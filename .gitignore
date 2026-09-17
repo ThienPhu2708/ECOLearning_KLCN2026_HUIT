@@ -1,0 +1,36 @@
+# Visual Studio / ASP.NET MVC .gitignore
+
+# Visual Studio files
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.suo
+*.userlibraries
+
+# Build outputs
+[B|b]in/
+[O|o]bj/
+[P|p]ackages/
+*.dll
+*.exe
+*.pdb
+*.cache
+*.log
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# SQL Server local db files in App_Data (if temporary)
+App_Data/*.mdf
+App_Data/*.ldf
+
+# System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/

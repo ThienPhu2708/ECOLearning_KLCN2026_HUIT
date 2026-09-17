@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+ <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <edmx:Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <!-- Diagram content (shape and connector positions) -->
+    <edmx:Diagrams>
+      <Diagram DiagramId="2e18d294aba341c687f4f54fd9e1fc11" Name="Diagram1">
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.BaiHoc" Width="1.5" PointX="13.5" PointY="20.625" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.BaoCaoThongKe" Width="1.5" PointX="3" PointY="18.875" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.ChiTietDonHang" Width="1.5" PointX="11.25" PointY="17.625" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.ChuongHoc" Width="1.5" PointX="11.25" PointY="21" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.DangKyKhoaHoc" Width="1.5" PointX="3" PointY="23" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.DanhGiaKhoaHoc" Width="1.5" PointX="6" PointY="20.875" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.DanhMuc" Width="1.5" PointX="6.75" PointY="13.125" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.DonHang" Width="1.5" PointX="6" PointY="16.625" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.KiemDuyetKhoaHoc" Width="1.5" PointX="6" PointY="24.75" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.KhoaHoc" Width="1.5" PointX="9" PointY="19.5" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.KhoaHocKhuyenNghi" Width="1.5" PointX="11.25" PointY="24.875" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.KhuyenMai" Width="1.5" PointX="14.25" PointY="16.625" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.MaGiamGia" Width="1.5" PointX="16.5" PointY="17" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.NguoiDung" Width="1.5" PointX="0.75" PointY="19.625" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.NhanThanhToan" Width="1.5" PointX="3" PointY="41.875" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.sysdiagrams" Width="1.5" PointX="0.75" PointY="0.75" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.TaiNguyen" Width="1.5" PointX="15.75" PointY="21" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.TienDoBaiHoc" Width="1.5" PointX="18.75" PointY="20.75" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.TienDoHocTap" Width="1.5" PointX="14.25" PointY="25" IsExpanded="true" />
+        <EntityTypeShape EntityType="QL_HETHONG_CUNGCAP_KHOAHOCModel.ThanhToan" Width="1.5" PointX="8.25" PointY="16" IsExpanded="true" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_BaiHoc_ChuongHoc" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_TaiNguyen_BaiHoc" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_TienDoBH_BaiHoc" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_BaoCao_NguoiDung" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_CTDH_DonHang" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_CTDH_KhoaHoc" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_ChuongHoc_KhoaHoc" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_DangKy_HocVien" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_DangKy_KhoaHoc" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_DanhGia_HocVien" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_DanhGia_KhoaHoc" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_KhoaHoc_DanhMuc" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_DonHang_HocVien" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_DonHang_MaGiamGia" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_ThanhToan_DonHang" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_KiemDuyet_Admin" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_KiemDuyet_KhoaHoc" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_GoiY_KhoaHoc" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_KhoaHoc_GiaoVien" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_TienDo_KhoaHoc" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_GoiY_HocVien" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_KhuyenMai_Marketing" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_MaGiamGia_KhuyenMai" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_NhanThanhToan_GiaoVien" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_TienDo_HocVien" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.FK_TienDoBH_HocVien" ManuallyRouted="false" />
+        <AssociationConnector Association="QL_HETHONG_CUNGCAP_KHOAHOCModel.KhuyenMaiKhoaHoc" ManuallyRouted="false" />
+      </Diagram>
+    </edmx:Diagrams>
+  </edmx:Designer>
+</edmx:Edmx>

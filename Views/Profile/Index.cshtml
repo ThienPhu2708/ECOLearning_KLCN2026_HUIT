@@ -1,0 +1,374 @@
+@model ECOLearning.ViewModels.StudentProfileViewModel
+
+@{
+    ViewBag.Title = "Quản lý Hồ sơ cá nhân | E-Learning Platform";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    string birthDateStr = Model.BirthDate.HasValue ? Model.BirthDate.Value.ToString("yyyy-MM-dd") : "";
+}
+
+@section styles {
+    <style>
+        .profile-header-banner {
+            height: 160px;
+            background: linear-gradient(135deg, var(--primary, #434CE8) 0%, #1E1B4B 100%);
+            border-radius: var(--radius-3xl, 24px) var(--radius-3xl, 24px) 0 0;
+            position: relative;
+        }
+
+        .profile-avatar-wrap {
+            position: relative;
+            margin-top: -60px;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: var(--radius-full, 9999px);
+            border: 4px solid var(--bg-surface, #FFFFFF);
+            object-fit: cover;
+            box-shadow: var(--shadow-card, 0 4px 12px rgba(0, 0, 0, 0.08));
+            background-color: #cbd5e1;
+        }
+
+        .avatar-upload-btn {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            background: var(--primary, #434CE8);
+            color: #fff;
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-full, 9999px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            transition: background var(--transition-fast, 0.2s);
+        }
+
+        .avatar-upload-btn:hover {
+            background: var(--primary-hover, #3538CD);
+        }
+
+        .grid-12 {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
+        }
+
+        .col-6 {
+            grid-column: span 6;
+        }
+
+        @@media (max-width: 768px) {
+            .col-6 {
+                grid-column: span 12;
+            }
+        }
+    </style>
+}
+
+<main style="padding: 40px 0 80px;">
+    <div class="safe-container">
+        <div style="margin-bottom: 15px;">
+            <h1 class="h2" style="margin-top: 8px; font-size: 28px; font-weight: 800; color: #0F172A;">Quản lý Hồ sơ Cá nhân</h1>
+        </div>
+
+        <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 30px; background: #FFFFFF; border: 1px solid var(--border-color, #E2E8F0); border-radius: var(--radius-3xl, 24px); box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);">
+            <!-- Top Banner -->
+            <div class="profile-header-banner"></div>
+
+            <div style="padding: 0 40px 30px;">
+
+                <!-- Avatar Upload Wrap -->
+                <div class="profile-avatar-wrap">
+                    <img id="avatar-preview" src="@Model.AvatarUrl" alt="Avatar" class="profile-avatar">
+                    <label class="avatar-upload-btn" title="Tải ảnh mới">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                        <input type="file" id="avatar-input" accept="image/*" style="display: none;" onchange="uploadAvatarFile(this)">
+                    </label>
+                </div>
+
+                <!-- Tab Navigation -->
+                <div class="tab-nav" style="display: flex; gap: 8px; border-bottom: 2px solid #F1F5F9; margin-bottom: 30px;">
+                    <button class="tab-btn active" id="tab-btn-info" data-tab="tab-info" onclick="switchProfileTab('info')" style="padding: 12px 20px; font-weight: 600; font-size: 15px; color: #434CE8; border: none; background: none; border-bottom: 3px solid #434CE8; cursor: pointer;">
+                        Cập nhật thông tin cá nhân
+                    </button>
+                    <button class="tab-btn" id="tab-btn-password" data-tab="tab-password" onclick="switchProfileTab('password')" style="padding: 12px 20px; font-weight: 600; font-size: 15px; color: #64748B; border: none; background: none; border-bottom: 3px solid transparent; cursor: pointer;">
+                        Đổi mật khẩu bảo vệ
+                    </button>
+                </div>
+
+                <!-- TAB 1: CẬP NHẬT THÔNG TIN CÁ NHÂN -->
+                <div id="tab-info" class="tab-content" style="display: block;">
+                    <form id="form-update-profile" onsubmit="handleSaveProfile(event)" style="max-width: 680px;">
+                        <div class="grid-12" style="margin-bottom: 20px;">
+                            <div class="col-6">
+                                <label class="form-label" for="prof-fullname">Họ và tên <span class="required" style="color: #EF4444;">*</span></label>
+                                <input type="text" id="prof-fullname" class="form-control" value="@Model.FullName" required placeholder="Nguyễn Văn A">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="prof-gender">Giới tính</label>
+                                <select class="form-control" id="prof-gender">
+                                    <option value="Nữ" @(Model.Gender == "Nữ" || Model.Gender == "female" ? "selected" : "")>Nữ</option>
+                                    <option value="Nam" @(Model.Gender == "Nam" || Model.Gender == "male" ? "selected" : "")>Nam</option>
+                                    <option value="Khác" @(Model.Gender == "Khác" || Model.Gender == "other" ? "selected" : "")>Khác</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid-12" style="margin-bottom: 20px;">
+                            <div class="col-6">
+                                <label class="form-label" for="prof-dob">Ngày sinh</label>
+                                <input type="date" id="prof-dob" class="form-control" value="@birthDateStr">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="prof-phone">Số điện thoại <span class="required" style="color: #EF4444;">*</span></label>
+                                <input type="tel" id="prof-phone" class="form-control" value="@Model.Phone" placeholder="09xxxxxxxx">
+                                <div id="phone-error" class="form-feedback-error" style="display: none; color: #EF4444; font-size: 12px; margin-top: 6px;">
+                                    Số điện thoại sai định dạng (Cần 10 chữ số).
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label class="form-label">Email tài khoản</label>
+                            <input type="email" class="form-control" value="@Model.Email" disabled style="background-color: var(--bg-canvas, #F8FAFC); cursor: not-allowed; color: #64748B;">
+                            <span class="caption" style="display: block; font-size: 13px; color: #64748B; margin-top: 6px;">Email này được dùng cho các thông báo giao dịch và cấp chứng chỉ</span>
+                        </div>
+
+                        <div style="display: flex; gap: 12px; margin-top: 30px;">
+                            <button type="submit" id="btn-save-profile" class="btn btn-primary" style="background: #434CE8; color: #fff; padding: 12px 24px; border-radius: 12px; font-weight: 700; border: none; cursor: pointer;">Lưu thay đổi</button>
+                            <button type="reset" class="btn btn-secondary" style="background: #F1F5F9; color: #475569; padding: 12px 24px; border-radius: 12px; font-weight: 600; border: 1px solid #CBD5E1; cursor: pointer;">Đặt lại ban đầu</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- TAB 2: ĐỔI MẬT KHẨU BẢO VỆ -->
+                <div id="tab-password" class="tab-content" style="display: none;">
+                    <form id="form-change-password" onsubmit="handleChangePassword(event)" style="max-width: 500px;">
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label class="form-label" for="pass-current">Mật khẩu hiện tại <span class="required" style="color: #EF4444;">*</span></label>
+                            <input type="password" id="pass-current" class="form-control" placeholder="••••••••" required>
+                            <div id="pass-current-error" class="form-feedback-error" style="display: none; color: #EF4444; font-size: 12px; margin-top: 6px;">Mật khẩu hiện tại không chính xác!</div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label class="form-label" for="pass-new">Mật khẩu mới <span class="required" style="color: #EF4444;">*</span></label>
+                            <input type="password" id="pass-new" class="form-control" placeholder="Tối thiểu 8 ký tự, có số và ký tự đặc biệt" required oninput="checkProfilePassStrength(this.value)">
+                            <div class="strength-meter" style="height: 6px; background: #E2E8F0; border-radius: 9999px; margin-top: 8px; overflow: hidden;">
+                                <div id="profile-strength-bar" class="strength-fill" style="height: 100%; width: 0%; transition: all 0.3s ease;"></div>
+                            </div>
+                            <div id="profile-strength-text" style="font-size: 12px; color: #64748B; margin-top: 6px; font-weight: 600;">Độ mạnh: Chưa nhập</div>
+                            <div id="pass-new-error" class="form-feedback-error" style="display: none; color: #EF4444; font-size: 12px; margin-top: 6px;">Mật khẩu mới quá yếu hoặc dưới 8 ký tự!</div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label class="form-label" for="pass-confirm">Xác nhận mật khẩu mới <span class="required" style="color: #EF4444;">*</span></label>
+                            <input type="password" id="pass-confirm" class="form-control" placeholder="Nhập lại mật khẩu mới" required>
+                            <div id="pass-confirm-error" class="form-feedback-error" style="display: none; color: #EF4444; font-size: 12px; margin-top: 6px;">Mật khẩu xác nhận không khớp!</div>
+                        </div>
+
+                        <div style="display: flex; gap: 12px; margin-top: 30px;">
+                            <button type="submit" id="btn-change-pass" class="btn btn-primary" style="background: #434CE8; color: #fff; padding: 12px 24px; border-radius: 12px; font-weight: 700; border: none; cursor: pointer;">Cập nhật mật khẩu</button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</main>
+
+@section scripts {
+    <script>
+        // Switch Profile Tabs
+        function switchProfileTab(tabName) {
+            const tabInfoBtn = document.getElementById('tab-btn-info');
+            const tabPassBtn = document.getElementById('tab-btn-password');
+            const tabInfoContent = document.getElementById('tab-info');
+            const tabPassContent = document.getElementById('tab-password');
+
+            if (tabName === 'info') {
+                tabInfoBtn.style.color = '#434CE8';
+                tabInfoBtn.style.borderBottomColor = '#434CE8';
+                tabPassBtn.style.color = '#64748B';
+                tabPassBtn.style.borderBottomColor = 'transparent';
+
+                tabInfoContent.style.display = 'block';
+                tabPassContent.style.display = 'none';
+            } else {
+                tabPassBtn.style.color = '#434CE8';
+                tabPassBtn.style.borderBottomColor = '#434CE8';
+                tabInfoBtn.style.color = '#64748B';
+                tabInfoBtn.style.borderBottomColor = 'transparent';
+
+                tabPassContent.style.display = 'block';
+                tabInfoContent.style.display = 'none';
+            }
+        }
+
+        // AJAX Avatar File Upload
+        function uploadAvatarFile(input) {
+            if (!input.files || !input.files[0]) return;
+
+            const file = input.files[0];
+            if (!file.type.startsWith('image/')) {
+                showToast('Tệp tin không đúng định dạng hình ảnh!', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('avatarFile', file);
+
+            showToast('Đang tải ảnh đại diện mới...', 'info');
+
+            $.ajax({
+                url: '@Url.Action("UploadAvatar", "Profile")',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function (res) {
+                    if (res.success) {
+                        document.getElementById('avatar-preview').src = res.avatarUrl;
+                        showToast(res.message, 'success');
+                    } else {
+                        showToast(res.message, 'error');
+                    }
+                },
+                error: function () {
+                    showToast('Có lỗi xảy ra khi tải ảnh lên!', 'error');
+                }
+            });
+        }
+
+        // Save Profile Info
+        function handleSaveProfile(e) {
+            e.preventDefault();
+
+            const fullName = document.getElementById('prof-fullname').value.trim();
+            const gender = document.getElementById('prof-gender').value;
+            const dob = document.getElementById('prof-dob').value;
+            const phone = document.getElementById('prof-phone').value.trim();
+            const phoneError = document.getElementById('phone-error');
+
+            if (phone && !/^(0[3|5|7|8|9])[0-9]{8}$/.test(phone)) {
+                phoneError.style.display = 'block';
+                showToast('Vui lòng kiểm tra lại số điện thoại (Cần 10 chữ số)!', 'error');
+                return;
+            }
+            phoneError.style.display = 'none';
+
+            const btn = document.getElementById('btn-save-profile');
+            btn.disabled = true;
+            btn.innerText = 'Đang lưu...';
+
+            $.ajax({
+                url: '@Url.Action("UpdateInfo", "Profile")',
+                type: 'POST',
+                data: { fullName: fullName, phone: phone, gender: gender, birthDate: dob },
+                success: function (res) {
+                    btn.disabled = false;
+                    btn.innerText = 'Lưu thay đổi';
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                    } else {
+                        showToast(res.message, 'error');
+                    }
+                },
+                error: function () {
+                    btn.disabled = false;
+                    btn.innerText = 'Lưu thay đổi';
+                    showToast('Lỗi kết nối máy chủ khi lưu thông tin!', 'error');
+                }
+            });
+        }
+
+        // Change Password
+        function handleChangePassword(e) {
+            e.preventDefault();
+
+            const curPass = document.getElementById('pass-current').value;
+            const newPass = document.getElementById('pass-new').value;
+            const confirmPass = document.getElementById('pass-confirm').value;
+
+            if (newPass.length < 8) {
+                document.getElementById('pass-new-error').style.display = 'block';
+                showToast('Mật khẩu mới phải từ 8 ký tự trở lên!', 'error');
+                return;
+            }
+            document.getElementById('pass-new-error').style.display = 'none';
+
+            if (newPass !== confirmPass) {
+                document.getElementById('pass-confirm-error').style.display = 'block';
+                showToast('Mật khẩu xác nhận không khớp!', 'error');
+                return;
+            }
+            document.getElementById('pass-confirm-error').style.display = 'none';
+
+            const btn = document.getElementById('btn-change-pass');
+            btn.disabled = true;
+            btn.innerText = 'Đang cập nhật...';
+
+            $.ajax({
+                url: '@Url.Action("ChangePassword", "Profile")',
+                type: 'POST',
+                data: { currentPassword: curPass, newPassword: newPass, confirmPassword: confirmPass },
+                success: function (res) {
+                    btn.disabled = false;
+                    btn.innerText = 'Cập nhật mật khẩu';
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                        document.getElementById('form-change-password').reset();
+                        document.getElementById('profile-strength-bar').style.width = '0%';
+                        document.getElementById('profile-strength-text').innerText = 'Độ mạnh: Chưa nhập';
+                    } else {
+                        document.getElementById('pass-current-error').innerText = res.message;
+                        document.getElementById('pass-current-error').style.display = 'block';
+                        showToast(res.message, 'error');
+                    }
+                },
+                error: function () {
+                    btn.disabled = false;
+                    btn.innerText = 'Cập nhật mật khẩu';
+                    showToast('Lỗi kết nối máy chủ khi đổi mật khẩu!', 'error');
+                }
+            });
+        }
+
+        // Password strength meter
+        function checkProfilePassStrength(val) {
+            const bar = document.getElementById('profile-strength-bar');
+            const txt = document.getElementById('profile-strength-text');
+            let score = 0;
+            if (val.length >= 8) score += 35;
+            if (/[A-Z]/.test(val)) score += 25;
+            if (/[0-9]/.test(val)) score += 20;
+            if (/[^A-Za-z0-9]/.test(val)) score += 20;
+
+            bar.style.width = score + '%';
+            if (score < 40) {
+                bar.style.backgroundColor = '#EF4444';
+                txt.innerText = 'Độ mạnh: Yếu (< 8 ký tự)';
+                txt.style.color = '#EF4444';
+            } else if (score < 75) {
+                bar.style.backgroundColor = '#F59E0B';
+                txt.innerText = 'Độ mạnh: Trung bình';
+                txt.style.color = '#F59E0B';
+            } else {
+                bar.style.backgroundColor = '#10B981';
+                txt.innerText = 'Độ mạnh: Rất mạnh (An toàn)';
+                txt.style.color = '#10B981';
+            }
+        }
+    </script>
+}

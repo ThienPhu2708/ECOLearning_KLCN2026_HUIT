@@ -1,0 +1,8 @@
+@{
+    ViewBag.Title = "Đăng ký tài khoản Học viên";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script>
+    window.location.href = '@Url.Action("Login", "Account", new { mode = "register" })';
+</script>

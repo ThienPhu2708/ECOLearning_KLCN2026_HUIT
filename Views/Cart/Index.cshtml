@@ -1,0 +1,377 @@
+@model ECOLearning.ViewModels.CartViewModel
+
+@{
+    ViewBag.Title = "Giỏ hàng & Thanh toán | E-Learning Platform";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <style>
+        .cart-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border-color, #E2E8F0);
+        }
+
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+
+        .cart-thumb {
+            width: 120px;
+            aspect-ratio: 16/9;
+            border-radius: 10px;
+            object-fit: cover;
+            border: 1px solid #E2E8F0;
+        }
+
+        .payment-option {
+            border: 1px solid var(--border-color, #E2E8F0);
+            border-radius: var(--radius-xl, 12px);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all var(--transition-fast, 0.2s);
+            background: #FFFFFF;
+        }
+
+        .payment-option:hover {
+            border-color: #CBD5E1;
+            background-color: #F8FAFC;
+        }
+
+        .payment-option.selected {
+            border-color: var(--primary, #434CE8);
+            background-color: #EEF2FF;
+        }
+
+        .payment-option input[type="radio"] {
+            accent-color: var(--primary, #434CE8);
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .grid-12 {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+
+        .col-8 {
+            grid-column: span 8;
+        }
+
+        .col-4 {
+            grid-column: span 4;
+        }
+
+        @@media (max-width: 992px) {
+            .col-8, .col-4 {
+                grid-column: span 12;
+            }
+        }
+    </style>
+}
+
+<main style="padding: 40px 0 80px; background-color: #F8FAFC; min-height: calc(100vh - 76px - 200px);">
+    <div class="safe-container">
+
+        <!-- Page Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 16px;">
+            <div>
+                <h1 class="h2" style="margin: 0; font-size: 28px; font-weight: 800; color: #0F172A;">Giỏ hàng & Thủ tục Thanh toán</h1>
+                <p style="font-size: 14px; color: #64748B; margin-top: 4px;">Kiểm tra danh sách khóa học và chọn phương thức thanh toán an toàn</p>
+            </div>
+            <a href="@Url.Action("Index", "Home")" class="btn btn-outline btn-sm" style="height: 40px; padding: 0 16px; border-radius: 10px; font-weight: 600;">
+                ← Tiếp tục chọn khóa học
+            </a>
+        </div>
+
+        <div class="grid-12">
+            <!-- LEFT COLUMN: CART LIST & PAYMENT METHOD -->
+            <div class="col-8">
+
+                <!-- Card 1: Selected Courses -->
+                <div class="card" style="margin-bottom: 24px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 class="h3" style="font-size: 18px; font-weight: 700; color: #0F172A; margin: 0;">
+                            Khóa học đã chọn (<span id="cart-items-count">@Model.Items.Count</span>)
+                        </h3>
+                    </div>
+
+                    <div id="cart-items-container">
+                        @if (Model.Items.Count == 0)
+                        {
+                            <div id="empty-cart-msg" style="text-align: center; padding: 40px 20px;">
+                                <h4 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 6px;">Giỏ hàng của bạn đang rỗng</h4>
+                                <p style="font-size: 14px; color: #64748B; margin-bottom: 20px;">Hãy chọn cho mình khóa học phù hợp để nâng cao kỹ năng nhé!</p>
+                                <a href="@Url.Action("Index", "Home")" class="btn btn-primary" style="background: #434CE8; padding: 12px 24px; border-radius: 12px; font-weight: 700; text-decoration: none;">Khám phá khóa học ngay</a>
+                            </div>
+                        }
+                        else
+                        {
+                            foreach (var item in Model.Items)
+                            {
+                                <div class="cart-item" id="item-@item.CourseId">
+                                    <img src="@item.ThumbnailUrl" alt="@item.CourseName" class="cart-thumb" />
+                                    <div style="flex: 1;">
+                                        <h4 style="font-size: 15px; font-weight: 700; color: #0F172A; margin: 0 0 6px 0; line-height: 1.4;">@item.CourseName</h4>
+                                        <div class="caption" style="font-size: 13px; color: #64748B;">
+                                            Giảng viên: @item.InstructorName • @item.DurationText
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right; flex-shrink: 0;">
+                                        <div style="font-weight: 800; font-size: 17px; color: #0F172A;">@item.Price.ToString("N0") đ</div>
+                                        @if (item.OriginalPrice > item.Price)
+                                        {
+                                            <div style="font-size: 12px; text-decoration: line-through; color: #94A3B8;">@item.OriginalPrice.ToString("N0") đ</div>
+                                        }
+                                        <button type="button" class="btn btn-secondary btn-sm" style="margin-top: 6px; padding: 4px 10px; font-size: 12px; border-radius: 8px; background: #FEF2F2; color: #EF4444; border: 1px solid #FCA5A5; cursor: pointer;" onclick="removeItem('@item.CourseId')">
+                                            Xóa
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+
+                <!-- Card 2: Payment Method Selection -->
+                <div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                    <h3 class="h3" style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 16px;">Chọn phương thức thanh toán</h3>
+
+                    <label class="payment-option selected" onclick="selectPayment(this)">
+                        <input type="radio" name="payment-method" value="MoMo/VNPay" checked />
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Ví điện tử MoMo / VNPay (Khuyên dùng)</div>
+                            <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Quét mã QR qua app ngân hàng hoặc ví điện tử tức thời</div>
+                        </div>
+                        <span class="badge" style="background: #ECFDF5; color: #10B981; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 9999px;">Nhanh & Tiện lợi</span>
+                    </label>
+
+                    <label class="payment-option" onclick="selectPayment(this)">
+                        <input type="radio" name="payment-method" value="Napas" />
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Thẻ ATM nội địa (Internet Banking Napas)</div>
+                            <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Hỗ trợ tất cả ngân hàng tại Việt Nam (Vietcombank, Techcombank,...)</div>
+                        </div>
+                    </label>
+
+                    <label class="payment-option" onclick="selectPayment(this)">
+                        <input type="radio" name="payment-method" value="Visa/Mastercard" />
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Thẻ Quốc Tế Visa / Mastercard / JCB</div>
+                            <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Thanh toán an toàn bảo mật chuẩn 3D-Secure quốc tế</div>
+                        </div>
+                    </label>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: ORDER SUMMARY & COUPON -->
+            <div class="col-4">
+                <aside class="card" style="position: sticky; top: 100px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                    <h3 class="h3" style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 20px;">Tóm tắt đơn hàng</h3>
+
+                    <!-- Coupon Input Block -->
+                    <div style="margin-bottom: 24px;">
+                        <label class="form-label" style="font-size: 13px; font-weight: 600; color: #0F172A; display: block; margin-bottom: 8px;">Mã khuyến mãi / Coupon</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="coupon-input" class="form-control" placeholder="Nhập mã (VD: CHAOMUNG2026)" value="@Model.AppliedCouponCode" style="text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
+                            <button type="button" class="btn btn-secondary btn-sm" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #475569; font-weight: 700; border-radius: 10px; padding: 0 16px; cursor: pointer;" onclick="applyCoupon()">Áp dụng</button>
+                        </div>
+
+                        <!-- Coupon Messages -->
+                        <div id="coupon-error" class="form-feedback-error" style="display: none; color: #EF4444; font-size: 12px; margin-top: 8px; font-weight: 600;">
+                            ✕ Mã khuyến mãi không hợp lệ hoặc đã hết hạn!
+                        </div>
+                        <div id="coupon-success" style="color: #10B981; font-size: 12px; font-weight: 600; margin-top: 8px; display: @(string.IsNullOrEmpty(Model.AppliedCouponCode) ? "none" : "block");">
+                            ✓ Đã áp dụng mã ưu đãi @Model.AppliedCouponCode!
+                        </div>
+                    </div>
+
+                    <!-- Price Breakdown -->
+                    <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 12px;">
+                        <span style="color: #64748B;">Tạm tính:</span>
+                        <span id="subtotal-val" style="font-weight: 700; color: #0F172A;">@Model.SubTotal.ToString("N0") đ</span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 16px;">
+                        <span style="color: #64748B;">Chiết khấu Voucher:</span>
+                        <span id="discount-val" style="color: #EF4444; font-weight: 700;">
+                            @(Model.DiscountAmount > 0 ? "- " + Model.DiscountAmount.ToString("N0") + " đ" : "- 0 đ")
+                        </span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 16px; border-top: 1px solid #E2E8F0; margin-bottom: 24px;">
+                        <span style="font-size: 15px; font-weight: 700; color: #0F172A;">Tổng thanh toán:</span>
+                        <span id="total-val" style="font-size: 24px; font-weight: 800; color: #434CE8;">@Model.TotalAmount.ToString("N0") đ</span>
+                    </div>
+
+                    <button type="button" id="btn-confirm-payment" class="btn btn-primary btn-lg" style="width: 100%; height: 50px; background: #434CE8; color: #FFFFFF; border-radius: 12px; font-weight: 700; font-size: 16px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(67, 76, 232, 0.25);" onclick="confirmPayment()">
+                        Xác nhận thanh toán
+                    </button>
+
+                    <div class="caption" style="text-align: center; margin-top: 16px; color: #94A3B8; font-size: 12px; line-height: 1.5;">
+                        🔒 Bảo mật thanh toán 256-bit SSL. Bằng việc xác nhận, bạn đồng ý với Điều khoản dịch vụ E-Learning.
+                    </div>
+                </aside>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<!-- SUCCESS MODAL POPUP -->
+<div class="modal-overlay" id="payment-success-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center;">
+    <div class="modal-container" style="background: #FFFFFF; border-radius: 24px; width: 100%; max-width: 480px; text-align: center; padding: 40px 32px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+        <div style="width: 70px; height: 70px; background: #ECFDF5; color: #10B981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 32px; font-weight: 800;">
+            ✓
+        </div>
+        <h3 class="h2" style="font-size: 22px; font-weight: 800; color: #0F172A; margin-bottom: 10px;">Thanh toán Thành công!</h3>
+        <p class="body-1" style="color: #64748B; font-size: 14px; margin-bottom: 24px; line-height: 1.6;">
+            Hệ thống đã gửi hóa đơn điện tử về email của bạn. Khóa học đã được tự động thêm vào hồ sơ học tập của bạn.
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: center; flex-direction: column;">
+            <a href="@Url.Action("Index", "Home")" class="btn btn-primary" style="height: 48px; background: #434CE8; color: #FFFFFF; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">Bắt đầu học ngay →</a>
+            <a href="@Url.Action("Index", "Profile")" class="btn btn-secondary" style="height: 44px; background: #F1F5F9; color: #475569; border-radius: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">Xem Hồ sơ cá nhân</a>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        // Chọn phương thức thanh toán
+        function selectPayment(el) {
+            document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
+            el.classList.add('selected');
+            el.querySelector('input[type="radio"]').checked = true;
+        }
+
+        // Xóa khóa học khỏi giỏ hàng qua AJAX
+        function removeItem(courseId) {
+            $.ajax({
+                url: '@Url.Action("RemoveFromCart", "Cart")',
+                type: 'POST',
+                data: { courseId: courseId },
+                success: function (res) {
+                    if (res.success) {
+                        const itemEl = document.getElementById('item-' + courseId);
+                        if (itemEl) itemEl.remove();
+
+                        document.getElementById('cart-items-count').innerText = res.cartCount;
+                        document.getElementById('subtotal-val').innerText = res.subtotal;
+                        document.getElementById('discount-val').innerText = res.discount;
+                        document.getElementById('total-val').innerText = res.total;
+
+                        if (typeof updateHeaderCartBadge === 'function') {
+                            updateHeaderCartBadge(res.cartCount);
+                        }
+
+                        showToast(res.message, 'info');
+
+                        if (res.cartCount === 0) {
+                            document.getElementById('cart-items-container').innerHTML = `
+                                <div id="empty-cart-msg" style="text-align: center; padding: 40px 20px;">
+                                    <h4 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 6px;">Giỏ hàng của bạn đang rỗng</h4>
+                                    <p style="font-size: 14px; color: #64748B; margin-bottom: 20px;">Hãy chọn cho mình khóa học phù hợp để nâng cao kỹ năng nhé!</p>
+                                    <a href="@Url.Action("Index", "Home")" class="btn btn-primary" style="background: #434CE8; padding: 12px 24px; border-radius: 12px; font-weight: 700; text-decoration: none;">Khám phá khóa học ngay</a>
+                                </div>
+                            `;
+                        }
+                    }
+                },
+                error: function () {
+                    showToast('Lỗi khi xóa khỏi giỏ hàng!', 'error');
+                }
+            });
+        }
+
+        // Áp dụng Mã Khuyến Mãi qua AJAX
+        function applyCoupon() {
+            const code = document.getElementById('coupon-input').value.trim();
+            const errEl = document.getElementById('coupon-error');
+            const succEl = document.getElementById('coupon-success');
+
+            if (!code) {
+                errEl.innerText = '✕ Vui lòng nhập mã khuyến mãi!';
+                errEl.style.display = 'block';
+                succEl.style.display = 'none';
+                return;
+            }
+
+            $.ajax({
+                url: '@Url.Action("ApplyCoupon", "Cart")',
+                type: 'POST',
+                data: { couponCode: code },
+                success: function (res) {
+                    if (res.success) {
+                        errEl.style.display = 'none';
+                        succEl.innerText = res.message;
+                        succEl.style.display = 'block';
+
+                        document.getElementById('discount-val').innerText = res.discount;
+                        document.getElementById('total-val').innerText = res.total;
+
+                        showToast(res.message, 'success');
+                    } else {
+                        succEl.style.display = 'none';
+                        errEl.innerText = res.message;
+                        errEl.style.display = 'block';
+
+                        showToast(res.message, 'error');
+                    }
+                },
+                error: function () {
+                    showToast('Lỗi kết nối khi kiểm tra mã khuyến mãi!', 'error');
+                }
+            });
+        }
+
+        // Xác nhận Thanh toán
+        function confirmPayment() {
+            const itemCount = parseInt(document.getElementById('cart-items-count').innerText || '0');
+            if (itemCount === 0) {
+                showToast('Giỏ hàng của bạn đang rỗng! Vui lòng chọn khóa học trước.', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('btn-confirm-payment');
+            btn.disabled = true;
+            btn.innerText = 'Đang xử lý thanh toán...';
+
+            const selectedMethod = document.querySelector('input[name="payment-method"]:checked').value;
+            const couponCode = document.getElementById('coupon-input').value.trim();
+
+            $.ajax({
+                url: '@Url.Action("Checkout", "Cart")',
+                type: 'POST',
+                data: { paymentMethod: selectedMethod, couponCode: couponCode },
+                success: function (res) {
+                    btn.disabled = false;
+                    btn.innerText = 'Xác nhận thanh toán';
+
+                    if (res.success) {
+                        if (typeof updateHeaderCartBadge === 'function') {
+                            updateHeaderCartBadge(0);
+                        }
+                        document.getElementById('payment-success-modal').style.display = 'flex';
+                    } else {
+                        showToast(res.message, 'error');
+                    }
+                },
+                error: function () {
+                    btn.disabled = false;
+                    btn.innerText = 'Xác nhận thanh toán';
+                    showToast('Có lỗi xảy ra khi xử lý thanh toán!', 'error');
+                }
+            });
+        }
+    </script>
+}

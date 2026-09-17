@@ -1,0 +1,1001 @@
+@model ECOLearning.Models.KhoaHoc
+@{
+    ViewBag.Title = (Model != null ? Model.tenKhoaHoc : "Chi tiết khóa học") + " | E-Learning Platform";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var chapters = ViewBag.Chapters as List<ECOLearning.Models.ChuongHoc> ?? (Model != null && Model.ChuongHoc != null ? Model.ChuongHoc.OrderBy(c => c.thuTu).ToList() : new List<ECOLearning.Models.ChuongHoc>());
+    bool isEnrolled = ViewBag.IsEnrolled ?? false;
+    bool isInCart = ViewBag.IsInCart ?? false;
+
+    int totalLessons = chapters.Sum(c => c.BaiHoc != null ? c.BaiHoc.Count : 0);
+    int totalDurationSeconds = chapters.Sum(c => c.BaiHoc != null ? c.BaiHoc.Sum(b => b.thoiLuong ?? 0) : 0);
+    int totalMinutes = totalDurationSeconds / 60;
+
+    var previewLesson = chapters.SelectMany(c => c.BaiHoc != null ? c.BaiHoc : new List<ECOLearning.Models.BaiHoc>())
+                                .FirstOrDefault(b => b.choXemThu == true && !string.IsNullOrEmpty(b.duongDanVideo));
+    string previewVideoUrl = previewLesson != null ? previewLesson.duongDanVideo : "";
+
+    double avgRating = Model != null && Model.DanhGiaKhoaHoc != null && Model.DanhGiaKhoaHoc.Count > 0
+        ? Model.DanhGiaKhoaHoc.Average(d => (double)d.soSao)
+        : 0.0;
+}
+
+@section styles {
+    <style>
+        .details-page-main {
+            background-color: #F8FAFC;
+            min-height: calc(100vh - 76px - 200px);
+            padding-bottom: 80px;
+        }
+
+        .details-hero {
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #2E1065 100%);
+            color: #FFFFFF;
+            padding: 44px 0 54px 0;
+            margin-bottom: 36px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .details-hero::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, rgba(0, 0, 0, 0) 70%);
+            pointer-events: none;
+        }
+
+        .breadcrumb-link {
+            color: #94A3B8;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-link:hover {
+            color: #38BDF8;
+        }
+
+        .course-title-main {
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1.35;
+            margin-top: 14px;
+            margin-bottom: 16px;
+            color: #FFFFFF;
+            letter-spacing: -0.02em;
+        }
+
+        .pill-badge-category {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(224, 231, 255, 0.95);
+            color: #434CE8;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 5px 16px;
+            border-radius: 9999px;
+            text-decoration: none;
+        }
+
+        .pill-badge-bestseller {
+            display: inline-flex;
+            align-items: center;
+            background: #FEF3C7;
+            color: #D97706;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 5px 16px;
+            border-radius: 9999px;
+        }
+
+        .details-layout-grid {
+            display: flex;
+            gap: 36px;
+            align-items: flex-start;
+        }
+
+        .details-left-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .details-right-sidebar {
+            width: 360px;
+            flex-shrink: 0;
+        }
+
+        @@media (max-width: 991px) {
+            .details-layout-grid {
+                flex-direction: column-reverse;
+            }
+            .details-right-sidebar {
+                width: 100%;
+            }
+        }
+
+        .sticky-course-card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 20px;
+            box-shadow: 0 20px 30px -10px rgba(15, 23, 42, 0.08);
+            overflow: hidden;
+            position: sticky;
+            top: 96px;
+        }
+
+        .preview-media-container {
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            background: #0F172A;
+        }
+
+        .preview-media-container img {
+            width: 100%;
+            height: 210px;
+            object-fit: cover;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .preview-media-container:hover img {
+            transform: scale(1.06);
+        }
+
+        .play-btn-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #434CE8 0%, #6366F1 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 0 25px rgba(67, 76, 232, 0.6);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .preview-media-container:hover .play-btn-overlay {
+            transform: translate(-50%, -50%) scale(1.15);
+        }
+
+        .price-tag-big {
+            font-size: 28px;
+            font-weight: 800;
+            color: #434CE8;
+            letter-spacing: -0.02em;
+            white-space: nowrap;
+            line-height: 1;
+        }
+
+        .price-tag-old {
+            font-size: 15px;
+            color: #94A3B8;
+            text-decoration: line-through;
+            white-space: nowrap;
+        }
+
+        .badge-discount-tag {
+            background: #FEF2F2;
+            color: #EF4444;
+            font-size: 12px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid #FCA5A5;
+            white-space: nowrap;
+        }
+
+        .curriculum-chapter-card {
+            border: 1px solid #E2E8F0;
+            border-radius: 14px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            background: #FFFFFF;
+            transition: border-color 0.2s;
+        }
+
+        .curriculum-chapter-card:hover {
+            border-color: #CBD5E1;
+        }
+
+        .chapter-header {
+            background: #F8FAFC;
+            padding: 16px 20px;
+            font-weight: 700;
+            font-size: 15px;
+            color: #1E293B;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .chapter-header:hover {
+            background: #F1F5F9;
+        }
+
+        .lesson-item-row {
+            padding: 14px 20px;
+            border-top: 1px solid #F1F5F9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .lesson-item-row:hover {
+            background: #F8FAFC;
+        }
+
+        .badge-preview {
+            background: #DEF7EC;
+            color: #03543F;
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            border: 1px solid #84E1BC;
+        }
+
+        .badge-preview:hover {
+            transform: translateY(-1px);
+            background: #BCF0DA;
+        }
+
+        .video-placeholder-container {
+            padding: 40px 20px;
+            text-align: center;
+            background: #000;
+            color: #fff;
+            border-radius: 12px;
+        }
+
+        .btn-cta-primary {
+            background: #434CE8 !important;
+            border: none !important;
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+            box-shadow: 0 4px 12px rgba(67, 76, 232, 0.2);
+            transition: background-color 0.2s ease, opacity 0.2s ease !important;
+        }
+
+        .btn-cta-primary:hover {
+            background: #3B43D6 !important;
+            opacity: 0.96;
+            transform: none !important;
+            box-shadow: 0 4px 12px rgba(67, 76, 232, 0.25) !important;
+        }
+
+        /* Scoped utilities for Details Page */
+        .details-page-main .d-flex { display: flex !important; }
+        .details-page-main .flex-wrap { flex-wrap: wrap !important; }
+        .details-page-main .flex-grow-1 { flex: 1 1 0% !important; flex-grow: 1 !important; }
+        .details-page-main .flex-shrink-0 { flex-shrink: 0 !important; }
+        .details-page-main .align-items-center { align-items: center !important; }
+        .details-page-main .align-items-start { align-items: flex-start !important; }
+        .details-page-main .align-items-baseline { align-items: baseline !important; }
+        .details-page-main .justify-content-between { justify-content: space-between !important; }
+        .details-page-main .gap-2 { gap: 8px !important; }
+        .details-page-main .gap-3 { gap: 16px !important; }
+        .details-page-main .gap-4 { gap: 24px !important; }
+        .details-page-main .gap-5 { gap: 32px !important; }
+        .details-page-main .w-100 { width: 100% !important; }
+        .details-page-main .mb-0 { margin-bottom: 0 !important; }
+        .details-page-main .mb-1 { margin-bottom: 4px !important; }
+        .details-page-main .mb-2 { margin-bottom: 8px !important; }
+        .details-page-main .mb-3 { margin-bottom: 12px !important; }
+        .details-page-main .mb-4 { margin-bottom: 16px !important; }
+        .details-page-main .mb-5 { margin-bottom: 24px !important; }
+        .details-page-main .p-4 { padding: 24px !important; }
+        .details-page-main .pt-2 { padding-top: 8px !important; }
+        .details-page-main .pt-3 { padding-top: 12px !important; }
+        .details-page-main .me-1 { margin-right: 4px !important; }
+        .details-page-main .me-2 { margin-right: 8px !important; }
+        .details-page-main .ms-1 { margin-left: 4px !important; }
+
+        .details-page-main .row { display: flex; flex-wrap: wrap; margin-right: -12px; margin-left: -12px; }
+        .details-page-main .col-md-6 { flex: 0 0 50%; max-width: 50%; padding-right: 12px; padding-left: 12px; box-sizing: border-box; }
+        @@media (max-width: 768px) {
+            .details-page-main .col-md-6 { flex: 0 0 100%; max-width: 100%; }
+        }
+
+        /* Curriculum Accordion Styles */
+        .curriculum-chapter-card .collapse-content {
+            display: block;
+        }
+        .chapter-header {
+            user-select: none;
+            cursor: pointer;
+        }
+        .chapter-header .chevron-icon {
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-block;
+        }
+        .chapter-header.collapsed .chevron-icon {
+            transform: rotate(-90deg);
+        }
+        .btn-toggle-all-chapters {
+            background: #F8FAFC;
+            border: 1px solid #CBD5E1;
+            color: #475569;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+        }
+        .btn-toggle-all-chapters:hover {
+            background: #EFF6FF;
+            color: #2563EB;
+            border-color: #93C5FD;
+        }
+
+        /* Custom Self-Contained Modal System (Fixes Scroll Jump & Interaction Lock) */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .custom-modal-overlay.active {
+            display: flex !important;
+            animation: modalFadeIn 0.2s ease-out forwards;
+        }
+
+        @@keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .custom-modal-dialog {
+            width: 100%;
+            max-width: 800px;
+            background: #0F172A;
+            border: 1px solid #1E293B;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .custom-modal-header {
+            padding: 16px 24px;
+            background: #1E293B;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #334155;
+        }
+
+        .modal-title-text {
+            color: #FFFFFF;
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .custom-modal-close {
+            background: transparent;
+            border: none;
+            color: #94A3B8;
+            font-size: 26px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            transition: color 0.2s;
+        }
+
+        .custom-modal-close:hover {
+            color: #FFFFFF;
+        }
+
+        .custom-modal-body {
+            padding: 0;
+            background: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 320px;
+        }
+    </style>
+}
+
+<main class="details-page-main">
+    @if (Model == null)
+    {
+        <div class="safe-container py-5 text-center">
+            <div class="alert alert-info py-5 rounded-4 shadow-sm" style="background: #FFFFFF; border: 1px solid #E2E8F0;">
+                <i class="bi bi-info-circle fs-1 text-primary mb-3 d-block"></i>
+                <h4 class="fw-bold">Khóa học thử nghiệm đang được khởi tạo</h4>
+                <p class="text-secondary">Dữ liệu thử nghiệm hệ thống đang được cập nhật tự động.</p>
+                <a href="@Url.Action("Index", "Home")" class="btn btn-primary mt-2" style="background: #434CE8; border-color: #434CE8;">Quay lại Trang chủ</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Header Hero Section -->
+        <div class="details-hero">
+            <div class="safe-container">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb bg-transparent p-0 mb-3">
+                        <li class="breadcrumb-item active text-light opacity-75" aria-current="page">@Model.tenKhoaHoc</li>
+                    </ol>
+                </nav>
+
+                <!-- Pill Badges (Category & Best Seller) -->
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="pill-badge-category">
+                        @(Model.DanhMuc != null ? Model.DanhMuc.tenDanhMuc : "Lập trình & CNTT")
+                    </span>
+                    <span class="pill-badge-bestseller">
+                        Bán chạy nhất
+                    </span>
+                </div>
+
+                <!-- Course Title Main -->
+                <h1 class="course-title-main" style="margin-top: 8px; margin-bottom: 14px;">@Model.tenKhoaHoc</h1>
+
+                <!-- Short Description -->
+                <p class="lead text-light opacity-75 fs-6 mb-4" style="max-width: 860px; line-height: 1.6; color: #94A3B8 !important;">@Model.moTaNgan</p>
+
+                <!-- Bottom Meta Info Bar -->
+                <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size: 14.5px;">
+                    <!-- Rating & Reviews -->
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="fw-bold" style="color: #F59E0B; font-size: 15px;">@(avgRating > 0 ? avgRating.ToString("0.0") : "4.9")</span>
+                        <div class="d-flex gap-1 ms-1" style="color: #F59E0B;">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                if (i <= Math.Round(avgRating > 0 ? avgRating : 4.9))
+                                {
+                                    <i class="bi bi-star-fill"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-star"></i>
+                                }
+                            }
+                        </div>
+                        <span class="ms-1" style="color: #94A3B8;">(@(Model.DanhGiaKhoaHoc != null && Model.DanhGiaKhoaHoc.Count > 0 ? Model.DanhGiaKhoaHoc.Count : 420) đánh giá)</span>
+                    </div>
+
+                    <span style="color: #475569;">•</span>
+
+                    <!-- Giảng viên -->
+                    <div style="color: #94A3B8;">
+                        Giảng viên: <strong style="color: #FFFFFF; font-weight: 700;">@(Model.NguoiDung != null ? Model.NguoiDung.hoTen : "ThS. Nguyễn Văn An")</strong>
+                    </div>
+
+                    <span style="color: #475569;">•</span>
+
+                    <!-- Cập nhật mới nhất -->
+                    <div style="color: #94A3B8;">
+                        Cập nhật mới nhất: <strong style="color: #FFFFFF; font-weight: 700;">09/2026</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="safe-container">
+            <div class="details-layout-grid">
+                <!-- Left Main Content Column (Flex 1) -->
+                <div class="details-left-content">
+                    <!-- Section 1: Outcomes -->
+                    @if (!string.IsNullOrEmpty(Model.mucTieuDauRa))
+                    {
+                        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4" style="background: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 100%); border: 1px solid #C7D2FE !important;">
+                            <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-check-circle-fill text-primary me-2"></i>Mục tiêu đạt được sau khóa học</h5>
+                            <div class="row g-2">
+                                @foreach (var outcome in Model.mucTieuDauRa.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    <div class="col-md-6 d-flex align-items-start gap-2">
+                                        <i class="bi bi-check2-circle text-primary fs-5"></i>
+                                        <span class="text-secondary fs-6 fw-medium">@outcome.Trim()</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Section 2: Dynamic Curriculum Accordion (Tính năng Thu gọn / Mở rộng chương học) -->
+                    <div class="mb-5">
+                        <div class="d-flex align-items-center justify-content-between mb-3 gap-3 flex-wrap">
+                            <h4 class="fw-bold text-dark m-0 text-nowrap" style="font-size: 20px;"><i class="bi bi-list-nested me-2 text-primary"></i>Đề cương chi tiết</h4>
+                            <div class="d-flex align-items-center gap-3 flex-wrap ms-auto">
+                                <span class="text-muted fs-6 text-nowrap"><strong>@chapters.Count</strong> chương • <strong>@totalLessons</strong> bài học • <strong>@totalMinutes phút</strong></span>
+                            </div>
+                        </div>
+                        @if (chapters.Count > 0)
+                        {
+                            int chapIndex = 1;
+                            foreach (var chap in chapters)
+                            {
+                                var lessons = chap.BaiHoc != null ? chap.BaiHoc.OrderBy(b => b.thuTu).ToList() : new List<ECOLearning.Models.BaiHoc>();
+                                int chapSeconds = lessons.Sum(b => b.thoiLuong ?? 0);
+                                int chapMin = chapSeconds / 60;
+
+                                <div class="curriculum-chapter-card">
+                                    <div class="chapter-header" onclick="toggleChapterAccordion('collapseChap_@chapIndex', this)" title="Bấm để đóng / mở danh sách bài học">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-chevron-down text-primary chevron-icon"></i>
+                                            <span class="fw-bold text-dark">@chap.tenChuong</span>
+                                        </div>
+                                        <span class="text-muted fw-normal fs-6">@lessons.Count bài học (@chapMin phút)</span>
+                                    </div>
+
+                                    <div id="collapseChap_@chapIndex" class="collapse-content">
+                                        @if (lessons.Count > 0)
+                                        {
+                                            foreach (var les in lessons)
+                                            {
+                                                int lesMin = (les.thoiLuong ?? 0) / 60;
+                                                int lesSec = (les.thoiLuong ?? 0) % 60;
+                                                string durationText = string.Format("{0:D2}:{1:D2}", lesMin, lesSec);
+                                                bool hasVideo = !string.IsNullOrEmpty(les.duongDanVideo);
+
+                                                <div class="lesson-item-row">
+                                                    <div class="d-flex align-items-center gap-3">
+                                                        <i class="bi bi-play-circle-fill text-primary fs-5"></i>
+                                                        <span class="fw-semibold text-dark">@les.tenBaiHoc</span>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-3">
+                                                        @if (hasVideo && les.choXemThu == true)
+                                                        {
+                                                            <span class="badge-preview" onclick="playPreviewModal('@les.tenBaiHoc', '@les.duongDanVideo')">
+                                                                <i class="bi bi-eye"></i> Học thử
+                                                            </span>
+                                                        }
+                                                        else if (!hasVideo)
+                                                        {
+                                                            <span class="badge bg-secondary opacity-75 fw-normal" style="font-size: 11px;">
+                                                                <i class="bi bi-clock-history me-1"></i> Video đang phát triển
+                                                            </span>
+                                                        }
+                                                        <span class="text-muted text-nowrap"><i class="bi bi-clock me-1"></i>@durationText</span>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="p-3 text-center text-muted fs-6">Đang cập nhật bài học...</div>
+                                        }
+                                    </div>
+                                </div>
+                                chapIndex++;
+                            }
+                        }
+                        else
+                        {
+                            <div class="alert alert-info">Đang cập nhật khung chương trình học.</div>
+                        }
+                    </div>
+
+                    <!-- Section 3: Course Description -->
+                    <div class="mb-5">
+                        <h4 class="fw-bold text-dark mb-3"><i class="bi bi-file-text me-2 text-primary"></i> Mô tả chi tiết khóa học</h4>
+                        <div class="text-secondary fs-6 lh-lg p-4 rounded-4 bg-white border" style="border-color: #E2E8F0 !important;">
+                            @Model.moTa
+                        </div>
+                    </div>
+
+                    <!-- Section 4: Student Reviews (Chỉ hiện khi có học viên đánh giá) -->
+                    @if (Model.DanhGiaKhoaHoc != null && Model.DanhGiaKhoaHoc.Count > 0)
+                    {
+                        var reviews = Model.DanhGiaKhoaHoc.OrderByDescending(d => d.ngayDanhGia).ToList();
+                        double overallRating = reviews.Average(d => (double)d.soSao);
+                        int totalReviewers = reviews.Count;
+
+                        <div class="mb-5">
+                            <!-- Khung Card bao bọc toàn bộ Đánh giá từ học viên theo chuẩn 100% mẫu thiết kế -->
+                            <div class="card border-0 rounded-4 p-4 p-md-5 bg-white" style="border: 1px solid #E2E8F0 !important; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);">
+                                <h4 class="fw-bold text-dark mb-4" style="font-size: 20px; letter-spacing: -0.01em;">
+                                    Đánh giá từ học viên
+                                </h4>
+
+                                <div class="d-flex align-items-center gap-5 flex-wrap mb-4">
+                                    <!-- Cột trái: Điểm số lớn, 5 sao vàng, Tổng số lượt đánh giá -->
+                                    <div class="text-start px-2" style="min-width: 140px;">
+                                        <div style="font-size: 54px; font-weight: 800; color: #0F172A; line-height: 1.0; margin-bottom: 8px;">
+                                            @overallRating.ToString("0.0")
+                                        </div>
+                                        <div class="d-flex gap-1 text-warning mb-2" style="font-size: 18px; color: #F59E0B !important;">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                if (i <= Math.Round(overallRating))
+                                                {
+                                                    <i class="bi bi-star-fill"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-star"></i>
+                                                }
+                                            }
+                                        </div>
+                                        <div style="font-size: 14px; font-weight: 600; color: #64748B;">
+                                            @totalReviewers lượt đánh giá
+                                        </div>
+                                    </div>
+
+                                    <!-- Cột phải: Progress Bar (Thanh tiến trình tỉ lệ phần trăm phân bổ số sao từ 5 sao -> 1 sao) -->
+                                    <div style="flex: 1; min-width: 260px;">
+                                        @for (int star = 5; star >= 1; star--)
+                                        {
+                                            int starCount = reviews.Count(r => r.soSao == star);
+                                            int starPercent = totalReviewers > 0 ? (int)Math.Round((double)starCount / totalReviewers * 100) : 0;
+
+                                            <div class="d-flex align-items-center gap-3 mb-2" style="font-size: 14px;">
+                                                <span style="width: 48px; font-weight: 600; color: #475569;" class="text-nowrap">@star sao</span>
+                                                <div style="flex: 1; height: 10px; background: #E2E8F0; border-radius: 9999px; overflow: hidden; display: block; position: relative; min-width: 80px;">
+                                                    <div style="width: @starPercent%; height: 100%; background: #10B981; border-radius: 9999px; display: block; transition: width 0.6s ease;"></div>
+                                                </div>
+                                                <span style="width: 48px; font-weight: 700; color: #1E293B;" class="text-end text-nowrap">@starPercent%</span>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Đường kẻ ngang phân cách chuẩn thiết kế -->
+                                <hr style="border: 0; border-top: 1px solid #E2E8F0; margin: 24px 0 28px 0;" />
+
+                                <!-- Danh sách các bài nhận xét của học viên -->
+                                <div class="d-flex flex-column gap-4">
+                                    @foreach (var r in reviews)
+                                    {
+                                        string reviewerName = r.NguoiDung != null ? r.NguoiDung.hoTen : "Học viên";
+                                        string reviewerAvatar = (r.NguoiDung != null && !string.IsNullOrEmpty(r.NguoiDung.anhDaiDien))
+                                            ? r.NguoiDung.anhDaiDien
+                                            : (Session["Avatar"]?.ToString() ?? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80");
+
+                                        string reviewDateText = r.ngayDanhGia.HasValue ? r.ngayDanhGia.Value.ToString("dd/MM/yyyy") : "Vừa xong";
+
+                                        <div class="d-flex align-items-start gap-3">
+                                            <img src="@reviewerAvatar" class="rounded-circle flex-shrink-0" style="width: 44px; height: 44px; object-fit: cover; border: 1px solid #E2E8F0;" alt="@reviewerName" />
+
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold text-dark mb-1" style="font-size: 15px;">@reviewerName</div>
+                                                
+                                                <div class="d-flex align-items-center gap-2 mb-2" style="font-size: 13px; color: #F59E0B;">
+                                                    <div class="d-flex gap-1">
+                                                        @for (int s = 1; s <= 5; s++)
+                                                        {
+                                                            if (s <= r.soSao)
+                                                            {
+                                                                <i class="bi bi-star-fill"></i>
+                                                            }
+                                                            else
+                                                            {
+                                                                <i class="bi bi-star"></i>
+                                                            }
+                                                        }
+                                                    </div>
+                                                    <span style="color: #F59E0B; font-weight: 500;">• @reviewDateText</span>
+                                                </div>
+
+                                                <p class="mb-0" style="font-size: 14.5px; line-height: 1.6; color: #1E293B; font-weight: 400;">
+                                                    @r.noiDung
+                                                </p>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Right Sticky Sidebar Column (Fixed 360px) -->
+                <div class="details-right-sidebar">
+                    <div class="sticky-course-card">
+                        <div class="preview-media-container" onclick="playPreviewModal('Video giới thiệu khóa học', '@previewVideoUrl')">
+                            <img src="@(string.IsNullOrEmpty(Model.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : Model.anhBia)" alt="@Model.tenKhoaHoc" />
+                            <div class="play-btn-overlay">
+                                <i class="bi bi-play-fill ms-1"></i>
+                            </div>
+                        </div>
+
+                        <div class="p-4">
+                            <!-- Price Block (Strict single horizontal line matching mockup 100%) -->
+                            <div class="d-flex align-items-baseline gap-2 mb-3" style="flex-wrap: nowrap; white-space: nowrap;">
+                                @if (Model.giaKhuyenMai.HasValue && Model.giaKhuyenMai.Value > 0)
+                                {
+                                    <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@Model.giaKhuyenMai.Value.ToString("N0") đ</span>
+                                    if (Model.giaBan > Model.giaKhuyenMai.Value)
+                                    {
+                                        <span style="font-size: 14px; color: #94A3B8; text-decoration: line-through; line-height: 1; margin-left: 2px;">@Model.giaBan.ToString("N0") đ</span>
+                                        int discountPercent = (int)((1.0 - ((double)Model.giaKhuyenMai.Value / (double)Model.giaBan)) * 100);
+                                        <span style="background: #FFF1F2; color: #E11D48; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; line-height: 1; margin-left: 2px;">Giảm @discountPercent%</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span style="font-size: 26px; font-weight: 800; color: #10B981; line-height: 1;">MIỄN PHÍ</span>
+                                }
+                            </div>
+
+                            <!-- Action Buttons -->
+                            @if (isEnrolled)
+                            {
+                                <button type="button" onclick="if (typeof showToast === 'function') { showToast('Bạn đã sở hữu khóa học này!', 'info'); } else { alert('Bạn đã sở hữu khóa học này!'); }" class="btn btn-secondary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold" style="background: #E2E8F0; color: #475569; border: none; border-radius: 12px !important; font-size: 15px;">
+                                    <i class="bi bi-check-circle-fill me-2 text-success"></i> ĐÃ ĐĂNG KÝ KHÓA HỌC
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="button" onclick="buyNowAjax('@Model.maKhoaHoc', this)" class="btn btn-cta-primary btn-lg w-100 py-3 mb-2 text-center d-block fw-bold shadow-sm" style="border-radius: 12px !important; font-size: 16px;">
+                                    Mua ngay
+                                </button>
+                                if (isInCart)
+                                {
+                                    <a href="@Url.Action("Index", "Cart")" id="btnAddToCartMain" class="btn w-100 py-3 fw-bold mb-3 text-center d-block text-decoration-none" style="background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px; transition: all 0.2s;">
+                                        <i class="bi me-1"></i> Chuyển đến giỏ hàng
+                                    </a>
+                                }
+                                else
+                                {
+                                    <button type="button" id="btnAddToCartMain" onclick="addToCartAjax('@Model.maKhoaHoc', this)" class="btn w-100 py-3 fw-bold mb-3" style="background: #F1F5F9; color: #0F172A; border: none; border-radius: 12px !important; font-size: 15px; transition: background 0.2s;">
+                                        Thêm vào giỏ hàng
+                                    </button>
+                                }
+                            }
+
+                            <!-- Course Inclusions Grid Layout (Matching Mockup 100%) -->
+                            <div class="border-top pt-3 mt-1">
+                                <h6 class="fw-bold mb-3 text-dark" style="font-size: 13.5px; color: #475569;">Khóa học bao gồm:</h6>
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 12px;">
+                                    <!-- 1. Video duration -->
+                                    <div class="d-flex align-items-start gap-2">
+                                        <i class="bi bi-play-btn-fill" style="font-size: 18px; color: #434CE8; margin-top: 1px;"></i>
+                                        <div style="font-size: 13px; line-height: 1.45; color: #475569;">
+                                            <strong style="color: #0F172A; font-weight: 700; display: inline-block;">@(totalMinutes > 0 ? totalMinutes + " phút" : "Video bài giảng")</strong>
+                                            <div>video học tập</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 2. Lessons count -->
+                                    <div class="d-flex align-items-start gap-2">
+                                        <i class="bi bi-journal-check" style="font-size: 18px; color: #434CE8; margin-top: 1px;"></i>
+                                        <div style="font-size: 13px; line-height: 1.45; color: #475569;">
+                                            <strong style="color: #0F172A; font-weight: 700; display: inline-block;">@(totalLessons > 0 ? totalLessons + " bài học" : "Bài học")</strong>
+                                            <div>thử nghiệm & thực hành</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</main>
+
+<!-- Modal Xem Thử Video Preview (Tự định nghĩa Modal độc lập - Không nhảy trang, không đơ web) -->
+<div class="custom-modal-overlay" id="previewModal">
+    <div class="custom-modal-dialog">
+        <div class="custom-modal-header">
+            <h6 class="modal-title-text" id="previewModalTitle"><i class="bi bi-play-circle-fill me-2" style="color: #6366F1;"></i> Xem thử bài học</h6>
+            <button type="button" class="custom-modal-close" onclick="closePreviewModal()">&times;</button>
+        </div>
+        <div class="custom-modal-body" id="modalVideoBody">
+            <video id="previewVideoPlayer" controls controlsList="nodownload" style="width:100%; max-height:480px; display:none; border-radius: 4px;">
+                <source id="previewVideoSource" src="" type="video/mp4" />
+            </video>
+            <div id="previewVideoPlaceholder" class="video-placeholder-container" style="display:none; padding: 40px 20px;">
+                <i class="bi bi-camera-video-off fs-1 text-secondary mb-3 d-block"></i>
+                <h5 class="fw-bold text-white">Video đang trong quá trình phát triển</h5>
+                <p class="text-secondary small mb-0">Nội dung video này hiện chưa tải lên. Vui lòng quay lại sau.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        function playPreviewModal(title, videoUrl) {
+            document.getElementById('previewModalTitle').innerHTML = '<i class="bi bi-play-circle-fill me-2" style="color: #6366F1;"></i> ' + title;
+            var videoPlayer = document.getElementById('previewVideoPlayer');
+            var videoSource = document.getElementById('previewVideoSource');
+            var placeholder = document.getElementById('previewVideoPlaceholder');
+            var modalOverlay = document.getElementById('previewModal');
+
+            if (videoUrl && videoUrl.trim() !== "") {
+                videoSource.src = videoUrl;
+                videoPlayer.load();
+                videoPlayer.style.display = 'block';
+                placeholder.style.display = 'none';
+                videoPlayer.play().catch(function (e) { console.log('Autoplay handled:', e); });
+            } else {
+                videoPlayer.pause();
+                videoPlayer.style.display = 'none';
+                placeholder.style.display = 'block';
+            }
+
+            if (modalOverlay) {
+                modalOverlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closePreviewModal() {
+            var modalOverlay = document.getElementById('previewModal');
+            var videoPlayer = document.getElementById('previewVideoPlayer');
+
+            if (videoPlayer) {
+                videoPlayer.pause();
+            }
+            if (modalOverlay) {
+                modalOverlay.classList.remove('active');
+            }
+            document.body.style.overflow = '';
+        }
+
+        // Đóng khi nhấp bên ngoài dialog
+        document.getElementById('previewModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closePreviewModal();
+            }
+        });
+
+        // Đóng khi nhấn phím ESC
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closePreviewModal();
+            }
+        });
+
+        function showCartWarningToast(message, cartUrl) {
+            var container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = 'position: fixed; bottom: 24px; right: 24px; z-index: 99999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;';
+                document.body.appendChild(container);
+            }
+
+            var existingWarning = container.querySelector('.cart-warning-toast-item');
+            if (existingWarning) {
+                existingWarning.remove();
+            }
+
+            var toast = document.createElement('div');
+            toast.className = 'cart-warning-toast-item';
+            toast.style.cssText = 'background: #FFFBEB; border: 1px solid #FCD34D; border-left: 5px solid #F59E0B; color: #92400E; padding: 14px 18px; border-radius: 14px; font-size: 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 15px 30px -5px rgba(245, 158, 11, 0.25), 0 4px 12px rgba(0,0,0,0.08); transform: translateY(20px); opacity: 0; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: auto; max-width: 460px;';
+
+            var targetCartUrl = cartUrl || '/Cart';
+
+            toast.innerHTML = '<div style="width: 36px; height: 36px; background: #FEF3C7; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #D97706; font-size: 17px; font-weight: 800;">⚠️</div>' +
+                '<div style="flex: 1; min-width: 0;">' +
+                '<div style="font-weight: 700; color: #78350F; font-size: 14px; margin-bottom: 2px;">Khóa học đã có trong giỏ hàng!</div>' +
+                '<div style="font-size: 12.5px; color: #B45309; line-height: 1.35;">' + (message || 'Khóa học này đã được thêm vào giỏ hàng từ trước.') + '</div>' +
+                '</div>' +
+                '<a href="' + targetCartUrl + '" style="background: #F59E0B; color: #FFFFFF; font-weight: 700; font-size: 12px; padding: 8px 14px; border-radius: 8px; text-decoration: none; white-space: nowrap; flex-shrink: 0; transition: background 0.2s;">Xem giỏ hàng →</a>';
+
+            container.appendChild(toast);
+
+            setTimeout(function () {
+                toast.style.transform = 'translateY(0)';
+                toast.style.opacity = '1';
+            }, 10);
+
+            setTimeout(function () {
+                if (toast.parentNode) {
+                    toast.style.transform = 'translateY(20px)';
+                    toast.style.opacity = '0';
+                    setTimeout(function () { if (toast.parentNode) toast.remove(); }, 250);
+                }
+            }, 4500);
+        }
+
+        function addToCartAjax(courseId, btnElement) {
+            if (!courseId) return;
+            var $btn = $('#btnAddToCartMain');
+            var cartUrl = '@Url.Action("Index", "Cart")';
+
+            $btn.prop('disabled', true).css('opacity', '0.75').html('⏳ Đang xử lý...');
+
+            $.ajax({
+                url: '@Url.Action("AddToCart", "Cart")',
+                type: 'POST',
+                data: { courseId: courseId },
+                success: function (res) {
+                    if (res && res.cartCount) {
+                        if (typeof updateHeaderCartBadge === 'function') {
+                            updateHeaderCartBadge(res.cartCount);
+                        } else if ($('#header-cart-badge').length) {
+                            if (res.cartCount > 0) {
+                                $('#header-cart-badge').text(res.cartCount).css('display', 'flex');
+                            }
+                        }
+                    }
+
+                    // Ngay lập tức biến đổi nút thành "Chuyển đến giỏ hàng"
+                    $('#btnAddToCartMain').replaceWith('<a href="' + cartUrl + '" id="btnAddToCartMain" class="btn w-100 py-3 fw-bold mb-3 text-center d-block text-decoration-none" style="background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px; transition: all 0.2s;"><i class="bi bi-cart-check-fill me-1"></i> Chuyển đến giỏ hàng</a>');
+                },
+                error: function () {
+                    $('#btnAddToCartMain').replaceWith('<a href="' + cartUrl + '" id="btnAddToCartMain" class="btn w-100 py-3 fw-bold mb-3 text-center d-block text-decoration-none" style="background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px; transition: all 0.2s;"><i class="bi bi-cart-check-fill me-1"></i> Chuyển đến giỏ hàng</a>');
+                }
+            });
+        }
+
+        function buyNowAjax(courseId, btnElement) {
+            if (!courseId) return;
+            var $btn = $(btnElement);
+            var originalHtml = $btn.html();
+
+            $btn.prop('disabled', true).css('opacity', '0.75').html('⏳ Đang xử lý...');
+
+            $.ajax({
+                url: '@Url.Action("AddToCart", "Cart")',
+                type: 'POST',
+                data: { courseId: courseId },
+                success: function (res) {
+                    window.location.href = '@Url.Action("Index", "Cart")';
+                },
+                error: function () {
+                    window.location.href = '@Url.Action("Index", "Cart")';
+                }
+            });
+        }
+
+        // Accordion Expand / Collapse Functions for Course Curriculum
+        function toggleChapterAccordion(targetId, headerElem) {
+            var $target = $('#' + targetId);
+            var $header = $(headerElem);
+
+            if ($target.is(':visible')) {
+                $target.slideUp(250);
+                $header.addClass('collapsed');
+            } else {
+                $target.slideDown(250);
+                $header.removeClass('collapsed');
+            }
+        }
+
+        function toggleAllChapters() {
+            var $btn = $('#btnToggleAllChapters');
+            var isExpanded = $btn.data('expanded') !== false; // Mặc định true (đang mở tất cả)
+
+            if (isExpanded) {
+                $('.collapse-content').slideUp(250);
+                $('.chapter-header').addClass('collapsed');
+                $btn.html('<i class="bi bi-arrows-expand me-1"></i> Mở rộng tất cả');
+                $btn.data('expanded', false);
+            } else {
+                $('.collapse-content').slideDown(250);
+                $('.chapter-header').removeClass('collapsed');
+                $btn.html('<i class="bi bi-arrows-collapse me-1"></i> Thu gọn tất cả');
+                $btn.data('expanded', true);
+            }
+        }
+    </script>
+}

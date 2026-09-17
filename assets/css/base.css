@@ -1,0 +1,203 @@
+/* ==========================================================================
+   DESIGN SYSTEM - BASE STYLES (CẤU TRÚC NỀN TẢNG & TYPOGRAPHY)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--fs-body1);
+  line-height: var(--lh-body1);
+  color: var(--text-body);
+  background-color: var(--bg-canvas);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Typography Hierarchy */
+h1, .h1 {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-h1);
+  font-weight: var(--fw-h1);
+  color: var(--text-heading);
+  letter-spacing: -0.02em;
+}
+
+h2, .h2 {
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  font-weight: var(--fw-h2);
+  color: var(--text-heading);
+  letter-spacing: -0.01em;
+}
+
+h3, .h3 {
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+  font-weight: var(--fw-h3);
+  color: var(--text-heading);
+}
+
+h4, .h4 {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+p, .body-1 {
+  font-size: var(--fs-body1);
+  line-height: var(--lh-body1);
+  font-weight: var(--fw-body1);
+  color: var(--text-body);
+}
+
+.body-2 {
+  font-size: var(--fs-body2);
+  line-height: var(--lh-body2);
+  font-weight: var(--fw-body2);
+  color: var(--text-body);
+}
+
+.caption {
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-caption);
+  color: var(--text-secondary);
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+img, svg {
+  display: block;
+  max-width: 100%;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+/* ==========================================================================
+   LAYOUT CONTAINERS & GRID SYSTEM (CHUẨN 1440px / 1280px SAFE WIDTH)
+   ========================================================================== */
+
+.app-container {
+  width: 100%;
+  max-width: var(--layout-max-width);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--margin-side);
+  padding-right: var(--margin-side);
+}
+
+.safe-container {
+  width: 100%;
+  max-width: var(--content-safe-width);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+/* 12-Column Grid */
+.grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--gutter);
+}
+
+.col-12 { grid-column: span 12; }
+.col-8  { grid-column: span 8; }
+.col-7  { grid-column: span 7; }
+.col-6  { grid-column: span 6; }
+.col-5  { grid-column: span 5; }
+.col-4  { grid-column: span 4; }
+.col-3  { grid-column: span 3; }
+.col-2  { grid-column: span 2; }
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .app-container {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+  .col-8, .col-7, .col-6, .col-5, .col-4 {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .grid-12 {
+    gap: 16px;
+  }
+}
+
+/* Dashboard Shell Layout */
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-canvas);
+}
+
+.dashboard-sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-color);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+}
+
+.dashboard-main {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  padding: 32px;
+  min-width: 0;
+  background-color: var(--bg-canvas);
+}
+
+@media (max-width: 992px) {
+  .dashboard-sidebar {
+    transform: translateX(-100%);
+    transition: transform var(--transition-normal);
+  }
+  .dashboard-sidebar.active {
+    transform: translateX(0);
+  }
+  .dashboard-main {
+    margin-left: 0;
+    padding: 20px 16px;
+  }
+}

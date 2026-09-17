@@ -1,0 +1,352 @@
+@{
+    ViewBag.Title = "Không Gian Học Tập | E-Learning Platform";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var course = ViewBag.Course as ECOLearning.Models.KhoaHoc;
+    var chapters = ViewBag.Chapters as List<ECOLearning.Models.ChuongHoc> ?? new List<ECOLearning.Models.ChuongHoc>();
+    var allLessons = ViewBag.AllLessons as List<ECOLearning.Models.BaiHoc> ?? new List<ECOLearning.Models.BaiHoc>();
+    var activeLesson = ViewBag.ActiveLesson as ECOLearning.Models.BaiHoc;
+    var completedLessonIds = ViewBag.CompletedLessonIds as List<string> ?? new List<string>();
+
+    int totalCount = allLessons.Count;
+    int completedCount = completedLessonIds.Count;
+    int percentCompleted = totalCount > 0 ? (int)((double)completedCount / totalCount * 100) : 0;
+
+    int activeIndex = allLessons.FindIndex(b => b.maBaiHoc == (activeLesson != null ? activeLesson.maBaiHoc : ""));
+    var prevLesson = activeIndex > 0 ? allLessons[activeIndex - 1] : null;
+    var nextLesson = activeIndex >= 0 && activeIndex < totalCount - 1 ? allLessons[activeIndex + 1] : null;
+}
+
+@section styles {
+    <style>
+        body {
+            background-color: #0F172A !important;
+            color: #E2E8F0;
+        }
+
+        .navbar-main, footer {
+            display: none !important; /* Standalone Learning Workspace */
+        }
+
+        .study-workspace-header {
+            background: #1E293B;
+            border-bottom: 1px solid #334155;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .btn-back-course {
+            color: #94A3B8;
+            text-decoration: none;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.2s;
+        }
+
+        .btn-back-course:hover {
+            color: #FFFFFF;
+        }
+
+        .study-video-wrapper {
+            position: relative;
+            background: #000000;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            margin-bottom: 24px;
+        }
+
+        .study-video-player {
+            width: 100%;
+            max-height: 520px;
+            outline: none;
+            display: block;
+        }
+
+        .study-sidebar {
+            background: #1E293B;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            height: calc(100vh - 110px);
+            overflow-y: auto;
+            position: sticky;
+            top: 80px;
+        }
+
+        .study-sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #334155;
+            background: #0F172A;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+        }
+
+        .study-chapter-title {
+            background: #1E293B;
+            padding: 14px 18px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #F8FAFC;
+            border-bottom: 1px solid #334155;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .study-lesson-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            color: #94A3B8;
+            text-decoration: none;
+            font-size: 13.5px;
+            border-bottom: 1px solid #334155;
+            transition: all 0.2s;
+        }
+
+        .study-lesson-link:hover {
+            background: #334155;
+            color: #FFFFFF;
+        }
+
+        .study-lesson-link.active {
+            background: rgba(67, 76, 232, 0.2);
+            color: #818CF8;
+            font-weight: 600;
+            border-left: 4px solid #6366F1;
+        }
+
+        .study-lesson-link.completed .lesson-icon-status {
+            color: #10B981;
+        }
+
+        .progress-bar-glow {
+            background: linear-gradient(90deg, #6366F1, #38BDF8);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+    </style>
+}
+
+<div class="study-workspace-header">
+    <div class="d-flex align-items-center gap-3">
+        <a href="@Url.Action("Details", "Course", new { id = course != null ? course.maKhoaHoc : "" })" class="btn-back-course">
+            <i class="bi bi-arrow-left fs-5"></i> Quay lại chi tiết khóa học
+        </a>
+        <div class="vr bg-secondary opacity-50 mx-2" style="height: 24px;"></div>
+        <h6 class="fw-bold text-white mb-0 text-truncate" style="max-width: 500px;">
+            @(course != null ? course.tenKhoaHoc : "Không gian học tập")
+        </h6>
+    </div>
+
+    <div class="d-flex align-items-center gap-3" style="min-width: 260px;">
+        <div class="flex-grow-1">
+            <div class="d-flex justify-content-between fs-6 text-slate-300 mb-1">
+                <span class="small text-light opacity-75">Tiến độ khóa học</span>
+                <span class="small fw-bold text-indigo-400">@completedCount / @totalCount (@percentCompleted%)</span>
+            </div>
+            <div class="progress bg-slate-700" style="height: 8px; border-radius: 999px;">
+                <div class="progress-bar progress-bar-glow" role="progressbar" style="width: @percentCompleted%;" aria-valuenow="@percentCompleted" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid py-4 px-lg-5">
+    <div class="row g-4">
+        <!-- Main Video Area (Left) -->
+        <div class="col-lg-8">
+            @if (activeLesson != null)
+            {
+                <div class="study-video-wrapper">
+                    @if (!string.IsNullOrEmpty(activeLesson.duongDanVideo))
+                    {
+                        <video id="studyPlayer" controls controlsList="nodownload" class="study-video-player" poster="@(course != null ? course.anhBia : "")">
+                            <source id="videoSource" src="@activeLesson.duongDanVideo" type="video/mp4" />
+                            Trình duyệt không hỗ trợ HTML5 Video.
+                        </video>
+                    }
+                    else
+                    {
+                        <div class="p-5 text-center text-white my-4">
+                            <i class="bi bi-camera-video-off fs-1 text-secondary mb-3 d-block"></i>
+                            <h4 class="fw-bold text-white mb-2">Video đang trong quá trình phát triển</h4>
+                            <p class="text-secondary small mb-0">Nội dung video cho bài học thử nghiệm này hiện chưa cập nhật.</p>
+                        </div>
+                    }
+                </div>
+
+                <div class="card border-0 rounded-4 p-4 text-white" style="background: #1E293B; border: 1px solid #334155 !important;">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                        <div>
+                            <span class="badge bg-indigo-500 text-white mb-2" style="background: #434CE8;">
+                                Bài @(activeIndex + 1) / @totalCount
+                            </span>
+                            <h4 class="fw-bold text-white mb-1">@activeLesson.tenBaiHoc</h4>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            @if (prevLesson != null)
+                            {
+                                <a href="@Url.Action("Study", "Learning", new { courseId = course.maKhoaHoc, lessonId = prevLesson.maBaiHoc })" class="btn btn-outline-light rounded-3 px-3 py-2">
+                                    <i class="bi bi-chevron-left me-1"></i> Bài trước
+                                </a>
+                            }
+                            @if (nextLesson != null)
+                            {
+                                <a href="@Url.Action("Study", "Learning", new { courseId = course.maKhoaHoc, lessonId = nextLesson.maBaiHoc })" class="btn btn-primary rounded-3 px-4 py-2" style="background: #434CE8; border-color: #434CE8;">
+                                    Bài tiếp theo <i class="bi bi-chevron-right ms-1"></i>
+                                </a>
+                            }
+                        </div>
+                    </div>
+
+                    <hr class="border-secondary opacity-25 my-3" />
+
+                    <div class="d-flex gap-4">
+                        <div>
+                            <span class="text-secondary small d-block mb-1">Thời lượng bài học</span>
+                            <span class="fw-semibold text-light"><i class="bi bi-clock me-1 text-primary"></i> @((activeLesson.thoiLuong ?? 0) / 60) phút @((activeLesson.thoiLuong ?? 0) % 60) giây</span>
+                        </div>
+                        <div>
+                            <span class="text-secondary small d-block mb-1">Trạng thái bài học</span>
+                            @if (completedLessonIds.Contains(activeLesson.maBaiHoc))
+                            {
+                                <span class="badge bg-success text-white"><i class="bi bi-check-circle-fill me-1"></i> Đã hoàn thành</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark" id="statusBadgeCurrent"><i class="bi bi-play-circle me-1"></i> Đang xem</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning">Khóa học này chưa có bài học nào.</div>
+            }
+        </div>
+
+        <!-- Curriculum Sidebar (Right) -->
+        <div class="col-lg-4">
+            <div class="study-sidebar">
+                <div class="study-sidebar-header">
+                    <h6 class="fw-bold text-white mb-1"><i class="bi bi-list-stars me-2 text-primary"></i> Nội dung khóa học</h6>
+                    <small class="text-secondary">@chapters.Count chương • @allLessons.Count bài học</small>
+                </div>
+
+                @if (chapters.Count > 0)
+                {
+                    int chapIndex = 1;
+                    foreach (var chap in chapters)
+                    {
+                        var lessons = chap.BaiHoc != null ? chap.BaiHoc.OrderBy(b => b.thuTu).ToList() : new List<ECOLearning.Models.BaiHoc>();
+
+                        <div class="study-chapter-group">
+                            <div class="study-chapter-title" data-bs-toggle="collapse" data-bs-target="#collapseChapSide_@chapIndex">
+                                <span>@chap.tenChuong</span>
+                                <i class="bi bi-chevron-down text-secondary"></i>
+                            </div>
+
+                            <div id="collapseChapSide_@chapIndex" class="collapse show">
+                                @foreach (var les in lessons)
+                                {
+                                    bool isActive = activeLesson != null && les.maBaiHoc == activeLesson.maBaiHoc;
+                                    bool isCompleted = completedLessonIds.Contains(les.maBaiHoc);
+                                    int lesMin = (les.thoiLuong ?? 0) / 60;
+                                    int lesSec = (les.thoiLuong ?? 0) % 60;
+                                    string durationStr = string.Format("{0:D2}:{1:D2}", lesMin, lesSec);
+
+                                    <a href="@Url.Action("Study", "Learning", new { courseId = course.maKhoaHoc, lessonId = les.maBaiHoc })"
+                                       class="study-lesson-link @(isActive ? "active" : "") @(isCompleted ? "completed" : "")">
+                                        <div class="d-flex align-items-center gap-2 text-truncate me-2">
+                                            @if (isCompleted)
+                                            {
+                                                <i class="bi bi-check-circle-fill lesson-icon-status fs-6"></i>
+                                            }
+                                            else if (isActive)
+                                            {
+                                                <i class="bi bi-play-circle-fill text-primary fs-6"></i>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-play-circle text-secondary fs-6"></i>
+                                            }
+                                            <span class="text-truncate">@les.tenBaiHoc</span>
+                                        </div>
+                                        <span class="small text-secondary text-nowrap">@durationStr</span>
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                        chapIndex++;
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        var currentLessonId = '@(activeLesson != null ? activeLesson.maBaiHoc : "")';
+        var currentCourseId = '@(course != null ? course.maKhoaHoc : "")';
+        var hasSavedProgress = false;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var player = document.getElementById('studyPlayer');
+            if (!player || !currentLessonId) return;
+
+            // Auto-play video
+            player.play().catch(function (e) {
+                console.log("Autoplay prevented by browser:", e);
+            });
+
+            // Monitor video progress and send AJAX to DB when 80% watched or ended
+            player.addEventListener('timeupdate', function () {
+                if (player.duration > 0) {
+                    var percent = (player.currentTime / player.duration) * 100;
+                    if (percent >= 80 && !hasSavedProgress) {
+                        hasSavedProgress = true;
+                        sendProgressToDatabase(player.currentTime, player.duration);
+                    }
+                }
+            });
+
+            player.addEventListener('ended', function () {
+                sendProgressToDatabase(player.duration, player.duration);
+            });
+        });
+
+        function sendProgressToDatabase(watched, total) {
+            $.ajax({
+                url: '/Learning/UpdateProgress',
+                type: 'POST',
+                data: {
+                    courseId: currentCourseId,
+                    lessonId: currentLessonId,
+                    durationWatched: watched,
+                    totalDuration: total
+                },
+                success: function (res) {
+                    if (res && res.completed) {
+                        var badge = document.getElementById('statusBadgeCurrent');
+                        if (badge) {
+                            badge.className = 'badge bg-success text-white';
+                            badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Đã hoàn thành';
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+}

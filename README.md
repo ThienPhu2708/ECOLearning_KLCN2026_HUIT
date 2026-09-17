@@ -41,15 +41,5 @@ cd ECOLearning_KLCN2026_HUIT
 
 ---
 
-## 🔑 3. Tài Khoản Thử Nghiệm (Demo Accounts)
-
-| Vai trò | Email đăng nhập | Mật khẩu |
-| :--- | :--- | :--- |
-| **Học viên (Student)** | `hocvien@elearning.vn` | `123456` |
-| **Giảng viên (Instructor)** | `giao_vien@elearning.vn` | `123456` |
-| **Quản trị viên (Admin)** | `admin@elearning.vn` | `123456` |
-
----
-
 ## 📁 4. Tài Liệu Cấu Trúc Hệ Thống
 Vui lòng xem chi tiết cấu trúc thư mục và mô tả chức năng từng file tại [CauTrucHeThong.md](CauTrucHeThong.md).

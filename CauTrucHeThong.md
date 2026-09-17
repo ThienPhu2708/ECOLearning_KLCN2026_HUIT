@@ -86,6 +86,13 @@ Chia dự án thành các phân vùng độc lập theo vai trò:
 ---
 
 ### 🎨 `assets/` & `Scripts/` — Tài Nguyên Giao Diện
+- **`assets/images/`**: Thư mục quản lý hình ảnh hệ thống:
+  - `avatars/`: Ảnh đại diện người dùng (Học viên, Giảng viên, Admin).
+  - `courses/`: Ảnh bìa khóa học và các ảnh tải lên của bài học (`covers/`).
+  - `banners/`: Ảnh banner quảng cáo, slider trang chủ và các chiến dịch Marketing.
+  - `categories/`: Ảnh icon/minh họa đại diện cho các danh mục khóa học.
+  - `defaults/`: Ảnh dự phòng (fallback) hiển thị khi link ngoài bị lỗi/hư hỏng.
+  - `icons/`: Logo và biểu tượng hệ thống.
 - **`assets/js/app.js`**: JavaScript xử lý tương tác UI/UX chung (Modal, Toast notification, Rating star, Cart warning toast).
 - **`assets/css/`**: Các tệp CSS tùy chỉnh giao diện chuẩn thiết kế hiện đại.
 - **`Scripts/jquery-3.7.0.min.js`**: Thư viện jQuery xử lý AJAX và tương tác DOM.

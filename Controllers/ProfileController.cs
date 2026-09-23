@@ -4,6 +4,7 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using ECOLearning.Models;
+using ECOLearning.Services;
 using ECOLearning.ViewModels;
 
 namespace ECOLearning.Controllers
@@ -36,22 +37,7 @@ namespace ECOLearning.Controllers
 
                 if (user == null)
                 {
-                    // Giả lập thông tin mẫu nếu CSDL chưa có record
-                    var demoModel = new StudentProfileViewModel
-                    {
-                        UserId = userId.Value,
-                        FullName = Session["FullName"]?.ToString() ?? "Học viên Nguyễn Văn A",
-                        Email = Session["Email"]?.ToString() ?? "hocvien@elearning.vn",
-                        Phone = "0912345678",
-                        Gender = "Nam",
-                        BirthDate = new DateTime(2002, 5, 15),
-                        AvatarUrl = Session["Avatar"]?.ToString() ?? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-                        RoleName = "Học viên",
-                        EnrolledCoursesCount = 3,
-                        CompletedCoursesCount = 1,
-                        TotalCertificates = 1
-                    };
-                    return View(demoModel);
+                    return RedirectToAction("Login", "Account");
                 }
 
                 // Thống kê tiến độ học tập từ CSDL
@@ -62,10 +48,11 @@ namespace ECOLearning.Controllers
                     enrolledCount = db.DangKyKhoaHoc.Count(d => d.maHocVien == user.maNguoiDung);
                     completedCount = db.TienDoHocTap.Count(t => t.maHocVien == user.maNguoiDung && t.phanTramHoanThanh >= 100);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    enrolledCount = 3;
-                    completedCount = 1;
+                    System.Diagnostics.Debug.WriteLine("Profile Stats Error: " + ex.Message);
+                    enrolledCount = 0;
+                    completedCount = 0;
                 }
 
                 var model = new StudentProfileViewModel
@@ -89,16 +76,7 @@ namespace ECOLearning.Controllers
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("Profile Index Error: " + ex.Message);
-                return View(new StudentProfileViewModel
-                {
-                    FullName = Session["FullName"]?.ToString() ?? "Học viên",
-                    Email = Session["Email"]?.ToString() ?? "hocvien@elearning.vn",
-                    AvatarUrl = Session["Avatar"]?.ToString() ?? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-                    RoleName = "Học viên",
-                    EnrolledCoursesCount = 1,
-                    CompletedCoursesCount = 0,
-                    TotalCertificates = 0
-                });
+                return RedirectToAction("Login", "Account");
             }
         }
 
@@ -129,15 +107,17 @@ namespace ECOLearning.Controllers
                     }
                 }
 
-                if (user != null)
+                if (user == null)
                 {
-                    user.hoTen = fullName.Trim();
-                    user.soDienThoai = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim();
-                    user.gioiTinh = gender;
-                    user.ngaySinh = birthDate;
-
-                    db.SaveChanges();
+                    return Json(new { success = false, message = "Không tìm thấy thông tin người dùng trong hệ thống!" });
                 }
+
+                user.hoTen = fullName.Trim();
+                user.soDienThoai = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim();
+                user.gioiTinh = gender;
+                user.ngaySinh = birthDate;
+
+                db.SaveChanges();
 
                 // Cập nhật lại Session hiển thị toàn bộ hệ thống
                 Session["FullName"] = fullName.Trim();
@@ -147,8 +127,7 @@ namespace ECOLearning.Controllers
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("UpdateInfo Error: " + ex.Message);
-                Session["FullName"] = fullName.Trim();
-                return Json(new { success = true, message = "Đã lưu thay đổi thông tin thành công!" });
+                return Json(new { success = false, message = "Có lỗi xảy ra khi lưu thông tin: " + ex.Message });
             }
         }
 
@@ -200,11 +179,13 @@ namespace ECOLearning.Controllers
                     }
                 }
 
-                if (user != null)
+                if (user == null)
                 {
-                    user.anhDaiDien = relativeUrl;
-                    db.SaveChanges();
+                    return Json(new { success = false, message = "Không tìm thấy tài khoản người dùng!" });
                 }
+
+                user.anhDaiDien = relativeUrl;
+                db.SaveChanges();
 
                 // Cập nhật Session
                 Session["Avatar"] = relativeUrl;
@@ -255,23 +236,25 @@ namespace ECOLearning.Controllers
                     }
                 }
 
-                if (user != null)
+                if (user == null)
                 {
-                    if (user.matKhau != currentPassword && currentPassword != "123456")
-                    {
-                        return Json(new { success = false, message = "Mật khẩu hiện tại không chính xác!" });
-                    }
-
-                    user.matKhau = newPassword;
-                    db.SaveChanges();
+                    return Json(new { success = false, message = "Không tìm thấy người dùng!" });
                 }
+
+                if (!PasswordHasher.VerifyPassword(user.matKhau, currentPassword))
+                {
+                    return Json(new { success = false, message = "Mật khẩu hiện tại không chính xác!" });
+                }
+
+                user.matKhau = PasswordHasher.HashPassword(newPassword);
+                db.SaveChanges();
 
                 return Json(new { success = true, message = "Đổi mật khẩu tài khoản thành công!" });
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("ChangePassword Error: " + ex.Message);
-                return Json(new { success = true, message = "Đổi mật khẩu thành công!" });
+                return Json(new { success = false, message = "Không thể đổi mật khẩu. Vui lòng thử lại sau!" });
             }
         }
 

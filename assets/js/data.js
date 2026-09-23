@@ -5,12 +5,12 @@
 
 const mockData = {
   categories: [
-    { id: 'cat-1', name: 'Lập trình & CNTT', count: 48, code: 'DEV', icon: '💻' },
-    { id: 'cat-2', name: 'Thiết kế Đồ họa & UI/UX', count: 32, code: 'DSG', icon: '🎨' },
-    { id: 'cat-3', name: 'Marketing & Truyền thông số', count: 26, code: 'MKT', icon: '📢' },
-    { id: 'cat-4', name: 'Kinh doanh & Khởi nghiệp', count: 19, code: 'BIZ', icon: '💼' },
-    { id: 'cat-5', name: 'Khoa học Dữ liệu & Trí tuệ nhân tạo', count: 24, code: 'AI', icon: '🤖' },
-    { id: 'cat-6', name: 'Ngoại ngữ & Kỹ năng mềm', count: 35, code: 'LANG', icon: '🌐' }
+    { id: 'cat-1', name: 'Lập trình & CNTT', count: 48, code: 'DEV', icon: 'bi-laptop' },
+    { id: 'cat-2', name: 'Thiết kế Đồ họa & UI/UX', count: 32, code: 'DSG', icon: 'bi-palette' },
+    { id: 'cat-3', name: 'Marketing & Truyền thông số', count: 26, code: 'MKT', icon: 'bi-megaphone' },
+    { id: 'cat-4', name: 'Kinh doanh & Khởi nghiệp', count: 19, code: 'BIZ', icon: 'bi-briefcase' },
+    { id: 'cat-5', name: 'Khoa học Dữ liệu & Trí tuệ nhân tạo', count: 24, code: 'AI', icon: 'bi-cpu' },
+    { id: 'cat-6', name: 'Ngoại ngữ & Kỹ năng mềm', count: 35, code: 'LANG', icon: 'bi-globe' }
   ],
 
   courses: [

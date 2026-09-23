@@ -66,11 +66,11 @@ namespace ECOLearning.Services
                                 <div class='otp-box'>
                                     <div style='font-size: 13px; font-weight: 600; color: #434CE8; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;'>Mã xác thực OTP của bạn</div>
                                     <div class='otp-code'>{otpCode}</div>
-                                    <div class='expiry-note'>⏰ Mã này có hiệu lực trong vòng <strong>5 phút</strong>.</div>
+                                    <div class='expiry-note'>Mã này có hiệu lực trong vòng <strong>5 phút</strong>.</div>
                                 </div>
 
                                 <div class='warning'>
-                                    ⚠️ <strong>Lưu ý an toàn:</strong> Không chia sẻ mã này với bất kỳ ai, kể cả nhân viên hỗ trợ của E-Learning.
+                                    <strong>Lưu ý an toàn:</strong> Không chia sẻ mã này với bất kỳ ai, kể cả nhân viên hỗ trợ của E-Learning.
                                 </div>
                             </div>
                             <div class='footer'>

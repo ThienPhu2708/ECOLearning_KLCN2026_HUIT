@@ -1,0 +1,213 @@
+@using ECOLearning.Models
+@{
+ViewBag.Title = "Đăng Ký Trở Thành Giảng Viên | E-Learning";
+Layout = "~/Views/Shared/_Layout.cshtml";
+var user = ViewBag.User as NguoiDung;
+var existingApp = ViewBag.ExistingApp as TeacherApplication;
+}
+
+<div style="background-color: var(--bg-body, #F8FAFC); min-height: calc(100vh - 70px); padding: 40px 0;">
+    <div class="container" style="max-width: 860px; margin: 0 auto; padding: 0 20px;">
+
+        <!-- Header Banner -->
+        <div style="background: linear-gradient(135deg, #0F172A 0%, #0D9488 100%); border-radius: 20px; padding: 36px 40px; color: #FFFFFF; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(13, 148, 136, 0.15); position: relative; overflow: hidden;">
+            <span style="display: inline-block; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 30px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">
+                Cổng Đăng Ký giáo viên
+            </span>
+            <h1 style="font-size: 28px; font-weight: 800; margin-bottom: 10px; color: #FFFFFF; line-height: 1.3;">
+                Gia nhập và trực tiếp giảng dạy trên hệ thống
+            </h1>
+            <p style="font-size: 15px; color: rgba(255,255,255,0.85); margin: 0; max-width: 620px; line-height: 1.6;">
+                Nộp hồ sơ chuyên môn của bạn để tham gia đội ngũ giáo viên. Sau khi được phê duyệt, bạn có thể tự do xuất bản các khóa học và nhận mức doanh thu hấp dẫn.
+            </p>
+        </div>
+
+        @if (existingApp != null && existingApp.Status == "Rejected")
+        {
+            <div style="background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 14px; padding: 16px 20px; margin-bottom: 24px; color: #991B1B;">
+                <div style="display: flex; align-items: center; gap: 10px; font-weight: 700; margin-bottom: 6px;">
+                    <i class="bi bi-exclamation-triangle-fill" style="color: #DC2626; font-size: 18px;"></i>
+                    Hồ sơ trước đó của bạn đã bị từ chối
+                </div>
+                <div style="font-size: 14px; line-height: 1.5; color: #7F1D1D;">
+                    Lý do: <strong>@(string.IsNullOrEmpty(existingApp.RejectionReason) ? "Thông tin bằng cấp chưa đủ điều kiện" : existingApp.RejectionReason)</strong>.
+                    Bạn có thể cập nhật lại hồ sơ mới bên dưới để gửi xét duyệt lại.
+                </div>
+            </div>
+        }
+
+        <!-- Registration Form Card -->
+        <div style="background: #FFFFFF; border-radius: 20px; border: 1px solid #E2E8F0; padding: 36px; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+
+            @using (Html.BeginForm("Register", "TeacherApplication", new { area = "Instructor" }, FormMethod.Post, new { enctype = "multipart/form-data", id = "teacher-register-form" }))
+            {
+                @Html.AntiForgeryToken()
+
+                if (!ViewData.ModelState.IsValid)
+                {
+                    <div style="background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; color: #991B1B; font-size: 14px;">
+                        <strong style="display: block; margin-bottom: 6px;"><i class="bi bi-exclamation-triangle-fill me-1"></i> Vui lòng kiểm tra lại các thông tin:</strong>
+                        @Html.ValidationSummary(false, "", new { style = "margin: 0; padding-left: 20px;" })
+                    </div>
+                }
+
+                <!-- Section 1: Thông tin cá nhân -->
+                <div style="margin-bottom: 32px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px;">
+                        <span style="width: 28px; height: 28px; border-radius: 50%; background: #0D9488; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;">1</span>
+                        <h2 style="font-size: 18px; font-weight: 700; color: #0F172A; margin: 0;">Thông tin cá nhân</h2>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <label style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                                Họ và tên <span style="color: #EF4444;">*</span>
+                            </label>
+                            <input type="text" value="@(user != null ? user.hoTen : "")" readonly
+                            style="width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid #CBD5E1; background: #F8FAFC; color: #64748B; font-weight: 600; font-size: 14px; box-sizing: border-box;" />
+                            <small style="color: #94A3B8; font-size: 12px; margin-top: 4px; display: block;">Lấy từ thông tin tài khoản hiện tại</small>
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                                Email liên hệ <span style="color: #EF4444;">*</span>
+                            </label>
+                            <input type="email" value="@(user != null ? user.email : "")" readonly
+                            style="width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid #CBD5E1; background: #F8FAFC; color: #64748B; font-weight: 600; font-size: 14px; box-sizing: border-box;" />
+                            <small style="color: #94A3B8; font-size: 12px; margin-top: 4px; display: block;">Dùng để nhận thông báo duyệt hồ sơ</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Chuyên môn & Kinh nghiệm -->
+                <div style="margin-bottom: 32px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px;">
+                        <span style="width: 28px; height: 28px; border-radius: 50%; background: #0D9488; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;">2</span>
+                        <h2 style="font-size: 18px; font-weight: 700; color: #0F172A; margin: 0;">Năng lực chuyên môn & Giảng dạy</h2>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                            Lĩnh vực chuyên môn chính <span style="color: #EF4444;">*</span>
+                        </label>
+                        <input type="text" name="specialization" placeholder="VD: Lập trình Web Fullstack, Thiết kế UI/UX, AI & Machine Learning..."
+                        required style="width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid #CBD5E1; font-size: 14px; box-sizing: border-box; transition: all 0.2s;" />
+                    </div>
+
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <label style="font-size: 14px; font-weight: 600; color: #334155; margin: 0;">
+                                Giới thiệu bản thân & Kinh nghiệm thực chiến <span style="color: #EF4444;">*</span>
+                            </label>
+                            <span id="char-count" style="font-size: 12px; color: #94A3B8; font-weight: 600;">0 / 50 ký tự tối thiểu</span>
+                        </div>
+                        <textarea name="bioExperience" id="bioExperience" rows="5" placeholder="Hãy mô tả ngắn gọn lịch sử làm việc, kinh nghiệm giảng dạy hoặc các dự án tiêu biểu bạn từng thực hiện (tối thiểu 50 ký tự)..."
+                        required style="width: 100%; padding: 14px 16px; border-radius: 10px; border: 1px solid #CBD5E1; font-size: 14px; font-family: inherit; line-height: 1.5; box-sizing: border-box; resize: vertical;"></textarea>
+                    </div>
+                </div>
+
+                <!-- Section 3: Hồ sơ bằng cấp -->
+                <div style="margin-bottom: 32px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px;">
+                        <span style="width: 28px; height: 28px; border-radius: 50%; background: #0D9488; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;">3</span>
+                        <h2 style="font-size: 18px; font-weight: 700; color: #0F172A; margin: 0;">Tệp bằng cấp / Chứng chỉ đính kèm</h2>
+                    </div>
+
+                    <div style="border: 2px dashed #CBD5E1; border-radius: 14px; padding: 24px; text-align: center; background: #F8FAFC; cursor: pointer; transition: all 0.2s;" id="drop-zone" onclick="document.getElementById('certificateFile').click();">
+                        <div style="font-size: 36px; margin-bottom: 8px; color: #0D9488;"><i class="bi bi-file-earmark-arrow-up"></i></div>
+                        <div style="font-size: 15px; font-weight: 700; color: #0F172A; margin-bottom: 4px;">
+                            Nhấn để tải lên tệp bằng cấp hoặc chứng chỉ chuyên môn
+                        </div>
+                        <div style="font-size: 13px; color: #64748B;">
+                            Định dạng hỗ trợ: <strong>.PDF, .PNG, .JPG, .JPEG</strong> (Dung lượng tối đa <strong>5MB</strong>)
+                        </div>
+                        <input type="file" name="certificateFile" id="certificateFile" accept=".pdf,.png,.jpg,.jpeg" required style="display: none;" onchange="handleFileSelect(this);" />
+                        <div id="file-name-display" style="margin-top: 12px; font-size: 13px; font-weight: 700; color: #0D9488; display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Thông tin nhận thanh toán -->
+                <div style="margin-bottom: 32px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px;">
+                        <span style="width: 28px; height: 28px; border-radius: 50%; background: #0D9488; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;">4</span>
+                        <h2 style="font-size: 18px; font-weight: 700; color: #0F172A; margin: 0;">Thông tin nhận thanh toán doanh thu</h2>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                        <div>
+                            <label style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                                Tên Ngân hàng <span style="color: #EF4444;">*</span>
+                            </label>
+                            <input type="text" name="bankName" placeholder="VD: Vietcombank, MB Bank, Techcombank..." required
+                            style="width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #CBD5E1; font-size: 14px; box-sizing: border-box;" />
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                                Số tài khoản <span style="color: #EF4444;">*</span>
+                            </label>
+                            <input type="text" name="accountNumber" placeholder="VD: 1012345678" required
+                            style="width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #CBD5E1; font-size: 14px; box-sizing: border-box;" />
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                                Tên chủ tài khoản <span style="color: #EF4444;">*</span>
+                            </label>
+                            <input type="text" name="accountName" placeholder="VD: NGUYEN VAN A" required style="text-transform: uppercase;"
+                            style="width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #CBD5E1; font-size: 14px; box-sizing: border-box;" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Điều khoản & Nộp đơn -->
+                <div style="margin-bottom: 24px; padding: 20px; background: #F8FAFC; border-radius: 12px; border: 1px solid #E2E8F0;">
+                    <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer; margin: 0;">
+                        <input type="checkbox" name="termsAgreed" value="true" required style="width: 18px; height: 18px; margin-top: 2px; accent-color: #0D9488;" />
+                        <span style="font-size: 14px; color: #475569; line-height: 1.5;">
+                            Tôi cam kết toàn bộ thông tin bằng cấp & kinh nghiệm cung cấp là hoàn toàn chính xác. Tôi đồng ý tuân thủ
+                            <a href="#" style="color: #0D9488; text-decoration: underline; font-weight: 600;">Điều khoản hợp tác đối tác giảng dạy</a> của E-Learning.
+                        </span>
+                    </label>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 14px;">
+                    <a href="@Url.Action("Index", "Home", new { area = "" })" class="btn btn-outline" style="border-radius: 12px; padding: 12px 24px; font-weight: 600; text-decoration: none;">
+                        Hủy bỏ
+                    </a>
+                    <button type="submit" class="btn" style="background: #0D9488; color: #FFFFFF; border-radius: 12px; padding: 12px 32px; font-weight: 700; border: none; font-size: 15px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);">
+                        Gửi Hồ Sơ Xét Duyệt
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<script>
+    const bioInput = document.getElementById('bioExperience');
+    const charCount = document.getElementById('char-count');
+
+    if (bioInput && charCount) {
+    bioInput.addEventListener('input', function () {
+    const len = this.value.trim().length;
+    charCount.textContent = len + ' / 50 ký tự tối thiểu';
+    if (len >= 50) {
+    charCount.style.color = '#10B981';
+}
+else
+{
+    charCount.style.color = '#94A3B8';
+}
+});
+}
+
+function handleFileSelect(input) {
+const display = document.getElementById('file-name-display');
+if (input.files && input.files[0]) {
+const file = input.files[0];
+display.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Đã chọn: ' + file.name + ' (' + (file.size / (1024 * 1024)).toFixed(2) + ' MB)';
+display.style.display = 'block';
+}
+}
+</script>

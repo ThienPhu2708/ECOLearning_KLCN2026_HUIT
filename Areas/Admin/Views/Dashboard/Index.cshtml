@@ -1,0 +1,189 @@
+@model ECOLearning.Areas.Admin.Models.AdminDashboardViewModel
+@{
+ViewBag.Title = "Dashboard Quản Trị Viên";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+    <div>
+        <h1 class="h2" style="margin-top: 6px;">Tổng Quan Vận Hành Hệ Thống</h1>
+        <p class="body-2" style="color: var(--text-secondary);">Giám sát các chỉ số kinh doanh, người dùng và hàng chờ kiểm duyệt toàn sàn</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin" })" class="btn btn-primary">
+            Kiểm duyệt ngay
+        </a>
+    </div>
+</div>
+
+<!-- 4 OPERATIONAL KPI CARDS COMPLIANT WITH 3.3.1.4 -->
+<div class="grid-12" style="margin-bottom: 32px;">
+    <!-- Card 1: Total Revenue -->
+    <div class="col-3">
+        <div class="kpi-card">
+            <div class="kpi-info">
+                <h4>Tổng doanh thu sàn</h4>
+                <div class="kpi-value">
+                    @if (Model.TotalRevenue >= 1000000000)
+                    {
+                        @((Model.TotalRevenue / 1000000000m).ToString("0.##") + " Tỷ")
+                    }
+                    else if (Model.TotalRevenue >= 1000000)
+                    {
+                        @((Model.TotalRevenue / 1000000m).ToString("0.#") + " Triệu")
+                    }
+                    else
+                    {
+                        @Model.TotalRevenue.ToString("#,##0 đ")
+                    }
+                </div>
+                <div class="kpi-trend positive">
+                    <span><i class="bi bi-arrow-up-short"></i> +22.8%</span> vs tháng trước
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Total Users -->
+    <div class="col-3">
+        <div class="kpi-card">
+            <div class="kpi-info">
+                <h4>Tổng người dùng</h4>
+                <div class="kpi-value">@Model.TotalUsers.ToString("#,##0")</div>
+                <div class="kpi-trend positive">
+                    <span>@Model.TotalStudents HV • @Model.TotalInstructors GV</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Active Courses -->
+    <div class="col-3">
+        <div class="kpi-card">
+            <div class="kpi-info">
+                <h4>Khóa học hoạt động</h4>
+                <div class="kpi-value">@Model.ActiveCoursesCount</div>
+                <div class="caption" style="color: var(--text-secondary); margin-top: 4px;">
+                    Đang mở bán trên toàn sàn
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 4: Pending Moderation -->
+    <div class="col-3">
+        <div class="kpi-card" style="border-color: #FCD34D;">
+            <div class="kpi-info">
+                <h4>Khóa học Chờ duyệt</h4>
+                <div class="kpi-value" style="color: var(--status-warning);">@Model.PendingCoursesCount.ToString("0") khóa</div>
+                <div class="caption" style="color: var(--status-danger); margin-top: 4px;">
+                    Yêu cầu xử lý trong 24h
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CHARTS SECTION -->
+<div class="grid-12" style="margin-bottom: 32px;">
+    <!-- User Growth & Traffic -->
+    <div class="col-8">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div>
+                    <h3 class="h3">Tăng Trưởng Người Dùng Mới & Lưu Lượng</h3>
+                    <span class="caption">Học viên và giáo viên đăng ký mới qua từng tháng</span>
+                </div>
+                <span class="badge badge-success">+@Model.TotalStudents user tháng này</span>
+            </div>
+            <div id="admin-growth-chart"></div>
+        </div>
+    </div>
+
+    <!-- Category Distribution -->
+    <div class="col-4">
+        <div class="card">
+            <h3 class="h3" style="margin-bottom: 6px;">Tỷ Trọng Khóa Học</h3>
+            <span class="caption" style="display: block; margin-bottom: 20px;">Phân bổ theo danh mục đào tạo</span>
+            <div id="admin-category-donut"></div>
+        </div>
+    </div>
+</div>
+
+<!-- RECENT PENDING APPROVALS TABLE -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <h3 class="h3">Khóa học đang đợi phê duyệt</h3>
+            <span class="caption">Cần kiểm tra chất lượng video bài giảng và đề cương trước khi xuất bản</span>
+        </div>
+        <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin" })" class="btn btn-outline btn-sm">Xem tất cả hàng chờ <i class="bi bi-arrow-right"></i></a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Tên Khóa Học</th>
+                    <th>Giáo Viên Gửi</th>
+                    <th>Danh Mục</th>
+                    <th>Ngày Gửi</th>
+                    <th>Nội Dung</th>
+                    <th>Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.PendingCourses != null && Model.PendingCourses.Any())
+                {
+                    foreach (var item in Model.PendingCourses)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@item.TenKhoaHoc</strong>
+                            </td>
+                            <td>@item.TenGiaoVien</td>
+                            <td><span class="badge badge-primary">@item.TenDanhMuc</span></td>
+                            <td>@(item.NgayGui.HasValue ? item.NgayGui.Value.ToString("dd/MM/yyyy") : DateTime.Now.ToString("dd/MM/yyyy"))</td>
+                            <td>@item.SoVideo video • @item.SoTaiLieu tài liệu</td>
+                            <td>
+                                <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin", id = item.MaKhoaHoc })" class="btn btn-primary btn-sm">Kiểm duyệt</a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 24px;">
+                            Hiện không có khóa học nào đang chờ kiểm duyệt.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+    // Growth Chart
+    const growthData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyGrowthData));
+    const growthLabels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyGrowthLabels));
+
+    if (window.Charts && typeof Charts.renderLineChart === 'function') {
+    Charts.renderLineChart('admin-growth-chart', {
+    data: growthData,
+    labels: growthLabels,
+    color: '#434CE8',
+    fillColor: 'rgba(67, 76, 232, 0.08)'
+    });
+
+    // Donut chart
+    const donutSegments = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.CategoryDonutSegments.Select(s => new { label = s.Label, value = s.Value, color = s.Color })));
+    Charts.renderDonutChart('admin-category-donut', {
+    segments: donutSegments
+    });
+}
+});
+</script>
+}

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="vi">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>@ViewBag.Title | E-Learning Admin</title>
+        <link rel="stylesheet" href="~/assets/css/variables.css">
+        <link rel="stylesheet" href="~/assets/css/base.css">
+        <link rel="stylesheet" href="~/assets/css/components.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    </head>
+    <body>
+        <div class="dashboard-layout">
+            <!-- SIDEBAR -->
+            <aside class="dashboard-sidebar">
+                <div class="sidebar-logo">
+                    <a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })" class="brand-logo">
+                        <div class="logo-icon" style="width: 34px; height: 34px; background: #0F172A;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                                <path d="M2 17l10 5 10-5"></path>
+                                <path d="M2 12l10 5 10-5"></path>
+                            </svg>
+                        </div>
+                        <span class="logo-text" style="font-size: 18px;">Admin Hub<span>.</span></span>
+                    </a>
+                </div>
+
+                @{
+                string currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Dashboard";
+            }
+
+            <nav class="sidebar-menu">
+                <a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })" class="sidebar-item @(currentController == "Dashboard" ? "active" : "")">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    Dashboard hệ thống
+                </a>
+                <a href="@Url.Action("Index", "Category", new { area = "Admin" })" class="sidebar-item @(currentController == "Category" ? "active" : "")">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                    Quản lý danh mục
+                </a>
+                <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin" })" class="sidebar-item @(currentController == "CourseApproval" ? "active" : "")">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 11l3 3L22 4"></path>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                    </svg>
+                    Kiểm duyệt khóa học
+                </a>
+                <a href="@Url.Action("Index", "TeacherApproval", new { area = "Admin" })" class="sidebar-item @(currentController == "TeacherApproval" ? "active" : "")">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="8.5" cy="7" r="4"></circle>
+                        <polyline points="17 11 19 13 23 9"></polyline>
+                    </svg>
+                    Duyệt hồ sơ Giáo viên
+                </a>
+                <a href="@Url.Action("Index", "SystemReport", new { area = "Admin" })" class="sidebar-item @(currentController == "SystemReport" ? "active" : "")">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    Báo cáo hệ thống
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; cursor: pointer;" onclick="confirmAdminLogout()">Đăng xuất</button>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <main class="dashboard-main">
+            <!-- TOP NAVIGATION BAR -->
+            <header class="dashboard-topbar">
+                <nav class="breadcrumb-nav">
+                    <a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })">Admin</a>
+                    @if (ViewBag.BreadcrumbCurrent != null)
+                    {
+                        <span class="separator">/</span>
+                        <span class="current">@ViewBag.BreadcrumbCurrent</span>
+                    }
+                </nav>
+                <div class="topbar-actions">
+                    <a href="@Url.Action("Index", "Home", new { area = "" })" class="btn btn-outline btn-sm">Về Trang chủ</a>
+                </div>
+            </header>
+
+            @RenderBody()
+        </main>
+    </div>
+
+    <!-- MODAL XÁC NHẬN ĐĂNG XUẤT ADMIN -->
+    <div class="modal-overlay" id="admin-logout-modal">
+        <div class="modal-container" style="max-width: 420px; text-align: center; padding: 32px 24px; border-radius: 20px; background: #FFFFFF;">
+            <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); color: #EF4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+            </div>
+            <h3 class="h3" style="margin-bottom: 8px;">Xác nhận đăng xuất</h3>
+            <p class="body-2" style="color: var(--text-secondary); margin-bottom: 24px; font-size: 14px; line-height: 1.5;">
+                Bạn có chắc chắn muốn kết thúc phiên làm việc Quản trị viên và quay về Trang chủ không?
+            </p>
+            <div style="display: flex; gap: 12px;">
+                <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeAdminLogoutModal()">Hủy</button>
+                <a href="@Url.Action("Logout", "Account", new { area = "" })" class="btn btn-danger" style="flex: 1; background: #EF4444; border-color: #EF4444; color: #ffffff; text-decoration: none; display: flex; align-items: center; justify-content: center; font-weight: 600;">Đăng xuất</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/Scripts/jquery-3.7.0.min.js"></script>
+    <script src="~/assets/js/charts.js"></script>
+    <script src="~/assets/js/app.js"></script>
+    <script src="~/assets/js/sweetalert2.all.min.js"></script>
+    <script>
+        if (typeof Swal === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"><\/script>');
+        }
+    </script>
+    <style>
+        /* Modern SweetAlert2 theme matching E-Learning Design System */
+        .swal2-popup {
+            border-radius: 20px !important;
+            font-family: inherit !important;
+            padding: 24px !important;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+        }
+        .swal2-title {
+            font-size: 20px !important;
+            font-weight: 800 !important;
+            color: #0F172A !important;
+        }
+        .swal2-html-container {
+            font-size: 14px !important;
+            color: #64748B !important;
+            line-height: 1.6 !important;
+        }
+        .swal2-actions {
+            gap: 12px !important;
+            margin-top: 20px !important;
+        }
+        .swal2-actions button {
+            border-radius: 12px !important;
+            font-weight: 700 !important;
+            font-size: 14px !important;
+            padding: 10px 22px !important;
+            box-shadow: none !important;
+        }
+    </style>
+    <script>
+        function confirmAdminLogout() {
+            const modal = document.getElementById('admin-logout-modal');
+            if (modal) {
+                if (window.openModal) {
+                    openModal('admin-logout-modal');
+                } else {
+                    modal.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+            } else {
+                if (confirm('Bạn có chắc chắn muốn đăng xuất khỏi phiên làm việc Quản trị viên không?')) {
+                    window.location.href = '@Url.Action("Logout", "Account", new { area = "" })';
+                }
+            }
+        }
+
+        function closeAdminLogoutModal() {
+            const modal = document.getElementById('admin-logout-modal');
+            if (modal) {
+                if (window.closeModal) {
+                    closeModal('admin-logout-modal');
+                } else {
+                    modal.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            }
+        }
+    </script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

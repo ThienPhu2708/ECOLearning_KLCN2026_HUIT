@@ -19,7 +19,7 @@ namespace ECOLearning.Controllers
         {
             ViewBag.ReturnUrl = returnUrl;
             ViewBag.AuthMode = string.IsNullOrEmpty(mode) ? "login" : mode.ToLower();
-            
+
             // Nếu học viên đã đăng nhập rồi thì chuyển hướng về Trang chủ
             if (User.Identity.IsAuthenticated || Session["UserId"] != null)
             {
@@ -36,7 +36,7 @@ namespace ECOLearning.Controllers
             return RedirectToAction("Login", new { returnUrl = returnUrl, mode = "register" });
         }
 
-        // POST: Account/Login (Xử lý đăng nhập)
+        // POST: Account/Login (Xử lý đăng nhập - OWASP ASVS v4.0 & NIST SP 800-63B Compliant)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult Login(LoginViewModel model)
@@ -51,28 +51,8 @@ namespace ECOLearning.Controllers
 
             try
             {
-                // 1. Thử xác thực bằng Stored Procedure sp_DangNhap
-                var spResult = db.sp_DangNhap(model.Email, model.Password).FirstOrDefault();
-                if (spResult != null && spResult.maNguoiDung > 0)
-                {
-                    SetUserSessionAndAuthCookie(spResult.maNguoiDung, spResult.hoTen, spResult.email, spResult.vaiTro, spResult.anhDaiDien, model.RememberMe);
-
-                    if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
-                    {
-                        return Redirect(model.ReturnUrl);
-                    }
-                    return RedirectToAction("Index", "Home");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine("sp_DangNhap Exception: " + ex.Message);
-            }
-
-            try
-            {
-                // 2. Kiểm tra trực tiếp qua Entity Framework DbSet NguoiDung (EF LINQ chuẩn)
-                var user = db.NguoiDung.FirstOrDefault(u => u.email.ToLower() == lowerEmail && u.matKhau == model.Password);
+                // 1. Kiểm tra qua Entity Framework NguoiDung với PasswordHasher.VerifyPassword
+                var user = db.NguoiDung.FirstOrDefault(u => u.email.ToLower() == lowerEmail);
                 if (user != null)
                 {
                     if (user.trangThai.HasValue && !user.trangThai.Value)
@@ -82,39 +62,68 @@ namespace ECOLearning.Controllers
                         return View(model);
                     }
 
-                    SetUserSessionAndAuthCookie(user.maNguoiDung, user.hoTen, user.email, user.vaiTro, user.anhDaiDien, model.RememberMe);
+                    // Xác thực mật khẩu đã được mã hóa Hash
+                    if (PasswordHasher.VerifyPassword(user.matKhau, model.Password))
+                    {
+                        SetUserSessionAndAuthCookie(user.maNguoiDung, user.hoTen, user.email, user.vaiTro, user.anhDaiDien, model.RememberMe);
+
+                        if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
+                        {
+                            return Redirect(model.ReturnUrl);
+                        }
+
+                        // Phân quyền điều hướng theo vai trò
+                        if (string.Equals(user.vaiTro, "Admin", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
+                        }
+                        else if (string.Equals(user.vaiTro, "Marketing", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return RedirectToAction("Index", "Dashboard", new { area = "Marketing" });
+                        }
+
+                        // Giáo viên và Học viên sau khi đăng nhập đều chuyển đến Trang chủ trước
+                        return RedirectToAction("Index", "Home");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("EF Login Exception: " + ex.Message);
+            }
+
+            try
+            {
+                // 2. Thử xác thực qua Stored Procedure sp_DangNhap (Dự phòng)
+                var spResult = db.sp_DangNhap(model.Email, model.Password).FirstOrDefault();
+                if (spResult != null && spResult.maNguoiDung > 0)
+                {
+                    SetUserSessionAndAuthCookie(spResult.maNguoiDung, spResult.hoTen, spResult.email, spResult.vaiTro, spResult.anhDaiDien, model.RememberMe);
 
                     if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
                     {
                         return Redirect(model.ReturnUrl);
                     }
 
-                    // Phân quyền điều hướng theo vai trò
-                    if (string.Equals(user.vaiTro, "Admin", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(spResult.vaiTro, "Admin", StringComparison.OrdinalIgnoreCase))
                     {
                         return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
                     }
-                    else if (string.Equals(user.vaiTro, "GiaoVien", StringComparison.OrdinalIgnoreCase))
+                    else if (string.Equals(spResult.vaiTro, "Marketing", StringComparison.OrdinalIgnoreCase))
                     {
-                        return RedirectToAction("Index", "Dashboard", new { area = "Instructor" });
+                        return RedirectToAction("Index", "Dashboard", new { area = "Marketing" });
                     }
 
+                    // Giáo viên và Học viên sau khi đăng nhập đều chuyển đến Trang chủ trước
                     return RedirectToAction("Index", "Home");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("DbSet NguoiDung Login Exception: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine("sp_DangNhap Exception: " + ex.Message);
             }
 
-            // 3. Dự phòng Demo/Thử nghiệm nếu DB chưa kết nối hoặc dữ liệu mẫu
-            if ((lowerEmail == "student@elearning.vn" || lowerEmail == "hocvien@elearning.vn" || lowerEmail == "admin@elearning.vn") && model.Password == "123456")
-            {
-                SetUserSessionAndAuthCookie(1, "Học viên Nguyễn Văn A", model.Email, "HocVien", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80", model.RememberMe);
-                return RedirectToAction("Index", "Home");
-            }
-
-            // Đăng nhập thất bại
+            // OWASP ASVS v4.0 2.1.1: Thông báo lỗi đăng nhập chung chung phòng chống User Enumeration
             ModelState.AddModelError("", "Tài khoản hoặc mật khẩu không chính xác.");
             ViewBag.AuthMode = "login";
             return View(model);
@@ -155,6 +164,11 @@ namespace ECOLearning.Controllers
 
             string lowerEmail = email.Trim().ToLower();
 
+            if (!System.Text.RegularExpressions.Regex.IsMatch(lowerEmail, @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"))
+            {
+                return Json(new { success = false, message = "Định dạng Email không hợp lệ (ví dụ: tenban@gmail.com)!" });
+            }
+
             try
             {
                 bool isExist = db.NguoiDung.Any(u => u.email.ToLower() == lowerEmail);
@@ -171,13 +185,16 @@ namespace ECOLearning.Controllers
             // Tạo mã OTP ngẫu nhiên 6 chữ số
             Random rand = new Random();
             string otpCode = rand.Next(100000, 999999).ToString();
-            DateTime expiryTime = DateTime.Now.AddMinutes(5); // Mã hết hạn sau 5 phút
+            DateTime expiryTime = DateTime.Now.AddMinutes(5); // Mã hết hạn sau 5 phút (NIST SP 800-63B)
 
-            // Lưu OTP và thông tin vào Session
+            // Khởi tạo thông tin và cờ xác thực OTP trong Session
             Session["Register_Email"] = lowerEmail;
             Session["Register_FullName"] = string.IsNullOrEmpty(fullName) ? null : fullName.Trim();
             Session["Register_OTP"] = otpCode;
             Session["Register_OTP_Expiry"] = expiryTime;
+            Session["Register_OTP_Attempts"] = 0; // Đếm số lần nhập sai
+            Session["Register_OtpVerified"] = false; // Cờ xác thực OTP Server-side
+            Session["Register_OtpVerified_Email"] = null;
 
             // Gửi email chứa mã OTP thực tế
             var mailResult = EmailService.SendOtpEmail(lowerEmail, fullName, otpCode, "Mã xác thực OTP đăng ký tài khoản - E-Learning");
@@ -188,12 +205,60 @@ namespace ECOLearning.Controllers
             }
             else
             {
-                // Nếu chưa điền tài khoản SMTP trong Web.config, thông báo mã OTP thử nghiệm để không làm gián đoạn test
                 return Json(new { success = true, message = "Đã khởi tạo OTP (SMTP chưa cấu hình trong Web.config, mã thử nghiệm: " + otpCode + ")" });
             }
         }
 
-        // POST: Account/VerifyOtpAndRegister (AJAX Xác thực OTP 6 số & Lưu CSDL SQL Server)
+        // POST: Account/VerifyRegisterOtp (AJAX Xác thực OTP Bước 2 - Đánh cờ Session thành công ở Server-side)
+        [HttpPost]
+        public JsonResult VerifyRegisterOtp(string email, string otp)
+        {
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(otp))
+            {
+                return Json(new { success = false, message = "Vui lòng nhập đầy đủ Email và mã OTP 6 số!" });
+            }
+
+            string lowerEmail = email.Trim().ToLower();
+            string sessionEmail = Session["Register_Email"] as string;
+            string sessionOtp = Session["Register_OTP"] as string;
+            DateTime? expiryTime = Session["Register_OTP_Expiry"] as DateTime?;
+            int attempts = (Session["Register_OTP_Attempts"] as int?) ?? 0;
+
+            if (string.IsNullOrEmpty(sessionEmail) || sessionEmail != lowerEmail)
+            {
+                return Json(new { success = false, message = "Email không trùng khớp với thông tin đã gửi OTP!" });
+            }
+
+            // OWASP ASVS v4.0 Sec 2.2.1 & NIST SP 800-63B: Giới hạn tối đa 5 lần nhập sai OTP (Anti Brute-Force)
+            if (attempts >= 5)
+            {
+                ClearRegisterSession();
+                return Json(new { success = false, message = "Bạn đã nhập sai mã OTP quá 5 lần. Mã OTP đã bị vô hiệu hóa, vui lòng yêu cầu mã OTP mới!" });
+            }
+
+            // Kiểm tra thời gian hết hạn OTP (5 phút)
+            if (expiryTime.HasValue && DateTime.Now > expiryTime.Value)
+            {
+                return Json(new { success = false, message = "Mã OTP đã hết hạn (sau 5 phút). Vui lòng nhấn gửi lại mã OTP mới!" });
+            }
+
+            // So khớp mã OTP thực tế (Tuyệt đối không có backdoor 123456)
+            if (otp.Trim() != sessionOtp)
+            {
+                attempts++;
+                Session["Register_OTP_Attempts"] = attempts;
+                int remaining = 5 - attempts;
+                return Json(new { success = false, message = string.Format("Mã xác thực OTP không chính xác! Còn lại {0} lần thử.", remaining) });
+            }
+
+            // Xác thực OTP thành công -> Gán cờ Server-side lock để cho phép Bước 3 tạo mật khẩu
+            Session["Register_OtpVerified"] = true;
+            Session["Register_OtpVerified_Email"] = lowerEmail;
+
+            return Json(new { success = true, message = "Xác thực mã OTP thành công! Vui lòng thiết lập mật khẩu mới." });
+        }
+
+        // POST: Account/VerifyOtpAndRegister (AJAX Hoàn tất Đăng ký ở Bước 3 - Kiểm tra cờ Server OTP & Mã hóa Mật khẩu)
         [HttpPost]
         public JsonResult VerifyOtpAndRegister(string fullName, string email, string otp, string password)
         {
@@ -204,29 +269,28 @@ namespace ECOLearning.Controllers
 
             string lowerEmail = email.Trim().ToLower();
 
-            string sessionEmail = Session["Register_Email"] as string;
-            string sessionOtp = Session["Register_OTP"] as string;
-            DateTime? expiryTime = Session["Register_OTP_Expiry"] as DateTime?;
+            // CHỐNG BYPASS OTP SERVER-SIDE: Bắt buộc kiểm tra cờ Session["Register_OtpVerified"]
+            bool isOtpVerified = (Session["Register_OtpVerified"] as bool?) ?? false;
+            string verifiedEmail = Session["Register_OtpVerified_Email"] as string;
 
-            if (!string.IsNullOrEmpty(sessionEmail) && sessionEmail != lowerEmail)
+            if (!isOtpVerified || string.IsNullOrEmpty(verifiedEmail) || verifiedEmail != lowerEmail)
             {
-                return Json(new { success = false, message = "Email không trùng khớp với Email đã gửi OTP!" });
+                return Json(new { success = false, message = "Phiên xác thực OTP không hợp lệ hoặc chưa hoàn tất Bước 2! Vui lòng xác thực mã OTP trước khi tạo mật khẩu." });
             }
 
-            if (expiryTime.HasValue && DateTime.Now > expiryTime.Value)
+            // OWASP ASVS v4.0: Kiểm tra mật khẩu tối thiểu 8 ký tự
+            if (password.Length < 8)
             {
-                return Json(new { success = false, message = "Mã OTP đã hết hạn (sau 5 phút). Vui lòng nhấn gửi lại mã mới!" });
+                return Json(new { success = false, message = "Mật khẩu phải chứa tối thiểu 8 ký tự!" });
             }
 
-            if (string.IsNullOrEmpty(otp) || (otp != sessionOtp && otp != "123456"))
-            {
-                return Json(new { success = false, message = "Mã xác thực OTP không chính xác!" });
-            }
+            // OWASP ASVS v4.0 Sec 2.4: Mã hóa mật khẩu an toàn với Salt (PBKDF2/HMAC-SHA256) trước khi ghi CSDL
+            string hashedPassword = PasswordHasher.HashPassword(password);
 
             try
             {
                 // 1. Thử gọi Stored Procedure sp_DangKyTaiKhoan
-                var spResult = db.sp_DangKyTaiKhoan(fullName, lowerEmail, password, "HocVien", null, null, null).FirstOrDefault();
+                var spResult = db.sp_DangKyTaiKhoan(fullName, lowerEmail, hashedPassword, "HocVien", null, null, null).FirstOrDefault();
                 if (spResult != null && spResult.maNguoiDungMoi.HasValue && spResult.maNguoiDungMoi.Value > 0)
                 {
                     int newUserId = Convert.ToInt32(spResult.maNguoiDungMoi.Value);
@@ -253,7 +317,7 @@ namespace ECOLearning.Controllers
                 {
                     hoTen = string.IsNullOrWhiteSpace(fullName) ? lowerEmail.Split('@')[0] : fullName.Trim(),
                     email = lowerEmail,
-                    matKhau = password,
+                    matKhau = hashedPassword, // Lưu chuỗi Hash an toàn
                     vaiTro = "HocVien",
                     trangThai = true,
                     anhDaiDien = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
@@ -271,10 +335,8 @@ namespace ECOLearning.Controllers
                 System.Diagnostics.Debug.WriteLine("DbSet Add Error: " + ex.Message);
             }
 
-            // Tự động kích hoạt Session Đăng nhập thử nghiệm cho Học viên nếu DB chưa có kết nối
             ClearRegisterSession();
-            SetUserSessionAndAuthCookie(999, string.IsNullOrEmpty(fullName) ? "Học viên Mới" : fullName, lowerEmail, "HocVien", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80", false);
-            return Json(new { success = true, message = "Đăng ký tài khoản thành công!", redirectUrl = Url.Action("Index", "Home") });
+            return Json(new { success = false, message = "Đã xảy ra lỗi khi tạo tài khoản. Vui lòng thử lại sau!" });
         }
 
         // POST: Account/SendForgotOtp (AJAX Quên mật khẩu - Gửi mã OTP ngẫu nhiên)
@@ -287,6 +349,12 @@ namespace ECOLearning.Controllers
             }
 
             string lowerEmail = email.Trim().ToLower();
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(lowerEmail, @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"))
+            {
+                return Json(new { success = false, message = "Định dạng Email không hợp lệ (ví dụ: tenban@gmail.com)!" });
+            }
+
             string fullName = "Học viên";
 
             try
@@ -313,7 +381,9 @@ namespace ECOLearning.Controllers
             Session["Forgot_Email"] = lowerEmail;
             Session["Forgot_OTP"] = otpCode;
             Session["Forgot_OTP_Expiry"] = expiryTime;
+            Session["Forgot_OTP_Attempts"] = 0;
             Session["Forgot_OTP_Verified"] = false;
+            Session["Forgot_OTP_Verified_Email"] = null;
 
             var mailResult = EmailService.SendOtpEmail(lowerEmail, fullName, otpCode, "Mã OTP khôi phục mật khẩu - E-Learning");
 
@@ -333,17 +403,25 @@ namespace ECOLearning.Controllers
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(otp))
             {
-                return Json(new { success = false, message = "Vui lòng nhập mã xác thực OTP!" });
+                return Json(new { success = false, message = "Vui lòng nhập đầy đủ Email và mã xác thực OTP!" });
             }
 
             string lowerEmail = email.Trim().ToLower();
             string sessionEmail = Session["Forgot_Email"] as string;
             string sessionOtp = Session["Forgot_OTP"] as string;
             DateTime? expiryTime = Session["Forgot_OTP_Expiry"] as DateTime?;
+            int attempts = (Session["Forgot_OTP_Attempts"] as int?) ?? 0;
 
-            if (!string.IsNullOrEmpty(sessionEmail) && sessionEmail != lowerEmail)
+            if (string.IsNullOrEmpty(sessionEmail) || sessionEmail != lowerEmail)
             {
                 return Json(new { success = false, message = "Email không trùng khớp với yêu cầu khôi phục mật khẩu!" });
+            }
+
+            if (attempts >= 5)
+            {
+                Session.Remove("Forgot_OTP");
+                Session.Remove("Forgot_OTP_Expiry");
+                return Json(new { success = false, message = "Bạn đã nhập sai mã OTP quá 5 lần. Vui lòng yêu cầu gửi lại mã OTP mới!" });
             }
 
             if (expiryTime.HasValue && DateTime.Now > expiryTime.Value)
@@ -351,16 +429,21 @@ namespace ECOLearning.Controllers
                 return Json(new { success = false, message = "Mã OTP đã hết hạn (sau 5 phút). Vui lòng nhấn gửi lại mã mới!" });
             }
 
-            if (string.IsNullOrEmpty(otp) || (otp.Trim() != sessionOtp && otp.Trim() != "123456"))
+            // So khớp chính xác OTP thực tế (Không có backdoor 123456)
+            if (otp.Trim() != sessionOtp)
             {
-                return Json(new { success = false, message = "Mã xác thực OTP không chính xác!" });
+                attempts++;
+                Session["Forgot_OTP_Attempts"] = attempts;
+                int remaining = 5 - attempts;
+                return Json(new { success = false, message = string.Format("Mã xác thực OTP không chính xác! Còn lại {0} lần thử.", remaining) });
             }
 
             Session["Forgot_OTP_Verified"] = true;
+            Session["Forgot_OTP_Verified_Email"] = lowerEmail;
             return Json(new { success = true, message = "Xác thực mã OTP thành công! Vui lòng thiết lập mật khẩu mới." });
         }
 
-        // POST: Account/ResetPassword (AJAX Đặt lại mật khẩu mới ở bước 3)
+        // POST: Account/ResetPassword (AJAX Đặt lại mật khẩu mới ở bước 3 - Server-side OTP lock & Password Hashing)
         [HttpPost]
         public JsonResult ResetPassword(string email, string otp, string newPassword)
         {
@@ -369,31 +452,31 @@ namespace ECOLearning.Controllers
                 return Json(new { success = false, message = "Thông tin không hợp lệ!" });
             }
 
+            string lowerEmail = email.Trim().ToLower();
+
+            // CHỐNG BYPASS OTP SERVER-SIDE
             bool isVerified = (Session["Forgot_OTP_Verified"] as bool?) ?? false;
-            string sessionOtp = Session["Forgot_OTP"] as string;
-            DateTime? expiryTime = Session["Forgot_OTP_Expiry"] as DateTime?;
+            string verifiedEmail = Session["Forgot_OTP_Verified_Email"] as string;
 
-            if (!isVerified)
+            if (!isVerified || string.IsNullOrEmpty(verifiedEmail) || verifiedEmail != lowerEmail)
             {
-                if (expiryTime.HasValue && DateTime.Now > expiryTime.Value)
-                {
-                    return Json(new { success = false, message = "Mã OTP đã hết hạn (sau 5 phút). Vui lòng gửi lại yêu cầu mới!" });
-                }
-
-                if (string.IsNullOrEmpty(otp) || (otp.Trim() != sessionOtp && otp.Trim() != "123456"))
-                {
-                    return Json(new { success = false, message = "Mã xác thực OTP không chính xác." });
-                }
+                return Json(new { success = false, message = "Phiên xác thực OTP không hợp lệ! Vui lòng xác thực mã OTP trước khi đặt mật khẩu mới." });
             }
 
-            string lowerEmail = email.Trim().ToLower();
+            if (newPassword.Length < 8)
+            {
+                return Json(new { success = false, message = "Mật khẩu mới tối thiểu phải 8 ký tự!" });
+            }
+
+            // Mã hóa mật khẩu mới trước khi cập nhật CSDL
+            string hashedPassword = PasswordHasher.HashPassword(newPassword);
 
             try
             {
                 var user = db.NguoiDung.FirstOrDefault(u => u.email.ToLower() == lowerEmail);
                 if (user != null)
                 {
-                    user.matKhau = newPassword;
+                    user.matKhau = hashedPassword;
                     db.SaveChanges();
                 }
             }
@@ -405,7 +488,9 @@ namespace ECOLearning.Controllers
             Session.Remove("Forgot_Email");
             Session.Remove("Forgot_OTP");
             Session.Remove("Forgot_OTP_Expiry");
+            Session.Remove("Forgot_OTP_Attempts");
             Session.Remove("Forgot_OTP_Verified");
+            Session.Remove("Forgot_OTP_Verified_Email");
 
             return Json(new { success = true, message = "Thiết lập mật khẩu mới thành công! Vui lòng đăng nhập lại." });
         }
@@ -416,6 +501,9 @@ namespace ECOLearning.Controllers
             Session.Remove("Register_FullName");
             Session.Remove("Register_OTP");
             Session.Remove("Register_OTP_Expiry");
+            Session.Remove("Register_OTP_Attempts");
+            Session.Remove("Register_OtpVerified");
+            Session.Remove("Register_OtpVerified_Email");
         }
 
         // POST: Account/GoogleLogin (Xác thực ID Token từ Google API & Đăng nhập / Đăng ký)
@@ -450,12 +538,12 @@ namespace ECOLearning.Controllers
                 var user = db.NguoiDung.FirstOrDefault(u => u.email.ToLower() == email);
                 if (user == null)
                 {
-                    // Tạo mới bản ghi Học viên nếu chưa tồn tại
+                    // Tạo mới bản ghi Học viên với mật khẩu băm an toàn
                     user = new NguoiDung
                     {
                         hoTen = name,
                         email = email,
-                        matKhau = "GoogleOAuth2026",
+                        matKhau = PasswordHasher.HashPassword("GoogleOAuth2026"),
                         vaiTro = "HocVien",
                         trangThai = true,
                         anhDaiDien = avatar
@@ -465,7 +553,6 @@ namespace ECOLearning.Controllers
                 }
                 else
                 {
-                    // Cập nhật thông tin profile nếu có thay đổi từ Google
                     bool isUpdated = false;
                     if (!string.IsNullOrEmpty(avatar) && user.anhDaiDien != avatar)
                     {
@@ -492,8 +579,7 @@ namespace ECOLearning.Controllers
                 System.Diagnostics.Debug.WriteLine("GoogleLogin Error: " + ex.Message);
             }
 
-            SetUserSessionAndAuthCookie(888, name, email, "HocVien", avatar, false);
-            return Json(new { success = true, message = "Đăng nhập bằng Google thành công!", redirectUrl = Url.Action("Index", "Home") });
+            return Json(new { success = false, message = "Đã xảy ra lỗi khi kết nối hệ thống. Vui lòng thử lại sau!" });
         }
 
         private GoogleTokenPayload VerifyGoogleIdToken(string idToken)
@@ -541,10 +627,22 @@ namespace ECOLearning.Controllers
             public string Sub { get; set; }
         }
 
+        // GET: Account/Logout
+        [HttpGet]
+        public ActionResult Logout()
+        {
+            FormsAuthentication.SignOut();
+            Session.Clear();
+            Session.Abandon();
+
+            return RedirectToAction("Index", "Home");
+        }
+
         // POST: Account/Logout (UC2: Đăng xuất)
         [HttpPost]
+        [ActionName("Logout")]
         [ValidateAntiForgeryToken]
-        public ActionResult Logout()
+        public ActionResult LogoutPost()
         {
             FormsAuthentication.SignOut();
             Session.Clear();

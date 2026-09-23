@@ -34,7 +34,7 @@ namespace ECOLearning.Controllers
         {
             if (string.IsNullOrEmpty(courseId))
             {
-                var defaultCourse = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == "KH_TEST01") ?? db.KhoaHoc.FirstOrDefault();
+                var defaultCourse = db.KhoaHoc.FirstOrDefault();
                 if (defaultCourse != null)
                 {
                     courseId = defaultCourse.maKhoaHoc;

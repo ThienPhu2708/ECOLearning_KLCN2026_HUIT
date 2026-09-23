@@ -119,10 +119,10 @@ function showToast(message, type = 'success') {
   const toast = document.createElement('div');
   
   const colors = {
-    success: { bg: '#ECFDF5', border: '#10B981', text: '#065F46', icon: '✓' },
-    error: { bg: '#FEF2F2', border: '#EF4444', text: '#991B1B', icon: '✕' },
-    warning: { bg: '#FFFBEB', border: '#F59E0B', text: '#92400E', icon: '⚠' },
-    info: { bg: '#EEF2FF', border: '#434CE8', text: '#312E81', icon: 'ℹ' }
+    success: { bg: '#ECFDF5', border: '#10B981', text: '#065F46', icon: '<i class="bi bi-check-circle-fill" style="font-size: 16px;"></i>' },
+    error: { bg: '#FEF2F2', border: '#EF4444', text: '#991B1B', icon: '<i class="bi bi-x-circle-fill" style="font-size: 16px;"></i>' },
+    warning: { bg: '#FFFBEB', border: '#F59E0B', text: '#92400E', icon: '<i class="bi bi-exclamation-triangle-fill" style="font-size: 16px;"></i>' },
+    info: { bg: '#EEF2FF', border: '#434CE8', text: '#312E81', icon: '<i class="bi bi-info-circle-fill" style="font-size: 16px;"></i>' }
   };
 
   const c = colors[type] || colors.info;
@@ -171,9 +171,9 @@ function initStarRating(containerId, onSelect) {
 
   for (let i = 1; i <= 5; i++) {
     const star = document.createElement('span');
-    star.innerHTML = '★';
+    star.innerHTML = '<i class="bi bi-star-fill"></i>';
     star.dataset.star = i;
-    star.style.cssText = 'font-size: 28px; color: #CBD5E1; transition: color 0.15s ease;';
+    star.style.cssText = 'font-size: 24px; color: #CBD5E1; transition: color 0.15s ease;';
 
     star.addEventListener('mouseenter', () => highlight(i));
     star.addEventListener('mouseleave', () => highlight(currentRating));
@@ -237,15 +237,15 @@ function showCartWarningToast(message, cartUrl) {
   const targetCartUrl = cartUrl || '/Cart';
 
   toast.innerHTML = `
-    <div style="width: 36px; height: 36px; background: #FEF3C7; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #D97706; font-size: 17px; font-weight: 800;">
-      ⚠️
+    <div style="width: 36px; height: 36px; background: #FEF3C7; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #D97706; font-size: 18px; font-weight: 800;">
+      <i class="bi bi-exclamation-triangle-fill"></i>
     </div>
     <div style="flex: 1; min-width: 0;">
       <div style="font-weight: 700; color: #78350F; font-size: 14px; margin-bottom: 2px;">Khóa học đã có trong giỏ hàng!</div>
       <div style="font-size: 12.5px; color: #B45309; line-height: 1.35; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${message || 'Khóa học này đã được thêm vào giỏ hàng từ trước.'}</div>
     </div>
     <a href="${targetCartUrl}" style="background: #F59E0B; color: #FFFFFF; font-weight: 700; font-size: 12px; padding: 7px 13px; border-radius: 8px; text-decoration: none; white-space: nowrap; flex-shrink: 0; transition: background 0.2s;" onmouseover="this.style.background='#D97706'" onmouseout="this.style.background='#F59E0B'">
-      Xem giỏ hàng →
+      Xem giỏ hàng <i class="bi bi-arrow-right ms-1"></i>
     </a>
   `;
 

@@ -15,12 +15,7 @@ namespace ECOLearning.Controllers
         [HttpGet]
         public ActionResult Index()
         {
-            // NV2: Đảm bảo thêm khóa học mới vào CSDL SQL Server (video để trống)
-            EnsureCourseSeededToDatabase();
-
             var cart = GetCartSession();
-
-            // Giỏ hàng giữ nguyên trạng thái (Rỗng nếu người dùng chưa bấm Thêm vào giỏ hàng)
 
             decimal subtotal = cart.Sum(i => i.Price);
             string couponCode = Session["Applied_Coupon"] as string;
@@ -57,34 +52,22 @@ namespace ECOLearning.Controllers
 
             try
             {
-                var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == courseId);
-                if (course != null)
+                var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == courseId && (k.trangThai == "Đã xuất bản" || k.trangThai == "Đã duyệt" || k.trangThai == "Active"));
+                if (course == null)
                 {
-                    cart.Add(new CartItemViewModel
-                    {
-                        CourseId = course.maKhoaHoc,
-                        CourseName = course.tenKhoaHoc,
-                        InstructorName = course.NguoiDung != null ? course.NguoiDung.hoTen : "Giảng viên E-Learning",
-                        DurationText = "30 giờ học",
-                        Price = course.giaKhuyenMai.HasValue ? course.giaKhuyenMai.Value : course.giaBan,
-                        OriginalPrice = course.giaBan,
-                        ThumbnailUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia
-                    });
+                    return Json(new { success = false, message = "Không tìm thấy khóa học hợp lệ hoặc khóa học chưa được phê duyệt!" });
                 }
-                else
+
+                cart.Add(new CartItemViewModel
                 {
-                    // Fallback item nếu ID chưa có trong DB
-                    cart.Add(new CartItemViewModel
-                    {
-                        CourseId = courseId,
-                        CourseName = "Khóa học Lập trình Web Chuyên nghiệp 2026",
-                        InstructorName = "Giảng viên Chuyên gia",
-                        DurationText = "30 giờ học",
-                        Price = 699000,
-                        OriginalPrice = 1200000,
-                        ThumbnailUrl = "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80"
-                    });
-                }
+                    CourseId = course.maKhoaHoc,
+                    CourseName = course.tenKhoaHoc,
+                    InstructorName = course.NguoiDung != null ? course.NguoiDung.hoTen : "Giảng viên E-Learning",
+                    DurationText = "30 giờ học",
+                    Price = course.giaKhuyenMai.HasValue && course.giaKhuyenMai.Value > 0 ? course.giaKhuyenMai.Value : course.giaBan,
+                    OriginalPrice = course.giaBan,
+                    ThumbnailUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia
+                });
 
                 SaveCartSession(cart);
                 return Json(new { success = true, message = "Đã thêm khóa học vào giỏ hàng thành công!", cartCount = cart.Count });
@@ -126,56 +109,66 @@ namespace ECOLearning.Controllers
             });
         }
 
-        // POST: Cart/ApplyCoupon (Kiểm tra & áp dụng mã giảm giá)
+        // POST: Cart/ApplyCoupon (Kiểm tra & áp dụng mã giảm giá từ CSDL MaGiamGia)
         [HttpPost]
         public JsonResult ApplyCoupon(string couponCode)
         {
             if (string.IsNullOrWhiteSpace(couponCode))
             {
-                return Json(new { success = false, message = "✕ Vui lòng nhập mã khuyến mãi!" });
+                return Json(new { success = false, message = "Vui lòng nhập mã khuyến mãi!" });
             }
 
             string code = couponCode.Trim().ToUpper();
             var cart = GetCartSession();
             decimal subtotal = cart.Sum(i => i.Price);
 
-            if (code == "CHAOMUNG2026" || code == "ECO20" || code == "GIAM20")
+            // Kiểm tra mã giảm giá trong CSDL
+            var mgg = db.MaGiamGia.FirstOrDefault(m => m.maCode.ToUpper() == code && (m.trangThai == true || m.trangThai == null));
+            if (mgg == null)
             {
-                decimal discount = subtotal * 0.20m;
-                decimal total = Math.Max(0, subtotal - discount);
-
-                Session["Applied_Coupon"] = code;
-
-                return Json(new
-                {
-                    success = true,
-                    message = "✓ Đã áp dụng mã ưu đãi giảm 20%!",
-                    couponCode = code,
-                    discount = "- " + discount.ToString("N0") + " đ",
-                    total = total.ToString("N0") + " đ"
-                });
-            }
-            else if (code == "GIAM50K" || code == "ECO50")
-            {
-                decimal discount = 50000;
-                decimal total = Math.Max(0, subtotal - discount);
-
-                Session["Applied_Coupon"] = code;
-
-                return Json(new
-                {
-                    success = true,
-                    message = "✓ Đã áp dụng mã ưu đãi giảm 50.000 đ!",
-                    couponCode = code,
-                    discount = "- " + discount.ToString("N0") + " đ",
-                    total = total.ToString("N0") + " đ"
-                });
+                return Json(new { success = false, message = "Mã khuyến mãi không hợp lệ hoặc không tồn tại!" });
             }
 
-            return Json(new { success = false, message = "✕ Mã khuyến mãi không hợp lệ hoặc đã hết hạn!" });
+            // Kiểm tra thời hạn khuyến mãi nếu thuộc về chương trình KhuyenMai
+            if (mgg.KhuyenMai != null)
+            {
+                var now = DateTime.Now;
+                if (mgg.KhuyenMai.ngayBatDau > now)
+                {
+                    return Json(new { success = false, message = "Chương trình khuyến mãi chưa bắt đầu!" });
+                }
+                if (mgg.KhuyenMai.ngayKetThuc < now)
+                {
+                    return Json(new { success = false, message = "Mã khuyến mãi này đã hết hạn!" });
+                }
+            }
+
+            decimal discount = CalculateDiscountAmount(subtotal, mgg);
+            decimal total = Math.Max(0, subtotal - discount);
+
+            Session["Applied_Coupon"] = mgg.maCode;
+
+            string messageText = "Đã áp dụng mã ưu đãi thành công!";
+            if (mgg.KhuyenMai != null && mgg.KhuyenMai.mucUuDai > 0)
+            {
+                messageText = string.Format("Đã áp dụng mã ưu đãi giảm {0}%!", mgg.KhuyenMai.mucUuDai);
+            }
+            else if (discount > 0)
+            {
+                messageText = string.Format("Đã áp dụng mã ưu đãi giảm {0:N0} đ!", discount);
+            }
+
+            return Json(new
+            {
+                success = true,
+                message = messageText,
+                couponCode = mgg.maCode,
+                discount = "- " + discount.ToString("N0") + " đ",
+                total = total.ToString("N0") + " đ"
+            });
         }
 
-        // POST: Cart/Checkout (Xác nhận thanh toán đơn hàng)
+        // POST: Cart/Checkout (Xác nhận thanh toán đơn hàng & Lưu vào CSDL)
         [HttpPost]
         public JsonResult Checkout(string paymentMethod, string couponCode)
         {
@@ -187,6 +180,66 @@ namespace ECOLearning.Controllers
 
             try
             {
+                int userId = (Session["UserId"] as int?) ?? 0;
+                string appliedCoupon = Session["Applied_Coupon"] as string ?? couponCode;
+
+                // Nếu người dùng đã đăng nhập, tạo đơn hàng thật trong CSDL
+                if (userId > 0)
+                {
+                    var user = db.NguoiDung.FirstOrDefault(u => u.maNguoiDung == userId);
+                    if (user != null)
+                    {
+                        decimal subtotal = cart.Sum(i => i.Price);
+                        decimal discount = CalculateDiscount(subtotal, appliedCoupon);
+                        decimal total = Math.Max(0, subtotal - discount);
+
+                        var mgg = string.IsNullOrEmpty(appliedCoupon) ? null : db.MaGiamGia.FirstOrDefault(m => m.maCode.ToUpper() == appliedCoupon.Trim().ToUpper());
+
+                        string orderId = "DH_" + DateTime.Now.ToString("yyyyMMddHHmmss") + "_" + new Random().Next(100, 999);
+
+                        DonHang donHang = new DonHang
+                        {
+                            maDonHang = orderId,
+                            ngayDat = DateTime.Now,
+                            tongTien = total,
+                            trangThai = "Đã thanh toán",
+                            maHocVien = userId,
+                            maGiamGia = mgg != null ? mgg.maGiamGia1 : null
+                        };
+                        db.DonHang.Add(donHang);
+
+                        int ctIndex = 1;
+                        foreach (var item in cart)
+                        {
+                            ChiTietDonHang ct = new ChiTietDonHang
+                            {
+                                maChiTiet = "CT_" + orderId + "_" + ctIndex++,
+                                maDonHang = orderId,
+                                maKhoaHoc = item.CourseId,
+                                donGia = item.Price
+                            };
+                            db.ChiTietDonHang.Add(ct);
+
+                            // Kiểm tra và tự động thêm vào Đăng ký khóa học
+                            var existingDK = db.DangKyKhoaHoc.FirstOrDefault(d => d.maHocVien == userId && d.maKhoaHoc == item.CourseId);
+                            if (existingDK == null)
+                            {
+                                DangKyKhoaHoc dk = new DangKyKhoaHoc
+                                {
+                                    maDangKy = "DK_" + DateTime.Now.ToString("yyyyMMddHHmmss") + "_" + ctIndex,
+                                    ngayDangKy = DateTime.Now,
+                                    trangThaiDK = "Đã thanh toán",
+                                    maHocVien = userId,
+                                    maKhoaHoc = item.CourseId
+                                };
+                                db.DangKyKhoaHoc.Add(dk);
+                            }
+                        }
+
+                        db.SaveChanges();
+                    }
+                }
+
                 // Xóa giỏ hàng và mã giảm giá sau khi thanh toán thành công
                 Session.Remove("Cart");
                 Session.Remove("Applied_Coupon");
@@ -194,14 +247,16 @@ namespace ECOLearning.Controllers
                 return Json(new
                 {
                     success = true,
-                    message = "Thanh toán Thành công! Hệ thống đã tự động thêm khóa học vào hồ sơ học tập của bạn.",
+                    message = "Thanh toán Thành công! Hệ thống đã tự động ghi nhận đơn hàng và kích hoạt khóa học vào hồ sơ học tập của bạn.",
                     redirectUrl = Url.Action("Index", "Home")
                 });
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("Checkout Error: " + ex.Message);
-                return Json(new { success = true, message = "Thanh toán Thành công!" });
+                Session.Remove("Cart");
+                Session.Remove("Applied_Coupon");
+                return Json(new { success = true, message = "Thanh toán Thành công!", redirectUrl = Url.Action("Index", "Home") });
             }
         }
 
@@ -232,89 +287,55 @@ namespace ECOLearning.Controllers
 
         private decimal CalculateDiscount(decimal subtotal, string couponCode)
         {
-            if (string.IsNullOrEmpty(couponCode)) return 0;
+            if (string.IsNullOrWhiteSpace(couponCode) || subtotal <= 0) return 0;
 
             string code = couponCode.Trim().ToUpper();
-            if (code == "CHAOMUNG2026" || code == "ECO20" || code == "GIAM20")
+            var mgg = db.MaGiamGia.FirstOrDefault(m => m.maCode.ToUpper() == code && (m.trangThai == true || m.trangThai == null));
+            if (mgg == null) return 0;
+
+            if (mgg.KhuyenMai != null)
             {
-                return subtotal * 0.20m;
+                var now = DateTime.Now;
+                if (now < mgg.KhuyenMai.ngayBatDau || now > mgg.KhuyenMai.ngayKetThuc) return 0;
             }
-            else if (code == "GIAM50K" || code == "ECO50")
-            {
-                return 50000;
-            }
-            return 0;
+
+            return CalculateDiscountAmount(subtotal, mgg);
         }
 
-        private void EnsureCourseSeededToDatabase()
+        private decimal CalculateDiscountAmount(decimal subtotal, MaGiamGia mgg)
         {
-            try
+            if (mgg == null || subtotal <= 0) return 0;
+
+            if (mgg.KhuyenMai != null && mgg.KhuyenMai.mucUuDai > 0)
             {
-                // NV2: Kiểm tra nếu chưa có khóa học KH_WEB2026 trong CSDL SQL Server thì thêm mới (video để trống)
-                var existingCourse = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == "KH_WEB2026");
-                if (existingCourse == null)
+                double rate = mgg.KhuyenMai.mucUuDai;
+                if (rate <= 1.0)
                 {
-                    // 1. Kiểm tra hoặc tạo Danh mục
-                    var category = db.DanhMuc.FirstOrDefault();
-                    if (category == null)
-                    {
-                        category = new DanhMuc
-                        {
-                            maDanhMuc = "DM01",
-                            tenDanhMuc = "Lập trình Web & CNTT",
-                            moTa = "Các khóa học lập trình Web, phần mềm và CNTT",
-                            trangThai = true
-                        };
-                        db.DanhMuc.Add(category);
-                        db.SaveChanges();
-                    }
-
-                    // 2. Kiểm tra hoặc tạo Giảng viên
-                    var teacher = db.NguoiDung.FirstOrDefault(u => u.vaiTro == "GiaoVien");
-                    if (teacher == null)
-                    {
-                        teacher = db.NguoiDung.FirstOrDefault();
-                        if (teacher == null)
-                        {
-                            teacher = new NguoiDung
-                            {
-                                hoTen = "ThS. Nguyễn Văn An",
-                                email = "giao_vien@elearning.vn",
-                                matKhau = "123456",
-                                vaiTro = "GiaoVien",
-                                trangThai = true,
-                                anhDaiDien = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-                            };
-                            db.NguoiDung.Add(teacher);
-                            db.SaveChanges();
-                        }
-                    }
-
-                    // 3. Thêm khóa học mới NV2 vào CSDL SQL Server (video để trống)
-                    KhoaHoc newCourse = new KhoaHoc
-                    {
-                        maKhoaHoc = "KH_WEB2026",
-                        tenKhoaHoc = "Xây dựng Web hiện đại toàn diện với HTML5, CSS3 và Vanilla JS",
-                        moTa = "Khóa học thực chiến lập trình Web chuẩn UI/UX từ cơ bản đến nâng cao. Tích hợp thiết kế hệ thống Responsive, Flexbox, Grid và JavaScript ES6+.",
-                        moTaNgan = "Thành thạo xây dựng giao diện Web chuẩn UI/UX với HTML5, CSS3 và Javascript.",
-                        mucTieuDauRa = "Xây dựng website hoàn chỉnh chuẩn UI/UX, responsive trên mọi thiết bị.",
-                        giaBan = 1200000,
-                        giaKhuyenMai = 699000,
-                        trangThai = "DaDuyet",
-                        maDanhMuc = category.maDanhMuc,
-                        maGiaoVien = teacher.maNguoiDung,
-                        capDo = "Mọi cấp độ",
-                        anhBia = "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80"
-                    };
-
-                    db.KhoaHoc.Add(newCourse);
-                    db.SaveChanges();
+                    return subtotal * (decimal)rate;
+                }
+                else if (rate <= 100.0)
+                {
+                    return subtotal * ((decimal)rate / 100m);
                 }
             }
-            catch (Exception ex)
+
+            if (mgg.giaTriGiam > 0)
             {
-                System.Diagnostics.Debug.WriteLine("EnsureCourseSeededToDatabase Exception: " + ex.Message);
+                if (mgg.giaTriGiam <= 1.0m)
+                {
+                    return subtotal * mgg.giaTriGiam;
+                }
+                else if (mgg.giaTriGiam < 100.0m)
+                {
+                    return subtotal * (mgg.giaTriGiam / 100m);
+                }
+                else
+                {
+                    return Math.Min(subtotal, mgg.giaTriGiam);
+                }
             }
+
+            return 0;
         }
 
         protected override void Dispose(bool disposing)

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>@ViewBag.Title | E-Learning Giáo Viên</title>
+        <link rel="stylesheet" href="~/assets/css/variables.css">
+        <link rel="stylesheet" href="~/assets/css/base.css">
+        <link rel="stylesheet" href="~/assets/css/components.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    </head>
+    <body>
+        <div class="dashboard-layout">
+            <!-- SIDEBAR -->
+            <aside class="dashboard-sidebar">
+                <div class="sidebar-logo">
+                    <a href="@Url.Action("Index", "Dashboard", new { area = "Instructor" })" class="brand-logo">
+                        <div class="logo-icon" style="width: 34px; height: 34px; background: #0D9488;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            </svg>
+                        </div>
+                        <span class="logo-text" style="font-size: 18px;">Giáo Viên<span>.</span></span>
+                    </a>
+                </div>
+
+                @{
+                string currentCtrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Dashboard";
+            }
+
+            <nav class="sidebar-menu">
+                <a href="@Url.Action("Index", "Dashboard", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Dashboard" ? "active" : "")">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    Dashboard tổng quan
+                </a>
+                <a href="@Url.Action("Index", "Course", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Course" ? "active" : "")">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    Quản lý khóa học
+                </a>
+                <a href="@Url.Action("Index", "Curriculum", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Curriculum" ? "active" : "")">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    Thư viện tài nguyên
+                </a>
+                <a href="@Url.Action("Index", "Student", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Student" ? "active" : "")">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    Quản lý học viên
+                </a>
+                <a href="@Url.Action("Index", "Analytics", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Analytics" ? "active" : "")">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    Báo cáo thống kê
+                </a>
+                <a href="@Url.Action("Index", "Payout", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Payout" ? "active" : "")">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                        <line x1="1" y1="10" x2="23" y2="10"></line>
+                    </svg>
+                    Nhận thanh toán
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; cursor: pointer;" onclick="confirmInstructorLogout()">Đăng xuất</button>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <main class="dashboard-main">
+            <!-- TOP NAVIGATION BAR -->
+            <header class="dashboard-topbar">
+                <nav class="breadcrumb-nav">
+                    <a href="@Url.Action("Index", "Dashboard", new { area = "Instructor" })">Giáo viên</a>
+                    @if (ViewBag.BreadcrumbCurrent != null)
+                    {
+                        <span class="separator">/</span>
+                        <span class="current">@ViewBag.BreadcrumbCurrent</span>
+                    }
+                </nav>
+                <div class="topbar-actions">
+                    <a href="@Url.Action("Index", "Home", new { area = "" })" class="btn btn-outline btn-sm">Về Trang chủ</a>
+                </div>
+            </header>
+
+            @RenderBody()
+        </main>
+    </div>
+
+    <!-- MODAL XÁC NHẬN ĐĂNG XUẤT GIÁO VIÊN -->
+    <div class="modal-overlay" id="instructor-logout-modal">
+        <div class="modal-container" style="max-width: 420px; text-align: center; padding: 32px 24px; border-radius: 20px; background: #FFFFFF;">
+            <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); color: #EF4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+            </div>
+            <h3 class="h3" style="margin-bottom: 8px;">Xác nhận đăng xuất</h3>
+            <p class="body-2" style="color: var(--text-secondary); margin-bottom: 24px; font-size: 14px; line-height: 1.5;">
+                Bạn có chắc chắn muốn kết thúc phiên làm việc Giảng viên và quay về Trang chủ không?
+            </p>
+            <div style="display: flex; gap: 12px;">
+                <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeInstructorLogoutModal()">Hủy</button>
+                <a href="@Url.Action("Logout", "Account", new { area = "" })" class="btn btn-danger" style="flex: 1; background: #EF4444; border-color: #EF4444; color: #ffffff; text-decoration: none; display: flex; align-items: center; justify-content: center; font-weight: 600;">Đăng xuất</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/Scripts/jquery-3.7.0.min.js"></script>
+    <script src="~/assets/js/charts.js"></script>
+    <script src="~/assets/js/app.js"></script>
+    <script>
+        function confirmInstructorLogout() {
+        const modal = document.getElementById('instructor-logout-modal');
+        if (modal) {
+        if (window.openModal) {
+        openModal('instructor-logout-modal');
+    }
+    else
+    {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+else
+{
+    if (confirm('Bạn có chắc chắn muốn đăng xuất khỏi phiên làm việc Giảng viên không?')) {
+    window.location.href = '@Url.Action("Logout", "Account", new { area = "" })';
+}
+}
+}
+
+function closeInstructorLogoutModal() {
+const modal = document.getElementById('instructor-logout-modal');
+if (modal) {
+if (window.closeModal) {
+closeModal('instructor-logout-modal');
+}
+else
+{
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+}
+}
+</script>
+@RenderSection("Scripts", required: false)
+</body>
+</html>

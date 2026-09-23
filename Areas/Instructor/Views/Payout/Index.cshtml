@@ -1,0 +1,185 @@
+@model ECOLearning.Areas.Instructor.Models.InstructorPayoutViewModel
+@{
+    ViewBag.Title = "Nhận Thanh Toán Khóa Học";
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div style="padding: 12px 16px; background: #ECFDF5; border: 1px solid #10B981; color: #065F46; border-radius: var(--radius-xl); margin-bottom: 20px; font-size: 14px; font-weight: 600;">
+        <i class="bi bi-check-circle-fill me-1"></i> @TempData["SuccessMessage"]
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div style="padding: 12px 16px; background: #FEF2F2; border: 1px solid #EF4444; color: #991B1B; border-radius: var(--radius-xl); margin-bottom: 20px; font-size: 14px; font-weight: 600;">
+        <i class="bi bi-x-circle-fill me-1"></i> @TempData["ErrorMessage"]
+    </div>
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div>
+        <h1 class="h2" style="margin-top: 6px;">Quản Lý & Nhận Thanh Toán</h1>
+        <p class="body-2" style="color: var(--text-secondary);">Theo dõi số dư doanh thu, gửi yêu cầu rút tiền và kiểm tra lịch sử đối soát (UC13)</p>
+    </div>
+</div>
+
+<!-- 3 BALANCE CARDS -->
+<div class="grid-12" style="margin-bottom: 28px;">
+
+    <!-- Card 1: Available Balance -->
+    <div class="col-4">
+        <div class="card" style="padding: 24px; background: linear-gradient(135deg, #0D9488 0%, #0F766E 100%); color: #ffffff;">
+            <span class="caption" style="color: rgba(255, 255, 255, 0.8); font-weight: 600;">Số dư khả dụng có thể rút</span>
+            <div style="font-size: 30px; font-weight: 800; margin: 8px 0 4px;">
+                @Model.AvailableBalance.ToString("#,##0 đ")
+            </div>
+            <span class="caption" style="color: rgba(255, 255, 255, 0.7);">Ngưỡng rút tối thiểu: 500.000 đ</span>
+        </div>
+    </div>
+
+    <!-- Card 2: Pending Balance -->
+    <div class="col-4">
+        <div class="card" style="padding: 24px;">
+            <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Đang chờ đối soát / phê duyệt</span>
+            <div style="font-size: 30px; font-weight: 800; color: #F59E0B; margin: 8px 0 4px;">
+                @Model.PendingBalance.ToString("#,##0 đ")
+            </div>
+            <span class="caption" style="color: var(--text-muted);">Yêu cầu rút đang được kế toán duyệt</span>
+        </div>
+    </div>
+
+    <!-- Card 3: Total Paid -->
+    <div class="col-4">
+        <div class="card" style="padding: 24px;">
+            <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Tổng tiền đã chi trả thành công</span>
+            <div style="font-size: 30px; font-weight: 800; color: var(--text-heading); margin: 8px 0 4px;">
+                @Model.TotalPaid.ToString("#,##0 đ")
+            </div>
+            <span class="caption" style="color: var(--status-success); font-weight: 600;"><i class="bi bi-check-circle-fill me-1"></i> Đã tất toán vào tài khoản</span>
+        </div>
+    </div>
+
+</div>
+
+<!-- PAYOUT FORM & TRANSACTION HISTORY -->
+<div class="grid-12">
+
+    <!-- Form Gửi Yêu Cầu Thanh Toán (UC13) -->
+    <div class="col-5">
+        <div class="card">
+            <h3 class="h3" style="margin-bottom: 6px;">Yêu Cầu Rút Tiền</h3>
+            <span class="caption" style="display: block; margin-bottom: 20px;">Chuyển doanh thu khóa học về tài khoản ngân hàng của bạn</span>
+
+            @using (Html.BeginForm("RequestPayout", "Payout", new { area = "Instructor" }, FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+
+                <div class="form-group">
+                    <label class="form-label">Số tiền cần rút (VNĐ) <span class="required">*</span></label>
+                    <input type="number" name="soTien" class="form-control" min="500000" step="50000" placeholder="Tối thiểu 500,000 đ" value="@Math.Min(Model.AvailableBalance, 2000000)" required />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ngân hàng nhận tiền <span class="required">*</span></label>
+                    <select name="nganHang" class="form-control" required>
+                        <option value="Vietcombank">Vietcombank - Ngoại thương Việt Nam</option>
+                        <option value="Techcombank">Techcombank - Kỹ thương Việt Nam</option>
+                        <option value="MBBank">MBBank - Quân Đội</option>
+                        <option value="BIDV">BIDV - Đầu tư & Phát triển</option>
+                        <option value="VietinBank">VietinBank - Công Thương</option>
+                        <option value="ACB">ACB - Á Châu</option>
+                        <option value="TPBank">TPBank - Tiên Phong</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Số tài khoản ngân hàng <span class="required">*</span></label>
+                    <input type="text" name="soTaiKhoan" class="form-control" placeholder="Ví dụ: 0123456789" required />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tên chủ tài khoản (In hoa không dấu) <span class="required">*</span></label>
+                    <input type="text" name="tenChuTaiKhoan" class="form-control" placeholder="Ví dụ: NGUYEN VAN A" required />
+                </div>
+
+                <div style="margin-top: 24px;">
+                    @if (Model.AvailableBalance >= 500000)
+                    {
+                        <button type="submit" class="btn btn-primary" style="width: 100%; height: 44px;">
+                            Gửi yêu cầu nhận thanh toán
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-secondary" style="width: 100%; height: 44px;" disabled title="Số dư chưa đạt tối thiểu 500,000 đ">
+                            Số dư khả dụng chưa đạt 500.000 đ
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Bảng Lịch Sử Thanh Toán -->
+    <div class="col-7">
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div style="padding: 18px 24px; border-bottom: 1px solid var(--border-color);">
+                <h3 class="h3">Lịch Sử Giao Dịch Rút Tiền</h3>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Mã phiếu</th>
+                            <th>Ngày yêu cầu</th>
+                            <th>Số tiền</th>
+                            <th>Tài khoản nhận</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.PayoutRequests != null && Model.PayoutRequests.Any())
+                        {
+                            foreach (var p in Model.PayoutRequests)
+                            {
+                                <tr>
+                                    <td><code>@p.MaPhieuChi</code></td>
+                                    <td>@(p.NgayYeuCau.HasValue ? p.NgayYeuCau.Value.ToString("dd/MM/yyyy HH:mm") : "")</td>
+                                    <td><strong style="color: #0D9488;">@p.SoTien.ToString("#,##0 đ")</strong></td>
+                                    <td>
+                                        <div style="font-size: 13px; font-weight: 600; color: var(--text-heading);">@p.NganHang</div>
+                                        <span class="caption" style="color: var(--text-muted);">@p.SoTaiKhoan (@p.TenChuTaiKhoan)</span>
+                                    </td>
+                                    <td>
+                                        @if (p.TrangThai == "Đã thanh toán")
+                                        {
+                                            <span class="badge badge-success">Đã thanh toán</span>
+                                        }
+                                        else if (p.TrangThai == "Từ chối")
+                                        {
+                                            <span class="badge badge-danger">Từ chối</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-warning">Chờ duyệt</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 32px;">
+                                    Chưa có yêu cầu rút tiền nào được tạo.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>

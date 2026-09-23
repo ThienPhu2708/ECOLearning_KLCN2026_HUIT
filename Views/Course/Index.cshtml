@@ -163,11 +163,11 @@
                             </label>
                             <label class="filter-checkbox-label">
                                 <input type="radio" name="minRating" value="4.8" @(minRating == 4.8 ? "checked" : "") onchange="this.form.submit()" />
-                                <span class="stars" style="color: #F59E0B;">★★★★★</span> Từ 4.8 sao
+                                <span class="stars" style="color: #F59E0B;"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></span> Từ 4.8 sao
                             </label>
                             <label class="filter-checkbox-label">
                                 <input type="radio" name="minRating" value="4.5" @(minRating == 4.5 ? "checked" : "") onchange="this.form.submit()" />
-                                <span class="stars" style="color: #F59E0B;">★★★★☆</span> Từ 4.5 sao
+                                <span class="stars" style="color: #F59E0B;"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-half"></i></span> Từ 4.5 sao
                             </label>
                         </div>
 
@@ -232,7 +232,7 @@
                     {
                         <!-- EMPTY STATE FOR SEARCH -->
                         <div class="empty-state">
-                            <div style="font-size: 48px; margin-bottom: 12px;">🔍</div>
+                            <div style="font-size: 48px; margin-bottom: 12px;"><i class="bi bi-search text-muted"></i></div>
                             <h3 style="font-size: 20px; font-weight: 800; color: #0F172A; margin-bottom: 8px;">Không tìm thấy kết quả phù hợp</h3>
                             <p style="font-size: 14px; color: #64748B; margin-bottom: 24px; line-height: 22px;">
                                 Vui lòng thử lại với các từ khóa phổ biến: <em>"Web", "Python", "UI/UX", "HTML5"</em> hoặc chọn lại bộ lọc.
@@ -265,11 +265,11 @@
                                             <img src="@thumbUrl" alt="@course.tenKhoaHoc" />
                                             @if (isTopTrending)
                                             {
-                                                <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;">🔥 Top Trending</span>
+                                                <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;"><i class="bi bi-fire me-1"></i> Top Trending</span>
                                             }
                                             else if (isHighRated)
                                             {
-                                                <span class="badge badge-success" style="position: absolute; top: 12px; left: 12px; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;">★ Đánh giá cao</span>
+                                                <span class="badge badge-success" style="position: absolute; top: 12px; left: 12px; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;"><i class="bi bi-star-fill me-1"></i> Đánh giá cao</span>
                                             }
                                         </div>
                                         <div class="course-body">
@@ -278,7 +278,7 @@
                                             </div>
                                             <h4 class="course-title" title="@course.tenKhoaHoc" style="font-size: 15px; font-weight: 700;">@course.tenKhoaHoc</h4>
                                             <div class="course-instructor">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                                <i class="bi bi-person me-1"></i>
                                                 @teacherName
                                             </div>
                                             
@@ -289,13 +289,13 @@
                                                     double avgRating = course.DanhGiaKhoaHoc.Average(d => d.soSao);
                                                     int ratingCount = course.DanhGiaKhoaHoc.Count;
                                                     <span class="rating-score">@avgRating.ToString("0.00")</span>
-                                                    <div class="stars">★★★★★</div>
+                                                    <div class="stars" style="color: #F59E0B;"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
                                                     <span class="rating-count">(@ratingCount)</span>
                                                 }
                                                 else
                                                 {
                                                     <span class="rating-score" style="color: var(--text-muted, #94A3B8); font-size: 13px; font-weight: 500;">Chưa có đánh giá</span>
-                                                    <div class="stars" style="color: #CBD5E1; opacity: 0.7;">★★★★★</div>
+                                                    <div class="stars" style="color: #CBD5E1; opacity: 0.7;"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
                                                 }
                                             </div>
 

@@ -1,0 +1,106 @@
+@model List<ECOLearning.Areas.Instructor.Models.InstructorStudentItem>
+@{
+ViewBag.Title = "Quản Lý Học Viên";
+var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div>
+        <h1 class="h2" style="margin-top: 6px;">Quản Lý Học Viên</h1>
+        <p class="body-2" style="color: var(--text-secondary);">Theo dõi tiến độ học tập, thời gian tham gia và đánh giá của học viên (UC11)</p>
+    </div>
+</div>
+
+<!-- FILTER & SEARCH BAR -->
+<div class="card" style="margin-bottom: 24px; padding: 16px 20px;">
+    <form method="get" action="@Url.Action("Index", "Student", new { area = "Instructor" })" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div style="display: flex; gap: 12px; align-items: center; flex: 1; min-width: 300px;">
+            <select name="courseId" class="form-control" style="max-width: 300px;">
+                <option value="">Tất cả khóa học của bạn</option>
+                @if (teacherCourses != null)
+                {
+                    foreach (var c in teacherCourses)
+                    {
+                        <option value="@c.maKhoaHoc" @(c.maKhoaHoc == ViewBag.SelectedCourseId ? "selected" : "")>
+                            @c.tenKhoaHoc
+                        </option>
+                    }
+                }
+            </select>
+            <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Tìm kiếm theo họ tên hoặc email..." style="max-width: 320px;">
+            <button type="submit" class="btn btn-secondary">Lọc</button>
+        </div>
+        <div>
+            <span class="caption" style="font-weight: 600; color: var(--text-secondary);">Tổng số: <strong>@(Model != null ? Model.Count : 0)</strong> học viên</span>
+        </div>
+    </form>
+</div>
+
+<!-- STUDENTS TABLE (UC11) -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Học viên</th>
+                    <th>Email</th>
+                    <th>Khóa học</th>
+                    <th>Ngày tham gia</th>
+                    <th style="width: 200px;">Tiến độ hoàn thành</th>
+                    <th>Đánh giá</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <img src="@item.AnhDaiDien" alt="@item.HoTen" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color);" />
+                                    <strong style="color: var(--text-heading);">@item.HoTen</strong>
+                                </div>
+                            </td>
+                            <td><span style="color: var(--text-secondary);">@item.Email</span></td>
+                            <td><span class="badge badge-secondary" style="max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;">@item.TenKhoaHoc</span></td>
+                            <td>@(item.NgayThamGia.HasValue ? item.NgayThamGia.Value.ToString("dd/MM/yyyy") : "-")</td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="flex: 1; height: 8px; background: var(--bg-canvas, #E2E8F0); border-radius: 9999px; overflow: hidden;">
+                                        <div style="width: @item.TienDoHoanThanh%; height: 100%; background: #0D9488; border-radius: 9999px;"></div>
+                                    </div>
+                                    <span style="font-size: 12px; font-weight: 700; color: var(--text-heading); width: 38px;">@Math.Round(item.TienDoHoanThanh, 0)%</span>
+                                </div>
+                            </td>
+                            <td>
+                                @if (item.SoSao.HasValue && item.SoSao > 0)
+                                {
+                                    <span style="color: #F59E0B; font-weight: 700;">@item.SoSao.Value <i class="bi bi-star-fill"></i></span>
+                                }
+                                else
+                                {
+                                    <span style="color: var(--text-muted); font-size: 13px;">Chưa đánh giá</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 48px 24px;">
+                            <div style="width: 52px; height: 52px; border-radius: 50%; background: var(--bg-canvas); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: var(--text-muted); font-size: 24px;">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                            <p class="body-1" style="font-weight: 600; color: var(--text-heading); margin-bottom: 4px;">
+                                Khóa học hiện tại chưa có học viên nào ghi danh
+                            </p>
+                            <span class="caption">Khi có học viên mua và tham gia khóa học, thông tin học tập sẽ hiển thị tại đây.</span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

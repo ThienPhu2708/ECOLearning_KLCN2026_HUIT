@@ -18,6 +18,7 @@ namespace ECOLearning.Controllers
                 .Include(k => k.NguoiDung)
                 .Include(k => k.DanhMuc)
                 .Include(k => k.DanhGiaKhoaHoc)
+                .Where(k => k.trangThai == "Đã xuất bản" || k.trangThai == "Đã duyệt" || k.trangThai == "Active")
                 .AsQueryable();
 
             // 1. Tìm kiếm thông minh theo từ khóa (Tên khóa học, Tên giảng viên, Mô tả, Danh mục)
@@ -95,13 +96,14 @@ namespace ECOLearning.Controllers
         {
             if (string.IsNullOrEmpty(id))
             {
-                id = "KH_TEST01";
+                var firstCourse = db.KhoaHoc.FirstOrDefault(k => k.trangThai == "Đã xuất bản" || k.trangThai == "Đã duyệt" || k.trangThai == "Active");
+                if (firstCourse != null)
+                {
+                    id = firstCourse.maKhoaHoc;
+                }
             }
 
-            // 1. Đảm bảo dữ liệu khóa học mẫu đã có trong CSDL
-            HomeController.EnsureSampleCoursesSeeded(db);
-
-            // 2. Tìm kiếm khóa học theo Mã hoặc Tên khóa học
+            // 1. Tìm kiếm khóa học theo Mã hoặc Tên khóa học
             var course = db.KhoaHoc
                 .Include(k => k.NguoiDung)
                 .Include(k => k.DanhMuc)
@@ -118,7 +120,7 @@ namespace ECOLearning.Controllers
                     .Include(k => k.DanhGiaKhoaHoc)
                     .Include("DanhGiaKhoaHoc.NguoiDung")
                     .Include("ChuongHoc.BaiHoc")
-                    .FirstOrDefault(k => k.maKhoaHoc == "KH_TEST01") ?? db.KhoaHoc.FirstOrDefault();
+                    .FirstOrDefault(k => k.trangThai == "Đã xuất bản" || k.trangThai == "Đã duyệt" || k.trangThai == "Active");
             }
 
             if (course == null)
@@ -126,9 +128,19 @@ namespace ECOLearning.Controllers
                 return HttpNotFound();
             }
 
-            // 3. Kiểm tra trạng thái học viên đăng ký
-            bool isEnrolled = false;
+            // Cho phép Giảng viên tạo khóa học hoặc Admin xem thử khóa học chưa duyệt
             var currentUser = Session["User"] as NguoiDung;
+            var sessionRole = Session["Role"]?.ToString();
+            int currentUserId = (Session["UserId"] as int?) ?? 0;
+            bool isOwnerOrAdmin = (sessionRole == "Admin" || (course.maGiaoVien == currentUserId && currentUserId > 0));
+
+            if (!isOwnerOrAdmin && course.trangThai != "Đã xuất bản" && course.trangThai != "Đã duyệt" && course.trangThai != "Active")
+            {
+                return HttpNotFound();
+            }
+
+            // 2. Kiểm tra trạng thái học viên đăng ký
+            bool isEnrolled = false;
             if (currentUser != null)
             {
                 isEnrolled = db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == course.maKhoaHoc && d.maHocVien == currentUser.maNguoiDung);
@@ -139,59 +151,7 @@ namespace ECOLearning.Controllers
             bool isInCart = cartList != null && cartList.Any(i => i.CourseId == course.maKhoaHoc);
             ViewBag.IsInCart = isInCart;
 
-            // 4. Đồng bộ đánh giá CSDL: KH_TEST01 có 1 lượt đánh giá từ người dùng hiện tại, KH_TEST02 có 0 lượt đánh giá
-            try
-            {
-                if (course.maKhoaHoc == "KH_TEST01")
-                {
-                    var activeUser = currentUser 
-                                  ?? db.NguoiDung.FirstOrDefault(u => u.email == "anh675262@gmail.com") 
-                                  ?? db.NguoiDung.FirstOrDefault(u => u.maNguoiDung == 2) 
-                                  ?? db.NguoiDung.FirstOrDefault(u => u.vaiTro == "HocVien");
-
-                    if (activeUser != null)
-                    {
-                        var existingReview = db.DanhGiaKhoaHoc.FirstOrDefault(r => r.maKhoaHoc == "KH_TEST01");
-                        if (existingReview != null)
-                        {
-                            existingReview.maHocVien = activeUser.maNguoiDung;
-                            existingReview.NguoiDung = activeUser;
-                            existingReview.soSao = 5;
-                            existingReview.noiDung = "Khóa học thử nghiệm rất tuyệt vời, giao diện trải nghiệm người dùng hiện đại và mượt mà!";
-                            existingReview.ngayDanhGia = DateTime.Now;
-                        }
-                        else
-                        {
-                            db.DanhGiaKhoaHoc.Add(new DanhGiaKhoaHoc
-                            {
-                                maDanhGia = "DG_TEST01_" + activeUser.maNguoiDung,
-                                maKhoaHoc = "KH_TEST01",
-                                maHocVien = activeUser.maNguoiDung,
-                                NguoiDung = activeUser,
-                                soSao = 5,
-                                noiDung = "Khóa học thử nghiệm rất tuyệt vời, giao diện trải nghiệm người dùng hiện đại và mượt mà!",
-                                ngayDanhGia = DateTime.Now
-                            });
-                        }
-                        db.SaveChanges();
-                    }
-                }
-                else if (course.maKhoaHoc == "KH_TEST02")
-                {
-                    var extraReviews = db.DanhGiaKhoaHoc.Where(r => r.maKhoaHoc == "KH_TEST02").ToList();
-                    if (extraReviews.Count > 0)
-                    {
-                        db.DanhGiaKhoaHoc.RemoveRange(extraReviews);
-                        db.SaveChanges();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine("Sync reviews error: " + ex.Message);
-            }
-
-            // 5. Đồng bộ lại dữ liệu chương và bài học
+            // 3. Dữ liệu chương và bài học
             var chapters = db.ChuongHoc
                 .Where(c => c.maKhoaHoc == course.maKhoaHoc)
                 .OrderBy(c => c.thuTu)

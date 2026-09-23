@@ -1,0 +1,407 @@
+@model List<ECOLearning.Models.TeacherApplication>
+@{
+ViewBag.Title = "Xét Duyệt Hồ Sơ Giảng Viên";
+Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
+string currentFilter = ViewBag.StatusFilter as string ?? "All";
+}
+
+<style>
+    .modal-overlay {
+        transition: opacity 0.25s ease, visibility 0.25s ease;
+    }
+    .modal-overlay.active {
+        display: flex !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+    }
+    .modal-overlay:not(.active) {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+</style>
+
+<div class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div>
+        <h1 style="font-size: 24px; font-weight: 800; color: #0F172A; margin: 0 0 4px 0;">Xét Duyệt Đơn Đăng Ký Giảng Viên</h1>
+        <p style="color: #64748B; font-size: 14px; margin: 0;">Quản lý và phê duyệt các yêu cầu đăng ký làm Giảng viên từ Học viên toàn sàn.</p>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px;">
+    <div style="background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; padding: 20px; display: flex; align-items: center; gap: 16px;">
+        <div>
+            <div style="font-size: 13px; color: #64748B; font-weight: 600;">Hồ sơ chờ duyệt</div>
+            <div style="font-size: 24px; font-weight: 800; color: #D97706;">@ViewBag.PendingCount</div>
+        </div>
+    </div>
+
+    <div style="background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; padding: 20px; display: flex; align-items: center; gap: 16px;">
+        <div>
+            <div style="font-size: 13px; color: #64748B; font-weight: 600;">Đã phê duyệt</div>
+            <div style="font-size: 24px; font-weight: 800; color: #10B981;">@ViewBag.ApprovedCount</div>
+        </div>
+    </div>
+
+    <div style="background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; padding: 20px; display: flex; align-items: center; gap: 16px;">
+        <div>
+            <div style="font-size: 13px; color: #64748B; font-weight: 600;">Đã từ chối</div>
+            <div style="font-size: 24px; font-weight: 800; color: #EF4444;">@ViewBag.RejectedCount</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Tabs -->
+<div style="display: flex; gap: 10px; margin-bottom: 20px;">
+    <a href="@Url.Action("Index", "TeacherApproval", new { area = "Admin", statusFilter = "All" })"
+    class="btn btn-sm" style="@(currentFilter == "All" ? "background: #0F172A; color: #FFFFFF;" : "background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1;") font-weight: 700; border-radius: 10px; text-decoration: none;">
+    Tất cả (@(ViewBag.PendingCount + ViewBag.ApprovedCount + ViewBag.RejectedCount))
+</a>
+<a href="@Url.Action("Index", "TeacherApproval", new { area = "Admin", statusFilter = "Pending" })"
+class="btn btn-sm" style="@(currentFilter == "Pending" ? "background: #0F172A; color: #FFFFFF;" : "background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1;") font-weight: 700; border-radius: 10px; text-decoration: none;">
+Chờ duyệt (@ViewBag.PendingCount)
+</a>
+<a href="@Url.Action("Index", "TeacherApproval", new { area = "Admin", statusFilter = "Approved" })"
+class="btn btn-sm" style="@(currentFilter == "Approved" ? "background: #0F172A; color: #FFFFFF;" : "background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1;") font-weight: 700; border-radius: 10px; text-decoration: none;">
+Đã duyệt (@ViewBag.ApprovedCount)
+</a>
+<a href="@Url.Action("Index", "TeacherApproval", new { area = "Admin", statusFilter = "Rejected" })"
+class="btn btn-sm" style="@(currentFilter == "Rejected" ? "background: #0F172A; color: #FFFFFF;" : "background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1;") font-weight: 700; border-radius: 10px; text-decoration: none;">
+Đã từ chối (@ViewBag.RejectedCount)
+</a>
+</div>
+
+<!-- Applications Table -->
+<div style="background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
+    <table style="width: 100%; border-collapse: collapse; font-size: 14px; text-align: left;">
+        <thead>
+            <tr style="background: #F8FAFC; border-bottom: 1px solid #E2E8F0; color: #475569; font-weight: 700;">
+                <th style="padding: 16px 20px;">Mã yêu cầu</th>
+                <th style="padding: 16px 20px;">Ứng viên</th>
+                <th style="padding: 16px 20px;">Lĩnh vực chuyên môn</th>
+                <th style="padding: 16px 20px;">BC/CC</th>
+                <th style="padding: 16px 20px;">Ngày nộp</th>
+                <th style="padding: 16px 20px;">Trạng thái</th>
+                <th style="padding: 16px 20px; text-align: Center;">Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model != null && Model.Any())
+            {
+                foreach (var app in Model)
+                {
+                    <tr style="border-bottom: 1px solid #F1F5F9; transition: background 0.15s;" onmouseover="this.style.background='#F8FAFC';" onmouseout="this.style.background='transparent';">
+                        <td style="padding: 16px 20px;">
+                            <code style="font-weight: 700; color: #0D9488; background: #CCFBF1; padding: 4px 8px; border-radius: 6px; font-size: 12px;">@app.ApplicationId</code>
+                        </td>
+                        <td style="padding: 16px 20px;">
+                            <div style="font-weight: 700; color: #0F172A;">@app.FullName</div>
+                            <div style="font-size: 12px; color: #64748B;">@app.Email</div>
+                        </td>
+                        <td style="padding: 16px 20px; font-weight: 600; color: #334155;">
+                            @app.Specialization
+                        </td>
+                        <td style="padding: 16px 20px;">
+                            @if (!string.IsNullOrEmpty(app.CertificateFilePath))
+                            {
+                                <a href="@app.CertificateFilePath" target="_blank" style="color: #2563EB; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-size: 13px;">
+                                    Xem
+                                </a>
+                            }
+                            else
+                            {
+                                <span style="color: #94A3B8; font-size: 13px;">Chưa gửi file</span>
+                            }
+                        </td>
+                        <td style="padding: 16px 20px; color: #64748B; font-size: 13px;">
+                            @app.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                        </td>
+                        <td style="padding: 16px 20px;">
+                            @if (app.Status == "Pending")
+                            {
+                                <span style="background: #FEF3C7; color: #B45309; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;">Chờ duyệt</span>
+                            }
+                            else if (app.Status == "Approved")
+                            {
+                                <span style="background: #D1FAE5; color: #047857; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;"><i class="bi bi-check-circle-fill me-1"></i> Đã phê duyệt</span>
+                            }
+                            else if (app.Status == "Rejected")
+                            {
+                                <span style="background: #FEE2E2; color: #B91C1C; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;"><i class="bi bi-x-circle-fill me-1"></i> Bị từ chối</span>
+                            }
+                        </td>
+                        <td style="padding: 16px 20px; text-align: right;">
+                            <div style="display: inline-flex; gap: 8px;">
+                                <button type="button" class="btn btn-sm" onclick="viewDetails('@app.ApplicationId', '@Html.Raw(HttpUtility.JavaScriptStringEncode(app.FullName))', '@Html.Raw(HttpUtility.JavaScriptStringEncode(app.Email))', '@Html.Raw(HttpUtility.JavaScriptStringEncode(app.Specialization))', '@Html.Raw(HttpUtility.JavaScriptStringEncode(app.BioExperience))', '@Html.Raw(HttpUtility.JavaScriptStringEncode(app.BankName))', '@Html.Raw(HttpUtility.JavaScriptStringEncode(app.AccountNumber))', '@Html.Raw(HttpUtility.JavaScriptStringEncode(app.AccountName))', '@app.CertificateFilePath', '@app.Status', '@Html.Raw(HttpUtility.JavaScriptStringEncode(app.RejectionReason ?? ""))');"
+                                style="background: #F1F5F9; color: #334155; border-radius: 8px; font-weight: 600; font-size: 13px; border: none; cursor: pointer;">
+                                Chi tiết hồ sơ
+                            </button>
+
+                            @if (app.Status == "Pending")
+                            {
+                                <button type="button" class="btn btn-sm" onclick="approveApplication('@app.ApplicationId');"
+                                style="background: #10B981; color: #FFFFFF; border-radius: 8px; font-weight: 700; font-size: 13px; border: none; cursor: pointer;">
+                                <i class="bi bi-check-circle-fill me-1"></i> Phê duyệt
+                            </button>
+
+                            <button type="button" class="btn btn-sm" onclick="openRejectModal('@app.ApplicationId');"
+                            style="background: #EF4444; color: #FFFFFF; border-radius: 8px; font-weight: 700; font-size: 13px; border: none; cursor: pointer;">
+                            <i class="bi bi-x-circle-fill me-1"></i> Từ chối
+                        </button>
+                    }
+                </div>
+            </td>
+        </tr>
+    }
+}
+else
+{
+    <tr>
+        <td colspan="7" style="padding: 40px; text-align: center; color: #94A3B8;">
+            Chưa có đơn đăng ký giảng viên nào theo bộ lọc này.
+        </td>
+    </tr>
+}
+</tbody>
+</table>
+</div>
+
+<!-- Modal Xem Chi Tiết -->
+<div class="modal-overlay" id="detail-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: #FFFFFF; border-radius: 20px; max-width: 640px; width: 90%; padding: 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #E2E8F0; padding-bottom: 14px;">
+            <h3 style="font-size: 18px; font-weight: 800; color: #0F172A; margin: 0;">Chi Tiết Hồ Sơ Đăng Ký Giảng Viên</h3>
+            <button type="button" onclick="closeModal('detail-modal');" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #64748B;"><i class="bi bi-x-lg"></i></button>
+        </div>
+
+        <div style="font-size: 14px; color: #334155; display: grid; gap: 14px;" id="detail-content">
+            <!-- Rendered by JS -->
+        </div>
+
+        <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;" id="detail-actions">
+            <button type="button" class="btn btn-outline" onclick="closeModal('detail-modal');" style="border-radius: 10px; font-weight: 600;">Đóng</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Từ Chối -->
+<div class="modal-overlay" id="reject-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1050; align-items: center; justify-content: center;">
+    <div style="background: #FFFFFF; border-radius: 20px; max-width: 480px; width: 90%; padding: 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+        <h3 style="font-size: 18px; font-weight: 800; color: #991B1B; margin-top: 0; margin-bottom: 12px;">Từ Chối Hồ Sơ Đăng Ký</h3>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 16px;">Vui lòng nhập lý do từ chối để phản hồi lại ứng viên:</p>
+
+        <input type="hidden" id="reject-app-id" />
+        <textarea id="reject-reason" rows="4" placeholder="VD: Bằng cấp chưa đáp ứng đủ tiêu chuẩn hoặc hình ảnh tệp quá mờ..."
+        style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CBD5E1; font-size: 14px; box-sizing: border-box; resize: vertical; margin-bottom: 20px;"></textarea>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('reject-modal');" style="border-radius: 10px; font-weight: 600;">Hủy bỏ</button>
+            <button type="button" class="btn" onclick="submitReject();" style="background: #EF4444; color: #FFFFFF; border-radius: 10px; font-weight: 700; border: none;">Xác nhận từ chối</button>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+<script>
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    }
+
+function viewDetails(appId, name, email, spec, bio, bank, accNo, accName, certUrl, status, reason) {
+let statusBadge = '';
+if (status === 'Pending') statusBadge = '<span style="background: #FEF3C7; color: #B45309; padding: 2px 8px; border-radius: 12px; font-weight:700;">Chờ duyệt</span>';
+else if (status === 'Approved') statusBadge = '<span style="background: #D1FAE5; color: #047857; padding: 2px 8px; border-radius: 12px; font-weight:700;">Đã phê duyệt</span>';
+else statusBadge = '<span style="background: #FEE2E2; color: #B91C1C; padding: 2px 8px; border-radius: 12px; font-weight:700;">Bị từ chối</span>';
+
+let html = `
+<div><strong>Mã đơn:</strong> <code>${appId}</code> ${statusBadge}</div>
+<div><strong>Ứng viên:</strong> ${name} (${email})</div>
+<div><strong>Lĩnh vực chuyên môn:</strong> ${spec}</div>
+<div><strong>Kinh nghiệm & Giới thiệu:</strong>
+<div style="background: #F8FAFC; padding: 12px; border-radius: 8px; margin-top: 4px; line-height: 1.5; font-size: 13px;">${bio}</div>
+</div>
+<div><strong>Thông tin nhận lương:</strong> ${bank} - STK: <strong>${accNo}</strong> (${accName})</div>
+<div><strong>Chứng chỉ đính kèm:</strong> ${certUrl ? `<a href="${certUrl}" target="_blank" style="color:#2563EB; font-weight:700;"><i class="bi bi-paperclip"></i> Mở tệp chứng chỉ</a>` : 'Không có'}</div>
+`;
+
+if (status === 'Rejected' && reason) {
+html += `<div style="background:#FEF2F2; color:#991B1B; padding:10px; border-radius:8px; margin-top:6px;"><strong>Lý do từ chối:</strong> ${reason}</div>`;
+}
+
+document.getElementById('detail-content').innerHTML = html;
+
+let actionsHtml = `<button type="button" class="btn btn-outline" onclick="closeModal('detail-modal');" style="border-radius:10px; font-weight:600;">Đóng</button>`;
+if (status === 'Pending') {
+actionsHtml = `
+<button type="button" class="btn" onclick="approveApplication('${appId}');" style="background:#10B981; color:#fff; border-radius:10px; font-weight:700;"><i class="bi bi-check-circle-fill me-1"></i> Phê duyệt</button>
+<button type="button" class="btn" onclick="openRejectModal('${appId}');" style="background:#EF4444; color:#fff; border-radius:10px; font-weight:700;"><i class="bi bi-x-circle-fill me-1"></i> Từ chối</button>
+<button type="button" class="btn btn-outline" onclick="closeModal('detail-modal');" style="border-radius:10px; font-weight:600;">Hủy</button>
+`;
+}
+document.getElementById('detail-actions').innerHTML = actionsHtml;
+
+const detModal = document.getElementById('detail-modal');
+if (detModal) {
+    detModal.style.display = 'flex';
+    detModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+}
+
+function approveApplication(appId) {
+    Swal.fire({
+        title: 'Phê duyệt hồ sơ giảng viên?',
+        html: 'Bạn có chắc chắn muốn <strong>Phê duyệt</strong> đơn đăng ký giảng viên này không?<br><span style="font-size:13px; color:#64748B; display:block; margin-top:6px;">Tài khoản người dùng sẽ được tự động nâng cấp vai trò thành Giảng viên trên toàn hệ thống.</span>',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Phê duyệt',
+        cancelButtonText: 'Hủy bỏ',
+        confirmButtonColor: '#10B981',
+        cancelButtonColor: '#94A3B8',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Đang phê duyệt...',
+                text: 'Hệ thống đang cập nhật quyền tài khoản, vui lòng chờ trong giây lát.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("Approve", "TeacherApproval", new { area = "Admin" })', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `appId=${encodeURIComponent(appId)}&__RequestVerificationToken=${encodeURIComponent(token)}`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Phê duyệt thành công!',
+                        text: data.message,
+                        confirmButtonColor: '#10B981',
+                        timer: 2000,
+                        timerProgressBar: true
+                    }).then(() => location.reload());
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Không thể phê duyệt',
+                        text: data.message,
+                        confirmButtonColor: '#EF4444'
+                    });
+                }
+            })
+            .catch(err => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi kết nối',
+                    text: 'Không thể kết nối đến máy chủ. Vui lòng thử lại!',
+                    confirmButtonColor: '#EF4444'
+                });
+            });
+        }
+    });
+}
+
+function openRejectModal(appId) {
+closeModal('detail-modal');
+document.getElementById('reject-app-id').value = appId;
+document.getElementById('reject-reason').value = '';
+const rejModal = document.getElementById('reject-modal');
+if (rejModal) {
+    rejModal.style.display = 'flex';
+    rejModal.classList.add('active');
+}
+}
+
+function submitReject() {
+    const appId = document.getElementById('reject-app-id').value;
+    const reason = document.getElementById('reject-reason').value.trim();
+
+    if (!reason) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Thiếu lý do từ chối',
+            text: 'Vui lòng nhập lý do từ chối để phản hồi lại ứng viên!',
+            confirmButtonColor: '#F59E0B'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Xác nhận từ chối đơn?',
+        text: 'Đơn đăng ký của ứng viên sẽ bị từ chối kèm theo lý do phản hồi chi tiết.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Xác nhận từ chối',
+        cancelButtonText: 'Hủy bỏ',
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#94A3B8',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Đang xử lý...',
+                text: 'Hệ thống đang cập nhật trạng thái đơn, vui lòng chờ trong giây lát.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("Reject", "TeacherApproval", new { area = "Admin" })', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `appId=${encodeURIComponent(appId)}&rejectionReason=${encodeURIComponent(reason)}&__RequestVerificationToken=${encodeURIComponent(token)}`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Đã từ chối đơn đăng ký!',
+                        text: data.message,
+                        confirmButtonColor: '#10B981',
+                        timer: 2000,
+                        timerProgressBar: true
+                    }).then(() => location.reload());
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Không thể từ chối đơn',
+                        text: data.message,
+                        confirmButtonColor: '#EF4444'
+                    });
+                }
+            })
+            .catch(err => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi kết nối',
+                    text: 'Không thể kết nối đến máy chủ. Vui lòng thử lại!',
+                    confirmButtonColor: '#EF4444'
+                });
+            });
+        }
+    });
+}
+</script>

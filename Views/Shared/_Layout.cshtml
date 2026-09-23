@@ -1,70 +1,94 @@
 <!DOCTYPE html>
 <html lang="vi">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@(ViewBag.Title != null ? ViewBag.Title + " | " : "")E-Learning - Nền tảng Đào tạo Trực tuyến</title>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>@(ViewBag.Title != null ? ViewBag.Title + " | " : "")E-Learning - Nền tảng Đào tạo Trực tuyến</title>
 
-    <!-- Google Fonts Preconnect & Stylesheet (Plus Jakarta Sans & Be Vietnam Pro chuẩn 100% tiếng Việt) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+        <!-- Google Fonts Preconnect & Stylesheet (Plus Jakarta Sans & Be Vietnam Pro chuẩn 100% tiếng Việt) -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
 
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+        <!-- Bootstrap Icons -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 
-    <!-- Design System CSS (Cache Busting v=2.0) -->
-    <link rel="stylesheet" href="@Url.Content("~/assets/css/variables.css?v=2.0")" />
-    <link rel="stylesheet" href="@Url.Content("~/assets/css/base.css?v=2.0")" />
-    <link rel="stylesheet" href="@Url.Content("~/assets/css/components.css?v=2.0")" />
+        <!-- Design System CSS (Cache Busting v=2.0) -->
+        <link rel="stylesheet" href="@Url.Content("~/assets/css/variables.css?v=2.0")" />
+        <link rel="stylesheet" href="@Url.Content("~/assets/css/base.css?v=2.0")" />
+        <link rel="stylesheet" href="@Url.Content("~/assets/css/components.css?v=2.1")" />
 
-    @RenderSection("styles", required: false)
-</head>
-<body style="margin: 0; padding: 0; background-color: #FFFFFF;">
-    <!-- Header Navigation (76px, Sticky) -->
-    <header class="main-header" style="height: 76px; min-height: 76px; background: #FFFFFF; border-bottom: none; box-shadow: 0 2px 12px 0 rgba(15, 23, 42, 0.04); position: sticky; top: 0; z-index: 50; margin: 0; padding: 0;">
-        <div class="safe-container header-inner">
-            <div class="header-left">
-                <a href="@Url.Action("Index", "Home", new { area = "" })" class="brand-logo" title="E-Learning Trang Chủ">
-                    <div class="logo-icon">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                        </svg>
-                    </div>
-                    <span class="logo-text">E-Learning<span>.</span></span>
-                </a>
-                <nav class="nav-links">
-                    <a href="@Url.Action("Index", "Home", new { area = "" })" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")">Trang chủ</a>
-                    <a href="#" class="nav-link">Khám phá</a>
-                    <a href="@Url.Action("MyCourses", "Learning", new { area = "" })" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Learning" ? "active" : "")">Khóa học của tôi</a>
-                </nav>
-            </div>
+        <style>
+            .btn-nav-portal {
+                background: #FFFFFF !important;
+                color: #0F172A !important;
+                border: 1px solid #E2E8F0 !important;
+                box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+                font-weight: 600 !important;
+                font-size: 13.5px !important;
+                border-radius: 10px !important;
+                text-decoration: none !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 6px !important;
+                height: 38px !important;
+                padding: 0 16px !important;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                cursor: pointer !important;
+                white-space: nowrap !important;
+                box-sizing: border-box !important;
+            }
+            .btn-nav-portal:hover {
+                background-color: #F8FAFC !important;
+                color: #000000 !important;
+                border-color: #CBD5E1 !important;
+                box-shadow: 0 4px 8px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -2px rgba(15, 23, 42, 0.06) !important;
+                transform: translateY(-1px) !important;
+            }
+            .btn-nav-portal:active {
+                transform: translateY(0) !important;
+                box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+            }
+        </style>
 
-            <!-- Search Bar -->
-            <div class="header-search">
-                <form action="@Url.Action("Index", "Course", new { area = "" })" method="get" style="display: flex; align-items: center; width: 100%;">
-                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                    <input type="text" name="search" placeholder="Tìm kiếm khóa học, kỹ năng hoặc giảng viên..." value="@Request.QueryString["search"]" />
-                </form>
-            </div>
+        @RenderSection("styles", required: false)
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #FFFFFF;">
+        <!-- Header Navigation (76px, Sticky) -->
+        <header class="main-header" style="height: 76px; min-height: 76px; background: #FFFFFF; border-bottom: none; box-shadow: 0 2px 12px 0 rgba(15, 23, 42, 0.04); position: sticky; top: 0; z-index: 50; margin: 0; padding: 0;">
+            <div class="safe-container header-inner">
+                <div class="header-left">
+                    <a href="@Url.Action("Index", "Home", new { area = "" })" class="brand-logo" title="E-Learning Trang Chủ">
+                        <div class="logo-icon" style="display: inline-flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-book-half" style="font-size: 20px;"></i>
+                        </div>
+                        <span class="logo-text">E-Learning<span>.</span></span>
+                    </a>
+                    <nav class="nav-links">
+                        <a href="@Url.Action("Index", "Home", new { area = "" })" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")">Trang chủ</a>
+                        <a href="#" class="nav-link">Khám phá</a>
+                        <a href="@Url.Action("MyCourses", "Learning", new { area = "" })" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Learning" ? "active" : "")">Khóa học của tôi</a>
+                    </nav>
+                </div>
 
-            <!-- Header Actions -->
-            <div class="header-actions">
-                @{
+                <!-- Search Bar -->
+                <div class="header-search">
+                    <form action="@Url.Action("Index", "Course", new { area = "" })" method="get" style="display: flex; align-items: center; width: 100%;">
+                        <i class="bi bi-search search-icon" style="font-size: 16px;"></i>
+                        <input type="text" name="search" placeholder="Tìm kiếm khóa học, kỹ năng hoặc giảng viên..." value="@Request.QueryString["search"]" />
+                    </form>
+                </div>
+
+                <!-- Header Actions -->
+                <div class="header-actions">
+                    @{
                     var cartList = Session["Cart"] as List<ECOLearning.ViewModels.CartItemViewModel>;
                     int cartBadgeCount = cartList != null ? cartList.Count : 0;
                 }
                 <!-- Giỏ hàng -->
-                <a href="@Url.Action("Index", "Cart", new { area = "" })" class="btn btn-icon btn-secondary" title="Giỏ hàng" style="position: relative;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="9" cy="21" r="1"></circle>
-                        <circle cx="20" cy="21" r="1"></circle>
-                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                    </svg>
+                <a href="@Url.Action("Index", "Cart", new { area = "" })" class="btn btn-icon btn-secondary" title="Giỏ hàng" style="position: relative; display: inline-flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-cart3" style="font-size: 18px;"></i>
                     <span id="header-cart-badge" style="position: absolute; top: -4px; right: -4px; background: #434CE8; color: #FFFFFF; font-size: 10px; font-weight: 800; width: 18px; height: 18px; border-radius: 50%; display: @(cartBadgeCount > 0 ? "flex" : "none"); align-items: center; justify-content: center; border: 2px solid #FFFFFF;">@(cartBadgeCount > 0 ? cartBadgeCount.ToString() : "")</span>
                 </a>
 
@@ -72,28 +96,66 @@
                 {
                     string userRole = Session["Role"]?.ToString() ?? "HocVien";
                     string userName = Session["FullName"]?.ToString() ?? User.Identity.Name;
-                    string userAvatar = Session["Avatar"]?.ToString() ?? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80";
+                    string userAvatar = Session["Avatar"]?.ToString() ?? "assets/images/avatars/avatar_default.jpg";
 
-                    <a href="#" class="btn btn-outline btn-sm" style="font-weight: 600; border-radius: 10px; text-decoration: none;">Giáo viên</a>
+                    if (string.Equals(userRole, "Admin", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })" class="btn-nav-portal" title="Quản trị hệ thống">
+                            Admin
+                        </a>
+                    }
+                    else if (string.Equals(userRole, "GiaoVien", StringComparison.OrdinalIgnoreCase) || string.Equals(userRole, "Giáo viên", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <a href="@Url.Action("Index", "Dashboard", new { area = "Instructor" })" class="btn-nav-portal" title="Kênh giảng viên">
+                            Giáo viên
+                        </a>
+                    }
+                    else if (string.Equals(userRole, "Marketing", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <a href="@Url.Action("Index", "Dashboard", new { area = "Marketing" })" class="btn-nav-portal" title="Kênh Marketing">
+                            Marketing
+                        </a>
+                    }
+                    else
+                    {
+                        int currentUserId = (Session["UserId"] as int?) ?? 0;
+                        var teacherApp = currentUserId > 0 ? ECOLearning.Services.TeacherApplicationService.GetByUserId(currentUserId) : null;
+
+                        if (teacherApp != null && teacherApp.Status == "Pending")
+                        {
+                            <a href="@Url.Action("Status", "TeacherApplication", new { area = "Instructor" })" class="btn-nav-portal" title="Hồ sơ giảng viên đang chờ duyệt">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #F59E0B; display: inline-block;"></span>
+                                Giáo viên
+                            </a>
+                        }
+                        else if (teacherApp != null && teacherApp.Status == "Approved")
+                        {
+                            <a href="@Url.Action("Index", "Dashboard", new { area = "Instructor" })" class="btn-nav-portal" title="Kênh giảng viên">
+                                Giáo viên
+                            </a>
+                        }
+                        else
+                        {
+                            <a href="@Url.Action("Register", "TeacherApplication", new { area = "Instructor" })" class="btn-nav-portal" title="Đăng ký làm giáo viên">
+                                Giáo viên
+                            </a>
+                        }
+                    }
 
 
                     <div style="display: flex; align-items: center; gap: 10px; padding-left: 10px; border-left: 1px solid var(--border-color);">
                         <a href="@Url.Action("Index", "Profile", new { area = "" })" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit;">
                             <img src="@userAvatar"
-                                 alt="Avatar"
-                                 style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary);" />
+                            alt="Avatar"
+                            style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary);" />
                             <div style="line-height: 1.2;">
                                 <div style="font-size: 13px; font-weight: 700; color: var(--text-heading);">@userName</div>
-                                <div style="font-size: 11px; color: var(--status-success); font-weight: 600;">● Đang hoạt động</div>
+                                <div style="font-size: 11px; color: var(--status-success); font-weight: 600;"><i class="bi bi-circle-fill" style="font-size: 7px; vertical-align: middle;"></i> Đang hoạt động</div>
                             </div>
                         </a>
 
                         <button type="button" class="btn btn-danger btn-sm" data-modal-target="logout-modal" style="display: inline-flex; align-items: center; gap: 6px;" title="Đăng xuất">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                                <polyline points="16 17 21 12 16 7"></polyline>
-                                <line x1="21" y1="12" x2="9" y2="12"></line>
-                            </svg>
+                            <i class="bi bi-box-arrow-right" style="font-size: 15px;"></i>
                             Đăng xuất
                         </button>
                     </div>
@@ -117,11 +179,8 @@
             <div style="display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 48px;">
                 <div>
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
-                        <div class="logo-icon" style="width: 32px; height: 32px;">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                            </svg>
+                        <div class="logo-icon" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-book-half" style="font-size: 20px;"></i>
                         </div>
                         <span style="color: #fff; font-weight: 800; font-size: 18px; letter-spacing: -0.02em;">E-Learning<span>.</span></span>
                     </div>
@@ -173,11 +232,7 @@
     <div id="logout-modal" class="modal-overlay">
         <div class="modal-container" style="max-width: 460px; text-align: center; padding: 36px 32px; border-radius: 24px; background: #FFFFFF;">
             <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); color: #EF4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px;">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                    <polyline points="16 17 21 12 16 7"></polyline>
-                    <line x1="21" y1="12" x2="9" y2="12"></line>
-                </svg>
+                <i class="bi bi-box-arrow-right" style="font-size: 26px;"></i>
             </div>
             <h3 style="font-size: 20px; font-weight: 800; color: #0F172A; margin-bottom: 6px;">Xác nhận đăng xuất</h3>
             <p style="font-size: 14px; color: #475569; margin: 0 auto 20px; line-height: 22px;">
@@ -199,7 +254,7 @@
             }
 
             <div style="background: rgba(67, 76, 232, 0.05); border: 1px dashed rgba(67, 76, 232, 0.25); border-radius: 12px; padding: 12px 14px; font-size: 13px; color: #475569; line-height: 20px; text-align: left; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 8px;">
-                <span style="color: #434CE8; font-size: 15px; line-height: 1;">ℹ️</span>
+                <i class="bi bi-info-circle-fill text-primary" style="font-size: 15px; margin-top: 2px;"></i>
                 <span>Hệ thống đã tự động lưu toàn bộ tiến độ video và khóa học của bạn. Khi đăng xuất, bạn sẽ được đưa về <strong>Trang chủ</strong> an toàn.</span>
             </div>
 
@@ -208,11 +263,7 @@
                 @Html.AntiForgeryToken()
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                     <button type="submit" class="btn btn-danger btn-md" style="width: 100%; height: 48px; background: #EF4444; border-radius: 12px; font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                            <polyline points="16 17 21 12 16 7"></polyline>
-                            <line x1="21" y1="12" x2="9" y2="12"></line>
-                        </svg>
+                        <i class="bi bi-box-arrow-right" style="font-size: 18px;"></i>
                         <span>Đăng xuất</span>
                     </button>
                     <button type="button" class="btn btn-outline btn-md" data-modal-close style="width: 100%; height: 44px; border-radius: 12px; font-weight: 600;">Hủy và tiếp tục học</button>
@@ -230,17 +281,19 @@
     <script src="@Url.Content("~/assets/js/app.js?v=3.0")"></script>
     <script>
         function updateHeaderCartBadge(count) {
-            var $badge = $('#header-cart-badge');
-            if ($badge.length) {
-                if (count > 0) {
-                    $badge.text(count).css('display', 'flex');
-                } else {
-                    $badge.text('').css('display', 'none');
-                }
-            }
-        }
-        window.updateHeaderCartBadge = updateHeaderCartBadge;
-    </script>
-    @RenderSection("scripts", required: false)
+        var $badge = $('#header-cart-badge');
+        if ($badge.length) {
+        if (count > 0) {
+        $badge.text(count).css('display', 'flex');
+    }
+    else
+    {
+        $badge.text('').css('display', 'none');
+    }
+}
+}
+window.updateHeaderCartBadge = updateHeaderCartBadge;
+</script>
+@RenderSection("scripts", required: false)
 </body>
 </html>

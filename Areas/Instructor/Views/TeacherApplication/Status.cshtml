@@ -1,0 +1,89 @@
+@model ECOLearning.Models.TeacherApplication
+@{
+ViewBag.Title = "Trạng Thái Hồ Sơ Giảng Viên | E-Learning";
+Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div style="background-color: var(--bg-body, #F8FAFC); min-height: calc(100vh - 70px); padding: 50px 0;">
+    <div class="container" style="max-width: 720px; margin: 0 auto; padding: 0 20px;">
+
+        <div style="background: #FFFFFF; border-radius: 24px; border: 1px solid #E2E8F0; padding: 44px 36px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.04);">
+
+            @if (Model.Status == "Pending")
+            {
+                <h1 style="font-size: 24px; font-weight: 800; color: #0F172A; margin-bottom: 12px;">
+                    Hồ Sơ Đang Trong Quá Trình Xét Duyệt
+                </h1>
+                <p style="font-size: 15px; color: #475569; line-height: 1.6; max-width: 540px; margin: 0 auto 28px;">
+                    Cảm ơn bạn đã nộp hồ sơ trở thành giáo viên tại E-Learning!<br> Ban quản trị đang tiến hành xác minh thông tin bằng cấp và năng lực chuyên môn của bạn.
+                </p>
+
+                <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px; padding: 20px; text-align: left; margin-bottom: 30px;">
+                    <div style="font-weight: 700; font-size: 14px; color: #334155; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Tóm tắt hồ sơ đã gửi:</span>
+                        <span style="background: #FEF3C7; color: #B45309; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;">Chờ Admin duyệt</span>
+                    </div>
+                    <div style="font-size: 13px; color: #64748B; display: grid; gap: 8px;">
+                        <div>• <strong>Mã hồ sơ:</strong> <code>@Model.ApplicationId</code></div>
+                        <div>• <strong>Chuyên môn:</strong> @Model.Specialization</div>
+                        <div>• <strong>Thời gian nộp:</strong> @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
+                        <div>• <strong>Tệp chứng chỉ:</strong> @Model.CertificateFileName</div>
+                        <div>• <strong>Thời gian phản hồi dự kiến:</strong> Trong vòng 24 - 48 giờ làm việc</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: center; gap: 14px;">
+                    <a href="@Url.Action("Index", "Home", new { area = "" })" class="btn btn-outline" style="border-radius: 12px; padding: 12px 24px; font-weight: 600; text-decoration: none;">
+                        Quay về Trang chủ
+                    </a>
+                </div>
+            }
+            else if (Model.Status == "Approved")
+            {
+                <h1 style="font-size: 24px; font-weight: 800; color: #0F172A; margin-bottom: 12px;">
+                    Chúc Mừng! Hồ Sơ Của Bạn Đã Được Phê Duyệt
+                </h1>
+                <p style="font-size: 15px; color: #475569; line-height: 1.6; max-width: 540px; margin: 0 auto 28px;">
+                    Tài khoản của bạn đã được nâng cấp chính thức thành <strong>Giảng viên</strong>. Bạn đã có thể bắt đầu xây dựng bài giảng và quản lý khóa học.
+                </p>
+
+                <div style="display: flex; justify-content: center; gap: 14px;">
+                    <a href="@Url.Action("Index", "Dashboard", new { area = "Instructor" })" class="btn" style="background: #0D9488; color: #FFFFFF; border-radius: 12px; padding: 12px 28px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);">
+                        Truy cập Instructor Dashboard
+                    </a>
+                </div>
+            }
+            else if (Model.Status == "Rejected")
+            {
+                <div style="width: 80px; height: 80px; border-radius: 50%; background: #FEE2E2; color: #EF4444; display: inline-flex; align-items: center; justify-content: center; font-size: 38px; margin-bottom: 20px; box-shadow: 0 8px 20px rgba(239, 68, 68, 0.2);">
+                    <i class="bi bi-x-circle-fill"></i>
+                </div>
+                <h1 style="font-size: 24px; font-weight: 800; color: #0F172A; margin-bottom: 12px;">
+                    Hồ Sơ Chưa Đủ Điều Kiện Phê Duyệt
+                </h1>
+                <p style="font-size: 15px; color: #475569; line-height: 1.6; max-width: 540px; margin: 0 auto 20px;">
+                    Rất tiếc, đơn đăng ký làm Giảng viên của bạn tạm thời chưa được duyệt.
+                </p>
+
+                <div style="background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 14px; padding: 18px 20px; text-align: left; margin-bottom: 28px;">
+                    <div style="font-weight: 700; font-size: 14px; color: #991B1B; margin-bottom: 6px;">
+                        Lý do từ chối từ Ban quản trị:
+                    </div>
+                    <div style="font-size: 14px; color: #7F1D1D; line-height: 1.5;">
+                        @(string.IsNullOrEmpty(Model.RejectionReason) ? "Thông tin hồ sơ/bằng cấp chuyên môn chưa đầy đủ hoặc không hợp lệ." : Model.RejectionReason)
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: center; gap: 14px;">
+                    <a href="@Url.Action("Register", "TeacherApplication", new { area = "Instructor" })" class="btn" style="background: #0D9488; color: #FFFFFF; border-radius: 12px; padding: 12px 24px; font-weight: 700; text-decoration: none;">
+                        Nộp lại hồ sơ mới
+                    </a>
+                    <a href="@Url.Action("Index", "Home", new { area = "" })" class="btn btn-outline" style="border-radius: 12px; padding: 12px 24px; font-weight: 600; text-decoration: none;">
+                        Quay về Trang chủ
+                    </a>
+                </div>
+            }
+
+        </div>
+    </div>
+</div>

@@ -1,0 +1,93 @@
+@model ECOLearning.Areas.Instructor.Models.CourseCreateOrEditViewModel
+@{
+    ViewBag.Title = "Khởi Tạo Khóa Học Mới";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div>
+        <h1 class="h2" style="margin-top: 6px;">Khởi Tạo Khóa Học Mới</h1>
+        <p class="body-2" style="color: var(--text-secondary);">Điền thông tin khóa học, thiết lập học phí và danh mục đào tạo</p>
+    </div>
+    <div>
+        <a href="@Url.Action("Index", "Course", new { area = "Instructor" })" class="btn btn-outline">
+            <i class="bi bi-chevron-left me-1"></i> Quay lại danh sách
+        </a>
+    </div>
+</div>
+
+<div class="card" style="max-width: 900px; margin: 0 auto; padding: 28px 32px;">
+    @using (Html.BeginForm("Create", "Course", new { area = "Instructor" }, FormMethod.Post))
+    {
+        @Html.AntiForgeryToken()
+        @Html.ValidationSummary(true, "", new { @class = "alert alert-danger", style = "color: var(--status-danger); margin-bottom: 20px;" })
+
+        <div class="form-group">
+            <label class="form-label">Tên khóa học <span class="required">*</span></label>
+            @Html.TextBoxFor(m => m.TenKhoaHoc, new { @class = "form-control", placeholder = "Ví dụ: Làm Chủ Lập Trình React Native & TypeScript", required = "required" })
+            @Html.ValidationMessageFor(m => m.TenKhoaHoc, "", new { style = "color: var(--status-danger); font-size: 13px;" })
+        </div>
+
+        <div class="grid-12">
+            <div class="col-6">
+                <div class="form-group">
+                    <label class="form-label">Danh mục đào tạo <span class="required">*</span></label>
+                    @Html.DropDownListFor(m => m.MaDanhMuc, Model.Categories, "-- Chọn danh mục --", new { @class = "form-control", required = "required" })
+                    @Html.ValidationMessageFor(m => m.MaDanhMuc, "", new { style = "color: var(--status-danger); font-size: 13px;" })
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="form-group">
+                    <label class="form-label">Cấp độ tiếp cận</label>
+                    <select name="CapDo" class="form-control">
+                        <option value="Cơ bản" selected>Cơ bản (Cho người mới)</option>
+                        <option value="Trung cấp">Trung cấp</option>
+                        <option value="Nâng cao">Nâng cao & Chuyên sâu</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-12">
+            <div class="col-6">
+                <div class="form-group">
+                    <label class="form-label">Giá bán (VNĐ) <span class="required">*</span></label>
+                    @Html.TextBoxFor(m => m.GiaBan, new { @class = "form-control", type = "number", min = "0", step = "10000", placeholder = "Ví dụ: 799000", required = "required" })
+                    @Html.ValidationMessageFor(m => m.GiaBan, "", new { style = "color: var(--status-danger); font-size: 13px;" })
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="form-group">
+                    <label class="form-label">Giá khuyến mãi (VNĐ - tùy chọn)</label>
+                    @Html.TextBoxFor(m => m.GiaKhuyenMai, new { @class = "form-control", type = "number", min = "0", step = "10000", placeholder = "Ví dụ: 599000" })
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Mô tả ngắn (Giới thiệu nổi bật)</label>
+            @Html.TextBoxFor(m => m.MoTaNgan, new { @class = "form-control", placeholder = "Tóm tắt nội dung khóa học trong 1 - 2 câu ngắn gọn..." })
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Mục tiêu đầu ra của học viên</label>
+            @Html.TextAreaFor(m => m.MucTieuDauRa, new { @class = "form-control", rows = "3", placeholder = "Học viên sẽ tự tay xây dựng ứng dụng thực tế, hiểu rõ kiến trúc..." })
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Mô tả chi tiết khóa học</label>
+            @Html.TextAreaFor(m => m.MoTa, new { @class = "form-control", rows = "5", placeholder = "Giới thiệu đầy đủ lộ trình, các công nghệ và kiến thức trong khóa..." })
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Link ảnh bìa (Thumbnail URL)</label>
+            @Html.TextBoxFor(m => m.AnhBia, new { @class = "form-control", placeholder = "https://images.unsplash.com/..." })
+            <span class="caption" style="color: var(--text-muted);">Để trống sẽ dùng ảnh mặc định chuẩn của hệ thống.</span>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+            <a href="@Url.Action("Index", "Course", new { area = "Instructor" })" class="btn btn-secondary">Hủy</a>
+            <button type="submit" name="actionType" value="draft" class="btn btn-outline">Lưu bản nháp</button>
+            <button type="submit" name="actionType" value="submit" class="btn btn-primary">Gửi duyệt xuất bản</button>
+        </div>
+    }
+</div>

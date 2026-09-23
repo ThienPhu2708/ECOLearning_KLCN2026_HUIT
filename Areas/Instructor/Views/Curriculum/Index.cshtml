@@ -1,0 +1,356 @@
+@model ECOLearning.Areas.Instructor.Models.CurriculumViewModel
+@{
+    ViewBag.Title = "Cấu Trúc Thư viện tài nguyên tập trung";
+    var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div>
+        <h1 class="h2" style="margin-top: 6px;">Thư viện tài nguyên tập trung</h1>
+        <p class="body-2" style="color: var(--text-secondary);">Thiết lập các chương học, tải video bài giảng và đính kèm tài liệu học tập</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <button type="button" class="btn btn-primary" onclick="openAddChapterModal()">
+            <i class="bi bi-plus-lg me-1"></i> Thêm chương mới
+        </button>
+    </div>
+</div>
+
+<!-- COURSE SELECTOR BAR -->
+<div class="card" style="margin-bottom: 24px; padding: 16px 20px;">
+    <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <label class="caption" style="font-weight: 700; color: var(--text-heading);">Đang chỉnh sửa khóa học:</label>
+        @if (teacherCourses != null && teacherCourses.Any())
+        {
+            <select class="form-control" style="max-width: 450px; font-weight: 600;" onchange="window.location.href='@Url.Action("Index", "Curriculum", new { area = "Instructor" })?courseId=' + this.value;">
+                @foreach (var c in teacherCourses)
+                {
+                    <option value="@c.maKhoaHoc" @(c.maKhoaHoc == ViewBag.SelectedCourseId ? "selected" : "")>
+                        [@c.maKhoaHoc] @c.tenKhoaHoc (@(c.trangThai ?? "Bản nháp"))
+                    </option>
+                }
+            </select>
+        }
+        else
+        {
+            <span style="color: var(--text-muted);">Chưa có khóa học nào được tạo.</span>
+        }
+    </div>
+</div>
+
+<!-- CURRICULUM TREE (UC10) -->
+@if (Model != null && Model.ChuongHocs != null && Model.ChuongHocs.Any())
+{
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        @foreach (var ch in Model.ChuongHocs)
+        {
+            <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--border-color);" id="chapter-card-@ch.MaChuong">
+                <!-- Chapter Header -->
+                <div style="background: var(--bg-canvas, #F8FAFC); padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="badge badge-primary" style="font-size: 13px; font-weight: 700;">Chương @ch.ThuTu</span>
+                        <strong style="font-size: 16px; color: var(--text-heading);">@ch.TenChuong</strong>
+                        <span class="caption" style="color: var(--text-muted);">(@ch.BaiHocs.Count bài học)</span>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn btn-sm btn-outline" onclick="openAddLessonModal('@ch.MaChuong', '@Html.Raw(HttpUtility.JavaScriptStringEncode(ch.TenChuong))')">
+                            <i class="bi bi-plus-lg me-1"></i> Thêm bài học
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteChapter('@ch.MaChuong')">
+                            Xóa chương
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lessons List -->
+                <div style="padding: 12px 20px;">
+                    @if (ch.BaiHocs != null && ch.BaiHocs.Any())
+                    {
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            @foreach (var les in ch.BaiHocs)
+                            {
+                                <div style="padding: 14px 16px; background: #FFFFFF; border-radius: var(--radius-xl); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;" id="lesson-row-@les.MaBaiHoc">
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                                            <span style="font-size: 14px; font-weight: 700; color: var(--text-heading);">@les.ThuTu. @les.TenBaiHoc</span>
+                                            @if (les.ChoXemThu)
+                                            {
+                                                <span class="badge badge-success" style="font-size: 11px;">Xem thử miễn phí</span>
+                                            }
+                                            <span class="caption" style="color: var(--text-muted);"><i class="bi bi-clock me-1"></i> @les.ThoiLuong phút</span>
+                                        </div>
+                                        <div style="font-size: 12px; color: var(--text-secondary); word-break: break-all;">
+                                            <i class="bi bi-camera-video-fill me-1"></i> Video: <a href="@les.DuongDanVideo" target="_blank" style="color: var(--primary);">@les.DuongDanVideo</a>
+                                        </div>
+
+                                        <!-- Attached Resources -->
+                                        @if (les.TaiNguyens != null && les.TaiNguyens.Any())
+                                        {
+                                            <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                                                <span class="caption" style="font-weight: 600; color: var(--text-heading);">Tài liệu đính kèm:</span>
+                                                @foreach (var res in les.TaiNguyens)
+                                                {
+                                                    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--bg-canvas); border-radius: 8px; border: 1px solid var(--border-color); font-size: 12px;">
+                                                        <i class="bi bi-file-earmark-text me-1"></i> <a href="@res.DuongDan" target="_blank" style="color: var(--text-heading); text-decoration: none;">@res.TenTaiNguyen (@res.LoaiTaiNguyen)</a>
+                                                        <a href="javascript:void(0)" onclick="deleteResource('@res.MaTaiNguyen')" style="color: var(--status-danger); margin-left: 4px; font-weight: bold;"><i class="bi bi-x-lg"></i></a>
+                                                    </span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                    <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="openAddResourceModal('@les.MaBaiHoc', '@Html.Raw(HttpUtility.JavaScriptStringEncode(les.TenBaiHoc))')">
+                                            <i class="bi bi-paperclip me-1"></i> File
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline" style="color: var(--status-danger); border-color: rgba(239, 68, 68, 0.3);" onclick="deleteLesson('@les.MaBaiHoc')">
+                                            Xóa
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                            Chương này chưa có bài học nào. Hãy bấm <strong>+ Thêm bài học</strong> phía trên.
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="card" style="text-align: center; padding: 48px 24px;">
+        <p class="body-1" style="color: var(--text-secondary); margin-bottom: 16px;">
+            Khóa học này chưa có cấu trúc đề cương nào.
+        </p>
+        <button type="button" class="btn btn-primary" onclick="openAddChapterModal()">
+            <i class="bi bi-plus-lg me-1"></i> Bắt đầu tạo Chương học đầu tiên
+        </button>
+    </div>
+}
+
+<!-- MODAL: ADD CHAPTER -->
+<div class="modal-overlay" id="add-chapter-modal">
+    <div class="modal-container" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3 class="h3">Thêm Chương Học Mới</h3>
+            <button class="btn btn-secondary btn-sm" data-modal-close><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form onsubmit="submitAddChapter(event)">
+            <div class="form-group">
+                <label class="form-label">Tên chương học <span class="required">*</span></label>
+                <input type="text" id="new-chapter-name" class="form-control" placeholder="Ví dụ: Chương 1: Giới thiệu tổng quan & Cài đặt môi trường" required />
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                <button type="button" class="btn btn-secondary" data-modal-close>Hủy</button>
+                <button type="submit" class="btn btn-primary">Thêm chương</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: ADD LESSON -->
+<div class="modal-overlay" id="add-lesson-modal">
+    <div class="modal-container" style="max-width: 540px;">
+        <div class="modal-header">
+            <div>
+                <h3 class="h3">Thêm Bài Học Mới</h3>
+                <span class="caption" id="add-lesson-chapter-title">Chương: ...</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" data-modal-close><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form onsubmit="submitAddLesson(event)">
+            <input type="hidden" id="lesson-target-chapter-id" />
+            <div class="form-group">
+                <label class="form-label">Tên bài học <span class="required">*</span></label>
+                <input type="text" id="new-lesson-name" class="form-control" placeholder="Ví dụ: Bài 1: Cài đặt NodeJS và khởi tạo project" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Đường dẫn Video bài giảng (MP4 / HLS / YouTube URL) <span class="required">*</span></label>
+                <input type="text" id="new-lesson-video" class="form-control" placeholder="https://.../video.mp4" required />
+            </div>
+            <div class="grid-12">
+                <div class="col-6">
+                    <div class="form-group">
+                        <label class="form-label">Thời lượng (Phút)</label>
+                        <input type="number" id="new-lesson-duration" class="form-control" value="15" min="1" />
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="form-group" style="padding-top: 32px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
+                            <input type="checkbox" id="new-lesson-preview" />
+                            <span>Cho phép xem thử miễn phí</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                <button type="button" class="btn btn-secondary" data-modal-close>Hủy</button>
+                <button type="submit" class="btn btn-primary">Thêm bài học</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: ADD RESOURCE -->
+<div class="modal-overlay" id="add-resource-modal">
+    <div class="modal-container" style="max-width: 500px;">
+        <div class="modal-header">
+            <div>
+                <h3 class="h3">Đính Kèm Tài Liệu Học Tập</h3>
+                <span class="caption" id="add-resource-lesson-title">Bài học: ...</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" data-modal-close><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form onsubmit="submitAddResource(event)">
+            <input type="hidden" id="resource-target-lesson-id" />
+            <div class="form-group">
+                <label class="form-label">Tên tài liệu / Tên file <span class="required">*</span></label>
+                <input type="text" id="new-res-name" class="form-control" placeholder="Ví dụ: Slide bài giảng Buổi 1, Source Code mẫu" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Đường dẫn tải về (File URL) <span class="required">*</span></label>
+                <input type="text" id="new-res-url" class="form-control" placeholder="https://example.com/tai-lieu.pdf" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Định dạng file</label>
+                <select id="new-res-type" class="form-control">
+                    <option value="PDF">PDF Document (.pdf)</option>
+                    <option value="ZIP">Zip / Source code (.zip, .rar)</option>
+                    <option value="DOC">Word / Slide (.doc, .ppt)</option>
+                    <option value="LINK">Link tài liệu ngoài</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                <button type="button" class="btn btn-secondary" data-modal-close>Hủy</button>
+                <button type="submit" class="btn btn-primary">Đính kèm tài liệu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const currentCourseId = '@ViewBag.SelectedCourseId';
+
+    function openAddChapterModal() {
+        document.getElementById('new-chapter-name').value = '';
+        if (window.openModal) openModal('add-chapter-modal');
+        else document.getElementById('add-chapter-modal').classList.add('active');
+    }
+
+    function submitAddChapter(e) {
+        e.preventDefault();
+        const name = document.getElementById('new-chapter-name').value.trim();
+        if (!name) return;
+
+        $.post('@Url.Action("AddChapter", "Curriculum", new { area = "Instructor" })', { courseId: currentCourseId, tenChuong: name }, function(res) {
+            if (res.success) {
+                location.reload();
+            } else {
+                alert(res.message);
+            }
+        });
+    }
+
+    function deleteChapter(chapterId) {
+        if (!confirm('Bạn có chắc chắn muốn xóa chương học này cùng tất cả bài học và tài liệu bên trong?')) return;
+
+        $.post('@Url.Action("DeleteChapter", "Curriculum", new { area = "Instructor" })', { chapterId: chapterId }, function(res) {
+            if (res.success) {
+                location.reload();
+            } else {
+                alert(res.message);
+            }
+        });
+    }
+
+    function openAddLessonModal(chapterId, chapterName) {
+        document.getElementById('lesson-target-chapter-id').value = chapterId;
+        document.getElementById('add-lesson-chapter-title').innerText = 'Chương: ' + chapterName;
+        document.getElementById('new-lesson-name').value = '';
+        document.getElementById('new-lesson-video').value = '';
+        document.getElementById('new-lesson-duration').value = '15';
+        document.getElementById('new-lesson-preview').checked = false;
+
+        if (window.openModal) openModal('add-lesson-modal');
+        else document.getElementById('add-lesson-modal').classList.add('active');
+    }
+
+    function submitAddLesson(e) {
+        e.preventDefault();
+        const chId = document.getElementById('lesson-target-chapter-id').value;
+        const name = document.getElementById('new-lesson-name').value.trim();
+        const video = document.getElementById('new-lesson-video').value.trim();
+        const dur = parseInt(document.getElementById('new-lesson-duration').value, 10) || 15;
+        const prev = document.getElementById('new-lesson-preview').checked;
+
+        if (!name) return;
+
+        $.post('@Url.Action("AddLesson", "Curriculum", new { area = "Instructor" })', { chapterId: chId, tenBaiHoc: name, videoUrl: video, thoiLuong: dur, choXemThu: prev }, function(res) {
+            if (res.success) {
+                location.reload();
+            } else {
+                alert(res.message);
+            }
+        });
+    }
+
+    function deleteLesson(lessonId) {
+        if (!confirm('Bạn có chắc chắn muốn xóa bài học này?')) return;
+
+        $.post('@Url.Action("DeleteLesson", "Curriculum", new { area = "Instructor" })', { lessonId: lessonId }, function(res) {
+            if (res.success) {
+                location.reload();
+            } else {
+                alert(res.message);
+            }
+        });
+    }
+
+    function openAddResourceModal(lessonId, lessonName) {
+        document.getElementById('resource-target-lesson-id').value = lessonId;
+        document.getElementById('add-resource-lesson-title').innerText = 'Bài học: ' + lessonName;
+        document.getElementById('new-res-name').value = '';
+        document.getElementById('new-res-url').value = '';
+
+        if (window.openModal) openModal('add-resource-modal');
+        else document.getElementById('add-resource-modal').classList.add('active');
+    }
+
+    function submitAddResource(e) {
+        e.preventDefault();
+        const lesId = document.getElementById('resource-target-lesson-id').value;
+        const name = document.getElementById('new-res-name').value.trim();
+        const url = document.getElementById('new-res-url').value.trim();
+        const type = document.getElementById('new-res-type').value;
+
+        if (!name || !url) return;
+
+        $.post('@Url.Action("AddResource", "Curriculum", new { area = "Instructor" })', { lessonId: lesId, tenTaiNguyen: name, fileUrl: url, loaiTaiNguyen: type }, function(res) {
+            if (res.success) {
+                location.reload();
+            } else {
+                alert(res.message);
+            }
+        });
+    }
+
+    function deleteResource(resId) {
+        if (!confirm('Bạn có chắc chắn muốn xóa file đính kèm này?')) return;
+
+        $.post('@Url.Action("DeleteResource", "Curriculum", new { area = "Instructor" })', { resourceId: resId }, function(res) {
+            if (res.success) {
+                location.reload();
+            } else {
+                alert(res.message);
+            }
+        });
+    }
+</script>
+}

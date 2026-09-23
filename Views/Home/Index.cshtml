@@ -1,8 +1,19 @@
 @model List<ECOLearning.Models.KhoaHoc>
 @{
-    ViewBag.Title = "Trang Chủ - Nền tảng Đào tạo Trực tuyến";
-    bool isLoggedIn = User.Identity.IsAuthenticated || Session["UserId"] != null;
-    var courses = Model ?? new List<ECOLearning.Models.KhoaHoc>();
+ViewBag.Title = "Trang Chủ - Nền tảng Đào tạo Trực tuyến";
+bool isLoggedIn = User.Identity.IsAuthenticated || Session["UserId"] != null;
+var courses = Model ?? new List<ECOLearning.Models.KhoaHoc>();
+var categories = ViewBag.Categories as List<ECOLearning.Models.DanhMuc> ?? new List<ECOLearning.Models.DanhMuc>();
+
+var iconStyles = new[] {
+new { Icon = "bi-laptop", Bg = "#EEF2FF", Color = "#434CE8" },
+new { Icon = "bi-palette", Bg = "#FFF7ED", Color = "#EA580C" },
+new { Icon = "bi-bar-chart-line", Bg = "#ECFDF5", Color = "#10B981" },
+new { Icon = "bi-rocket-takeoff", Bg = "#F0F9FF", Color = "#0284C7" },
+new { Icon = "bi-code-slash", Bg = "#F3E8FF", Color = "#9333EA" },
+new { Icon = "bi-megaphone", Bg = "#FCE7F3", Color = "#DB2777" },
+new { Icon = "bi-briefcase", Bg = "#FEF3C7", Color = "#D97706" }
+};
 }
 
 <!-- Hero Section -->
@@ -11,7 +22,7 @@
         <div style="display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 48px; align-items: center;">
             <div>
                 <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background-color: var(--primary-light, #EEF2FF); color: var(--primary, #434CE8); border: 1px solid #C7D2FE; font-size: 13px; font-weight: 700; border-radius: 9999px; margin-bottom: 20px; letter-spacing: 0.05em;">
-                    ✨ LEARNING, MADE PERSONAL
+                    <i class="bi bi-stars"></i> LEARNING, MADE PERSONAL
                 </div>
                 <h1 style="font-size: var(--fs-h1, 40px); line-height: 48px; font-weight: 800; color: var(--text-heading, #0F172A); margin-bottom: 20px;">
                     Tìm kiếm khóa học phù hợp cho lộ trình phát triển của bạn
@@ -22,21 +33,21 @@
                 <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
                     @if (isLoggedIn)
                     {
-                        <a href="#courses-section" class="btn btn-primary btn-lg" style="text-decoration: none;">Khám phá khóa học →</a>
+                        <a href="#categories-section" class="btn btn-primary btn-lg" style="text-decoration: none;">Khám phá khóa học <i class="bi bi-arrow-right"></i></a>
                         <a href="#recommendations" class="btn btn-outline btn-lg" style="text-decoration: none;">Xem gợi ý cá nhân</a>
                     }
                     else
                     {
-                        <a href="@Url.Action("Login", "Account", new { area = "", mode = "login" })" class="btn btn-primary btn-lg" style="text-decoration: none;">Đăng nhập ngay →</a>
+                        <a href="@Url.Action("Login", "Account", new { area = "", mode = "login" })" class="btn btn-primary btn-lg" style="text-decoration: none;">Đăng nhập ngay</a>
                         <a href="@Url.Action("Login", "Account", new { area = "", mode = "register" })" class="btn btn-outline btn-lg" style="text-decoration: none;">Đăng ký tài khoản miễn phí</a>
                     }
                 </div>
             </div>
 
             <div style="position: relative; background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%); border-radius: var(--radius-3xl, 24px); padding: 30px; box-shadow: 0 20px 40px -15px rgba(67, 76, 232, 0.15); min-height: 380px; display: flex; align-items: center; justify-content: center;">
-                <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&auto=format&fit=crop&q=80"
-                     alt="E-Learning Illustration"
-                     style="width: 100%; max-width: 440px; border-radius: 18px; object-fit: cover; box-shadow: var(--shadow-card);" />
+                <img src="assets/images/banners/hero_section.jpg"
+                alt="E-Learning Illustration"
+                style="width: 100%; max-width: 440px; border-radius: 18px; object-fit: cover; box-shadow: var(--shadow-card);" />
 
                 @if (isLoggedIn)
                 {
@@ -57,328 +68,389 @@
     </div>
 </section>
 
-@if (!isLoggedIn)
+@if (isLoggedIn)
 {
-    <!-- Thông Báo Yêu Cầu Đăng Nhập Dành Cho Khách -->
-    <section style="padding: 60px 0; background: var(--bg-canvas, #F8FAFC); text-align: center;">
-        <div class="safe-container" style="max-width: 680px; margin: 0 auto; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 24px; padding: 48px 32px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);">
-            <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--primary-light, #EEF2FF); color: var(--primary, #434CE8); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-            </div>
-            <h2 style="font-size: 22px; font-weight: 800; color: var(--text-heading); margin-bottom: 12px;">Đăng nhập để khám phá các khóa học</h2>
-            <p style="font-size: 15px; color: var(--text-secondary); line-height: 24px; margin-bottom: 28px;">
-                Vui lòng <strong>Đăng nhập</strong> hoặc <strong>Đăng ký tài khoản Học viên</strong> để xem danh sách khóa học nổi bật, danh mục đào tạo và các gợi ý khóa học cá nhân hóa dành riêng cho bạn.
-            </p>
-            <div style="display: flex; gap: 14px; justify-content: center;">
-                <a href="@Url.Action("Login", "Account", new { area = "", mode = "login" })" class="btn btn-primary" style="text-decoration: none;">Đăng nhập ngay</a>
-                <a href="@Url.Action("Login", "Account", new { area = "", mode = "register" })" class="btn btn-outline" style="text-decoration: none;">Đăng ký miễn phí</a>
-            </div>
-        </div>
-    </section>
-}
-else
-{
-    <!-- Section Danh Mục Khóa Học -->
-    <section style="padding: 48px 0; background: var(--bg-canvas, #F8FAFC);">
+    <!-- Section Danh Mục Khóa Học Truy Vấn Từ CSDL (CHỈ HIỆN KHI ĐÃ ĐĂNG NHẬP, TỐI ĐA 4 DANH MỤC + NÚT MŨI TÊN DI CHUYỂN NẾU > 4) -->
+    <section id="categories-section" style="padding: 48px 0; background: var(--bg-canvas, #F8FAFC);">
         <style>
-            .category-card {
-                display: flex;
-                align-items: center;
-                gap: 16px;
-                padding: 20px;
-                background: #FFFFFF;
-                border: 1px solid var(--border-color, #E2E8F0);
-                border-radius: var(--radius-2xl, 16px);
-                text-decoration: none;
-                transition: all 0.25s ease;
-                box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-            }
-            .category-card:hover {
-                border-color: #434CE8 !important;
-                transform: translateY(-3px);
-                box-shadow: 0 10px 25px rgba(67, 76, 232, 0.12) !important;
-            }
-            .category-card:hover .category-icon-bg {
-                transform: scale(1.08);
-            }
-        </style>
-        <div class="safe-container">
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px;">
-                <div>
-                    <span class="caption" style="text-transform: uppercase; color: var(--primary); font-weight: 700;">Danh mục đào tạo</span>
-                    <h2 class="h2" style="margin-top: 4px;">Khám phá theo lĩnh vực</h2>
-                </div>
+            .category-slider-viewport {
+            overflow: hidden;
+            width: 100%;
+            position: relative;
+        }
+
+        .category-slider-track {
+        display: flex;
+        gap: 24px;
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .category-item-col {
+    flex: 0 0 calc(25% - 18px);
+    min-width: calc(25% - 18px);
+    max-width: calc(25% - 18px);
+}
+
+.category-card {
+display: flex;
+align-items: center;
+gap: 16px;
+padding: 20px;
+background: #FFFFFF;
+border: 1px solid var(--border-color, #E2E8F0);
+border-radius: var(--radius-2xl, 16px);
+text-decoration: none;
+transition: all 0.25s ease;
+box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+height: 100%;
+}
+
+.category-card:hover {
+border-color: #434CE8 !important;
+transform: translateY(-3px);
+box-shadow: 0 10px 25px rgba(67, 76, 232, 0.12) !important;
+}
+
+.category-card:hover .category-icon-bg {
+transform: scale(1.08);
+}
+
+.cat-nav-btn {
+width: 38px;
+height: 38px;
+border-radius: 50%;
+border: 1px solid var(--border-color, #E2E8F0);
+background: #FFFFFF;
+color: var(--text-heading, #0F172A);
+font-size: 18px;
+font-weight: 700;
+display: flex;
+align-items: center;
+justify-content: center;
+cursor: pointer;
+transition: all 0.2s ease;
+box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06);
+}
+
+.cat-nav-btn:hover:not(:disabled) {
+background: var(--primary, #434CE8);
+color: #FFFFFF;
+border-color: var(--primary, #434CE8);
+}
+
+.cat-nav-btn:disabled {
+opacity: 0.4;
+cursor: not-allowed;
+}
+</style>
+
+<div class="safe-container">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px;">
+        <div>
+            <span class="caption" style="text-transform: uppercase; color: var(--primary); font-weight: 700;">Danh mục đào tạo</span>
+            <h2 class="h2" style="margin-top: 4px;">Khám phá theo lĩnh vực</h2>
+        </div>
+        @if (categories.Count > 4)
+        {
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button id="cat-prev-btn" class="cat-nav-btn" onclick="slideCategory(-1)" title="Danh mục trước" disabled><i class="bi bi-chevron-left"></i></button>
+                <button id="cat-next-btn" class="cat-nav-btn" onclick="slideCategory(1)" title="Danh mục tiếp theo"><i class="bi bi-chevron-right"></i></button>
             </div>
+        }
+    </div>
 
-            <div class="grid-12" id="categories-container">
-                <div class="col-3">
-                    <a href="#" class="category-card" title="Xem danh mục Lập trình Web & CNTT">
-                        <div class="category-icon-bg" style="width: 48px; height: 48px; border-radius: 12px; background: #EEF2FF; color: #434CE8; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; transition: transform 0.25s ease;">💻</div>
-                        <div>
-                            <div style="font-weight: 700; font-size: 15px; color: var(--text-heading, #0F172A);">Lập trình Web & CNTT</div>
-                        </div>
-                    </a>
-                </div>
-
-                <div class="col-3">
-                    <a href="#" class="category-card" title="Xem danh mục Thiết kế UI/UX">
-                        <div class="category-icon-bg" style="width: 48px; height: 48px; border-radius: 12px; background: #FFF7ED; color: #EA580C; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; transition: transform 0.25s ease;">🎨</div>
-                        <div>
-                            <div style="font-weight: 700; font-size: 15px; color: var(--text-heading, #0F172A);">Thiết kế UI/UX</div>
-                        </div>
-                    </a>
-                </div>
-
-                <div class="col-3">
-                    <a href="#" class="category-card" title="Xem danh mục Khoa học Dữ liệu & AI">
-                        <div class="category-icon-bg" style="width: 48px; height: 48px; border-radius: 12px; background: #ECFDF5; color: #10B981; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; transition: transform 0.25s ease;">📊</div>
-                        <div>
-                            <div style="font-weight: 700; font-size: 15px; color: var(--text-heading, #0F172A);">Khoa học Dữ liệu & AI</div>
-                        </div>
-                    </a>
-                </div>
-
-                <div class="col-3">
-                    <a href="#" class="category-card" title="Xem danh mục Frontend & Mobile">
-                        <div class="category-icon-bg" style="width: 48px; height: 48px; border-radius: 12px; background: #F0F9FF; color: #0284C7; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; transition: transform 0.25s ease;">🚀</div>
-                        <div>
-                            <div style="font-weight: 700; font-size: 15px; color: var(--text-heading, #0F172A);">Frontend & Mobile</div>
-                        </div>
-                    </a>
-                </div>
+    @if (categories != null && categories.Any())
+    {
+        <div class="category-slider-viewport">
+            <div class="category-slider-track" id="category-track">
+                @for (int i = 0; i < categories.Count; i++)
+                {
+                    var cat = categories[i];
+                    var style = iconStyles[i % iconStyles.Length];
+                    <div class="category-item-col">
+                        <a href="@Url.Action("Index", "Course", new { category = cat.maDanhMuc })" class="category-card" title="Xem danh mục @cat.tenDanhMuc">
+                            <div class="category-icon-bg" style="width: 48px; height: 48px; border-radius: 12px; background: @style.Bg; color: @style.Color; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; transition: transform 0.25s ease;">
+                                <i class="bi @style.Icon"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 700; font-size: 15px; color: var(--text-heading, #0F172A);">@cat.tenDanhMuc</div>
+                            </div>
+                        </a>
+                    </div>
+                }
             </div>
         </div>
-    </section>
+    }
+    else
+    {
+        <div style="text-align: center; color: var(--text-secondary); padding: 24px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--border-color);">
+            Chưa có danh mục khóa học nào trong cơ sở dữ liệu.
+        </div>
+    }
+</div>
+</section>
 
-    <!-- Section UC7: Khóa Học Dành Riêng Cho Bạn (Gợi Ý Cá Nhân Hóa) -->
-    <section id="recommendations" style="padding: 60px 0; background: var(--bg-surface); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
-        <div class="safe-container">
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px;">
-                <div>
-                    <h2 class="h2" style="margin-top: 8px;">Khóa học dành riêng cho bạn</h2>
-                    <p class="body-2" style="color: var(--text-secondary);">Gợi ý cá nhân hóa dựa trên lịch sử xem, tìm kiếm và kỹ năng cần trang bị</p>
-                </div>
-                <a href="#courses-section" class="btn btn-outline btn-sm" style="text-decoration: none;">Xem tất cả khóa học</a>
+<!-- Section UC7: Khóa Học Dành Riêng Cho Bạn (Gợi Ý Cá Nhân Hóa) -->
+<section id="recommendations" style="padding: 60px 0; background: var(--bg-surface); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+    <div class="safe-container">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px;">
+            <div>
+                <h2 class="h2" style="margin-top: 8px;">Khóa học dành riêng cho bạn</h2>
+                <p class="body-2" style="color: var(--text-secondary);">Gợi ý cá nhân hóa dựa trên lịch sử xem, tìm kiếm và kỹ năng cần trang bị</p>
             </div>
+            <a href="#courses-section" class="btn btn-outline btn-sm" style="text-decoration: none;">Xem tất cả khóa học</a>
+        </div>
 
-            @if (courses != null && courses.Count > 0)
-            {
-                <div class="grid-12">
-                    @foreach (var course in courses.Take(3))
-                    {
-                        string thumbUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
-                        string teacherName = course.NguoiDung != null ? course.NguoiDung.hoTen : "ThS. Nguyễn Văn An";
-                        string categoryName = course.DanhMuc != null ? course.DanhMuc.tenDanhMuc : "Lập trình Web & CNTT";
-                        decimal actualPrice = course.giaKhuyenMai.HasValue ? course.giaKhuyenMai.Value : course.giaBan;
-                        decimal oldPrice = course.giaBan;
-                        bool hasRatings = course.DanhGiaKhoaHoc != null && course.DanhGiaKhoaHoc.Count > 0;
-                        int enrollCount = course.DangKyKhoaHoc != null ? course.DangKyKhoaHoc.Count : 0;
-                        double avgStars = hasRatings ? course.DanhGiaKhoaHoc.Average(d => d.soSao) : 0;
-                        bool isTopTrending = enrollCount >= 3;
-                        bool isHighRated = hasRatings && avgStars >= 4.5;
+        @if (courses != null && courses.Count > 0)
+        {
+            <div class="grid-12">
+                @foreach (var course in courses.Take(3))
+                {
+                    string thumbUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
+                    string teacherName = course.NguoiDung != null ? course.NguoiDung.hoTen : "ThS. Nguyễn Văn An";
+                    string categoryName = course.DanhMuc != null ? course.DanhMuc.tenDanhMuc : "Lập trình Web & CNTT";
+                    decimal actualPrice = course.giaKhuyenMai.HasValue ? course.giaKhuyenMai.Value : course.giaBan;
+                    decimal oldPrice = course.giaBan;
+                    bool hasRatings = course.DanhGiaKhoaHoc != null && course.DanhGiaKhoaHoc.Count > 0;
+                    int enrollCount = course.DangKyKhoaHoc != null ? course.DangKyKhoaHoc.Count : 0;
+                    double avgStars = hasRatings ? course.DanhGiaKhoaHoc.Average(d => d.soSao) : 0;
+                    bool isTopTrending = enrollCount >= 3;
+                    bool isHighRated = hasRatings && avgStars >= 4.5;
 
-                        <div class="col-4">
-                            <div class="course-card" onclick="window.location.href='@Url.Action("Details", "Course", new { id = course.maKhoaHoc })'" style="cursor: pointer;">
-                                <div class="course-thumb">
-                                    <img src="@thumbUrl" alt="@course.tenKhoaHoc" />
-                                    @if (isTopTrending)
+                    <div class="col-4">
+                        <div class="course-card" onclick="window.location.href='@Url.Action("Details", "Course", new { id = course.maKhoaHoc })'" style="cursor: pointer;">
+                            <div class="course-thumb">
+                                <img src="@thumbUrl" alt="@course.tenKhoaHoc" />
+                                @if (isTopTrending)
+                                {
+                                    <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;"><i class="bi bi-fire me-1"></i> Top Trending</span>
+                                }
+                                else if (isHighRated)
+                                {
+                                    <span class="badge badge-success" style="position: absolute; top: 12px; left: 12px; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;"><i class="bi bi-star-fill me-1"></i> Đánh giá cao</span>
+                                }
+                            </div>
+                            <div class="course-body">
+                                <div class="course-category">
+                                    <span class="caption" style="color: var(--primary); font-weight: 700;">@categoryName</span>
+                                </div>
+                                <h3 class="course-title" title="@course.tenKhoaHoc">@course.tenKhoaHoc</h3>
+                                <div class="course-instructor">
+                                    <i class="bi bi-person me-1"></i>
+                                    @teacherName
+                                </div>
+
+                                <div class="course-rating">
+                                    @if (hasRatings)
                                     {
-                                        <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;">🔥 Top Trending</span>
+                                        double avgRating = course.DanhGiaKhoaHoc.Average(d => d.soSao);
+                                        int ratingCount = course.DanhGiaKhoaHoc.Count;
+                                        <span class="rating-score">@avgRating.ToString("0.00")</span>
+                                        <div class="stars" style="color: #F59E0B;"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
+                                        <span class="rating-count">(@ratingCount)</span>
                                     }
-                                    else if (isHighRated)
+                                    else
                                     {
-                                        <span class="badge badge-success" style="position: absolute; top: 12px; left: 12px; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;">★ Đánh giá cao</span>
+                                        <span class="rating-score" style="color: var(--text-muted, #94A3B8); font-size: 13px; font-weight: 500;">Chưa có đánh giá</span>
+                                        <div class="stars" style="color: #CBD5E1; opacity: 0.7;"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
                                     }
                                 </div>
-                                <div class="course-body">
-                                    <div class="course-category">
-                                        <span class="caption" style="color: var(--primary); font-weight: 700;">@categoryName</span>
-                                    </div>
-                                    <h3 class="course-title" title="@course.tenKhoaHoc">@course.tenKhoaHoc</h3>
-                                    <div class="course-instructor">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                        @teacherName
-                                    </div>
-                                    
-                                    <!-- Layout Đánh Giá Star Rating (Hiện số sao khi có đánh giá, thiết kế sẵn layout khi chưa có) -->
-                                    <div class="course-rating">
-                                        @if (hasRatings)
-                                        {
-                                            double avgRating = course.DanhGiaKhoaHoc.Average(d => d.soSao);
-                                            int ratingCount = course.DanhGiaKhoaHoc.Count;
-                                            <span class="rating-score">@avgRating.ToString("0.00")</span>
-                                            <div class="stars">★★★★★</div>
-                                            <span class="rating-count">(@ratingCount)</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="rating-score" style="color: var(--text-muted, #94A3B8); font-size: 13px; font-weight: 500;">Chưa có đánh giá</span>
-                                            <div class="stars" style="color: #CBD5E1; opacity: 0.7;">★★★★★</div>
-                                        }
-                                    </div>
 
-                                    <div class="course-footer">
-                                        <div class="course-pricing">
-                                            <span class="price-current">@actualPrice.ToString("N0") đ</span>
-                                            @if (actualPrice < oldPrice)
-                                            {
-                                                <span class="price-original">@oldPrice.ToString("N0") đ</span>
-                                            }
-                                        </div>
-                                        <a href="@Url.Action("Details", "Course", new { id = course.maKhoaHoc })" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: var(--radius-xl, 10px); font-weight: 600; text-decoration: none;">
-                                            Chi tiết
-                                        </a>
+                                <div class="course-footer">
+                                    <div class="course-pricing">
+                                        <span class="price-current">@actualPrice.ToString("N0") đ</span>
+                                        @if (actualPrice < oldPrice)
+                                        {
+                                            <span class="price-original">@oldPrice.ToString("N0") đ</span>
+                                        }
                                     </div>
+                                    <a href="@Url.Action("Details", "Course", new { id = course.maKhoaHoc })" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: var(--radius-xl, 10px); font-weight: 600; text-decoration: none;">
+                                        Chi tiết
+                                    </a>
                                 </div>
                             </div>
                         </div>
-                    }
-                </div>
-            }
-        </div>
-    </section>
-
-    <!-- Section: Danh Sách Khóa Học Nổi Bật / Bán Chạy -->
-    <section id="courses-section" style="padding: 60px 0; background: var(--bg-canvas, #F8FAFC);">
-        <div class="safe-container">
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px;">
-                <div>
-                    <span class="badge badge-warning" style="margin-bottom: 8px;">Top Bán Chạy & Xu Hướng</span>
-                    <h2 class="h2">Khóa học nổi bật nhất tuần</h2>
-                </div>
+                    </div>
+                }
             </div>
+        }
+    </div>
+</section>
 
-            @if (courses != null && courses.Count > 0)
-            {
-                <div class="grid-12">
-                    @foreach (var course in courses)
-                    {
-                        string thumbUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
-                        string teacherName = course.NguoiDung != null ? course.NguoiDung.hoTen : "ThS. Nguyễn Văn An";
-                        string categoryName = course.DanhMuc != null ? course.DanhMuc.tenDanhMuc : "Lập trình Web & CNTT";
-                        decimal actualPrice = course.giaKhuyenMai.HasValue ? course.giaKhuyenMai.Value : course.giaBan;
-                        decimal oldPrice = course.giaBan;
-                        bool hasRatings = course.DanhGiaKhoaHoc != null && course.DanhGiaKhoaHoc.Count > 0;
-                        int enrollCount = course.DangKyKhoaHoc != null ? course.DangKyKhoaHoc.Count : 0;
-                        double avgStars = hasRatings ? course.DanhGiaKhoaHoc.Average(d => d.soSao) : 0;
-                        bool isTopTrending = enrollCount >= 3;
-                        bool isHighRated = hasRatings && avgStars >= 4.5;
+<!-- Section: Danh Sách Khóa Học Nổi Bật / Bán Chạy -->
+<section id="courses-section" style="padding: 60px 0; background: var(--bg-canvas, #F8FAFC);">
+    <div class="safe-container">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px;">
+            <div>
+                <span class="badge badge-warning" style="margin-bottom: 8px;">Top Bán Chạy & Xu Hướng</span>
+                <h2 class="h2">Khóa học nổi bật nhất tuần</h2>
+            </div>
+        </div>
 
-                        <div class="col-4">
-                            <div class="course-card" onclick="window.location.href='@Url.Action("Details", "Course", new { id = course.maKhoaHoc })'" style="cursor: pointer;">
-                                <div class="course-thumb">
-                                    <img src="@thumbUrl" alt="@course.tenKhoaHoc" />
-                                    @if (isTopTrending)
+        @if (courses != null && courses.Count > 0)
+        {
+            <div class="grid-12">
+                @foreach (var course in courses)
+                {
+                    string thumbUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
+                    string teacherName = course.NguoiDung != null ? course.NguoiDung.hoTen : "ThS. Nguyễn Văn An";
+                    string categoryName = course.DanhMuc != null ? course.DanhMuc.tenDanhMuc : "Lập trình Web & CNTT";
+                    decimal actualPrice = course.giaKhuyenMai.HasValue ? course.giaKhuyenMai.Value : course.giaBan;
+                    decimal oldPrice = course.giaBan;
+                    bool hasRatings = course.DanhGiaKhoaHoc != null && course.DanhGiaKhoaHoc.Count > 0;
+                    int enrollCount = course.DangKyKhoaHoc != null ? course.DangKyKhoaHoc.Count : 0;
+                    double avgStars = hasRatings ? course.DanhGiaKhoaHoc.Average(d => d.soSao) : 0;
+                    bool isTopTrending = enrollCount >= 3;
+                    bool isHighRated = hasRatings && avgStars >= 4.5;
+
+                    <div class="col-4">
+                        <div class="course-card" onclick="window.location.href='@Url.Action("Details", "Course", new { id = course.maKhoaHoc })'" style="cursor: pointer;">
+                            <div class="course-thumb">
+                                <img src="@thumbUrl" alt="@course.tenKhoaHoc" />
+                                @if (isTopTrending)
+                                {
+                                    <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;"><i class="bi bi-fire me-1"></i> Top Trending</span>
+                                }
+                                else if (isHighRated)
+                                {
+                                    <span class="badge badge-success" style="position: absolute; top: 12px; left: 12px; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;"><i class="bi bi-star-fill me-1"></i> Đánh giá cao</span>
+                                }
+                            </div>
+                            <div class="course-body">
+                                <div class="course-category">
+                                    <span class="caption" style="color: var(--primary); font-weight: 700;">@categoryName</span>
+                                </div>
+                                <h3 class="course-title" title="@course.tenKhoaHoc">@course.tenKhoaHoc</h3>
+                                <div class="course-instructor">
+                                    <i class="bi bi-person me-1"></i>
+                                    @teacherName
+                                </div>
+
+                                <div class="course-rating">
+                                    @if (hasRatings)
                                     {
-                                        <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;">🔥 Top Trending</span>
+                                        double avgRating = course.DanhGiaKhoaHoc.Average(d => d.soSao);
+                                        int ratingCount = course.DanhGiaKhoaHoc.Count;
+                                        <span class="rating-score">@avgRating.ToString("0.00")</span>
+                                        <div class="stars" style="color: #F59E0B;"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
+                                        <span class="rating-count">(@ratingCount)</span>
                                     }
-                                    else if (isHighRated)
+                                    else
                                     {
-                                        <span class="badge badge-success" style="position: absolute; top: 12px; left: 12px; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;">★ Đánh giá cao</span>
+                                        <span class="rating-score" style="color: var(--text-muted, #94A3B8); font-size: 13px; font-weight: 500;">Chưa có đánh giá</span>
+                                        <div class="stars" style="color: #CBD5E1; opacity: 0.7;"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
                                     }
                                 </div>
-                                <div class="course-body">
-                                    <div class="course-category">
-                                        <span class="caption" style="color: var(--primary); font-weight: 700;">@categoryName</span>
-                                    </div>
-                                    <h3 class="course-title" title="@course.tenKhoaHoc">@course.tenKhoaHoc</h3>
-                                    <div class="course-instructor">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                        @teacherName
-                                    </div>
-                                    
-                                    <!-- Layout Đánh Giá Star Rating (Hiện số sao khi có đánh giá, thiết kế sẵn layout khi chưa có) -->
-                                    <div class="course-rating">
-                                        @if (hasRatings)
-                                        {
-                                            double avgRating = course.DanhGiaKhoaHoc.Average(d => d.soSao);
-                                            int ratingCount = course.DanhGiaKhoaHoc.Count;
-                                            <span class="rating-score">@avgRating.ToString("0.00")</span>
-                                            <div class="stars">★★★★★</div>
-                                            <span class="rating-count">(@ratingCount)</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="rating-score" style="color: var(--text-muted, #94A3B8); font-size: 13px; font-weight: 500;">Chưa có đánh giá</span>
-                                            <div class="stars" style="color: #CBD5E1; opacity: 0.7;">★★★★★</div>
-                                        }
-                                    </div>
 
-                                    <div class="course-footer">
-                                        <div class="course-pricing">
-                                            <span class="price-current">@actualPrice.ToString("N0") đ</span>
-                                            @if (actualPrice < oldPrice)
-                                            {
-                                                <span class="price-original">@oldPrice.ToString("N0") đ</span>
-                                            }
-                                        </div>
-                                        <a href="@Url.Action("Details", "Course", new { id = course.maKhoaHoc })" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: var(--radius-xl, 10px); font-weight: 600; text-decoration: none;">
-                                            Chi tiết
-                                        </a>
+                                <div class="course-footer">
+                                    <div class="course-pricing">
+                                        <span class="price-current">@actualPrice.ToString("N0") đ</span>
+                                        @if (actualPrice < oldPrice)
+                                        {
+                                            <span class="price-original">@oldPrice.ToString("N0") đ</span>
+                                        }
                                     </div>
+                                    <a href="@Url.Action("Details", "Course", new { id = course.maKhoaHoc })" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: var(--radius-xl, 10px); font-weight: 600; text-decoration: none;">
+                                        Chi tiết
+                                    </a>
                                 </div>
                             </div>
                         </div>
-                    }
-                </div>
-            }
-        </div>
-    </section>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
 }
 
 @section scripts {
-    <script>
-        function addToCartAjax(courseId, btnElement) {
-            if (!courseId) return;
-            var $btn = $(btnElement);
-            var originalHtml = $btn.html();
+<script>
+    let currentCatIndex = 0;
 
-            $btn.prop('disabled', true).css('opacity', '0.75').html('⏳ Đang xử lý...');
+    function slideCategory(direction) {
+    const track = document.getElementById('category-track');
+    if (!track) return;
 
-            $.ajax({
-                url: '@Url.Action("AddToCart", "Cart")',
-                type: 'POST',
-                data: { courseId: courseId },
-                success: function (response) {
-                    $btn.prop('disabled', false).css('opacity', '1').html(originalHtml);
-                    if (response.success) {
-                        // Update Cart count badge in header
-                        if (typeof updateHeaderCartBadge === 'function') {
-                            updateHeaderCartBadge(response.cartCount);
-                        } else if ($('#header-cart-badge').length) {
-                            if (response.cartCount > 0) {
-                                $('#header-cart-badge').text(response.cartCount).css('display', 'flex');
-                            } else {
-                                $('#header-cart-badge').text('').css('display', 'none');
-                            }
-                        }
+    const items = track.querySelectorAll('.category-item-col');
+    if (!items.length) return;
 
-                        // Trigger Toast message
-                        if (typeof showToast === 'function') {
-                            showToast(response.message, 'success');
-                        } else {
-                            alert(response.message);
-                        }
-                    } else {
-                        if (typeof showToast === 'function') {
-                            showToast(response.message, 'warning');
-                        } else {
-                            alert(response.message);
-                        }
-                    }
-                },
-                error: function () {
-                    $btn.prop('disabled', false).css('opacity', '1').html(originalHtml);
-                    if (typeof showToast === 'function') {
-                        showToast('Có lỗi xảy ra khi thêm vào giỏ hàng!', 'error');
-                    } else {
-                        alert('Có lỗi xảy ra khi thêm vào giỏ hàng!');
-                    }
-                }
-            });
-        }
-    </script>
+    const visibleCount = 4;
+    const maxIndex = Math.max(0, items.length - visibleCount);
+
+    currentCatIndex += direction;
+    if (currentCatIndex < 0) currentCatIndex = 0;
+    if (currentCatIndex > maxIndex) currentCatIndex = maxIndex;
+
+    const itemWidth = items[0].getBoundingClientRect().width;
+    const gap = 24; // Khoảng cách giữa các cột
+    const moveAmount = (itemWidth + gap) * currentCatIndex;
+
+    track.style.transform = `translateX(-${moveAmount}px)`;
+
+    const prevBtn = document.getElementById('cat-prev-btn');
+    const nextBtn = document.getElementById('cat-next-btn');
+
+    if (prevBtn) prevBtn.disabled = (currentCatIndex === 0);
+    if (nextBtn) nextBtn.disabled = (currentCatIndex >= maxIndex);
+}
+
+function addToCartAjax(courseId, btnElement) {
+if (!courseId) return;
+var $btn = $(btnElement);
+var originalHtml = $btn.html();
+
+$btn.prop('disabled', true).css('opacity', '0.75').html('<i class="bi bi-hourglass-split me-1"></i> Đang xử lý...');
+
+$.ajax({
+url: '@Url.Action("AddToCart", "Cart")',
+type: 'POST',
+data: { courseId: courseId },
+success: function (response) {
+$btn.prop('disabled', false).css('opacity', '1').html(originalHtml);
+if (response.success) {
+if (typeof updateHeaderCartBadge === 'function') {
+updateHeaderCartBadge(response.cartCount);
+} else if ($('#header-cart-badge').length) {
+if (response.cartCount > 0) {
+$('#header-cart-badge').text(response.cartCount).css('display', 'flex');
+}
+else
+{
+    $('#header-cart-badge').text('').css('display', 'none');
+}
+}
+
+if (typeof showToast === 'function') {
+showToast(response.message, 'success');
+}
+else
+{
+    alert(response.message);
+}
+}
+else
+{
+    if (typeof showToast === 'function') {
+    showToast(response.message, 'warning');
+}
+else
+{
+    alert(response.message);
+}
+}
+},
+error: function () {
+$btn.prop('disabled', false).css('opacity', '1').html(originalHtml);
+if (typeof showToast === 'function') {
+showToast('Có lỗi xảy ra khi thêm vào giỏ hàng!', 'error');
+}
+else
+{
+    alert('Có lỗi xảy ra khi thêm vào giỏ hàng!');
+}
+}
+});
+}
+</script>
 }

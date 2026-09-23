@@ -88,8 +88,8 @@
                 <h1 class="h2" style="margin: 0; font-size: 28px; font-weight: 800; color: #0F172A;">Giỏ hàng & Thủ tục Thanh toán</h1>
                 <p style="font-size: 14px; color: #64748B; margin-top: 4px;">Kiểm tra danh sách khóa học và chọn phương thức thanh toán an toàn</p>
             </div>
-            <a href="@Url.Action("Index", "Home")" class="btn btn-outline btn-sm" style="height: 40px; padding: 0 16px; border-radius: 10px; font-weight: 600;">
-                ← Tiếp tục chọn khóa học
+            <a href="@Url.Action("Index", "Home")" class="btn btn-outline btn-sm" style="height: 40px; padding: 0 16px; border-radius: 10px; font-weight: 600; text-decoration: none;">
+                <i class="bi bi-arrow-left me-1"></i> Tiếp tục chọn khóa học
             </a>
         </div>
 
@@ -133,7 +133,7 @@
                                             <div style="font-size: 12px; text-decoration: line-through; color: #94A3B8;">@item.OriginalPrice.ToString("N0") đ</div>
                                         }
                                         <button type="button" class="btn btn-secondary btn-sm" style="margin-top: 6px; padding: 4px 10px; font-size: 12px; border-radius: 8px; background: #FEF2F2; color: #EF4444; border: 1px solid #FCA5A5; cursor: pointer;" onclick="removeItem('@item.CourseId')">
-                                            Xóa
+                                            <i class="bi bi-trash3 me-1"></i> Xóa
                                         </button>
                                     </div>
                                 </div>
@@ -189,10 +189,10 @@
 
                         <!-- Coupon Messages -->
                         <div id="coupon-error" class="form-feedback-error" style="display: none; color: #EF4444; font-size: 12px; margin-top: 8px; font-weight: 600;">
-                            ✕ Mã khuyến mãi không hợp lệ hoặc đã hết hạn!
+                            <i class="bi bi-x-circle-fill me-1"></i> Mã khuyến mãi không hợp lệ hoặc đã hết hạn!
                         </div>
                         <div id="coupon-success" style="color: #10B981; font-size: 12px; font-weight: 600; margin-top: 8px; display: @(string.IsNullOrEmpty(Model.AppliedCouponCode) ? "none" : "block");">
-                            ✓ Đã áp dụng mã ưu đãi @Model.AppliedCouponCode!
+                            <i class="bi bi-check-circle-fill me-1"></i> Đã áp dụng mã ưu đãi @Model.AppliedCouponCode!
                         </div>
                     </div>
 
@@ -219,7 +219,7 @@
                     </button>
 
                     <div class="caption" style="text-align: center; margin-top: 16px; color: #94A3B8; font-size: 12px; line-height: 1.5;">
-                        🔒 Bảo mật thanh toán 256-bit SSL. Bằng việc xác nhận, bạn đồng ý với Điều khoản dịch vụ E-Learning.
+                        <i class="bi bi-shield-lock-fill me-1"></i> Bảo mật thanh toán 256-bit SSL. Bằng việc xác nhận, bạn đồng ý với Điều khoản dịch vụ E-Learning.
                     </div>
                 </aside>
             </div>
@@ -232,14 +232,14 @@
 <div class="modal-overlay" id="payment-success-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center;">
     <div class="modal-container" style="background: #FFFFFF; border-radius: 24px; width: 100%; max-width: 480px; text-align: center; padding: 40px 32px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
         <div style="width: 70px; height: 70px; background: #ECFDF5; color: #10B981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 32px; font-weight: 800;">
-            ✓
+            <i class="bi bi-check-lg"></i>
         </div>
         <h3 class="h2" style="font-size: 22px; font-weight: 800; color: #0F172A; margin-bottom: 10px;">Thanh toán Thành công!</h3>
         <p class="body-1" style="color: #64748B; font-size: 14px; margin-bottom: 24px; line-height: 1.6;">
             Hệ thống đã gửi hóa đơn điện tử về email của bạn. Khóa học đã được tự động thêm vào hồ sơ học tập của bạn.
         </p>
         <div style="display: flex; gap: 12px; justify-content: center; flex-direction: column;">
-            <a href="@Url.Action("Index", "Home")" class="btn btn-primary" style="height: 48px; background: #434CE8; color: #FFFFFF; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">Bắt đầu học ngay →</a>
+            <a href="@Url.Action("Index", "Home")" class="btn btn-primary" style="height: 48px; background: #434CE8; color: #FFFFFF; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">Bắt đầu học ngay <i class="bi bi-arrow-right ms-1"></i></a>
             <a href="@Url.Action("Index", "Profile")" class="btn btn-secondary" style="height: 44px; background: #F1F5F9; color: #475569; border-radius: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">Xem Hồ sơ cá nhân</a>
         </div>
     </div>
@@ -300,7 +300,7 @@
             const succEl = document.getElementById('coupon-success');
 
             if (!code) {
-                errEl.innerText = '✕ Vui lòng nhập mã khuyến mãi!';
+                errEl.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i> Vui lòng nhập mã khuyến mãi!';
                 errEl.style.display = 'block';
                 succEl.style.display = 'none';
                 return;

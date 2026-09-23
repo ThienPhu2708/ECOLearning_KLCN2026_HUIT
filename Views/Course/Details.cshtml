@@ -13,11 +13,18 @@
 
     var previewLesson = chapters.SelectMany(c => c.BaiHoc != null ? c.BaiHoc : new List<ECOLearning.Models.BaiHoc>())
                                 .FirstOrDefault(b => b.choXemThu == true && !string.IsNullOrEmpty(b.duongDanVideo));
+    if (previewLesson == null)
+    {
+        previewLesson = chapters.SelectMany(c => c.BaiHoc != null ? c.BaiHoc : new List<ECOLearning.Models.BaiHoc>())
+                                .FirstOrDefault(b => !string.IsNullOrEmpty(b.duongDanVideo));
+    }
     string previewVideoUrl = previewLesson != null ? previewLesson.duongDanVideo : "";
+    string previewLessonTitle = previewLesson != null ? previewLesson.tenBaiHoc : "Video giới thiệu khóa học";
 
     double avgRating = Model != null && Model.DanhGiaKhoaHoc != null && Model.DanhGiaKhoaHoc.Count > 0
         ? Model.DanhGiaKhoaHoc.Average(d => (double)d.soSao)
         : 0.0;
+    int reviewCount = Model != null && Model.DanhGiaKhoaHoc != null ? Model.DanhGiaKhoaHoc.Count : 0;
 }
 
 @section styles {
@@ -470,36 +477,45 @@
                 <!-- Bottom Meta Info Bar -->
                 <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size: 14.5px;">
                     <!-- Rating & Reviews -->
-                    <div class="d-flex align-items-center gap-1">
-                        <span class="fw-bold" style="color: #F59E0B; font-size: 15px;">@(avgRating > 0 ? avgRating.ToString("0.0") : "4.9")</span>
-                        <div class="d-flex gap-1 ms-1" style="color: #F59E0B;">
-                            @for (int i = 1; i <= 5; i++)
-                            {
-                                if (i <= Math.Round(avgRating > 0 ? avgRating : 4.9))
+                    @if (reviewCount > 0)
+                    {
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="fw-bold" style="color: #F59E0B; font-size: 15px;">@avgRating.ToString("0.0")</span>
+                            <div class="d-flex gap-1 ms-1" style="color: #F59E0B;">
+                                @for (int i = 1; i <= 5; i++)
                                 {
-                                    <i class="bi bi-star-fill"></i>
+                                    if (i <= Math.Round(avgRating))
+                                    {
+                                        <i class="bi bi-star-fill"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-star"></i>
+                                    }
                                 }
-                                else
-                                {
-                                    <i class="bi bi-star"></i>
-                                }
-                            }
+                            </div>
+                            <span class="ms-1" style="color: #94A3B8;">(@reviewCount đánh giá)</span>
                         </div>
-                        <span class="ms-1" style="color: #94A3B8;">(@(Model.DanhGiaKhoaHoc != null && Model.DanhGiaKhoaHoc.Count > 0 ? Model.DanhGiaKhoaHoc.Count : 420) đánh giá)</span>
-                    </div>
-
-                    <span style="color: #475569;">•</span>
+                        <span style="color: #475569;">•</span>
+                    }
+                    else
+                    {
+                        <div class="d-flex align-items-center gap-1" style="color: #94A3B8;">
+                            <span>Chưa có đánh giá</span>
+                        </div>
+                        <span style="color: #475569;">•</span>
+                    }
 
                     <!-- Giảng viên -->
                     <div style="color: #94A3B8;">
-                        Giảng viên: <strong style="color: #FFFFFF; font-weight: 700;">@(Model.NguoiDung != null ? Model.NguoiDung.hoTen : "ThS. Nguyễn Văn An")</strong>
+                        Giảng viên: <strong style="color: #FFFFFF; font-weight: 700;">@(Model.NguoiDung != null ? Model.NguoiDung.hoTen : "Giảng viên E-Learning")</strong>
                     </div>
 
                     <span style="color: #475569;">•</span>
 
                     <!-- Cập nhật mới nhất -->
                     <div style="color: #94A3B8;">
-                        Cập nhật mới nhất: <strong style="color: #FFFFFF; font-weight: 700;">09/2026</strong>
+                        Cập nhật mới nhất: <strong style="color: #FFFFFF; font-weight: 700;">@DateTime.Now.ToString("MM/yyyy")</strong>
                     </div>
                 </div>
             </div>
@@ -570,7 +586,7 @@
                                                     <div class="d-flex align-items-center gap-3">
                                                         @if (hasVideo && les.choXemThu == true)
                                                         {
-                                                            <span class="badge-preview" onclick="playPreviewModal('@les.tenBaiHoc', '@les.duongDanVideo')">
+                                                            <span class="badge-preview" role="button" data-title="@les.tenBaiHoc" data-video="@les.duongDanVideo" onclick="handlePreviewClick(this)">
                                                                 <i class="bi bi-eye"></i> Học thử
                                                             </span>
                                                         }
@@ -716,7 +732,7 @@
                 <!-- Right Sticky Sidebar Column (Fixed 360px) -->
                 <div class="details-right-sidebar">
                     <div class="sticky-course-card">
-                        <div class="preview-media-container" onclick="playPreviewModal('Video giới thiệu khóa học', '@previewVideoUrl')">
+                        <div class="preview-media-container" role="button" data-title="@previewLessonTitle" data-video="@previewVideoUrl" onclick="handlePreviewClick(this)">
                             <img src="@(string.IsNullOrEmpty(Model.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : Model.anhBia)" alt="@Model.tenKhoaHoc" />
                             <div class="play-btn-overlay">
                                 <i class="bi bi-play-fill ms-1"></i>
@@ -726,19 +742,24 @@
                         <div class="p-4">
                             <!-- Price Block (Strict single horizontal line matching mockup 100%) -->
                             <div class="d-flex align-items-baseline gap-2 mb-3" style="flex-wrap: nowrap; white-space: nowrap;">
-                                @if (Model.giaKhuyenMai.HasValue && Model.giaKhuyenMai.Value > 0)
+                                @if (Model.giaKhuyenMai.HasValue && Model.giaKhuyenMai.Value > 0 && Model.giaBan > Model.giaKhuyenMai.Value)
                                 {
                                     <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@Model.giaKhuyenMai.Value.ToString("N0") đ</span>
-                                    if (Model.giaBan > Model.giaKhuyenMai.Value)
+                                    <span style="font-size: 14px; color: #94A3B8; text-decoration: line-through; line-height: 1; margin-left: 2px;">@Model.giaBan.ToString("N0") đ</span>
+                                    int discountPercent = (int)((1.0 - ((double)Model.giaKhuyenMai.Value / (double)Model.giaBan)) * 100);
+                                    if (discountPercent > 0)
                                     {
-                                        <span style="font-size: 14px; color: #94A3B8; text-decoration: line-through; line-height: 1; margin-left: 2px;">@Model.giaBan.ToString("N0") đ</span>
-                                        int discountPercent = (int)((1.0 - ((double)Model.giaKhuyenMai.Value / (double)Model.giaBan)) * 100);
                                         <span style="background: #FFF1F2; color: #E11D48; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; line-height: 1; margin-left: 2px;">Giảm @discountPercent%</span>
                                     }
                                 }
+                                else if (Model.giaKhuyenMai.HasValue && Model.giaKhuyenMai.Value > 0)
+                                {
+                                    <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@Model.giaKhuyenMai.Value.ToString("N0") đ</span>
+                                }
                                 else
                                 {
-                                    <span style="font-size: 26px; font-weight: 800; color: #10B981; line-height: 1;">MIỄN PHÍ</span>
+                                    decimal displayPrice = Model.giaBan > 0 ? Model.giaBan : 699000;
+                                    <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@displayPrice.ToString("N0") đ</span>
                                 }
                             </div>
 
@@ -804,16 +825,29 @@
     <div class="custom-modal-dialog">
         <div class="custom-modal-header">
             <h6 class="modal-title-text" id="previewModalTitle"><i class="bi bi-play-circle-fill me-2" style="color: #6366F1;"></i> Xem thử bài học</h6>
-            <button type="button" class="custom-modal-close" onclick="closePreviewModal()">&times;</button>
+            <button type="button" class="custom-modal-close" onclick="closePreviewModal()"><i class="bi bi-x-lg"></i></button>
         </div>
-        <div class="custom-modal-body" id="modalVideoBody">
-            <video id="previewVideoPlayer" controls controlsList="nodownload" style="width:100%; max-height:480px; display:none; border-radius: 4px;">
+        <div class="custom-modal-body" id="modalVideoBody" style="background: #000; min-height: 320px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 0 0 16px 16px;">
+            <!-- Iframe player for YouTube / Vimeo -->
+            <div id="previewIframeWrapper" style="display:none; width: 100%; aspect-ratio: 16/9; max-height: 480px; position: relative; background: #000;">
+                <iframe id="previewVideoIframe"
+                        src=""
+                        style="width: 100%; height: 100%; border: none; display: block;"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowfullscreen></iframe>
+            </div>
+
+            <!-- HTML5 Video player for MP4 / WebM -->
+            <video id="previewVideoPlayer" controls controlsList="nodownload" style="width:100%; max-height:480px; display:none; aspect-ratio: 16/9; background: #000;">
                 <source id="previewVideoSource" src="" type="video/mp4" />
+                Trình duyệt không hỗ trợ HTML5 Video.
             </video>
-            <div id="previewVideoPlaceholder" class="video-placeholder-container" style="display:none; padding: 40px 20px;">
+
+            <!-- Placeholder when no video -->
+            <div id="previewVideoPlaceholder" class="video-placeholder-container" style="display:none; padding: 48px 24px; text-align: center; width: 100%;">
                 <i class="bi bi-camera-video-off fs-1 text-secondary mb-3 d-block"></i>
-                <h5 class="fw-bold text-white">Video đang trong quá trình phát triển</h5>
-                <p class="text-secondary small mb-0">Nội dung video này hiện chưa tải lên. Vui lòng quay lại sau.</p>
+                <h5 class="fw-bold text-white mb-2">Video đang trong quá trình phát triển</h5>
+                <p class="text-secondary small mb-0">Nội dung video cho bài học này hiện chưa cập nhật. Vui lòng quay lại sau.</p>
             </div>
         </div>
     </div>
@@ -821,23 +855,93 @@
 
 @section scripts {
     <script>
+        function extractVideoInfo(url) {
+            if (!url || typeof url !== 'string' || !url.trim()) return null;
+            url = url.trim();
+
+            // 1. YouTube formats: watch?v=ID, youtu.be/ID, embed/ID, shorts/ID
+            var ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/\s]{11})/i);
+            if (ytMatch && ytMatch[1]) {
+                return {
+                    type: 'youtube',
+                    id: ytMatch[1],
+                    embedUrl: 'https://www.youtube-nocookie.com/embed/' + ytMatch[1] + '?autoplay=1&rel=0&modestbranding=1&enablejsapi=1'
+                };
+            }
+
+            // Direct 11-character YouTube ID
+            if (/^[a-zA-Z0-9_-]{11}$/.test(url)) {
+                return {
+                    type: 'youtube',
+                    id: url,
+                    embedUrl: 'https://www.youtube-nocookie.com/embed/' + url + '?autoplay=1&rel=0&modestbranding=1&enablejsapi=1'
+                };
+            }
+
+            // 2. Vimeo format: vimeo.com/ID
+            var vimeoMatch = url.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)([0-9]+)/i);
+            if (vimeoMatch && vimeoMatch[1]) {
+                return {
+                    type: 'vimeo',
+                    id: vimeoMatch[1],
+                    embedUrl: 'https://player.vimeo.com/video/' + vimeoMatch[1] + '?autoplay=1'
+                };
+            }
+
+            // 3. Fallback to direct HTML5 video (mp4, webm, etc.)
+            return {
+                type: 'html5',
+                url: url
+            };
+        }
+
         function playPreviewModal(title, videoUrl) {
-            document.getElementById('previewModalTitle').innerHTML = '<i class="bi bi-play-circle-fill me-2" style="color: #6366F1;"></i> ' + title;
+            var modalTitle = document.getElementById('previewModalTitle');
+            if (modalTitle) {
+                modalTitle.innerHTML = '<i class="bi bi-play-circle-fill me-2" style="color: #6366F1;"></i> ' + (title || 'Xem thử bài học');
+            }
+
+            var iframeWrapper = document.getElementById('previewIframeWrapper');
+            var iframeElem = document.getElementById('previewVideoIframe');
             var videoPlayer = document.getElementById('previewVideoPlayer');
             var videoSource = document.getElementById('previewVideoSource');
             var placeholder = document.getElementById('previewVideoPlaceholder');
             var modalOverlay = document.getElementById('previewModal');
 
-            if (videoUrl && videoUrl.trim() !== "") {
-                videoSource.src = videoUrl;
-                videoPlayer.load();
-                videoPlayer.style.display = 'block';
-                placeholder.style.display = 'none';
-                videoPlayer.play().catch(function (e) { console.log('Autoplay handled:', e); });
-            } else {
-                videoPlayer.pause();
+            // Reset current state
+            if (videoPlayer) {
+                try { videoPlayer.pause(); } catch(e){}
                 videoPlayer.style.display = 'none';
-                placeholder.style.display = 'block';
+            }
+            if (iframeElem) {
+                iframeElem.src = '';
+            }
+            if (iframeWrapper) {
+                iframeWrapper.style.display = 'none';
+            }
+            if (placeholder) {
+                placeholder.style.display = 'none';
+            }
+
+            var info = extractVideoInfo(videoUrl);
+            if (info) {
+                if (info.type === 'youtube' || info.type === 'vimeo') {
+                    if (iframeElem && iframeWrapper) {
+                        iframeElem.src = info.embedUrl;
+                        iframeWrapper.style.display = 'block';
+                    }
+                } else if (info.type === 'html5') {
+                    if (videoPlayer && videoSource) {
+                        videoSource.src = info.url;
+                        videoPlayer.style.display = 'block';
+                        videoPlayer.load();
+                        videoPlayer.play().catch(function (e) { console.log('Autoplay handled:', e); });
+                    }
+                }
+            } else {
+                if (placeholder) {
+                    placeholder.style.display = 'block';
+                }
             }
 
             if (modalOverlay) {
@@ -846,12 +950,28 @@
             }
         }
 
+        function handlePreviewClick(elem) {
+            if (!elem) return;
+            var title = elem.getAttribute('data-title') || 'Xem thử bài học';
+            var videoUrl = elem.getAttribute('data-video') || '';
+            playPreviewModal(title, videoUrl);
+        }
+
         function closePreviewModal() {
             var modalOverlay = document.getElementById('previewModal');
             var videoPlayer = document.getElementById('previewVideoPlayer');
+            var iframeElem = document.getElementById('previewVideoIframe');
+            var iframeWrapper = document.getElementById('previewIframeWrapper');
 
             if (videoPlayer) {
-                videoPlayer.pause();
+                try { videoPlayer.pause(); videoPlayer.currentTime = 0; } catch (e) {}
+                videoPlayer.style.display = 'none';
+            }
+            if (iframeElem) {
+                iframeElem.src = '';
+            }
+            if (iframeWrapper) {
+                iframeWrapper.style.display = 'none';
             }
             if (modalOverlay) {
                 modalOverlay.classList.remove('active');
@@ -860,11 +980,14 @@
         }
 
         // Đóng khi nhấp bên ngoài dialog
-        document.getElementById('previewModal').addEventListener('click', function (e) {
-            if (e.target === this) {
-                closePreviewModal();
-            }
-        });
+        var modalElem = document.getElementById('previewModal');
+        if (modalElem) {
+            modalElem.addEventListener('click', function (e) {
+                if (e.target === this) {
+                    closePreviewModal();
+                }
+            });
+        }
 
         // Đóng khi nhấn phím ESC
         document.addEventListener('keydown', function (e) {
@@ -893,12 +1016,12 @@
 
             var targetCartUrl = cartUrl || '/Cart';
 
-            toast.innerHTML = '<div style="width: 36px; height: 36px; background: #FEF3C7; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #D97706; font-size: 17px; font-weight: 800;">⚠️</div>' +
+            toast.innerHTML = '<div style="width: 36px; height: 36px; background: #FEF3C7; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #D97706; font-size: 17px; font-weight: 800;"><i class="bi bi-exclamation-triangle-fill"></i></div>' +
                 '<div style="flex: 1; min-width: 0;">' +
                 '<div style="font-weight: 700; color: #78350F; font-size: 14px; margin-bottom: 2px;">Khóa học đã có trong giỏ hàng!</div>' +
                 '<div style="font-size: 12.5px; color: #B45309; line-height: 1.35;">' + (message || 'Khóa học này đã được thêm vào giỏ hàng từ trước.') + '</div>' +
                 '</div>' +
-                '<a href="' + targetCartUrl + '" style="background: #F59E0B; color: #FFFFFF; font-weight: 700; font-size: 12px; padding: 8px 14px; border-radius: 8px; text-decoration: none; white-space: nowrap; flex-shrink: 0; transition: background 0.2s;">Xem giỏ hàng →</a>';
+                '<a href="' + targetCartUrl + '" style="background: #F59E0B; color: #FFFFFF; font-weight: 700; font-size: 12px; padding: 8px 14px; border-radius: 8px; text-decoration: none; white-space: nowrap; flex-shrink: 0; transition: background 0.2s;">Xem giỏ hàng <i class="bi bi-arrow-right ms-1"></i></a>';
 
             container.appendChild(toast);
 
@@ -921,7 +1044,7 @@
             var $btn = $('#btnAddToCartMain');
             var cartUrl = '@Url.Action("Index", "Cart")';
 
-            $btn.prop('disabled', true).css('opacity', '0.75').html('⏳ Đang xử lý...');
+            $btn.prop('disabled', true).css('opacity', '0.75').html('<i class="bi bi-hourglass-split me-1"></i> Đang xử lý...');
 
             $.ajax({
                 url: '@Url.Action("AddToCart", "Cart")',
@@ -952,7 +1075,7 @@
             var $btn = $(btnElement);
             var originalHtml = $btn.html();
 
-            $btn.prop('disabled', true).css('opacity', '0.75').html('⏳ Đang xử lý...');
+            $btn.prop('disabled', true).css('opacity', '0.75').html('<i class="bi bi-hourglass-split me-1"></i> Đang xử lý...');
 
             $.ajax({
                 url: '@Url.Action("AddToCart", "Cart")',

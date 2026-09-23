@@ -134,19 +134,27 @@
     <Compile Include="Areas\Admin\AdminAreaRegistration.cs" />
     <Compile Include="Areas\Instructor\InstructorAreaRegistration.cs" />
     <Compile Include="Areas\Marketing\MarketingAreaRegistration.cs" />
+    <Compile Include="Areas\Admin\Controllers\AdminBaseController.cs" />
     <Compile Include="Areas\Admin\Controllers\DashboardController.cs" />
     <Compile Include="Areas\Admin\Controllers\CategoryController.cs" />
     <Compile Include="Areas\Admin\Controllers\CourseApprovalController.cs" />
+    <Compile Include="Areas\Admin\Controllers\TeacherApprovalController.cs" />
     <Compile Include="Areas\Admin\Controllers\SystemReportController.cs" />
+    <Compile Include="Areas\Admin\Models\AdminViewModels.cs" />
+    <Compile Include="Areas\Instructor\Controllers\InstructorBaseController.cs" />
+    <Compile Include="Areas\Instructor\Controllers\TeacherApplicationController.cs" />
     <Compile Include="Areas\Instructor\Controllers\DashboardController.cs" />
     <Compile Include="Areas\Instructor\Controllers\CourseController.cs" />
     <Compile Include="Areas\Instructor\Controllers\CurriculumController.cs" />
     <Compile Include="Areas\Instructor\Controllers\StudentController.cs" />
     <Compile Include="Areas\Instructor\Controllers\AnalyticsController.cs" />
     <Compile Include="Areas\Instructor\Controllers\PayoutController.cs" />
+    <Compile Include="Areas\Instructor\Models\InstructorViewModels.cs" />
+    <Compile Include="Areas\Marketing\Controllers\MarketingBaseController.cs" />
     <Compile Include="Areas\Marketing\Controllers\DashboardController.cs" />
     <Compile Include="Areas\Marketing\Controllers\PromotionController.cs" />
     <Compile Include="Areas\Marketing\Controllers\CampaignReportController.cs" />
+    <Compile Include="Areas\Marketing\Models\MarketingViewModels.cs" />
     <Compile Include="Controllers\AccountController.cs" />
     <Compile Include="ViewModels\LoginViewModel.cs" />
     <Compile Include="ViewModels\RegisterViewModels.cs" />
@@ -155,6 +163,9 @@
     <Compile Include="ViewModels\CartItemViewModel.cs" />
     <Compile Include="ViewModels\CartViewModel.cs" />
     <Compile Include="Services\EmailService.cs" />
+    <Compile Include="Services\PasswordHasher.cs" />
+    <Compile Include="Services\TeacherApplicationService.cs" />
+    <Compile Include="Models\TeacherApplication.cs" />
     <Compile Include="Controllers\ProfileController.cs" />
     <Compile Include="Controllers\CourseController.cs" />
     <Compile Include="Controllers\CartController.cs" />
@@ -383,6 +394,27 @@
     <Content Include="Views\Account\Register.cshtml" />
     <Content Include="Views\Profile\Index.cshtml" />
     <Content Include="Views\Cart\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\_ViewStart.cshtml" />
+    <Content Include="Areas\Admin\Views\Shared\_LayoutAdmin.cshtml" />
+    <Content Include="Areas\Admin\Views\Dashboard\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\Category\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\CourseApproval\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\SystemReport\Index.cshtml" />
+    <Content Include="Areas\Instructor\Views\_ViewStart.cshtml" />
+    <Content Include="Areas\Instructor\Views\Shared\_LayoutInstructor.cshtml" />
+    <Content Include="Areas\Instructor\Views\Dashboard\Index.cshtml" />
+    <Content Include="Areas\Instructor\Views\Course\Index.cshtml" />
+    <Content Include="Areas\Instructor\Views\Course\Create.cshtml" />
+    <Content Include="Areas\Instructor\Views\Course\Edit.cshtml" />
+    <Content Include="Areas\Instructor\Views\Curriculum\Index.cshtml" />
+    <Content Include="Areas\Instructor\Views\Student\Index.cshtml" />
+    <Content Include="Areas\Instructor\Views\Analytics\Index.cshtml" />
+    <Content Include="Areas\Instructor\Views\Payout\Index.cshtml" />
+    <Content Include="Areas\Marketing\Views\_ViewStart.cshtml" />
+    <Content Include="Areas\Marketing\Views\Shared\_LayoutMarketing.cshtml" />
+    <Content Include="Areas\Marketing\Views\Dashboard\Index.cshtml" />
+    <Content Include="Areas\Marketing\Views\Promotion\Index.cshtml" />
+    <Content Include="Areas\Marketing\Views\CampaignReport\Index.cshtml" />
 
   </ItemGroup>
   <ItemGroup>

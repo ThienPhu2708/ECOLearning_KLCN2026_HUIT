@@ -75,11 +75,11 @@ const Charts = {
     if (!el) return;
 
     const data = options.data || [
-      { label: '5 ★', value: 85, color: '#10B981' },
-      { label: '4 ★', value: 12, color: '#434CE8' },
-      { label: '3 ★', value: 2, color: '#F59E0B' },
-      { label: '2 ★', value: 1, color: '#F97316' },
-      { label: '1 ★', value: 0, color: '#EF4444' }
+      { label: '5 sao', value: 85, color: '#10B981' },
+      { label: '4 sao', value: 12, color: '#434CE8' },
+      { label: '3 sao', value: 2, color: '#F59E0B' },
+      { label: '2 sao', value: 1, color: '#F97316' },
+      { label: '1 sao', value: 0, color: '#EF4444' }
     ];
 
     let barsHtml = '';

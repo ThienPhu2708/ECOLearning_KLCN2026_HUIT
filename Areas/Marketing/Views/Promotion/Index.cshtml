@@ -1,0 +1,277 @@
+@model List<ECOLearning.Areas.Marketing.Models.PromotionItem>
+@{
+    ViewBag.Title = "Quản lý Mã Giảm Giá & Khuyến Mãi (UC17)";
+    string currentStatus = ViewBag.CurrentStatus as string ?? "all";
+    string currentSearch = ViewBag.CurrentSearch as string ?? "";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+    <div>
+        <h1 class="h2" style="margin-top: 6px;">Quản Lý Mã Giảm Giá & Khuyến Mãi</h1>
+        <p class="body-2" style="color: var(--text-secondary);">Khởi tạo mã coupon kích cầu, thiết lập thời hạn hiệu lực và phạm vi áp dụng khóa học</p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal('create-promo-modal')" style="background-color: #E11D48; border-color: #E11D48;">
+        <i class="bi bi-plus-lg me-1"></i> Khởi tạo chương trình mới
+    </button>
+</div>
+
+<!-- THÔNG BÁO FLASH MESSAGE -->
+@if (TempData["Success"] != null)
+{
+    <div style="padding: 14px 20px; background: #ECFDF5; border-left: 4px solid #10B981; color: #065F46; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+        <span><strong>Thành công:</strong> @TempData["Success"]</span>
+        <button type="button" onclick="this.parentElement.style.display='none'" style="background: none; border: none; font-size: 14px; cursor: pointer; color: #065F46;"><i class="bi bi-x-lg"></i></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div style="padding: 14px 20px; background: #FEF2F2; border-left: 4px solid #EF4444; color: #991B1B; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+        <span><strong>Lỗi:</strong> @TempData["Error"]</span>
+        <button type="button" onclick="this.parentElement.style.display='none'" style="background: none; border: none; font-size: 14px; cursor: pointer; color: #991B1B;"><i class="bi bi-x-lg"></i></button>
+    </div>
+}
+
+<!-- FILTER & SEARCH BAR -->
+<div class="card" style="margin-bottom: 24px; padding: 16px 20px;">
+    @using (Html.BeginForm("Index", "Promotion", FormMethod.Get, new { @class = "d-flex", style = "display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;" }))
+    {
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 8px;">
+                <a href="@Url.Action("Index", "Promotion", new { status = "all", search = currentSearch })" 
+                   class="btn btn-sm @(currentStatus == "all" ? "btn-primary" : "btn-secondary")"
+                   style="@(currentStatus == "all" ? "background-color: #E11D48; border-color: #E11D48;" : "")">
+                    Tất cả (@Model.Count)
+                </a>
+                <a href="@Url.Action("Index", "Promotion", new { status = "Đang chạy", search = currentSearch })" 
+                   class="btn btn-sm @(currentStatus == "Đang chạy" ? "btn-primary" : "btn-secondary")"
+                   style="@(currentStatus == "Đang chạy" ? "background-color: #E11D48; border-color: #E11D48;" : "")">
+                    Đang chạy
+                </a>
+                <a href="@Url.Action("Index", "Promotion", new { status = "Tạm ngưng", search = currentSearch })" 
+                   class="btn btn-sm @(currentStatus == "Tạm ngưng" ? "btn-primary" : "btn-secondary")"
+                   style="@(currentStatus == "Tạm ngưng" ? "background-color: #E11D48; border-color: #E11D48;" : "")">
+                    Tạm ngưng
+                </a>
+                <a href="@Url.Action("Index", "Promotion", new { status = "Đã kết thúc", search = currentSearch })" 
+                   class="btn btn-sm @(currentStatus == "Đã kết thúc" ? "btn-primary" : "btn-secondary")"
+                   style="@(currentStatus == "Đã kết thúc" ? "background-color: #E11D48; border-color: #E11D48;" : "")">
+                    Đã kết thúc
+                </a>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="hidden" name="status" value="@currentStatus" />
+            <input type="text" name="search" class="form-control" placeholder="Tìm tên hoặc mã code..." 
+                   value="@currentSearch" style="width: 240px; height: 38px; font-size: 13px;" />
+            <button type="submit" class="btn btn-secondary btn-sm" style="height: 38px;">Tìm kiếm</button>
+            @if (!string.IsNullOrEmpty(currentSearch) || currentStatus != "all")
+            {
+                <a href="@Url.Action("Index", "Promotion")" class="btn btn-outline btn-sm" style="height: 38px; display: inline-flex; align-items: center;">Đặt lại</a>
+            }
+        </div>
+    }
+</div>
+
+<!-- PROMOTIONS TABLE -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Tên Chương Trình</th>
+                    <th>Mã Code Áp Dụng</th>
+                    <th>Mức Ưu Đãi</th>
+                    <th>Thời Gian Áp Dụng</th>
+                    <th>Phạm Vi Khóa Học</th>
+                    <th>Đã Dùng</th>
+                    <th>Trạng Thái</th>
+                    <th style="width: 200px;">Thao Tác Nhanh</th>
+                </tr>
+            </thead>
+            <tbody id="promo-table-body">
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var p in Model)
+                    {
+                        <tr>
+                            <td><strong>@p.TenKhuyenMai</strong></td>
+                            <td><code style="background: #F1F5F9; padding: 3px 8px; border-radius: 4px; font-weight: 700; color: #0F172A;">@p.MaCode</code></td>
+                            <td><strong style="color: #E11D48;">-@p.MucUuDai%</strong></td>
+                            <td>@p.NgayBatDau.ToString("dd/MM/yyyy") - @p.NgayKetThuc.ToString("dd/MM/yyyy")</td>
+                            <td><span class="badge badge-secondary">@p.DieuKienApDung</span></td>
+                            <td><strong>@p.SoLuongDaDung</strong> lượt</td>
+                            <td>
+                                @if (p.TrangThai == "Đang chạy")
+                                {
+                                    <span class="badge badge-success">Đang chạy</span>
+                                }
+                                else if (p.TrangThai == "Tạm ngưng")
+                                {
+                                    <span class="badge badge-warning">Tạm ngưng</span>
+                                }
+                                else if (p.TrangThai == "Chưa bắt đầu")
+                                {
+                                    <span class="badge badge-info">Sắp tới</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-secondary">Đã kết thúc</span>
+                                }
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 6px;">
+                                    @if (p.TrangThai == "Đang chạy")
+                                    {
+                                        using (Html.BeginForm("ToggleStatus", "Promotion", new { id = p.MaKhuyenMai }, FormMethod.Post, new { style = "display:inline;" }))
+                                        {
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-secondary btn-sm" title="Tạm ngưng">Tạm ngưng</button>
+                                        }
+                                        using (Html.BeginForm("EndPromo", "Promotion", new { id = p.MaKhuyenMai }, FormMethod.Post, new { style = "display:inline;", onsubmit = "return confirm('Bạn có chắc chắn muốn kết thúc chiến dịch khuyến mãi này?');" }))
+                                        {
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-danger btn-sm" title="Kết thúc">Kết thúc</button>
+                                        }
+                                    }
+                                    else if (p.TrangThai == "Tạm ngưng")
+                                    {
+                                        using (Html.BeginForm("ToggleStatus", "Promotion", new { id = p.MaKhuyenMai }, FormMethod.Post, new { style = "display:inline;" }))
+                                        {
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline btn-sm" style="color: #10B981; border-color: #10B981;" title="Kích hoạt lại">Kích hoạt lại</button>
+                                        }
+                                        using (Html.BeginForm("EndPromo", "Promotion", new { id = p.MaKhuyenMai }, FormMethod.Post, new { style = "display:inline;", onsubmit = "return confirm('Bạn có chắc chắn muốn kết thúc chiến dịch khuyến mãi này?');" }))
+                                        {
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-danger btn-sm" title="Kết thúc">Kết thúc</button>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="caption" style="color: var(--text-muted);">Không khả dụng</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 48px 20px; color: var(--text-secondary);">
+                            <div style="font-size: 32px; margin-bottom: 8px; color: var(--text-muted);"><i class="bi bi-tag"></i></div>
+                            <p>Không có chương trình khuyến mãi nào phù hợp.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- PAGINATION INFO -->
+    <div class="pagination-container" style="padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <div class="pagination-info">
+            Hiển thị <strong>@Model.Count</strong> mã khuyến mãi
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: CREATE NEW PROMOTION (UC17) -->
+<div class="modal-overlay" id="create-promo-modal">
+    <div class="modal-container" style="max-width: 640px;">
+        <div class="modal-header">
+            <h3 class="h3">Khởi Tạo Chương Trình Khuyến Mãi Mới</h3>
+            <button class="btn btn-secondary btn-sm" data-modal-close><i class="bi bi-x-lg"></i></button>
+        </div>
+
+        <div class="modal-body">
+            @using (Html.BeginForm("Create", "Promotion", FormMethod.Post, new { id = "form-create-promo", onsubmit = "return validatePromoForm();" }))
+            {
+                @Html.AntiForgeryToken()
+
+                <div class="grid-12" style="display: grid; grid-template-columns: 7fr 5fr; gap: 16px; margin-bottom: 16px;">
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 600;">Tên chương trình <span class="required" style="color: #EF4444;">*</span></label>
+                        <input type="text" name="TenKhuyenMai" id="promo-name" class="form-control"
+                               placeholder="Ví dụ: Ngày hội Lập trình viên 2026" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 600;">Mã Coupon <span class="required" style="color: #EF4444;">*</span></label>
+                        <input type="text" name="MaCode" id="promo-code" class="form-control" placeholder="DEVDAY2026"
+                               style="text-transform: uppercase;" required />
+                    </div>
+                </div>
+
+                <div class="grid-12" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 600;">Mức ưu đãi (%) <span class="required" style="color: #EF4444;">*</span></label>
+                        <input type="number" name="MucUuDai" id="promo-discount" class="form-control" min="1" max="100" placeholder="Ví dụ: 25" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 600;">Giá trị giảm tối đa (VNĐ)</label>
+                        <input type="number" name="GiaTriGiam" id="promo-max-discount" class="form-control" min="0" step="1000" placeholder="Không bắt buộc" />
+                    </div>
+                </div>
+
+                <!-- Scope Selection -->
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label class="form-label" style="font-weight: 600;">Phạm vi khóa học áp dụng</label>
+                    <input type="text" name="DieuKienApDung" class="form-control" placeholder="Ví dụ: Toàn sàn, Khóa học Lập trình Web..." value="Toàn sàn" />
+                </div>
+
+                <!-- Dates validation rule compliant with UC17 -->
+                <div class="grid-12" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 600;">Ngày bắt đầu hiệu lực <span class="required" style="color: #EF4444;">*</span></label>
+                        <input type="date" name="NgayBatDau" id="promo-start-date" class="form-control" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 600;">Ngày kết thúc <span class="required" style="color: #EF4444;">*</span></label>
+                        <input type="date" name="NgayKetThuc" id="promo-end-date" class="form-control" required />
+                        <div id="date-error" style="display: none; color: #EF4444; font-size: 12px; margin-top: 4px; font-weight: 600;">
+                            <i class="bi bi-exclamation-circle-fill me-1"></i> Lỗi nghiệp vụ UC17: Ngày kết thúc không thể trước ngày bắt đầu!
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                    <button type="button" class="btn btn-secondary" data-modal-close>Hủy</button>
+                    <button type="submit" class="btn btn-primary" style="background-color: #E11D48; border-color: #E11D48;">Kích hoạt chương trình</button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date().toISOString().split('T')[0];
+        const nextMonth = new Date();
+        nextMonth.setDate(nextMonth.getDate() + 30);
+        const endDay = nextMonth.toISOString().split('T')[0];
+
+        const startInput = document.getElementById('promo-start-date');
+        const endInput = document.getElementById('promo-end-date');
+        if (startInput && !startInput.value) startInput.value = today;
+        if (endInput && !endInput.value) endInput.value = endDay;
+    });
+
+    function validatePromoForm() {
+        const startDate = document.getElementById('promo-start-date').value;
+        const endDate = document.getElementById('promo-end-date').value;
+        const dateErr = document.getElementById('date-error');
+
+        if (new Date(endDate) < new Date(startDate)) {
+            if (dateErr) dateErr.style.display = 'block';
+            if (typeof showToast === 'function') {
+                showToast('Lỗi nghiệp vụ UC17: Ngày kết thúc không thể trước ngày bắt đầu!', 'error');
+            } else {
+                alert('Lỗi nghiệp vụ UC17: Ngày kết thúc không thể trước ngày bắt đầu!');
+            }
+            return false;
+        }
+        if (dateErr) dateErr.style.display = 'none';
+        return true;
+    }
+</script>

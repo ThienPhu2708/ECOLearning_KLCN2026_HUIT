@@ -1,40 +1,322 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Web.Mvc;
+using ECOLearning.Models;
+using ECOLearning.Areas.Admin.Models;
 
 namespace ECOLearning.Areas.Admin.Controllers
 {
-    [Authorize(Roles = "Admin")]
-    public class CourseApprovalController : Controller
+    public class CourseApprovalController : AdminBaseController
     {
-        // GET: Admin/CourseApproval (UC15: Kiểm duyệt khóa học)
-        public ActionResult Index()
+        private QL_HETHONG_CUNGCAP_KHOAHOCEntities1 db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1();
+
+        // GET: Admin/CourseApproval/Index/KH... (UC15: Kiểm duyệt khóa học)
+        public ActionResult Index(string id, string statusFilter = null, string search = "")
         {
-            return View();
+            var query = db.KhoaHoc.AsQueryable();
+
+            // Find target course if ID is passed in route/URL
+            KhoaHoc targetCourse = null;
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                targetCourse = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc.ToLower() == id.ToLower());
+            }
+
+            // Default statusFilter: if target course is requested, show "All", otherwise default to "Pending"
+            if (string.IsNullOrEmpty(statusFilter))
+            {
+                statusFilter = (targetCourse != null) ? "All" : "Pending";
+            }
+
+            // Calculate tab counts
+            int pendingCount = db.KhoaHoc.Count(k => k.trangThai == "Chờ duyệt" || k.trangThai == "Chờ kiểm duyệt" || k.trangThai == "Pending");
+            int approvedCount = db.KhoaHoc.Count(k => k.trangThai == "Đã xuất bản" || k.trangThai == "Đã duyệt");
+            int rejectedCount = db.KhoaHoc.Count(k => k.trangThai == "Cần sửa đổi" || k.trangThai == "Từ chối");
+            int allCount = db.KhoaHoc.Count();
+
+            // Filter by status tab
+            if (string.Equals(statusFilter, "Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(k => k.trangThai == "Chờ duyệt" || k.trangThai == "Chờ kiểm duyệt" || k.trangThai == "Pending");
+            }
+            else if (string.Equals(statusFilter, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(k => k.trangThai == "Đã xuất bản" || k.trangThai == "Đã duyệt");
+            }
+            else if (string.Equals(statusFilter, "Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(k => k.trangThai == "Cần sửa đổi" || k.trangThai == "Từ chối");
+            }
+
+            // Filter by search keyword
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                string s = search.Trim().ToLower();
+                query = query.Where(k => k.tenKhoaHoc.ToLower().Contains(s) 
+                                      || k.maKhoaHoc.ToLower().Contains(s)
+                                      || (k.NguoiDung != null && k.NguoiDung.hoTen.ToLower().Contains(s)));
+            }
+
+            var rawCourses = query.OrderByDescending(k => k.maKhoaHoc).ToList();
+
+            // Guarantee targetCourse is in the list even if tab filtering excluded it
+            if (targetCourse != null && !rawCourses.Any(c => c.maKhoaHoc.ToLower() == targetCourse.maKhoaHoc.ToLower()))
+            {
+                rawCourses.Insert(0, targetCourse);
+            }
+
+            var model = rawCourses.Select(k => {
+                var kiemDuyet = k.KiemDuyetKhoaHoc.OrderByDescending(kd => kd.ngayGui).FirstOrDefault();
+                int videoCount = 0;
+                int documentCount = 0;
+
+                if (k.ChuongHoc != null)
+                {
+                    foreach (var ch in k.ChuongHoc)
+                    {
+                        if (ch.BaiHoc != null)
+                        {
+                            videoCount += ch.BaiHoc.Count(b => !string.IsNullOrEmpty(b.duongDanVideo));
+                            foreach (var bh in ch.BaiHoc)
+                            {
+                                if (bh.TaiNguyen != null)
+                                {
+                                    documentCount += bh.TaiNguyen.Count();
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return new PendingCourseItem
+                {
+                    MaKhoaHoc = k.maKhoaHoc,
+                    TenKhoaHoc = k.tenKhoaHoc,
+                    TenGiaoVien = k.NguoiDung != null ? k.NguoiDung.hoTen : "N/A",
+                    TenDanhMuc = k.DanhMuc != null ? k.DanhMuc.tenDanhMuc : "Chưa phân loại",
+                    NgayGui = kiemDuyet != null ? kiemDuyet.ngayGui : null,
+                    HocPhi = k.giaBan,
+                    GiaKhuyenMai = k.giaKhuyenMai,
+                    SoVideo = videoCount,
+                    SoTaiLieu = documentCount,
+                    TrangThai = k.trangThai
+                };
+            }).ToList();
+
+            ViewBag.StatusFilter = statusFilter;
+            ViewBag.Search = search;
+            ViewBag.PendingCount = pendingCount;
+            ViewBag.ApprovedCount = approvedCount;
+            ViewBag.RejectedCount = rejectedCount;
+            ViewBag.AllCount = allCount;
+            ViewBag.SelectedCourseId = id;
+            ViewBag.BreadcrumbCurrent = "Kiểm duyệt khóa học";
+
+            return View(model);
         }
 
-        // GET: Admin/CourseApproval/Review/5
-        // Xem chi tiết nội dung, video bài giảng, tài liệu đính kèm
-        public ActionResult Review(string id)
+        // GET: Admin/CourseApproval/GetDetails/5
+        [HttpGet]
+        public ActionResult GetDetails(string id)
         {
-            return View();
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return Json(new { success = false, message = "Mã khóa học không hợp lệ!" }, JsonRequestBehavior.AllowGet);
+            }
+
+            var k = db.KhoaHoc.FirstOrDefault(x => x.maKhoaHoc.ToLower() == id.ToLower());
+            if (k == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy khóa học mã " + id }, JsonRequestBehavior.AllowGet);
+            }
+
+            var kiemDuyet = k.KiemDuyetKhoaHoc.OrderByDescending(kd => kd.ngayGui).FirstOrDefault();
+
+            var detail = new CourseApprovalDetailViewModel
+            {
+                MaKhoaHoc = k.maKhoaHoc,
+                TenKhoaHoc = k.tenKhoaHoc,
+                TenGiaoVien = k.NguoiDung != null ? k.NguoiDung.hoTen : "N/A",
+                EmailGiaoVien = k.NguoiDung != null ? k.NguoiDung.email : "N/A",
+                TenDanhMuc = k.DanhMuc != null ? k.DanhMuc.tenDanhMuc : "Chưa phân loại",
+                HocPhi = k.giaBan,
+                GiaKhuyenMai = k.giaKhuyenMai,
+                MoTa = k.moTa,
+                MoTaNgan = k.moTaNgan,
+                MucTieuDauRa = k.mucTieuDauRa,
+                AnhBia = k.anhBia,
+                TrangThai = k.trangThai,
+                NgayGui = kiemDuyet != null ? kiemDuyet.ngayGui : null,
+                LyDoTuChoi = kiemDuyet != null ? kiemDuyet.lyDoTuChoi : ""
+            };
+
+            if (k.ChuongHoc != null && k.ChuongHoc.Any())
+            {
+                foreach (var ch in k.ChuongHoc.OrderBy(c => c.thuTu))
+                {
+                    var chDetail = new ChuongHocDetail
+                    {
+                        MaChuong = ch.maChuong,
+                        TenChuong = ch.tenChuong
+                    };
+
+                    if (ch.BaiHoc != null)
+                    {
+                        foreach (var bh in ch.BaiHoc.OrderBy(b => b.thuTu))
+                        {
+                            var bhDetail = new BaiHocDetail
+                            {
+                                MaBaiHoc = bh.maBaiHoc,
+                                TenBaiHoc = bh.tenBaiHoc,
+                                VideoUrl = bh.duongDanVideo,
+                                ThoiLuong = bh.thoiLuong,
+                                CoXemThu = bh.choXemThu
+                            };
+
+                            if (bh.TaiNguyen != null)
+                            {
+                                foreach (var tn in bh.TaiNguyen)
+                                {
+                                    bhDetail.TaiNguyens.Add(new TaiNguyenDetail
+                                    {
+                                        MaTaiNguyen = tn.maTaiNguyen,
+                                        TenTaiNguyen = tn.tenTaiNguyen,
+                                        FileUrl = tn.duongDan,
+                                        LoaiFile = tn.loaiTaiNguyen
+                                    });
+                                }
+                            }
+
+                            chDetail.BaiHocs.Add(bhDetail);
+                        }
+                    }
+
+                    detail.ChuongHocs.Add(chDetail);
+                }
+            }
+
+            return Json(new { success = true, data = detail }, JsonRequestBehavior.AllowGet);
         }
 
-        // POST: Admin/CourseApproval/Approve/5
+        // POST: Admin/CourseApproval/Approve
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public ActionResult Approve(string id)
         {
-            // Nghiệp vụ: Cập nhật trạng thái thành 'Đã xuất bản'
-            return RedirectToAction("Index");
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return Json(new { success = false, message = "Mã khóa học không hợp lệ!" });
+            }
+
+            try
+            {
+                var k = db.KhoaHoc.FirstOrDefault(x => x.maKhoaHoc.ToLower() == id.ToLower());
+                if (k == null)
+                {
+                    return Json(new { success = false, message = "Không tìm thấy khóa học mã " + id });
+                }
+
+                // Cập nhật trạng thái khóa học thành "Đã xuất bản"
+                k.trangThai = "Đã xuất bản";
+
+                // Lưu nhật ký kiểm duyệt vào CSDL
+                var kd = db.KiemDuyetKhoaHoc.FirstOrDefault(x => x.maKhoaHoc.ToLower() == id.ToLower());
+                if (kd == null)
+                {
+                    kd = new KiemDuyetKhoaHoc
+                    {
+                        maKiemDuyet = "KD-" + Guid.NewGuid().ToString().Substring(0, 8),
+                        maKhoaHoc = k.maKhoaHoc,
+                        ngayGui = DateTime.Now
+                    };
+                    db.KiemDuyetKhoaHoc.Add(kd);
+                }
+
+                kd.trangThai = "Đã duyệt";
+                kd.ngayKiemDuyet = DateTime.Now;
+                kd.lyDoTuChoi = null;
+                if (Session["UserId"] != null)
+                {
+                    kd.maAdmin = Convert.ToInt32(Session["UserId"]);
+                }
+
+                db.SaveChanges();
+
+                return Json(new { success = true, message = "Phê duyệt thành công! Khóa học \"" + k.tenKhoaHoc + "\" đã được xuất bản ra trang chủ." });
+            }
+            catch (Exception ex)
+            {
+                Exception current = ex;
+                while (current.InnerException != null) current = current.InnerException;
+                return Json(new { success = false, message = "Lỗi khi lưu dữ liệu phê duyệt: " + current.Message });
+            }
         }
 
-        // POST: Admin/CourseApproval/Reject/5
+        // POST: Admin/CourseApproval/Reject
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public ActionResult Reject(string id, string reason)
         {
-            // Nghiệp vụ: Gửi lý do từ chối về giảng viên
-            return RedirectToAction("Index");
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return Json(new { success = false, message = "Mã khóa học không hợp lệ!" });
+            }
+
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                return Json(new { success = false, message = "Vui lòng nhập lý do từ chối để thông báo cho giáo viên!" });
+            }
+
+            try
+            {
+                var k = db.KhoaHoc.FirstOrDefault(x => x.maKhoaHoc.ToLower() == id.ToLower());
+                if (k == null)
+                {
+                    return Json(new { success = false, message = "Không tìm thấy khóa học mã " + id });
+                }
+
+                // Cập nhật trạng thái khóa học thành "Cần sửa đổi"
+                k.trangThai = "Cần sửa đổi";
+
+                // Lưu lý do từ chối vào CSDL
+                var kd = db.KiemDuyetKhoaHoc.FirstOrDefault(x => x.maKhoaHoc.ToLower() == id.ToLower());
+                if (kd == null)
+                {
+                    kd = new KiemDuyetKhoaHoc
+                    {
+                        maKiemDuyet = "KD-" + Guid.NewGuid().ToString().Substring(0, 8),
+                        maKhoaHoc = k.maKhoaHoc,
+                        ngayGui = DateTime.Now
+                    };
+                    db.KiemDuyetKhoaHoc.Add(kd);
+                }
+
+                kd.trangThai = "Từ chối";
+                kd.lyDoTuChoi = reason.Trim();
+                kd.ngayKiemDuyet = DateTime.Now;
+                if (Session["UserId"] != null)
+                {
+                    kd.maAdmin = Convert.ToInt32(Session["UserId"]);
+                }
+
+                db.SaveChanges();
+
+                return Json(new { success = true, message = "Đã từ chối phê duyệt và chuyển khóa học sang trạng thái \"Cần sửa đổi\"." });
+            }
+            catch (Exception ex)
+            {
+                Exception current = ex;
+                while (current.InnerException != null) current = current.InnerException;
+                return Json(new { success = false, message = "Lỗi khi lưu dữ liệu từ chối: " + current.Message });
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && db != null)
+            {
+                db.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 }

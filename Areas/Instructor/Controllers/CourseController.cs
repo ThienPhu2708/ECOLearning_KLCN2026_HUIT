@@ -41,6 +41,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
                         if (c.BaiHoc != null) lessonCount += c.BaiHoc.Count;
                     }
                 }
+                lessonCount += db.BaiHoc.Count(b => b.maChuong == null && b.maBaiHoc.StartsWith(k.maKhoaHoc + "_"));
 
                 return new InstructorCourseItem
                 {
@@ -108,6 +109,34 @@ namespace ECOLearning.Areas.Instructor.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Create(CourseCreateOrEditViewModel model, string actionType = "draft")
         {
+            // Normalize formatted VND price from Request.Form if needed
+            string rawGiaBan = Request.Form["GiaBan"];
+            if (!string.IsNullOrWhiteSpace(rawGiaBan))
+            {
+                string cleanGiaBan = rawGiaBan.Replace(".", "").Replace(",", "").Replace(" ", "").Replace("đ", "").Replace("₫", "").Replace("VND", "").Replace("VNĐ", "").Trim();
+                if (decimal.TryParse(cleanGiaBan, out decimal parsedGiaBan))
+                {
+                    model.GiaBan = parsedGiaBan;
+                    ModelState.Remove("GiaBan");
+                }
+            }
+
+            string rawGiaKm = Request.Form["GiaKhuyenMai"];
+            if (!string.IsNullOrWhiteSpace(rawGiaKm))
+            {
+                string cleanGiaKm = rawGiaKm.Replace(".", "").Replace(",", "").Replace(" ", "").Replace("đ", "").Replace("₫", "").Replace("VND", "").Replace("VNĐ", "").Trim();
+                if (decimal.TryParse(cleanGiaKm, out decimal parsedGiaKm))
+                {
+                    model.GiaKhuyenMai = parsedGiaKm;
+                    ModelState.Remove("GiaKhuyenMai");
+                }
+            }
+            else
+            {
+                model.GiaKhuyenMai = null;
+                ModelState.Remove("GiaKhuyenMai");
+            }
+
             if (string.IsNullOrWhiteSpace(model.TenKhoaHoc))
             {
                 ModelState.AddModelError("TenKhoaHoc", "Vui lòng nhập tên khóa học!");
@@ -116,6 +145,11 @@ namespace ECOLearning.Areas.Instructor.Controllers
             if (model.GiaBan < 0)
             {
                 ModelState.AddModelError("GiaBan", "Giá bán không được là số âm!");
+            }
+
+            if (model.GiaKhuyenMai.HasValue && model.GiaKhuyenMai.Value > model.GiaBan)
+            {
+                ModelState.AddModelError("GiaKhuyenMai", "Giá khuyến mãi không được lớn hơn giá bán!");
             }
 
             if (string.IsNullOrEmpty(model.MaDanhMuc))
@@ -210,9 +244,47 @@ namespace ECOLearning.Areas.Instructor.Controllers
             var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == model.MaKhoaHoc && k.maGiaoVien == teacherId);
             if (course == null) return HttpNotFound();
 
+            // Normalize formatted VND price from Request.Form if needed
+            string rawGiaBan = Request.Form["GiaBan"];
+            if (!string.IsNullOrWhiteSpace(rawGiaBan))
+            {
+                string cleanGiaBan = rawGiaBan.Replace(".", "").Replace(",", "").Replace(" ", "").Replace("đ", "").Replace("₫", "").Replace("VND", "").Replace("VNĐ", "").Trim();
+                if (decimal.TryParse(cleanGiaBan, out decimal parsedGiaBan))
+                {
+                    model.GiaBan = parsedGiaBan;
+                    ModelState.Remove("GiaBan");
+                }
+            }
+
+            string rawGiaKm = Request.Form["GiaKhuyenMai"];
+            if (!string.IsNullOrWhiteSpace(rawGiaKm))
+            {
+                string cleanGiaKm = rawGiaKm.Replace(".", "").Replace(",", "").Replace(" ", "").Replace("đ", "").Replace("₫", "").Replace("VND", "").Replace("VNĐ", "").Trim();
+                if (decimal.TryParse(cleanGiaKm, out decimal parsedGiaKm))
+                {
+                    model.GiaKhuyenMai = parsedGiaKm;
+                    ModelState.Remove("GiaKhuyenMai");
+                }
+            }
+            else
+            {
+                model.GiaKhuyenMai = null;
+                ModelState.Remove("GiaKhuyenMai");
+            }
+
             if (string.IsNullOrWhiteSpace(model.TenKhoaHoc))
             {
                 ModelState.AddModelError("TenKhoaHoc", "Vui lòng nhập tên khóa học!");
+            }
+
+            if (model.GiaBan < 0)
+            {
+                ModelState.AddModelError("GiaBan", "Giá bán không được là số âm!");
+            }
+
+            if (model.GiaKhuyenMai.HasValue && model.GiaKhuyenMai.Value > model.GiaBan)
+            {
+                ModelState.AddModelError("GiaKhuyenMai", "Giá khuyến mãi không được lớn hơn giá bán!");
             }
 
             if (!ModelState.IsValid)
@@ -240,8 +312,10 @@ namespace ECOLearning.Areas.Instructor.Controllers
 
             if (actionType == "submit")
             {
-                // Kiểm tra có bài học chưa
-                bool hasLessons = course.ChuongHoc != null && course.ChuongHoc.Any(c => c.BaiHoc != null && c.BaiHoc.Any());
+                // Kiểm tra có bài học chưa (bao gồm cả bài học không phân chương)
+                bool hasLessons = (course.ChuongHoc != null && course.ChuongHoc.Any(c => c.BaiHoc != null && c.BaiHoc.Any()))
+                    || db.BaiHoc.Any(b => b.maChuong == null && b.maBaiHoc.StartsWith(course.maKhoaHoc + "_"));
+
                 if (!hasLessons)
                 {
                     TempData["ErrorMessage"] = "Khóa học không có nội dung bài học! Vui lòng thêm bài học trước khi gửi duyệt.";
@@ -266,7 +340,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
             var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == id && k.maGiaoVien == teacherId);
             if (course == null) return HttpNotFound();
 
-            bool hasLessons = course.ChuongHoc != null && course.ChuongHoc.Any(c => c.BaiHoc != null && c.BaiHoc.Any());
+            bool hasLessons = (course.ChuongHoc != null && course.ChuongHoc.Any(c => c.BaiHoc != null && c.BaiHoc.Any()))
+                || db.BaiHoc.Any(b => b.maChuong == null && b.maBaiHoc.StartsWith(course.maKhoaHoc + "_"));
+
             if (!hasLessons)
             {
                 TempData["ErrorMessage"] = "Khóa học không có nội dung bài học! Vui lòng tạo đề cương và video trước khi gửi duyệt.";
@@ -296,6 +372,17 @@ namespace ECOLearning.Areas.Instructor.Controllers
             {
                 TempData["ErrorMessage"] = "Không thể xóa khóa học đã có học viên đăng ký tham gia!";
                 return RedirectToAction("Index");
+            }
+
+            // Xóa các bài học không phân chương
+            var unchaptered = db.BaiHoc.Where(b => b.maChuong == null && b.maBaiHoc.StartsWith(course.maKhoaHoc + "_")).ToList();
+            foreach (var bh in unchaptered)
+            {
+                if (bh.TaiNguyen != null)
+                {
+                    db.TaiNguyen.RemoveRange(bh.TaiNguyen);
+                }
+                db.BaiHoc.Remove(bh);
             }
 
             // Xóa các liên kết bài học & chương học

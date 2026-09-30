@@ -178,69 +178,72 @@ namespace ECOLearning.Controllers
                 return Json(new { success = false, message = "Giỏ hàng của bạn đang rỗng!" });
             }
 
+            int userId = (Session["UserId"] as int?) ?? 0;
+            if (userId == 0)
+            {
+                return Json(new { success = false, requireLogin = true, message = "Vui lòng đăng nhập để hoàn tất thanh toán!" });
+            }
+
+            var user = db.NguoiDung.FirstOrDefault(u => u.maNguoiDung == userId);
+            if (user == null)
+            {
+                return Json(new { success = false, requireLogin = true, message = "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại!" });
+            }
+
             try
             {
-                int userId = (Session["UserId"] as int?) ?? 0;
                 string appliedCoupon = Session["Applied_Coupon"] as string ?? couponCode;
 
-                // Nếu người dùng đã đăng nhập, tạo đơn hàng thật trong CSDL
-                if (userId > 0)
+                decimal subtotal = cart.Sum(i => i.Price);
+                decimal discount = CalculateDiscount(subtotal, appliedCoupon);
+                decimal total = Math.Max(0, subtotal - discount);
+
+                var mgg = string.IsNullOrEmpty(appliedCoupon) ? null : db.MaGiamGia.FirstOrDefault(m => m.maCode.ToUpper() == appliedCoupon.Trim().ToUpper());
+
+                string orderId = "DH_" + DateTime.Now.ToString("yyyyMMddHHmmss") + "_" + new Random().Next(100, 999);
+
+                DonHang donHang = new DonHang
                 {
-                    var user = db.NguoiDung.FirstOrDefault(u => u.maNguoiDung == userId);
-                    if (user != null)
+                    maDonHang = orderId,
+                    ngayDat = DateTime.Now,
+                    tongTien = total,
+                    trangThai = "Đã thanh toán",
+                    maHocVien = userId,
+                    maGiamGia = mgg != null ? mgg.maGiamGia1 : null
+                };
+                db.DonHang.Add(donHang);
+
+                int ctIndex = 1;
+                foreach (var item in cart)
+                {
+                    ChiTietDonHang ct = new ChiTietDonHang
                     {
-                        decimal subtotal = cart.Sum(i => i.Price);
-                        decimal discount = CalculateDiscount(subtotal, appliedCoupon);
-                        decimal total = Math.Max(0, subtotal - discount);
+                        maChiTiet = "CT_" + orderId + "_" + ctIndex++,
+                        maDonHang = orderId,
+                        maKhoaHoc = item.CourseId,
+                        donGia = item.Price
+                    };
+                    db.ChiTietDonHang.Add(ct);
 
-                        var mgg = string.IsNullOrEmpty(appliedCoupon) ? null : db.MaGiamGia.FirstOrDefault(m => m.maCode.ToUpper() == appliedCoupon.Trim().ToUpper());
-
-                        string orderId = "DH_" + DateTime.Now.ToString("yyyyMMddHHmmss") + "_" + new Random().Next(100, 999);
-
-                        DonHang donHang = new DonHang
+                    // Kiểm tra và tự động thêm vào Đăng ký khóa học
+                    var existingDK = db.DangKyKhoaHoc.FirstOrDefault(d => d.maHocVien == userId && d.maKhoaHoc == item.CourseId);
+                    if (existingDK == null)
+                    {
+                        DangKyKhoaHoc dk = new DangKyKhoaHoc
                         {
-                            maDonHang = orderId,
-                            ngayDat = DateTime.Now,
-                            tongTien = total,
-                            trangThai = "Đã thanh toán",
+                            maDangKy = "DK_" + DateTime.Now.ToString("yyyyMMddHHmmss") + "_" + ctIndex,
+                            ngayDangKy = DateTime.Now,
+                            trangThaiDK = "Đã thanh toán",
                             maHocVien = userId,
-                            maGiamGia = mgg != null ? mgg.maGiamGia1 : null
+                            maKhoaHoc = item.CourseId
                         };
-                        db.DonHang.Add(donHang);
-
-                        int ctIndex = 1;
-                        foreach (var item in cart)
-                        {
-                            ChiTietDonHang ct = new ChiTietDonHang
-                            {
-                                maChiTiet = "CT_" + orderId + "_" + ctIndex++,
-                                maDonHang = orderId,
-                                maKhoaHoc = item.CourseId,
-                                donGia = item.Price
-                            };
-                            db.ChiTietDonHang.Add(ct);
-
-                            // Kiểm tra và tự động thêm vào Đăng ký khóa học
-                            var existingDK = db.DangKyKhoaHoc.FirstOrDefault(d => d.maHocVien == userId && d.maKhoaHoc == item.CourseId);
-                            if (existingDK == null)
-                            {
-                                DangKyKhoaHoc dk = new DangKyKhoaHoc
-                                {
-                                    maDangKy = "DK_" + DateTime.Now.ToString("yyyyMMddHHmmss") + "_" + ctIndex,
-                                    ngayDangKy = DateTime.Now,
-                                    trangThaiDK = "Đã thanh toán",
-                                    maHocVien = userId,
-                                    maKhoaHoc = item.CourseId
-                                };
-                                db.DangKyKhoaHoc.Add(dk);
-                            }
-                        }
-
-                        db.SaveChanges();
+                        db.DangKyKhoaHoc.Add(dk);
                     }
                 }
 
-                // Xóa giỏ hàng và mã giảm giá sau khi thanh toán thành công
+                db.SaveChanges();
+
+                // Chỉ xóa giỏ hàng và mã giảm giá SAU KHI đã lưu đơn hàng thành công vào CSDL
                 Session.Remove("Cart");
                 Session.Remove("Applied_Coupon");
 
@@ -254,9 +257,8 @@ namespace ECOLearning.Controllers
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("Checkout Error: " + ex.Message);
-                Session.Remove("Cart");
-                Session.Remove("Applied_Coupon");
-                return Json(new { success = true, message = "Thanh toán Thành công!", redirectUrl = Url.Action("Index", "Home") });
+                // KHÔNG xóa giỏ hàng và KHÔNG báo thành công khi lưu đơn hàng thất bại thật sự
+                return Json(new { success = false, message = "Có lỗi xảy ra khi xử lý đơn hàng. Vui lòng thử lại hoặc liên hệ hỗ trợ!" });
             }
         }
 

@@ -4,21 +4,29 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 
     var chapters = ViewBag.Chapters as List<ECOLearning.Models.ChuongHoc> ?? (Model != null && Model.ChuongHoc != null ? Model.ChuongHoc.OrderBy(c => c.thuTu).ToList() : new List<ECOLearning.Models.ChuongHoc>());
+    var unchapteredLessons = ViewBag.UnchapteredLessons as List<ECOLearning.Models.BaiHoc> ?? new List<ECOLearning.Models.BaiHoc>();
     bool isEnrolled = ViewBag.IsEnrolled ?? false;
     bool isInCart = ViewBag.IsInCart ?? false;
 
-    int totalLessons = chapters.Sum(c => c.BaiHoc != null ? c.BaiHoc.Count : 0);
-    int totalDurationSeconds = chapters.Sum(c => c.BaiHoc != null ? c.BaiHoc.Sum(b => b.thoiLuong ?? 0) : 0);
+    int totalLessons = chapters.Sum(c => c.BaiHoc != null ? c.BaiHoc.Count : 0) + unchapteredLessons.Count;
+    int totalDurationSeconds = chapters.Sum(c => c.BaiHoc != null ? c.BaiHoc.Sum(b => b.thoiLuong ?? 0) : 0) + unchapteredLessons.Sum(b => b.thoiLuong ?? 0);
     int totalMinutes = totalDurationSeconds / 60;
 
-    var previewLesson = chapters.SelectMany(c => c.BaiHoc != null ? c.BaiHoc : new List<ECOLearning.Models.BaiHoc>())
-                                .FirstOrDefault(b => b.choXemThu == true && !string.IsNullOrEmpty(b.duongDanVideo));
+    var allLessonsList = chapters.SelectMany(c => c.BaiHoc != null ? c.BaiHoc : new List<ECOLearning.Models.BaiHoc>()).Concat(unchapteredLessons).ToList();
+
+    var previewLesson = allLessonsList.FirstOrDefault(b => b.choXemThu == true && !string.IsNullOrEmpty(b.duongDanVideo));
     if (previewLesson == null)
     {
-        previewLesson = chapters.SelectMany(c => c.BaiHoc != null ? c.BaiHoc : new List<ECOLearning.Models.BaiHoc>())
-                                .FirstOrDefault(b => !string.IsNullOrEmpty(b.duongDanVideo));
+        previewLesson = allLessonsList.FirstOrDefault(b => !string.IsNullOrEmpty(b.duongDanVideo));
     }
-    string previewVideoUrl = previewLesson != null ? previewLesson.duongDanVideo : "";
+    // Video nội bộ: phát qua Learning/StreamVideo để hỗ trợ HTTP Range Request đúng chuẩn
+    // (static file trên IIS Express không phục vụ đúng Range, gây hiện tượng có tiếng nhưng hình đứng)
+    const string localVideoPrefix = "/assets/uploads/videos/";
+    Func<string, string> toPlayableVideoUrl = raw => !string.IsNullOrEmpty(raw) && raw.StartsWith(localVideoPrefix)
+        ? Url.Action("StreamVideo", "Learning", new { file = raw.Substring(localVideoPrefix.Length) })
+        : raw;
+
+    string previewVideoUrl = previewLesson != null ? toPlayableVideoUrl(previewLesson.duongDanVideo) : "";
     string previewLessonTitle = previewLesson != null ? previewLesson.tenBaiHoc : "Video giới thiệu khóa học";
 
     double avgRating = Model != null && Model.DanhGiaKhoaHoc != null && Model.DanhGiaKhoaHoc.Count > 0
@@ -472,43 +480,47 @@
                 <h1 class="course-title-main" style="margin-top: 8px; margin-bottom: 14px;">@Model.tenKhoaHoc</h1>
 
                 <!-- Short Description -->
-                <p class="lead text-light opacity-75 fs-6 mb-4" style="max-width: 860px; line-height: 1.6; color: #94A3B8 !important;">@Model.moTaNgan</p>
+                <p class="lead text-light opacity-75 fs-6 mb-4" style="max-width: 860px; line-height: 1.6; color: #94A3B8 !important; white-space: pre-line;">@Model.moTaNgan</p>
 
                 <!-- Bottom Meta Info Bar -->
                 <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size: 14.5px;">
                     <!-- Rating & Reviews -->
-                    @if (reviewCount > 0)
-                    {
-                        <div class="d-flex align-items-center gap-1">
-                            <span class="fw-bold" style="color: #F59E0B; font-size: 15px;">@avgRating.ToString("0.0")</span>
-                            <div class="d-flex gap-1 ms-1" style="color: #F59E0B;">
-                                @for (int i = 1; i <= 5; i++)
+                    @{
+                        double headerScore = reviewCount > 0 ? avgRating : 0.0;
+                        int headerReviews = reviewCount;
+                    }
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="fw-bold" style="color: @(headerScore > 0 ? "#F59E0B" : "#94A3B8"); font-size: 15px;">@headerScore.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)</span>
+                        <div class="d-flex gap-1 ms-1" style="color: @(headerScore > 0 ? "#F59E0B" : "#CBD5E1");">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                if (headerScore > 0 && i <= Math.Round(headerScore))
                                 {
-                                    if (i <= Math.Round(avgRating))
-                                    {
-                                        <i class="bi bi-star-fill"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-star"></i>
-                                    }
+                                    <i class="bi bi-star-fill"></i>
                                 }
-                            </div>
-                            <span class="ms-1" style="color: #94A3B8;">(@reviewCount đánh giá)</span>
+                                else
+                                {
+                                    <i class="bi bi-star"></i>
+                                }
+                            }
                         </div>
-                        <span style="color: #475569;">•</span>
-                    }
-                    else
-                    {
-                        <div class="d-flex align-items-center gap-1" style="color: #94A3B8;">
-                            <span>Chưa có đánh giá</span>
-                        </div>
-                        <span style="color: #475569;">•</span>
-                    }
+                        <span class="ms-1" style="color: #CBD5E1;">(@headerReviews đánh giá)</span>
+                    </div>
+                    <span style="color: #475569;">•</span>
 
                     <!-- Giảng viên -->
                     <div style="color: #94A3B8;">
-                        Giảng viên: <strong style="color: #FFFFFF; font-weight: 700;">@(Model.NguoiDung != null ? Model.NguoiDung.hoTen : "Giảng viên E-Learning")</strong>
+                        Giáo viên: 
+                        @if (Model.NguoiDung != null)
+                        {
+                            <a href="@Url.Action("Index", "User", new { id = Model.NguoiDung.maNguoiDung })" title="Xem thông tin chi tiết giáo viên @Model.NguoiDung.hoTen" style="color: #FFFFFF; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; transition: color 0.2s;" onmouseover="this.style.color='#A5B4FC'" onmouseout="this.style.color='#FFFFFF'">
+                                @Model.NguoiDung.hoTen
+                            </a>
+                        }
+                        else
+                        {
+                            <strong style="color: #FFFFFF; font-weight: 700;">Giảng viên E-Learning</strong>
+                        }
                     </div>
 
                     <span style="color: #475569;">•</span>
@@ -528,18 +540,27 @@
                     <!-- Section 1: Outcomes -->
                     @if (!string.IsNullOrEmpty(Model.mucTieuDauRa))
                     {
-                        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4" style="background: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 100%); border: 1px solid #C7D2FE !important;">
-                            <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-check-circle-fill text-primary me-2"></i>Mục tiêu đạt được sau khóa học</h5>
-                            <div class="row g-2">
-                                @foreach (var outcome in Model.mucTieuDauRa.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
-                                {
-                                    <div class="col-md-6 d-flex align-items-start gap-2">
-                                        <i class="bi bi-check2-circle text-primary fs-5"></i>
-                                        <span class="text-secondary fs-6 fw-medium">@outcome.Trim()</span>
-                                    </div>
-                                }
+                        var outcomesList = Model.mucTieuDauRa
+                            .Split(new[] { "\r\n", "\r", "\n", ";", "," }, StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => s.Trim().TrimStart('-', '•', '*').Trim())
+                            .Where(s => !string.IsNullOrEmpty(s))
+                            .ToList();
+
+                        if (outcomesList.Any())
+                        {
+                            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4" style="background: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 100%); border: 1px solid #C7D2FE !important;">
+                                <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-check-circle-fill text-primary me-2"></i>Mục tiêu đạt được sau khóa học</h5>
+                                <div class="row g-3">
+                                    @foreach (var outcome in outcomesList)
+                                    {
+                                        <div class="col-md-6 d-flex align-items-start gap-2">
+                                            <i class="bi bi-check2-circle text-primary fs-5 flex-shrink-0 mt-1"></i>
+                                            <span class="text-secondary fs-6 fw-medium lh-base">@outcome</span>
+                                        </div>
+                                    }
+                                </div>
                             </div>
-                        </div>
+                        }
                     }
 
                     <!-- Section 2: Dynamic Curriculum Accordion (Tính năng Thu gọn / Mở rộng chương học) -->
@@ -547,9 +568,58 @@
                         <div class="d-flex align-items-center justify-content-between mb-3 gap-3 flex-wrap">
                             <h4 class="fw-bold text-dark m-0 text-nowrap" style="font-size: 20px;"><i class="bi bi-list-nested me-2 text-primary"></i>Đề cương chi tiết</h4>
                             <div class="d-flex align-items-center gap-3 flex-wrap ms-auto">
-                                <span class="text-muted fs-6 text-nowrap"><strong>@chapters.Count</strong> chương • <strong>@totalLessons</strong> bài học • <strong>@totalMinutes phút</strong></span>
+                                <span class="text-muted fs-6 text-nowrap">@(chapters.Count > 0 ? $"{chapters.Count} chương • " : "")<strong>@totalLessons</strong> bài học • <strong>@totalMinutes phút</strong></span>
                             </div>
                         </div>
+
+                        @if (unchapteredLessons.Count > 0)
+                        {
+                            int unchapSeconds = unchapteredLessons.Sum(b => b.thoiLuong ?? 0);
+                            int unchapMin = unchapSeconds / 60;
+
+                            <div class="curriculum-chapter-card">
+                                <div class="chapter-header" onclick="toggleChapterAccordion('collapseUnchapDetail', this)" title="Bấm để đóng / mở danh sách bài học">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-chevron-down text-primary chevron-icon"></i>
+                                        <span class="fw-bold text-dark"><i class="bi bi-file-earmark-play me-2 text-primary"></i>@(chapters.Count > 0 ? "Bài học độc lập (Không phân chương)" : "Danh sách bài học")</span>
+                                    </div>
+                                    <span class="text-muted fw-normal fs-6">@unchapteredLessons.Count bài học (@unchapMin phút)</span>
+                                </div>
+
+                                <div id="collapseUnchapDetail" class="collapse-content">
+                                    @foreach (var les in unchapteredLessons)
+                                    {
+                                        int lesMin = (les.thoiLuong ?? 0) / 60;
+                                        int lesSec = (les.thoiLuong ?? 0) % 60;
+                                        string durationText = string.Format("{0:D2}:{1:D2}", lesMin, lesSec);
+                                        bool hasVideo = !string.IsNullOrEmpty(les.duongDanVideo);
+
+                                        <div class="lesson-item-row">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <i class="bi bi-play-circle-fill text-primary fs-5"></i>
+                                                <span class="fw-semibold text-dark">@les.tenBaiHoc</span>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-3">
+                                                @if (hasVideo && les.choXemThu == true)
+                                                {
+                                                    <span class="badge-preview" role="button" data-title="@les.tenBaiHoc" data-video="@toPlayableVideoUrl(les.duongDanVideo)" onclick="handlePreviewClick(this)">
+                                                        <i class="bi bi-eye"></i> Học thử
+                                                    </span>
+                                                }
+                                                else if (!hasVideo)
+                                                {
+                                                    <span class="badge bg-secondary opacity-75 fw-normal" style="font-size: 11px;">
+                                                        <i class="bi bi-clock-history me-1"></i> Video đang phát triển
+                                                    </span>
+                                                }
+                                                <span class="text-muted text-nowrap"><i class="bi bi-clock me-1"></i>@durationText</span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
                         @if (chapters.Count > 0)
                         {
                             int chapIndex = 1;
@@ -586,7 +656,7 @@
                                                     <div class="d-flex align-items-center gap-3">
                                                         @if (hasVideo && les.choXemThu == true)
                                                         {
-                                                            <span class="badge-preview" role="button" data-title="@les.tenBaiHoc" data-video="@les.duongDanVideo" onclick="handlePreviewClick(this)">
+                                                            <span class="badge-preview" role="button" data-title="@les.tenBaiHoc" data-video="@toPlayableVideoUrl(les.duongDanVideo)" onclick="handlePreviewClick(this)">
                                                                 <i class="bi bi-eye"></i> Học thử
                                                             </span>
                                                         }
@@ -610,7 +680,7 @@
                                 chapIndex++;
                             }
                         }
-                        else
+                        else if (unchapteredLessons.Count == 0)
                         {
                             <div class="alert alert-info">Đang cập nhật khung chương trình học.</div>
                         }
@@ -619,114 +689,163 @@
                     <!-- Section 3: Course Description -->
                     <div class="mb-5">
                         <h4 class="fw-bold text-dark mb-3"><i class="bi bi-file-text me-2 text-primary"></i> Mô tả chi tiết khóa học</h4>
-                        <div class="text-secondary fs-6 lh-lg p-4 rounded-4 bg-white border" style="border-color: #E2E8F0 !important;">
+                        <div class="text-secondary fs-6 lh-lg p-4 rounded-4 bg-white border" style="border-color: #E2E8F0 !important; white-space: pre-line;">
                             @Model.moTa
                         </div>
                     </div>
-
-                    <!-- Section 4: Student Reviews (Chỉ hiện khi có học viên đánh giá) -->
-                    @if (Model.DanhGiaKhoaHoc != null && Model.DanhGiaKhoaHoc.Count > 0)
-                    {
-                        var reviews = Model.DanhGiaKhoaHoc.OrderByDescending(d => d.ngayDanhGia).ToList();
-                        double overallRating = reviews.Average(d => (double)d.soSao);
-                        int totalReviewers = reviews.Count;
-
-                        <div class="mb-5">
-                            <!-- Khung Card bao bọc toàn bộ Đánh giá từ học viên theo chuẩn 100% mẫu thiết kế -->
-                            <div class="card border-0 rounded-4 p-4 p-md-5 bg-white" style="border: 1px solid #E2E8F0 !important; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);">
-                                <h4 class="fw-bold text-dark mb-4" style="font-size: 20px; letter-spacing: -0.01em;">
-                                    Đánh giá từ học viên
-                                </h4>
-
-                                <div class="d-flex align-items-center gap-5 flex-wrap mb-4">
-                                    <!-- Cột trái: Điểm số lớn, 5 sao vàng, Tổng số lượt đánh giá -->
-                                    <div class="text-start px-2" style="min-width: 140px;">
-                                        <div style="font-size: 54px; font-weight: 800; color: #0F172A; line-height: 1.0; margin-bottom: 8px;">
-                                            @overallRating.ToString("0.0")
-                                        </div>
-                                        <div class="d-flex gap-1 text-warning mb-2" style="font-size: 18px; color: #F59E0B !important;">
-                                            @for (int i = 1; i <= 5; i++)
-                                            {
-                                                if (i <= Math.Round(overallRating))
-                                                {
-                                                    <i class="bi bi-star-fill"></i>
-                                                }
-                                                else
-                                                {
-                                                    <i class="bi bi-star"></i>
-                                                }
-                                            }
-                                        </div>
-                                        <div style="font-size: 14px; font-weight: 600; color: #64748B;">
-                                            @totalReviewers lượt đánh giá
-                                        </div>
-                                    </div>
-
-                                    <!-- Cột phải: Progress Bar (Thanh tiến trình tỉ lệ phần trăm phân bổ số sao từ 5 sao -> 1 sao) -->
-                                    <div style="flex: 1; min-width: 260px;">
-                                        @for (int star = 5; star >= 1; star--)
-                                        {
-                                            int starCount = reviews.Count(r => r.soSao == star);
-                                            int starPercent = totalReviewers > 0 ? (int)Math.Round((double)starCount / totalReviewers * 100) : 0;
-
-                                            <div class="d-flex align-items-center gap-3 mb-2" style="font-size: 14px;">
-                                                <span style="width: 48px; font-weight: 600; color: #475569;" class="text-nowrap">@star sao</span>
-                                                <div style="flex: 1; height: 10px; background: #E2E8F0; border-radius: 9999px; overflow: hidden; display: block; position: relative; min-width: 80px;">
-                                                    <div style="width: @starPercent%; height: 100%; background: #10B981; border-radius: 9999px; display: block; transition: width 0.6s ease;"></div>
-                                                </div>
-                                                <span style="width: 48px; font-weight: 700; color: #1E293B;" class="text-end text-nowrap">@starPercent%</span>
-                                            </div>
-                                        }
-                                    </div>
-                                </div>
-
-                                <!-- Đường kẻ ngang phân cách chuẩn thiết kế -->
-                                <hr style="border: 0; border-top: 1px solid #E2E8F0; margin: 24px 0 28px 0;" />
-
-                                <!-- Danh sách các bài nhận xét của học viên -->
-                                <div class="d-flex flex-column gap-4">
-                                    @foreach (var r in reviews)
+                    
+                    <!-- Section 4: Student Reviews (UC6) -->
+                    @{
+                        bool hasReviews = Model.DanhGiaKhoaHoc != null && Model.DanhGiaKhoaHoc.Count > 0;
+                        var reviews = hasReviews ? Model.DanhGiaKhoaHoc.OrderByDescending(d => d.ngayDanhGia).ToList() : null;
+                        double overallRating = hasReviews ? reviews.Average(d => (double)d.soSao) : 0;
+                        int totalReviewers = hasReviews ? reviews.Count : 0;
+                    }
+                    <!-- Reviews Section -->
+                    <div class="card" style="margin-bottom: 40px;">
+                        <h3 class="h3" style="margin-bottom: 20px; font-size: 20px; font-weight: 700; color: var(--text-heading, #0F172A);">Đánh giá từ học viên</h3>
+                        <div style="display: flex; gap: 32px; align-items: center; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color, #E2E8F0); flex-wrap: wrap;">
+                            <div style="text-align: center; min-width: 120px;">
+                                <div style="font-size: 48px; font-weight: 800; color: var(--text-heading, #0F172A); line-height: 1;">@overallRating.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)</div>
+                                <div style="color: @(overallRating > 0 ? "var(--status-warning, #F59E0B)" : "#CBD5E1"); font-size: 18px; margin: 4px 0; display: flex; justify-content: center; gap: 2px;">
+                                    @for (int i = 1; i <= 5; i++)
                                     {
-                                        string reviewerName = r.NguoiDung != null ? r.NguoiDung.hoTen : "Học viên";
-                                        string reviewerAvatar = (r.NguoiDung != null && !string.IsNullOrEmpty(r.NguoiDung.anhDaiDien))
-                                            ? r.NguoiDung.anhDaiDien
-                                            : (Session["Avatar"]?.ToString() ?? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80");
-
-                                        string reviewDateText = r.ngayDanhGia.HasValue ? r.ngayDanhGia.Value.ToString("dd/MM/yyyy") : "Vừa xong";
-
-                                        <div class="d-flex align-items-start gap-3">
-                                            <img src="@reviewerAvatar" class="rounded-circle flex-shrink-0" style="width: 44px; height: 44px; object-fit: cover; border: 1px solid #E2E8F0;" alt="@reviewerName" />
-
-                                            <div class="flex-grow-1">
-                                                <div class="fw-bold text-dark mb-1" style="font-size: 15px;">@reviewerName</div>
-                                                
-                                                <div class="d-flex align-items-center gap-2 mb-2" style="font-size: 13px; color: #F59E0B;">
-                                                    <div class="d-flex gap-1">
-                                                        @for (int s = 1; s <= 5; s++)
-                                                        {
-                                                            if (s <= r.soSao)
-                                                            {
-                                                                <i class="bi bi-star-fill"></i>
-                                                            }
-                                                            else
-                                                            {
-                                                                <i class="bi bi-star"></i>
-                                                            }
-                                                        }
-                                                    </div>
-                                                    <span style="color: #F59E0B; font-weight: 500;">• @reviewDateText</span>
-                                                </div>
-
-                                                <p class="mb-0" style="font-size: 14.5px; line-height: 1.6; color: #1E293B; font-weight: 400;">
-                                                    @r.noiDung
-                                                </p>
-                                            </div>
-                                        </div>
+                                        if (overallRating > 0 && i <= Math.Round(overallRating))
+                                        {
+                                            <i class="bi bi-star-fill"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-star"></i>
+                                        }
                                     }
                                 </div>
+                                <span class="caption" style="font-size: 13px; color: var(--text-secondary, #64748B);">@totalReviewers lượt đánh giá</span>
+                            </div>
+                            <div style="flex: 1; min-width: 240px;">
+                                @if (hasReviews)
+                                {
+                                    for (int star = 5; star >= 1; star--)
+                                    {
+                                        int starCount = reviews.Count(r => r.soSao == star);
+                                        if (starCount > 0)
+                                        {
+                                            int starPercent = totalReviewers > 0 ? (int)Math.Round((double)starCount / totalReviewers * 100) : 0;
+                                            string barBg = star == 5 ? "#10B981" : (star == 4 ? "#434CE8" : (star == 3 ? "#06B6D4" : (star == 2 ? "#F59E0B" : "#EF4444")));
+
+                                            <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 6px;">
+                                                <span style="width: 40px; color: var(--text-secondary, #475569); font-weight: 500;">@star sao</span>
+                                                <div style="flex: 1; height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                                                    <div style="width: @starPercent%; height: 100%; background: @barBg; border-radius: 999px;"></div>
+                                                </div>
+                                                <span style="width: 36px; text-align: right; color: var(--text-heading, #1E293B); font-weight: 600;">@starPercent%</span>
+                                            </div>
+                                        }
+                                    }
+                                }
                             </div>
                         </div>
-                    }
+
+                        <!-- Review Items List -->
+                        <div style="display: flex; flex-direction: column; gap: 18px;">
+                            @if (hasReviews)
+                            {
+                                foreach (var r in reviews)
+                                {
+                                    string reviewerName = r.NguoiDung != null ? r.NguoiDung.hoTen : "Học viên";
+                                    string reviewDateText = "Vừa xong";
+                                    if (r.ngayDanhGia.HasValue)
+                                    {
+                                        var diff = DateTime.Now - r.ngayDanhGia.Value;
+                                        if (diff.TotalDays >= 30)
+                                        {
+                                            reviewDateText = r.ngayDanhGia.Value.ToString("dd/MM/yyyy");
+                                        }
+                                        else if (diff.TotalDays >= 1)
+                                        {
+                                            reviewDateText = (int)diff.TotalDays + " ngày trước";
+                                        }
+                                        else if (diff.TotalHours >= 1)
+                                        {
+                                            reviewDateText = (int)diff.TotalHours + " giờ trước";
+                                        }
+                                        else if (diff.TotalMinutes >= 1)
+                                        {
+                                            reviewDateText = (int)diff.TotalMinutes + " phút trước";
+                                        }
+                                        else
+                                        {
+                                            reviewDateText = "Vừa xong";
+                                        }
+                                    }
+
+                                    string initials = "HV";
+                                    if (r.NguoiDung != null && !string.IsNullOrWhiteSpace(r.NguoiDung.hoTen))
+                                    {
+                                        var nameParts = r.NguoiDung.hoTen.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                                        if (nameParts.Length >= 2)
+                                        {
+                                            initials = (nameParts[0][0].ToString() + nameParts[1][0].ToString()).ToUpper();
+                                        }
+                                        else if (nameParts.Length == 1 && nameParts[0].Length >= 2)
+                                        {
+                                            initials = nameParts[0].Substring(0, 2).ToUpper();
+                                        }
+                                        else if (nameParts.Length == 1)
+                                        {
+                                            initials = nameParts[0].Substring(0, 1).ToUpper();
+                                        }
+                                    }
+
+                                    <div style="display: flex; gap: 14px; margin-bottom: 4px;">
+                                        @if (r.NguoiDung != null && !string.IsNullOrEmpty(r.NguoiDung.anhDaiDien) && !r.NguoiDung.anhDaiDien.Contains("avatar_default"))
+                                        {
+                                            string avatarSrc = r.NguoiDung.anhDaiDien.StartsWith("http") || r.NguoiDung.anhDaiDien.StartsWith("/") 
+                                                ? r.NguoiDung.anhDaiDien 
+                                                : Url.Content("~/" + r.NguoiDung.anhDaiDien);
+                                            <img src="@avatarSrc" alt="@reviewerName" style="width: 40px; height: 40px; border-radius: 999px; object-fit: cover; flex-shrink: 0;" />
+                                        }
+                                        else
+                                        {
+                                            <div style="width: 40px; height: 40px; border-radius: 999px; background: #EEF2FF; color: var(--primary, #434CE8); font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;">
+                                                @initials
+                                            </div>
+                                        }
+                                        <div>
+                                            <div style="font-weight: 700; font-size: 14px; color: var(--text-heading, #0F172A); margin-bottom: 2px;">@reviewerName</div>
+                                            <div style="color: #F59E0B; font-size: 12px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                                                <span style="display: inline-flex; gap: 2px;">
+                                                    @for (int s = 1; s <= 5; s++)
+                                                    {
+                                                        if (s <= r.soSao)
+                                                        {
+                                                            <i class="bi bi-star-fill"></i>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="bi bi-star"></i>
+                                                        }
+                                                    }
+                                                </span>
+                                                <span style="color: #F59E0B; font-size: 12px;">• @reviewDateText</span>
+                                            </div>
+                                            <p class="body-2" style="font-size: 14px; color: var(--text-body, #334155); margin: 0; line-height: 1.6;">
+                                                @r.noiDung
+                                            </p>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-center py-4" style="background: #F8FAFC; border: 1px dashed #E2E8F0; border-radius: 12px; color: #64748B;">
+                                    <i class=" text-muted fs-3 d-block mb-2"></i>
+                                    <span style="font-size: 14px; font-weight: 600; color: #334155;">Chưa có nhận xét nào</span>
+                                    <p class="mb-0 mt-1" style="font-size: 13px; color: #94A3B8;">Khóa học này hiện chưa có nhận xét hay bình luận nào từ học viên.</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Right Sticky Sidebar Column (Fixed 360px) -->
@@ -741,33 +860,50 @@
 
                         <div class="p-4">
                             <!-- Price Block (Strict single horizontal line matching mockup 100%) -->
+                            @{
+                                decimal originalPrice = Model.giaBan;
+                                decimal? promoPrice = Model.giaKhuyenMai;
+                                bool hasPromo = promoPrice.HasValue && promoPrice.Value < originalPrice;
+                                decimal effectivePrice = hasPromo ? promoPrice.Value : originalPrice;
+                                bool isFree = effectivePrice <= 0;
+                            }
                             <div class="d-flex align-items-baseline gap-2 mb-3" style="flex-wrap: nowrap; white-space: nowrap;">
-                                @if (Model.giaKhuyenMai.HasValue && Model.giaKhuyenMai.Value > 0 && Model.giaBan > Model.giaKhuyenMai.Value)
+                                @if (isFree)
                                 {
-                                    <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@Model.giaKhuyenMai.Value.ToString("N0") đ</span>
-                                    <span style="font-size: 14px; color: #94A3B8; text-decoration: line-through; line-height: 1; margin-left: 2px;">@Model.giaBan.ToString("N0") đ</span>
-                                    int discountPercent = (int)((1.0 - ((double)Model.giaKhuyenMai.Value / (double)Model.giaBan)) * 100);
+                                    <span style="font-size: 26px; font-weight: 800; color: #10B981; line-height: 1; letter-spacing: -0.02em;">Miễn phí</span>
+                                    if (originalPrice > 0)
+                                    {
+                                        <span style="font-size: 14px; color: #94A3B8; text-decoration: line-through; line-height: 1; margin-left: 2px;">@originalPrice.ToString("N0") đ</span>
+                                        <span style="background: #ECFDF5; color: #059669; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; line-height: 1; margin-left: 2px; border: 1px solid #A7F3D0;">100% Miễn phí</span>
+                                    }
+                                }
+                                else if (hasPromo && promoPrice.Value > 0)
+                                {
+                                    <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@promoPrice.Value.ToString("N0") đ</span>
+                                    <span style="font-size: 14px; color: #94A3B8; text-decoration: line-through; line-height: 1; margin-left: 2px;">@originalPrice.ToString("N0") đ</span>
+                                    int discountPercent = (int)((1.0 - ((double)promoPrice.Value / (double)originalPrice)) * 100);
                                     if (discountPercent > 0)
                                     {
                                         <span style="background: #FFF1F2; color: #E11D48; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; line-height: 1; margin-left: 2px;">Giảm @discountPercent%</span>
                                     }
                                 }
-                                else if (Model.giaKhuyenMai.HasValue && Model.giaKhuyenMai.Value > 0)
-                                {
-                                    <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@Model.giaKhuyenMai.Value.ToString("N0") đ</span>
-                                }
                                 else
                                 {
-                                    decimal displayPrice = Model.giaBan > 0 ? Model.giaBan : 699000;
-                                    <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@displayPrice.ToString("N0") đ</span>
+                                    <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@originalPrice.ToString("N0") đ</span>
                                 }
                             </div>
 
                             <!-- Action Buttons -->
                             @if (isEnrolled)
                             {
-                                <button type="button" onclick="if (typeof showToast === 'function') { showToast('Bạn đã sở hữu khóa học này!', 'info'); } else { alert('Bạn đã sở hữu khóa học này!'); }" class="btn btn-secondary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold" style="background: #E2E8F0; color: #475569; border: none; border-radius: 12px !important; font-size: 15px;">
-                                    <i class="bi bi-check-circle-fill me-2 text-success"></i> ĐÃ ĐĂNG KÝ KHÓA HỌC
+                                <a href="@Url.Action("Study", "Learning", new { courseId = Model.maKhoaHoc })" class="btn btn-secondary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold text-decoration-none shadow-sm" style="background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px; transition: all 0.2s;">
+                                    <i class="bi bi-play-circle-fill me-2 text-primary"></i> VÀO HỌC NGAY
+                                </a>
+                            }
+                            else if (isFree)
+                            {
+                                <button type="button" onclick="enrollFreeAjax('@Model.maKhoaHoc', this)" class="btn btn-cta-primary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold shadow-sm" style="background: #10B981 !important; border: none !important; border-radius: 12px !important; font-size: 16px;">
+                                    <i class="bi bi-mortarboard-fill me-2"></i> Đăng ký học
                                 </button>
                             }
                             else
@@ -1086,6 +1222,59 @@
                 },
                 error: function () {
                     window.location.href = '@Url.Action("Index", "Cart")';
+                }
+            });
+        }
+
+        function enrollFreeAjax(courseId, btnElement) {
+            if (!courseId) return;
+            var $btn = $(btnElement);
+            var originalHtml = $btn.html();
+
+            $btn.prop('disabled', true).css('opacity', '0.75').html('<i class="bi bi-hourglass-split me-1"></i> Đang đăng ký...');
+
+            $.ajax({
+                url: '@Url.Action("EnrollFree", "Course")',
+                type: 'POST',
+                data: { courseId: courseId },
+                success: function (res) {
+                    if (res.requireLogin) {
+                        if (typeof showToast === 'function') {
+                            showToast(res.message, 'warning');
+                        } else {
+                            alert(res.message);
+                        }
+                        setTimeout(function () {
+                            window.location.href = '@Url.Action("Login", "Account")?returnUrl=' + encodeURIComponent(window.location.pathname);
+                        }, 600);
+                        return;
+                    }
+
+                    if (res.success) {
+                        if (typeof showToast === 'function') {
+                            showToast(res.message, 'success');
+                        } else {
+                            alert(res.message);
+                        }
+                        setTimeout(function () {
+                            window.location.href = res.redirectUrl || '@Url.Action("MyCourses", "Learning")';
+                        }, 800);
+                    } else {
+                        $btn.prop('disabled', false).css('opacity', '1').html(originalHtml);
+                        if (typeof showToast === 'function') {
+                            showToast(res.message, 'danger');
+                        } else {
+                            alert(res.message);
+                        }
+                    }
+                },
+                error: function () {
+                    $btn.prop('disabled', false).css('opacity', '1').html(originalHtml);
+                    if (typeof showToast === 'function') {
+                        showToast('Có lỗi xảy ra trong quá trình đăng ký. Vui lòng thử lại!', 'danger');
+                    } else {
+                        alert('Có lỗi xảy ra trong quá trình đăng ký!');
+                    }
                 }
             });
         }

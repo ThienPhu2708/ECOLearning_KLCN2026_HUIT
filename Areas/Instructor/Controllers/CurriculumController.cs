@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Web;
 using System.Web.Mvc;
 using ECOLearning.Areas.Instructor.Models;
 using ECOLearning.Models;
@@ -91,6 +93,42 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 model.ChuongHocs.Add(chItem);
             }
 
+            // Bài học không phân chương (maChuong == null)
+            var unchapteredLessons = db.BaiHoc
+                .Where(b => b.maChuong == null && b.maBaiHoc.StartsWith(currentCourse.maKhoaHoc + "_"))
+                .OrderBy(b => b.thuTu)
+                .ToList();
+
+            foreach (var les in unchapteredLessons)
+            {
+                var lesItem = new BaiHocItem
+                {
+                    MaBaiHoc = les.maBaiHoc,
+                    TenBaiHoc = les.tenBaiHoc,
+                    DuongDanVideo = les.duongDanVideo,
+                    ThoiLuong = les.thoiLuong ?? 0,
+                    ChoXemThu = les.choXemThu ?? false,
+                    ThuTu = les.thuTu ?? 1
+                };
+
+                var resources = db.TaiNguyen
+                    .Where(t => t.maBaiHoc == les.maBaiHoc)
+                    .ToList();
+
+                foreach (var res in resources)
+                {
+                    lesItem.TaiNguyens.Add(new TaiNguyenItem
+                    {
+                        MaTaiNguyen = res.maTaiNguyen,
+                        TenTaiNguyen = res.tenTaiNguyen,
+                        DuongDan = res.duongDan,
+                        LoaiTaiNguyen = res.loaiTaiNguyen
+                    });
+                }
+
+                model.BaiHocKhongChuong.Add(lesItem);
+            }
+
             ViewBag.TeacherCourses = teacherCourses;
             ViewBag.SelectedCourseId = currentCourse.maKhoaHoc;
             ViewBag.BreadcrumbCurrent = "Đề cương & Tài nguyên";
@@ -151,25 +189,103 @@ namespace ECOLearning.Areas.Instructor.Controllers
             return Json(new { success = true, message = "Đã xóa chương học thành công!" });
         }
 
-        // POST: Instructor/Curriculum/AddLesson
+        // POST: Instructor/Curriculum/AddLesson (Tải lên file video trực tiếp, không hỗ trợ YouTube)
         [HttpPost]
-        public JsonResult AddLesson(string chapterId, string tenBaiHoc, string videoUrl, int? thoiLuong, bool choXemThu)
+        public JsonResult AddLesson(string courseId, string chapterId, string tenBaiHoc, int? thoiLuong, bool choXemThu, HttpPostedFileBase videoFile)
         {
             if (string.IsNullOrWhiteSpace(tenBaiHoc))
             {
                 return Json(new { success = false, message = "Tên bài học không được để trống!" });
             }
 
-            string lessonId = "BH" + DateTime.Now.ToString("yyMMddHHmmss");
-            int order = db.BaiHoc.Count(b => b.maChuong == chapterId) + 1;
+            // Kiểm tra file video upload từ model binding hoặc Request.Files
+            if (videoFile == null || videoFile.ContentLength == 0)
+            {
+                if (Request.Files.Count > 0 && Request.Files["videoFile"] != null && Request.Files["videoFile"].ContentLength > 0)
+                {
+                    videoFile = Request.Files["videoFile"];
+                }
+                else if (Request.Files.Count > 0 && Request.Files[0].ContentLength > 0)
+                {
+                    videoFile = Request.Files[0];
+                }
+            }
+
+            if (videoFile == null || videoFile.ContentLength == 0)
+            {
+                return Json(new { success = false, message = "Vui lòng chọn hoặc kéo thả file video bài giảng (MP4, WebM, MOV, MKV) để tải lên! Hệ thống không còn hỗ trợ liên kết YouTube." });
+            }
+
+            // Kiểm tra định dạng video hợp lệ
+            string ext = Path.GetExtension(videoFile.FileName)?.ToLowerInvariant();
+            string[] allowedExts = { ".mp4", ".webm", ".mov", ".mkv", ".m4v", ".ogv" };
+            if (string.IsNullOrEmpty(ext) || !allowedExts.Contains(ext))
+            {
+                return Json(new { success = false, message = "Định dạng file không hợp lệ! Vui lòng chỉ tải lên file video định dạng MP4, WebM, MOV hoặc MKV." });
+            }
+
+            // Lưu file video vào thư mục /assets/uploads/videos/
+            string uploadDir = Server.MapPath("~/assets/uploads/videos/");
+            if (!Directory.Exists(uploadDir))
+            {
+                Directory.CreateDirectory(uploadDir);
+            }
+
+            string cleanCourseId = !string.IsNullOrWhiteSpace(courseId) ? courseId.Trim() : "course";
+            string uniqueFileName = $"vid_{cleanCourseId}_{DateTime.Now:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N").Substring(0, 8)}{ext}";
+            string fullPath = Path.Combine(uploadDir, uniqueFileName);
+            videoFile.SaveAs(fullPath);
+            string savedVideoUrl = "/assets/uploads/videos/" + uniqueFileName;
+
+            bool isNoChapter = string.IsNullOrWhiteSpace(chapterId) || chapterId == "none" || chapterId == "null";
+
+            string lessonId;
+            int order;
+
+            if (isNoChapter)
+            {
+                if (string.IsNullOrWhiteSpace(courseId))
+                {
+                    return Json(new { success = false, message = "Không xác định được mã khóa học!" });
+                }
+
+                string prefix = courseId + "_";
+                var existingLessons = db.BaiHoc
+                    .Where(b => b.maChuong == null && b.maBaiHoc.StartsWith(prefix))
+                    .ToList();
+
+                order = existingLessons.Count + 1;
+
+                int nextSeq = 1;
+                foreach (var b in existingLessons)
+                {
+                    string suffix = b.maBaiHoc.Substring(prefix.Length);
+                    if (int.TryParse(suffix, out int parsedSeq) && parsedSeq >= nextSeq)
+                    {
+                        nextSeq = parsedSeq + 1;
+                    }
+                }
+
+                lessonId = prefix + nextSeq;
+                while (db.BaiHoc.Any(b => b.maBaiHoc == lessonId))
+                {
+                    nextSeq++;
+                    lessonId = prefix + nextSeq;
+                }
+            }
+            else
+            {
+                order = db.BaiHoc.Count(b => b.maChuong == chapterId) + 1;
+                lessonId = "BH" + DateTime.Now.ToString("yyMMddHHmmss");
+            }
 
             var lesson = new BaiHoc
             {
                 maBaiHoc = lessonId,
-                maChuong = chapterId,
+                maChuong = isNoChapter ? null : chapterId,
                 tenBaiHoc = tenBaiHoc.Trim(),
-                duongDanVideo = !string.IsNullOrWhiteSpace(videoUrl) ? videoUrl.Trim() : "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-                thoiLuong = thoiLuong ?? 15,
+                duongDanVideo = savedVideoUrl,
+                thoiLuong = thoiLuong ?? 900,
                 choXemThu = choXemThu,
                 thuTu = order
             };
@@ -177,7 +293,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
             db.BaiHoc.Add(lesson);
             db.SaveChanges();
 
-            return Json(new { success = true, message = "Đã thêm bài học thành công!", lessonId = lessonId });
+            return Json(new { success = true, message = "Đã tải lên video và thêm bài học mới thành công!", lessonId = lessonId, isNoChapter = isNoChapter, videoUrl = savedVideoUrl });
         }
 
         // POST: Instructor/Curriculum/DeleteLesson
@@ -188,6 +304,20 @@ namespace ECOLearning.Areas.Instructor.Controllers
             if (lesson == null)
             {
                 return Json(new { success = false, message = "Không tìm thấy bài học!" });
+            }
+
+            // Xóa file video vật lý trên máy chủ nếu là file upload
+            if (!string.IsNullOrEmpty(lesson.duongDanVideo) && lesson.duongDanVideo.StartsWith("/assets/uploads/videos/"))
+            {
+                try
+                {
+                    string localPath = Server.MapPath("~" + lesson.duongDanVideo);
+                    if (System.IO.File.Exists(localPath))
+                    {
+                        System.IO.File.Delete(localPath);
+                    }
+                }
+                catch { }
             }
 
             if (lesson.TaiNguyen != null)

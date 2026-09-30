@@ -2,14 +2,88 @@
 @{
     ViewBag.Title = "Cấu Trúc Thư viện tài nguyên tập trung";
     var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
+    bool hasChapters = Model != null && Model.ChuongHocs != null && Model.ChuongHocs.Any();
+    bool hasNoChapterLessons = Model != null && Model.BaiHocKhongChuong != null && Model.BaiHocKhongChuong.Any();
 }
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+<style>
+    /* Nút gạt / Toggle switch phong cách hiện đại */
+    .switch-toggle {
+        position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 26px;
+        margin: 0;
+        vertical-align: middle;
+        cursor: pointer;
+    }
+    .switch-toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .switch-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #CBD5E1;
+        transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 26px;
+    }
+    .switch-slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 50%;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    }
+    .switch-toggle input:checked + .switch-slider {
+        background-color: var(--primary, #0D9488);
+    }
+    .switch-toggle input:checked + .switch-slider:before {
+        transform: translateX(22px);
+    }
+    .switch-toggle input:focus + .switch-slider {
+        box-shadow: 0 0 1px var(--primary, #0D9488);
+    }
+
+    .card-no-chapter {
+        border: 1px solid #BFDBFE;
+        background: #FFFFFF;
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 6px rgba(59, 130, 246, 0.06);
+    }
+    .card-no-chapter .no-chap-header {
+        background: linear-gradient(135deg, #EFF6FF 0%, #F8FAFC 100%);
+        padding: 16px 20px;
+        border-bottom: 1px solid #DBEAFE;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+</style>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
     <div>
         <h1 class="h2" style="margin-top: 6px;">Thư viện tài nguyên tập trung</h1>
-        <p class="body-2" style="color: var(--text-secondary);">Thiết lập các chương học, tải video bài giảng và đính kèm tài liệu học tập</p>
+        <p class="body-2" style="color: var(--text-secondary);">Thiết lập các chương học, bài giảng và tài liệu học tập (hỗ trợ cả bài học độc lập không cần chương)</p>
     </div>
-    <div style="display: flex; gap: 10px;">
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button type="button" class="btn btn-outline" style="border-color: var(--primary); color: var(--primary);" onclick="openAddLessonWithoutChapterModal()">
+            <i class="bi bi-file-earmark-plus me-1"></i> Tạo bài học không cần chương
+        </button>
         <button type="button" class="btn btn-primary" onclick="openAddChapterModal()">
             <i class="bi bi-plus-lg me-1"></i> Thêm chương mới
         </button>
@@ -38,98 +112,194 @@
     </div>
 </div>
 
-<!-- CURRICULUM TREE (UC10) -->
-@if (Model != null && Model.ChuongHocs != null && Model.ChuongHocs.Any())
+<!-- CURRICULUM TREE & UNCHAPTERED LESSONS -->
+@if (hasChapters || hasNoChapterLessons)
 {
     <div style="display: flex; flex-direction: column; gap: 20px;">
-        @foreach (var ch in Model.ChuongHocs)
+        <!-- KHỐI BÀI HỌC ĐỘC LẬP (KHÔNG CẦN CHƯƠNG - MACHUONG = NULL) -->
+        @if (hasNoChapterLessons)
         {
-            <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--border-color);" id="chapter-card-@ch.MaChuong">
-                <!-- Chapter Header -->
-                <div style="background: var(--bg-canvas, #F8FAFC); padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span class="badge badge-primary" style="font-size: 13px; font-weight: 700;">Chương @ch.ThuTu</span>
-                        <strong style="font-size: 16px; color: var(--text-heading);">@ch.TenChuong</strong>
-                        <span class="caption" style="color: var(--text-muted);">(@ch.BaiHocs.Count bài học)</span>
+            <div class="card card-no-chapter" id="no-chapter-card">
+                <div class="no-chap-header">
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <span class="badge" style="background: #2563EB; color: #FFFFFF; font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 6px;">
+                            <i class="bi bi-file-earmark-text me-1"></i> Bài học không phân chương
+                        </span>
+                        <span class="caption" style="color: var(--text-muted);">(@Model.BaiHocKhongChuong.Count bài học)</span>
                     </div>
                     <div style="display: flex; gap: 8px;">
-                        <button type="button" class="btn btn-sm btn-outline" onclick="openAddLessonModal('@ch.MaChuong', '@Html.Raw(HttpUtility.JavaScriptStringEncode(ch.TenChuong))')">
-                            <i class="bi bi-plus-lg me-1"></i> Thêm bài học
-                        </button>
-                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteChapter('@ch.MaChuong')">
-                            Xóa chương
+                        <button type="button" class="btn btn-sm btn-primary" onclick="openAddLessonWithoutChapterModal()">
+                            <i class="bi bi-plus-lg me-1"></i> Thêm bài học không chương
                         </button>
                     </div>
                 </div>
 
-                <!-- Lessons List -->
-                <div style="padding: 12px 20px;">
-                    @if (ch.BaiHocs != null && ch.BaiHocs.Any())
-                    {
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
-                            @foreach (var les in ch.BaiHocs)
-                            {
-                                <div style="padding: 14px 16px; background: #FFFFFF; border-radius: var(--radius-xl); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;" id="lesson-row-@les.MaBaiHoc">
-                                    <div style="flex: 1;">
-                                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-                                            <span style="font-size: 14px; font-weight: 700; color: var(--text-heading);">@les.ThuTu. @les.TenBaiHoc</span>
-                                            @if (les.ChoXemThu)
-                                            {
-                                                <span class="badge badge-success" style="font-size: 11px;">Xem thử miễn phí</span>
-                                            }
-                                            <span class="caption" style="color: var(--text-muted);"><i class="bi bi-clock me-1"></i> @les.ThoiLuong phút</span>
-                                        </div>
-                                        <div style="font-size: 12px; color: var(--text-secondary); word-break: break-all;">
-                                            <i class="bi bi-camera-video-fill me-1"></i> Video: <a href="@les.DuongDanVideo" target="_blank" style="color: var(--primary);">@les.DuongDanVideo</a>
-                                        </div>
-
-                                        <!-- Attached Resources -->
-                                        @if (les.TaiNguyens != null && les.TaiNguyens.Any())
+                <div style="padding: 16px 20px;">
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        @foreach (var les in Model.BaiHocKhongChuong)
+                        {
+                            <div style="padding: 14px 16px; background: #FFFFFF; border-radius: var(--radius-xl); border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;" id="lesson-row-@les.MaBaiHoc">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap;">
+                                        <span style="font-size: 14px; font-weight: 700; color: var(--text-heading);">@les.ThuTu. @les.TenBaiHoc</span>
+                                        @if (les.ChoXemThu)
                                         {
-                                            <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-                                                <span class="caption" style="font-weight: 600; color: var(--text-heading);">Tài liệu đính kèm:</span>
-                                                @foreach (var res in les.TaiNguyens)
-                                                {
-                                                    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--bg-canvas); border-radius: 8px; border: 1px solid var(--border-color); font-size: 12px;">
-                                                        <i class="bi bi-file-earmark-text me-1"></i> <a href="@res.DuongDan" target="_blank" style="color: var(--text-heading); text-decoration: none;">@res.TenTaiNguyen (@res.LoaiTaiNguyen)</a>
-                                                        <a href="javascript:void(0)" onclick="deleteResource('@res.MaTaiNguyen')" style="color: var(--status-danger); margin-left: 4px; font-weight: bold;"><i class="bi bi-x-lg"></i></a>
-                                                    </span>
-                                                }
-                                            </div>
+                                            <span class="badge badge-success" style="font-size: 11px;">Xem thử miễn phí</span>
+                                        }
+                                        <span class="caption" style="color: var(--text-muted);"><i class="bi bi-clock me-1"></i> @(string.Format("{0:D2}:{1:D2}", les.ThoiLuong / 60, les.ThoiLuong % 60))</span>
+                                        <span class="badge" style="background: #F1F5F9; color: #475569; font-size: 11px; border: 1px solid #CBD5E1;">Không thuộc chương nào</span>
+                                    </div>
+                                    <div style="font-size: 12px; color: var(--text-secondary); word-break: break-all; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                        @if (!string.IsNullOrEmpty(les.DuongDanVideo) && les.DuongDanVideo.StartsWith("/assets/uploads/videos/"))
+                                        {
+                                            <span class="badge" style="background: #E0E7FF; color: #4338CA; font-size: 11px;"><i class="bi bi-file-earmark-play-fill me-1"></i> Video file (MP4)</span>
+                                            <a href="@les.DuongDanVideo" target="_blank" style="color: var(--primary);">@les.DuongDanVideo</a>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge" style="background: #FEE2E2; color: #DC2626; font-size: 11px;"><i class="bi bi-youtube me-1"></i> YouTube cũ</span>
+                                            <a href="@les.DuongDanVideo" target="_blank" style="color: var(--text-secondary);">@les.DuongDanVideo</a>
                                         }
                                     </div>
-                                    <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
-                                        <button type="button" class="btn btn-sm btn-secondary" onclick="openAddResourceModal('@les.MaBaiHoc', '@Html.Raw(HttpUtility.JavaScriptStringEncode(les.TenBaiHoc))')">
-                                            <i class="bi bi-paperclip me-1"></i> File
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline" style="color: var(--status-danger); border-color: rgba(239, 68, 68, 0.3);" onclick="deleteLesson('@les.MaBaiHoc')">
-                                            Xóa
-                                        </button>
-                                    </div>
+
+                                    <!-- Attached Resources -->
+                                    @if (les.TaiNguyens != null && les.TaiNguyens.Any())
+                                    {
+                                        <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                                            <span class="caption" style="font-weight: 600; color: var(--text-heading);">Tài liệu đính kèm:</span>
+                                            @foreach (var res in les.TaiNguyens)
+                                            {
+                                                <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--bg-canvas); border-radius: 8px; border: 1px solid var(--border-color); font-size: 12px;">
+                                                    <i class="bi bi-file-earmark-text me-1"></i> <a href="@res.DuongDan" target="_blank" style="color: var(--text-heading); text-decoration: none;">@res.TenTaiNguyen (@res.LoaiTaiNguyen)</a>
+                                                    <a href="javascript:void(0)" onclick="deleteResource('@res.MaTaiNguyen')" style="color: var(--status-danger); margin-left: 4px; font-weight: bold;"><i class="bi bi-x-lg"></i></a>
+                                                </span>
+                                            }
+                                        </div>
+                                    }
                                 </div>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div style="text-align: center; color: var(--text-secondary); padding: 20px;">
-                            Chương này chưa có bài học nào. Hãy bấm <strong>+ Thêm bài học</strong> phía trên.
-                        </div>
-                    }
+                                <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
+                                    <button type="button" class="btn btn-sm btn-secondary" onclick="openAddResourceModal('@les.MaBaiHoc', '@Html.Raw(HttpUtility.JavaScriptStringEncode(les.TenBaiHoc))')">
+                                        <i class="bi bi-paperclip me-1"></i> File
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline" style="color: var(--status-danger); border-color: rgba(239, 68, 68, 0.3);" onclick="deleteLesson('@les.MaBaiHoc')">
+                                        Xóa
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
+        }
+
+        <!-- DANH SÁCH CÁC CHƯƠNG HỌC -->
+        @if (hasChapters)
+        {
+            foreach (var ch in Model.ChuongHocs)
+            {
+                <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--border-color);" id="chapter-card-@ch.MaChuong">
+                    <!-- Chapter Header -->
+                    <div style="background: var(--bg-canvas, #F8FAFC); padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="badge badge-primary" style="font-size: 13px; font-weight: 700;">Chương @ch.ThuTu</span>
+                            <strong style="font-size: 16px; color: var(--text-heading);">@ch.TenChuong</strong>
+                            <span class="caption" style="color: var(--text-muted);">(@ch.BaiHocs.Count bài học)</span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" class="btn btn-sm btn-outline" onclick="openAddLessonModal('@ch.MaChuong', '@Html.Raw(HttpUtility.JavaScriptStringEncode(ch.TenChuong))')">
+                                <i class="bi bi-plus-lg me-1"></i> Thêm bài học
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteChapter('@ch.MaChuong')">
+                                Xóa chương
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lessons List -->
+                    <div style="padding: 12px 20px;">
+                        @if (ch.BaiHocs != null && ch.BaiHocs.Any())
+                        {
+                            <div style="display: flex; flex-direction: column; gap: 12px;">
+                                @foreach (var les in ch.BaiHocs)
+                                {
+                                    <div style="padding: 14px 16px; background: #FFFFFF; border-radius: var(--radius-xl); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;" id="lesson-row-@les.MaBaiHoc">
+                                        <div style="flex: 1;">
+                                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                                                <span style="font-size: 14px; font-weight: 700; color: var(--text-heading);">@les.ThuTu. @les.TenBaiHoc</span>
+                                                @if (les.ChoXemThu)
+                                                {
+                                                    <span class="badge badge-success" style="font-size: 11px;">Xem thử miễn phí</span>
+                                                }
+                                                <span class="caption" style="color: var(--text-muted);"><i class="bi bi-clock me-1"></i> @(string.Format("{0:D2}:{1:D2}", les.ThoiLuong / 60, les.ThoiLuong % 60))</span>
+                                            </div>
+                                            <div style="font-size: 12px; color: var(--text-secondary); word-break: break-all; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                                @if (!string.IsNullOrEmpty(les.DuongDanVideo) && les.DuongDanVideo.StartsWith("/assets/uploads/videos/"))
+                                                {
+                                                    <span class="badge" style="background: #E0E7FF; color: #4338CA; font-size: 11px;"><i class="bi bi-file-earmark-play-fill me-1"></i> Video file (MP4)</span>
+                                                    <a href="@les.DuongDanVideo" target="_blank" style="color: var(--primary);">@les.DuongDanVideo</a>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge" style="background: #FEE2E2; color: #DC2626; font-size: 11px;"><i class="bi bi-youtube me-1"></i> YouTube cũ</span>
+                                                    <a href="@les.DuongDanVideo" target="_blank" style="color: var(--text-secondary);">@les.DuongDanVideo</a>
+                                                }
+                                            </div>
+
+                                            <!-- Attached Resources -->
+                                            @if (les.TaiNguyens != null && les.TaiNguyens.Any())
+                                            {
+                                                <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                                                    <span class="caption" style="font-weight: 600; color: var(--text-heading);">Tài liệu đính kèm:</span>
+                                                    @foreach (var res in les.TaiNguyens)
+                                                    {
+                                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--bg-canvas); border-radius: 8px; border: 1px solid var(--border-color); font-size: 12px;">
+                                                            <i class="bi bi-file-earmark-text me-1"></i> <a href="@res.DuongDan" target="_blank" style="color: var(--text-heading); text-decoration: none;">@res.TenTaiNguyen (@res.LoaiTaiNguyen)</a>
+                                                            <a href="javascript:void(0)" onclick="deleteResource('@res.MaTaiNguyen')" style="color: var(--status-danger); margin-left: 4px; font-weight: bold;"><i class="bi bi-x-lg"></i></a>
+                                                        </span>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                        <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
+                                            <button type="button" class="btn btn-sm btn-secondary" onclick="openAddResourceModal('@les.MaBaiHoc', '@Html.Raw(HttpUtility.JavaScriptStringEncode(les.TenBaiHoc))')">
+                                                <i class="bi bi-paperclip me-1"></i> File
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline" style="color: var(--status-danger); border-color: rgba(239, 68, 68, 0.3);" onclick="deleteLesson('@les.MaBaiHoc')">
+                                                Xóa
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                                Chương này chưa có bài học nào. Hãy bấm <strong>+ Thêm bài học</strong> phía trên.
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
         }
     </div>
 }
 else
 {
     <div class="card" style="text-align: center; padding: 48px 24px;">
-        <p class="body-1" style="color: var(--text-secondary); margin-bottom: 16px;">
-            Khóa học này chưa có cấu trúc đề cương nào.
+        <i class="bi bi-journal-bookmark" style="font-size: 48px; color: var(--primary); margin-bottom: 12px; display: inline-block;"></i>
+        <h3 class="h3" style="margin-bottom: 8px;">Khóa học chưa có nội dung bài giảng</h3>
+        <p class="body-1" style="color: var(--text-secondary); margin-bottom: 24px; max-width: 520px; margin-left: auto; margin-right: auto;">
+            Bạn có thể tạo cấu trúc phân chia theo Chương học, hoặc trực tiếp tạo các Bài học độc lập (không cần chương) nếu khóa học ngắn.
         </p>
-        <button type="button" class="btn btn-primary" onclick="openAddChapterModal()">
-            <i class="bi bi-plus-lg me-1"></i> Bắt đầu tạo Chương học đầu tiên
-        </button>
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary" onclick="openAddChapterModal()">
+                <i class="bi bi-plus-lg me-1"></i> Bắt đầu tạo Chương học đầu tiên
+            </button>
+            <button type="button" class="btn btn-outline" style="border-color: var(--primary); color: var(--primary);" onclick="openAddLessonWithoutChapterModal()">
+                <i class="bi bi-file-earmark-plus me-1"></i> Tạo bài học không cần chương
+            </button>
+        </div>
     </div>
 }
 
@@ -153,25 +323,116 @@ else
     </div>
 </div>
 
-<!-- MODAL: ADD LESSON -->
+<!-- MODAL: ADD LESSON (CÓ NÚT GẠT TẠO BÀI HỌC KHÔNG CẦN CHƯƠNG) -->
 <div class="modal-overlay" id="add-lesson-modal">
-    <div class="modal-container" style="max-width: 540px;">
+    <div class="modal-container" style="max-width: 560px;">
         <div class="modal-header">
             <div>
-                <h3 class="h3">Thêm Bài Học Mới</h3>
+                <h3 class="h3" id="add-lesson-modal-title">Thêm Bài Học Mới</h3>
                 <span class="caption" id="add-lesson-chapter-title">Chương: ...</span>
             </div>
             <button class="btn btn-secondary btn-sm" data-modal-close><i class="bi bi-x-lg"></i></button>
         </div>
         <form onsubmit="submitAddLesson(event)">
             <input type="hidden" id="lesson-target-chapter-id" />
+
+            <!-- NÚT GẠT (TOGGLE SWITCH): TẠO BÀI HỌC KHÔNG CẦN CHƯƠNG -->
+            <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 12px 16px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+                <div style="flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-weight: 700; font-size: 13.5px; color: var(--text-heading);">Không cần chương học</span>
+                        <span id="no-chapter-badge" class="badge" style="display: none; background: #2563EB; color: #fff; font-size: 11px;">Chương = null</span>
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin: 2px 0 0 0;">
+                        Gạt nút để tạo bài học độc lập trực tiếp trong khóa học (không tạo chương)
+                    </p>
+                </div>
+                <div>
+                    <label class="switch-toggle" title="Gạt để bật/tắt chế độ không cần chương">
+                        <input type="checkbox" id="toggle-no-chapter" onchange="handleToggleNoChapter(this.checked)" />
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- CHỌN CHƯƠNG (HIỆN KHI TẮT NÚT GẠT) -->
+            <div class="form-group" id="chapter-selection-container">
+                <label class="form-label">Chương học áp dụng <span class="required">*</span></label>
+                @if (hasChapters)
+                {
+                    <select id="lesson-chapter-select" class="form-control" onchange="onChapterSelectChange(this.value)">
+                        @foreach (var ch in Model.ChuongHocs)
+                        {
+                            <option value="@ch.MaChuong">Chương @ch.ThuTu: @ch.TenChuong</option>
+                        }
+                    </select>
+                }
+                else
+                {
+                    <div style="padding: 10px 14px; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; color: #92400E; font-size: 13px;">
+                        <i class="bi bi-exclamation-triangle me-1"></i> Khóa học chưa có chương nào. Hãy bật nút gạt ở trên để tạo bài học không cần chương.
+                    </div>
+                }
+            </div>
             <div class="form-group">
                 <label class="form-label">Tên bài học <span class="required">*</span></label>
                 <input type="text" id="new-lesson-name" class="form-control" placeholder="Ví dụ: Bài 1: Cài đặt NodeJS và khởi tạo project" required />
             </div>
+            <!-- TẢI LÊN VIDEO BÀI GIẢNG (CHỈ CHẤP NHẬN FILE MP4, WEBM, MOV, MKV - KHÔNG CHẤP NHẬN YOUTUBE) -->
             <div class="form-group">
-                <label class="form-label">Đường dẫn Video bài giảng (MP4 / HLS / YouTube URL) <span class="required">*</span></label>
-                <input type="text" id="new-lesson-video" class="form-control" placeholder="https://.../video.mp4" required />
+                <label class="form-label">Tải lên Video bài giảng (MP4, WebM, MOV, MKV) <span class="required">*</span></label>
+                
+                <div id="video-dropzone" style="border: 2px dashed #CBD5E1; border-radius: var(--radius-xl, 12px); padding: 22px 16px; text-align: center; background: #F8FAFC; cursor: pointer; transition: all 0.2s ease;"
+                     onclick="document.getElementById('new-lesson-video-file').click()"
+                     ondragover="handleVideoDragOver(event)" ondragleave="handleVideoDragLeave(event)" ondrop="handleVideoDrop(event)">
+                    
+                    <input type="file" id="new-lesson-video-file" name="videoFile" accept=".mp4,.webm,.mov,.mkv,.m4v,video/mp4,video/webm,video/quicktime,video/x-matroska"
+                           style="display: none;" onchange="handleVideoFileSelect(this)" />
+                    
+                    <div id="video-upload-prompt">
+                        <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(67, 76, 232, 0.1); color: var(--primary, #434CE8); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+                            <i class="bi bi-cloud-arrow-up fs-3"></i>
+                        </div>
+                        <div style="font-weight: 700; font-size: 14px; color: var(--text-heading, #0F172A); margin-bottom: 4px;">
+                            Kéo thả file video vào đây hoặc <span style="color: var(--primary, #434CE8); text-decoration: underline;">Chọn file từ máy tính</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary, #64748B);">
+                            Định dạng hỗ trợ: <strong>.MP4, .WebM, .MOV, .MKV</strong> (Tối đa 1 GB)
+                        </div>
+                    </div>
+
+                    <!-- Selected Video Info (ẩn mặc định) -->
+                    <div id="video-selected-info" style="display: none; align-items: center; justify-content: space-between; gap: 12px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; text-align: left;" onclick="event.stopPropagation()">
+                        <div style="display: flex; align-items: center; gap: 12px; overflow: hidden; flex: 1;">
+                            <div style="width: 42px; height: 42px; border-radius: 8px; background: #EFF6FF; color: var(--primary, #434CE8); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i class="bi bi-file-earmark-play-fill fs-4"></i>
+                            </div>
+                            <div style="overflow: hidden; flex: 1;">
+                                <div id="video-file-name" style="font-size: 13.5px; font-weight: 700; color: #0F172A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+                                <div style="display: flex; gap: 10px; font-size: 12px; color: #64748B; margin-top: 2px;">
+                                    <span id="video-file-size"></span>
+                                    <span id="video-detected-duration" style="color: #10B981; font-weight: 600;"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline text-danger" style="border-color: #FCA5A5; flex-shrink: 0;" onclick="clearSelectedVideo()" title="Chọn file khác">
+                            <i class="bi bi-x-lg me-1"></i> Đổi file
+                        </button>
+                    </div>
+
+                    <!-- Upload progress bar -->
+                    <div id="video-upload-progress-container" style="display: none; margin-top: 12px; text-align: left;" onclick="event.stopPropagation()">
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px;">
+                            <span style="color: var(--primary, #434CE8);"><i class="bi bi-arrow-repeat spin me-1"></i> Đang tải video lên máy chủ...</span>
+                            <span id="video-upload-percent" style="color: var(--primary, #434CE8);">0%</span>
+                        </div>
+                        <div style="height: 6px; background: #E2E8F0; border-radius: 999px; overflow: hidden;">
+                            <div id="video-upload-progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #434CE8, #38BDF8); border-radius: 999px; transition: width 0.15s ease;"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Video ảo để tự động nhận diện thời lượng bài học -->
+                <video id="invisible-video-meta" style="display: none;"></video>
             </div>
             <div class="grid-12">
                 <div class="col-6">
@@ -191,7 +452,7 @@ else
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
                 <button type="button" class="btn btn-secondary" data-modal-close>Hủy</button>
-                <button type="submit" class="btn btn-primary">Thêm bài học</button>
+                <button type="submit" class="btn btn-primary" id="btn-submit-lesson">Thêm bài học</button>
             </div>
         </form>
     </div>
@@ -237,6 +498,7 @@ else
 @section Scripts {
 <script>
     const currentCourseId = '@ViewBag.SelectedCourseId';
+    const totalChaptersCount = @(hasChapters ? Model.ChuongHocs.Count : 0);
 
     function openAddChapterModal() {
         document.getElementById('new-chapter-name').value = '';
@@ -271,10 +533,22 @@ else
     }
 
     function openAddLessonModal(chapterId, chapterName) {
-        document.getElementById('lesson-target-chapter-id').value = chapterId;
-        document.getElementById('add-lesson-chapter-title').innerText = 'Chương: ' + chapterName;
+        var toggle = document.getElementById('toggle-no-chapter');
+        if (toggle) toggle.checked = false;
+
+        document.getElementById('lesson-target-chapter-id').value = chapterId || '';
+        document.getElementById('add-lesson-modal-title').innerText = 'Thêm Bài Học Mới';
+        document.getElementById('add-lesson-chapter-title').innerText = 'Chương: ' + (chapterName || 'Chưa chọn');
+
+        var select = document.getElementById('lesson-chapter-select');
+        if (select && chapterId) {
+            select.value = chapterId;
+        }
+
+        handleToggleNoChapter(false);
+
         document.getElementById('new-lesson-name').value = '';
-        document.getElementById('new-lesson-video').value = '';
+        clearSelectedVideo();
         document.getElementById('new-lesson-duration').value = '15';
         document.getElementById('new-lesson-preview').checked = false;
 
@@ -282,21 +556,237 @@ else
         else document.getElementById('add-lesson-modal').classList.add('active');
     }
 
+    function openAddLessonWithoutChapterModal() {
+        var toggle = document.getElementById('toggle-no-chapter');
+        if (toggle) toggle.checked = true;
+
+        document.getElementById('lesson-target-chapter-id').value = 'none';
+        document.getElementById('add-lesson-modal-title').innerText = 'Thêm Bài Học (Không cần chương)';
+        document.getElementById('add-lesson-chapter-title').innerText = 'Không phân chương';
+
+        handleToggleNoChapter(true);
+
+        document.getElementById('new-lesson-name').value = '';
+        clearSelectedVideo();
+        document.getElementById('new-lesson-duration').value = '15';
+        document.getElementById('new-lesson-preview').checked = false;
+
+        if (window.openModal) openModal('add-lesson-modal');
+        else document.getElementById('add-lesson-modal').classList.add('active');
+    }
+
+    function handleToggleNoChapter(isNoChap) {
+        var chapContainer = document.getElementById('chapter-selection-container');
+        var infoBox = document.getElementById('no-chapter-info-box');
+        var badge = document.getElementById('no-chapter-badge');
+        var titleSpan = document.getElementById('add-lesson-chapter-title');
+
+        if (isNoChap) {
+            document.getElementById('lesson-target-chapter-id').value = 'none';
+            if (chapContainer) chapContainer.style.display = 'none';
+            if (infoBox) infoBox.style.display = 'block';
+            if (badge) badge.style.display = 'inline-block';
+            if (titleSpan) titleSpan.innerText = 'Không phân chương (Chương = null)';
+        } else {
+            if (totalChaptersCount === 0) {
+                alert('Khóa học này hiện chưa có chương nào. Bạn hãy bật nút gạt để tạo bài học không cần chương, hoặc tạo chương học trước.');
+                var toggle = document.getElementById('toggle-no-chapter');
+                if (toggle) toggle.checked = true;
+                return;
+            }
+            if (chapContainer) chapContainer.style.display = 'block';
+            if (infoBox) infoBox.style.display = 'none';
+            if (badge) badge.style.display = 'none';
+
+            var select = document.getElementById('lesson-chapter-select');
+            if (select) {
+                document.getElementById('lesson-target-chapter-id').value = select.value;
+                var optText = select.options[select.selectedIndex]?.text || '';
+                if (titleSpan) titleSpan.innerText = optText;
+            }
+        }
+    }
+
+    function onChapterSelectChange(val) {
+        document.getElementById('lesson-target-chapter-id').value = val;
+        var select = document.getElementById('lesson-chapter-select');
+        var optText = select.options[select.selectedIndex]?.text || '';
+        document.getElementById('add-lesson-chapter-title').innerText = optText;
+    }
+
+    // Xử lý chọn và kéo thả file video
+    function handleVideoFileSelect(input) {
+        if (input.files && input.files[0]) {
+            processSelectedVideoFile(input.files[0]);
+        }
+    }
+
+    function handleVideoDragOver(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var dropzone = document.getElementById('video-dropzone');
+        if (dropzone) {
+            dropzone.style.borderColor = 'var(--primary, #434CE8)';
+            dropzone.style.background = '#EFF6FF';
+        }
+    }
+
+    function handleVideoDragLeave(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var dropzone = document.getElementById('video-dropzone');
+        if (dropzone) {
+            dropzone.style.borderColor = '#CBD5E1';
+            dropzone.style.background = '#F8FAFC';
+        }
+    }
+
+    function handleVideoDrop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var dropzone = document.getElementById('video-dropzone');
+        if (dropzone) {
+            dropzone.style.borderColor = '#CBD5E1';
+            dropzone.style.background = '#F8FAFC';
+        }
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            var fileInput = document.getElementById('new-lesson-video-file');
+            if (fileInput) fileInput.files = e.dataTransfer.files;
+            processSelectedVideoFile(e.dataTransfer.files[0]);
+        }
+    }
+
+    function processSelectedVideoFile(file) {
+        if (!file) return;
+
+        var allowedExts = ['.mp4', '.webm', '.mov', '.mkv', '.m4v', '.ogv'];
+        var name = file.name || '';
+        var ext = name.substring(name.lastIndexOf('.')).toLowerCase();
+        if (allowedExts.indexOf(ext) === -1) {
+            alert('Hệ thống chỉ chấp nhận file video (MP4, WebM, MOV, MKV). Không hỗ trợ liên kết YouTube hoặc định dạng khác!');
+            clearSelectedVideo();
+            return;
+        }
+
+        var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        document.getElementById('video-file-name').innerText = file.name;
+        document.getElementById('video-file-size').innerText = sizeMB + ' MB';
+        document.getElementById('video-detected-duration').innerText = '• Đang đọc thời lượng...';
+
+        document.getElementById('video-upload-prompt').style.display = 'none';
+        document.getElementById('video-selected-info').style.display = 'flex';
+
+        // Tự động nhận diện thời lượng từ file video
+        var videoEl = document.getElementById('invisible-video-meta');
+        if (videoEl) {
+            var objUrl = URL.createObjectURL(file);
+            videoEl.src = objUrl;
+            videoEl.onloadedmetadata = function() {
+                var durMinutes = Math.max(1, Math.ceil(videoEl.duration / 60));
+                document.getElementById('new-lesson-duration').value = durMinutes;
+                document.getElementById('video-detected-duration').innerText = '• Tự động nhận diện: ' + durMinutes + ' phút';
+                URL.revokeObjectURL(objUrl);
+            };
+            videoEl.onerror = function() {
+                document.getElementById('video-detected-duration').innerText = '';
+                URL.revokeObjectURL(objUrl);
+            };
+        }
+    }
+
+    function clearSelectedVideo() {
+        var input = document.getElementById('new-lesson-video-file');
+        if (input) input.value = '';
+        var prompt = document.getElementById('video-upload-prompt');
+        var info = document.getElementById('video-selected-info');
+        var progress = document.getElementById('video-upload-progress-container');
+        if (prompt) prompt.style.display = 'block';
+        if (info) info.style.display = 'none';
+        if (progress) progress.style.display = 'none';
+    }
+
     function submitAddLesson(e) {
         e.preventDefault();
-        const chId = document.getElementById('lesson-target-chapter-id').value;
-        const name = document.getElementById('new-lesson-name').value.trim();
-        const video = document.getElementById('new-lesson-video').value.trim();
-        const dur = parseInt(document.getElementById('new-lesson-duration').value, 10) || 15;
-        const prev = document.getElementById('new-lesson-preview').checked;
+        var isNoChap = document.getElementById('toggle-no-chapter') ? document.getElementById('toggle-no-chapter').checked : false;
+        var chId = isNoChap ? 'none' : document.getElementById('lesson-target-chapter-id').value;
+        var name = document.getElementById('new-lesson-name').value.trim();
+        var dur = parseInt(document.getElementById('new-lesson-duration').value, 10) || 15;
+        var prev = document.getElementById('new-lesson-preview').checked;
+        var fileInput = document.getElementById('new-lesson-video-file');
 
-        if (!name) return;
+        if (!name) {
+            alert('Vui lòng nhập tên bài học!');
+            return;
+        }
 
-        $.post('@Url.Action("AddLesson", "Curriculum", new { area = "Instructor" })', { chapterId: chId, tenBaiHoc: name, videoUrl: video, thoiLuong: dur, choXemThu: prev }, function(res) {
-            if (res.success) {
-                location.reload();
-            } else {
-                alert(res.message);
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+            alert('Vui lòng chọn hoặc kéo thả file video bài giảng (MP4, WebM, MOV, MKV) để tải lên! Hệ thống không còn hỗ trợ liên kết YouTube.');
+            return;
+        }
+
+        var file = fileInput.files[0];
+        var allowedExts = ['.mp4', '.webm', '.mov', '.mkv', '.m4v', '.ogv'];
+        var ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        if (allowedExts.indexOf(ext) === -1) {
+            alert('Hệ thống chỉ chấp nhận file video (MP4, WebM, MOV, MKV). Không hỗ trợ liên kết YouTube hoặc định dạng khác!');
+            return;
+        }
+
+        var btn = document.getElementById('btn-submit-lesson');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Đang tải video lên...';
+        }
+
+        var progressContainer = document.getElementById('video-upload-progress-container');
+        var progressBar = document.getElementById('video-upload-progress-bar');
+        var progressPercent = document.getElementById('video-upload-percent');
+        if (progressContainer) progressContainer.style.display = 'block';
+
+        var formData = new FormData();
+        formData.append('courseId', currentCourseId);
+        formData.append('chapterId', chId);
+        formData.append('tenBaiHoc', name);
+        formData.append('thoiLuong', dur * 60);
+        formData.append('choXemThu', prev);
+        formData.append('videoFile', file);
+
+        $.ajax({
+            url: '@Url.Action("AddLesson", "Curriculum", new { area = "Instructor" })',
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            xhr: function() {
+                var xhr = new window.XMLHttpRequest();
+                xhr.upload.addEventListener('progress', function(evt) {
+                    if (evt.lengthComputable) {
+                        var percent = Math.round((evt.loaded / evt.total) * 100);
+                        if (progressBar) progressBar.style.width = percent + '%';
+                        if (progressPercent) progressPercent.innerText = percent + '%';
+                    }
+                }, false);
+                return xhr;
+            },
+            success: function(res) {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = 'Thêm bài học';
+                    }
+                    if (progressContainer) progressContainer.style.display = 'none';
+                    alert(res.message || 'Lỗi khi tải video lên!');
+                }
+            },
+            error: function(xhr) {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Thêm bài học';
+                }
+                if (progressContainer) progressContainer.style.display = 'none';
+                alert('Lỗi tải video lên máy chủ (Mã lỗi: ' + xhr.status + '). Vui lòng kiểm tra dung lượng file video!');
             }
         });
     }

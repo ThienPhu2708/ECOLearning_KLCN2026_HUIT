@@ -162,6 +162,7 @@
     <Compile Include="ViewModels\StudentProfileViewModel.cs" />
     <Compile Include="ViewModels\CartItemViewModel.cs" />
     <Compile Include="ViewModels\CartViewModel.cs" />
+    <Compile Include="ViewModels\MyCoursesViewModel.cs" />
     <Compile Include="Services\EmailService.cs" />
     <Compile Include="Services\PasswordHasher.cs" />
     <Compile Include="Services\TeacherApplicationService.cs" />
@@ -172,6 +173,8 @@
     <Compile Include="Controllers\PaymentController.cs" />
     <Compile Include="Controllers\LearningController.cs" />
     <Compile Include="Controllers\ReviewController.cs" />
+    <Compile Include="Controllers\UserController.cs" />
+    <Compile Include="ViewModels\InstructorProfileViewModel.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
@@ -394,6 +397,8 @@
     <Content Include="Views\Account\Register.cshtml" />
     <Content Include="Views\Profile\Index.cshtml" />
     <Content Include="Views\Cart\Index.cshtml" />
+    <Content Include="Views\Learning\MyCourses.cshtml" />
+    <Content Include="Views\Learning\Certificate.cshtml" />
     <Content Include="Areas\Admin\Views\_ViewStart.cshtml" />
     <Content Include="Areas\Admin\Views\Shared\_LayoutAdmin.cshtml" />
     <Content Include="Areas\Admin\Views\Dashboard\Index.cshtml" />
@@ -415,6 +420,8 @@
     <Content Include="Areas\Marketing\Views\Dashboard\Index.cshtml" />
     <Content Include="Areas\Marketing\Views\Promotion\Index.cshtml" />
     <Content Include="Areas\Marketing\Views\CampaignReport\Index.cshtml" />
+    <Content Include="Views\User\Index.cshtml" />
+
 
   </ItemGroup>
   <ItemGroup>

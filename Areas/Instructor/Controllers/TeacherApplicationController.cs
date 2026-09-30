@@ -44,10 +44,6 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 {
                     return RedirectToAction("Status");
                 }
-                else if (existingApp.Status == "Approved")
-                {
-                    return RedirectToAction("Index", "Dashboard", new { area = "Instructor" });
-                }
             }
 
             ViewBag.User = user;

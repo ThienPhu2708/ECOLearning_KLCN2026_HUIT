@@ -281,6 +281,29 @@
                                                 <i class="bi bi-person me-1"></i>
                                                 @teacherName
                                             </div>
+
+                                            @if (!string.IsNullOrWhiteSpace(course.mucTieuDauRa))
+                                            {
+                                                var cardOutcomes = course.mucTieuDauRa
+                                                    .Split(new[] { "\r\n", "\r", "\n", ";", "," }, StringSplitOptions.RemoveEmptyEntries)
+                                                    .Select(s => s.Trim().TrimStart('-', '•', '*').Trim())
+                                                    .Where(s => !string.IsNullOrEmpty(s))
+                                                    .Take(2)
+                                                    .ToList();
+
+                                                if (cardOutcomes.Any())
+                                                {
+                                                    <div class="course-card-outcomes" style="margin: 8px 0 10px 0; display: flex; flex-direction: column; gap: 4px; border-top: 1px dashed var(--border-color, #E2E8F0); padding-top: 8px;">
+                                                        @foreach (var oc in cardOutcomes)
+                                                        {
+                                                            <div style="font-size: 12px; color: var(--text-secondary, #64748B); display: flex; align-items: flex-start; gap: 6px; line-height: 1.4;">
+                                                                <i class="bi bi-check2 text-primary" style="font-size: 14px; flex-shrink: 0; margin-top: 1px;"></i>
+                                                                <span style="display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;" title="@oc">@oc</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                            }
                                             
                                             <!-- Layout Đánh Giá Star Rating -->
                                             <div class="course-rating">

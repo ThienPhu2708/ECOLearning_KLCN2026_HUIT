@@ -362,6 +362,11 @@
                             updateHeaderCartBadge(0);
                         }
                         document.getElementById('payment-success-modal').style.display = 'flex';
+                    } else if (res.requireLogin) {
+                        showToast(res.message, 'warning');
+                        setTimeout(function () {
+                            window.location.href = '@Url.Action("Login", "Account")?returnUrl=' + encodeURIComponent(window.location.pathname);
+                        }, 600);
                     } else {
                         showToast(res.message, 'error');
                     }

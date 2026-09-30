@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Web.Mvc;
 using System.Web.Routing;
@@ -27,17 +27,8 @@ namespace ECOLearning.Areas.Instructor.Controllers
 
         protected override void OnActionExecuting(ActionExecutingContext filterContext)
         {
-            var role = Session["Role"]?.ToString();
-            var userId = Session["UserId"];
-
-            // Cho phép Giáo viên và Quản trị viên (Admin) truy cập để kiểm thử
-            bool isAllowed = userId != null && !string.IsNullOrEmpty(role) &&
-                (role.Equals("GiaoVien", StringComparison.OrdinalIgnoreCase) ||
-                 role.Equals("Giáo viên", StringComparison.OrdinalIgnoreCase) ||
-                 role.Equals("Instructor", StringComparison.OrdinalIgnoreCase) ||
-                 role.Equals("Admin", StringComparison.OrdinalIgnoreCase));
-
-            if (!isAllowed)
+            var userIdObj = Session["UserId"];
+            if (userIdObj == null || !int.TryParse(userIdObj.ToString(), out int userId))
             {
                 filterContext.Result = new RedirectToRouteResult(
                     new RouteValueDictionary(new { 
@@ -45,6 +36,41 @@ namespace ECOLearning.Areas.Instructor.Controllers
                         action = "Login", 
                         area = "", 
                         returnUrl = filterContext.HttpContext.Request.RawUrl 
+                    })
+                );
+                return;
+            }
+
+            // Đồng bộ trực tiếp vai trò mới nhất từ CSDL SQL Server (chống bypass quyền khi CSDL bị thay đổi)
+            var user = db.NguoiDung.Find(userId);
+            if (user == null || (user.trangThai.HasValue && !user.trangThai.Value))
+            {
+                Session.Clear();
+                filterContext.Result = new RedirectToRouteResult(
+                    new RouteValueDictionary(new { controller = "Account", action = "Login", area = "" })
+                );
+                return;
+            }
+
+            // Cập nhật lại Session vai trò mới nhất theo CSDL
+            Session["Role"] = user.vaiTro;
+            var role = user.vaiTro;
+
+            // Chỉ cho phép Giáo viên và Quản trị viên (Admin) truy cập Dashboard
+            bool isAllowed = !string.IsNullOrEmpty(role) &&
+                (role.Equals("GiaoVien", StringComparison.OrdinalIgnoreCase) ||
+                 role.Equals("Giáo viên", StringComparison.OrdinalIgnoreCase) ||
+                 role.Equals("Instructor", StringComparison.OrdinalIgnoreCase) ||
+                 role.Equals("Admin", StringComparison.OrdinalIgnoreCase));
+
+            if (!isAllowed)
+            {
+                // Nếu vai trò trong CSDL đã chuyển thành Học viên -> Chặn ngay và điều hướng về Trang chủ
+                filterContext.Result = new RedirectToRouteResult(
+                    new RouteValueDictionary(new { 
+                        controller = "Home", 
+                        action = "Index", 
+                        area = "" 
                     })
                 );
                 return;

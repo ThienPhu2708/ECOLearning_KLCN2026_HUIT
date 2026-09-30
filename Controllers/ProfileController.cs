@@ -40,13 +40,33 @@ namespace ECOLearning.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
-                // Thống kê tiến độ học tập từ CSDL
+                // Thống kê tiến độ học tập từ CSDL (dựa trên TienDoBaiHoc — bảng theo dõi tiến độ thật của hệ thống,
+                // không dùng TienDoHocTap vì bảng này không được bất kỳ luồng nghiệp vụ nào ghi dữ liệu)
                 int enrolledCount = 0;
                 int completedCount = 0;
                 try
                 {
-                    enrolledCount = db.DangKyKhoaHoc.Count(d => d.maHocVien == user.maNguoiDung);
-                    completedCount = db.TienDoHocTap.Count(t => t.maHocVien == user.maNguoiDung && t.phanTramHoanThanh >= 100);
+                    var enrollments = db.DangKyKhoaHoc.Where(d => d.maHocVien == user.maNguoiDung).ToList();
+                    enrolledCount = enrollments.Count;
+
+                    foreach (var dk in enrollments)
+                    {
+                        var lessonIds = db.BaiHoc
+                            .Where(b => (b.ChuongHoc != null && b.ChuongHoc.maKhoaHoc == dk.maKhoaHoc)
+                                     || (b.maChuong == null && b.maBaiHoc.StartsWith(dk.maKhoaHoc + "_")))
+                            .Select(b => b.maBaiHoc)
+                            .ToList();
+
+                        if (lessonIds.Count == 0) continue;
+
+                        int doneCount = db.TienDoBaiHoc
+                            .Count(t => t.maHocVien == user.maNguoiDung && lessonIds.Contains(t.maBaiHoc) && t.daHoanThanh == true);
+
+                        if (doneCount >= lessonIds.Count)
+                        {
+                            completedCount++;
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -54,6 +74,8 @@ namespace ECOLearning.Controllers
                     enrolledCount = 0;
                     completedCount = 0;
                 }
+
+                bool isTeacher = string.Equals(user.vaiTro, "GiaoVien", StringComparison.OrdinalIgnoreCase);
 
                 var model = new StudentProfileViewModel
                 {
@@ -65,11 +87,29 @@ namespace ECOLearning.Controllers
                     BirthDate = user.ngaySinh,
                     AvatarUrl = string.IsNullOrEmpty(user.anhDaiDien) ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" : user.anhDaiDien,
                     RoleName = string.Equals(user.vaiTro, "Admin", StringComparison.OrdinalIgnoreCase) ? "Quản trị viên" :
-                               (string.Equals(user.vaiTro, "GiaoVien", StringComparison.OrdinalIgnoreCase) ? "Giảng viên" : "Học viên"),
+                               (isTeacher ? "Giảng viên" : "Học viên"),
+                    IsTeacher = isTeacher,
                     EnrolledCoursesCount = enrolledCount,
                     CompletedCoursesCount = completedCount,
                     TotalCertificates = completedCount
                 };
+
+                if (isTeacher)
+                {
+                    var teacherApp = TeacherApplicationService.GetByUserId(user.maNguoiDung);
+                    if (teacherApp != null)
+                    {
+                        model.ApplicationId = teacherApp.ApplicationId;
+                        model.Specialization = teacherApp.Specialization;
+                        model.BioExperience = teacherApp.BioExperience;
+                        model.BankName = teacherApp.BankName;
+                        model.AccountNumber = teacherApp.AccountNumber;
+                        model.AccountName = teacherApp.AccountName;
+                        model.CertificateFilePath = teacherApp.CertificateFilePath;
+                        model.CertificateFileName = teacherApp.CertificateFileName;
+                        model.TeacherStatus = teacherApp.Status;
+                    }
+                }
 
                 return View(model);
             }
@@ -255,6 +295,99 @@ namespace ECOLearning.Controllers
             {
                 System.Diagnostics.Debug.WriteLine("ChangePassword Error: " + ex.Message);
                 return Json(new { success = false, message = "Không thể đổi mật khẩu. Vui lòng thử lại sau!" });
+            }
+        }
+
+        // POST: Profile/UpdateTeacherProfile (Cập nhật hồ sơ giáo viên và đồng bộ CSDL)
+        [HttpPost]
+        public JsonResult UpdateTeacherProfile(string specialization, string bioExperience, string bankName, string accountNumber, string accountName, HttpPostedFileBase certificateFile)
+        {
+            int? userId = GetCurrentUserId();
+            if (!userId.HasValue)
+            {
+                return Json(new { success = false, message = "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!" });
+            }
+
+            try
+            {
+                var user = db.NguoiDung.Find(userId.Value);
+                if (user == null)
+                {
+                    return Json(new { success = false, message = "Không tìm thấy người dùng!" });
+                }
+
+                if (!string.Equals(user.vaiTro, "GiaoVien", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Json(new { success = false, message = "Chức năng chỉ dành cho tài khoản Giáo viên/Giảng viên!" });
+                }
+
+                var app = TeacherApplicationService.GetByUserId(user.maNguoiDung);
+                if (app == null)
+                {
+                    app = new TeacherApplication
+                    {
+                        ApplicationId = "GVAPP_" + DateTime.Now.ToString("yyyyMMddHHmmss") + "_" + user.maNguoiDung,
+                        UserId = user.maNguoiDung,
+                        FullName = user.hoTen,
+                        Email = user.email,
+                        Phone = user.soDienThoai,
+                        CreatedAt = DateTime.Now,
+                        ReviewedAt = DateTime.Now,
+                        Status = "Approved"
+                    };
+                }
+
+                app.Specialization = specialization?.Trim();
+                app.BioExperience = bioExperience?.Trim();
+                app.BankName = bankName?.Trim();
+                app.AccountNumber = accountNumber?.Trim();
+                app.AccountName = accountName?.Trim();
+
+                // Xử lý tệp chứng chỉ mới tải lên
+                if (certificateFile != null && certificateFile.ContentLength > 0)
+                {
+                    string ext = Path.GetExtension(certificateFile.FileName).ToLower();
+                    string[] allowedExts = { ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx" };
+                    if (!allowedExts.Contains(ext))
+                    {
+                        return Json(new { success = false, message = "Định dạng tệp không hỗ trợ! Vui lòng chọn tệp PDF, JPG, PNG hoặc DOCX." });
+                    }
+
+                    if (certificateFile.ContentLength > 10 * 1024 * 1024)
+                    {
+                        return Json(new { success = false, message = "Dung lượng tệp chứng chỉ không được vượt quá 10MB!" });
+                    }
+
+                    string uploadsDir = Server.MapPath("~/assets/uploads/certificates");
+                    if (!Directory.Exists(uploadsDir))
+                    {
+                        Directory.CreateDirectory(uploadsDir);
+                    }
+
+                    string cleanFileName = Path.GetFileName(certificateFile.FileName);
+                    string uniqueFileName = $"cert_{user.maNguoiDung}_{DateTime.Now:yyyyMMddHHmmss}{ext}";
+                    string savedPath = Path.Combine(uploadsDir, uniqueFileName);
+                    certificateFile.SaveAs(savedPath);
+
+                    app.CertificateFilePath = $"/assets/uploads/certificates/{uniqueFileName}";
+                    app.CertificateFileName = cleanFileName;
+                }
+
+                // Đồng bộ và lưu xuống CSDL DangKyGiaoVien
+                TeacherApplicationService.Save(app);
+
+                return Json(new
+                {
+                    success = true,
+                    message = "Cập nhật hồ sơ giáo viên thành công!",
+                    certificateUrl = app.CertificateFilePath,
+                    certificateName = app.CertificateFileName
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("UpdateTeacherProfile Error: " + ex.Message);
+                return Json(new { success = false, message = "Lỗi khi cập nhật hồ sơ giáo viên: " + ex.Message });
             }
         }
 

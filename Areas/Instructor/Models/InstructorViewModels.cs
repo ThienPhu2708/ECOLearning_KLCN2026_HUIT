@@ -105,10 +105,12 @@ namespace ECOLearning.Areas.Instructor.Models
         public string MaKhoaHoc { get; set; }
         public string TenKhoaHoc { get; set; }
         public List<ChuongHocItem> ChuongHocs { get; set; }
+        public List<BaiHocItem> BaiHocKhongChuong { get; set; }
 
         public CurriculumViewModel()
         {
             ChuongHocs = new List<ChuongHocItem>();
+            BaiHocKhongChuong = new List<BaiHocItem>();
         }
     }
 

@@ -11,7 +11,6 @@ string regTabClass = (authMode == "register") ? "active" : "";
 string loginDisplay = (authMode != "register" && authMode != "forgot") ? "block" : "none";
 string regDisplay = (authMode == "register") ? "block" : "none";
 string forgotDisplay = (authMode == "forgot") ? "block" : "none";
-
 string emailPlaceholder = "email@example.com";
 string defaultEmailPlaceholder = "hocvien@example.com";
 string targetEmailMask = "email@...";
@@ -278,7 +277,12 @@ color: #EF4444;
                         <label class="form-label" for="login-password" style="margin-bottom: 0;">Mật khẩu <span class="required">*</span></label>
                         <a href="#" onclick="showForgotPassword(event)" style="font-size: 13px; font-weight: 600; color: #434CE8; text-decoration: none;">Quên mật khẩu?</a>
                     </div>
-                    @Html.PasswordFor(m => m.Password, new { id = "login-password", @class = "form-control", placeholder = "Nhập mật khẩu", required = "required", data_val = "true", data_val_required = "Vui lòng nhập mật khẩu", data_val_length = "Mật khẩu tối thiểu phải 8 ký tự", data_val_length_min = "8", aria_required = "true", aria_invalid = "false", aria_describedby = "login-password-error" })
+                    <div style="position: relative;">
+                        @Html.PasswordFor(m => m.Password, new { id = "login-password", @class = "form-control", placeholder = "Nhập mật khẩu", style = "padding-right: 44px;", required = "required", data_val = "true", data_val_required = "Vui lòng nhập mật khẩu", data_val_length = "Mật khẩu tối thiểu phải 8 ký tự", data_val_length_min = "8", aria_required = "true", aria_invalid = "false", aria_describedby = "login-password-error" })
+                        <button type="button" onclick="toggleLoginPassword()" id="btn-toggle-login-pass" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748B; padding: 4px; display: flex; align-items: center; justify-content: center; z-index: 2; transition: color 0.2s;" title="Hiển thị/Ẩn mật khẩu" aria-label="Hiển thị mật khẩu">
+                            <i class="bi bi-eye" id="icon-toggle-login-pass" style="font-size: 18px;"></i>
+                        </button>
+                    </div>
                     <span id="login-password-error" class="field-validation-valid form-feedback-error" data-valmsg-for="Password" data-valmsg-replace="true" role="alert" aria-live="polite">@Html.ValidationMessageFor(m => m.Password)</span>
                 </div>
 
@@ -311,7 +315,7 @@ color: #EF4444;
                 <div class="form-group">
                     <label class="form-label" for="reg-fullname">Họ và tên <span class="required">*</span></label>
                     <input type="text" id="reg-fullname" class="form-control" placeholder="Nhập vào họ và tên của bạn" required data-val="true" data-val-required="Vui lòng nhập họ và tên" aria-required="true" aria-invalid="false" aria-describedby="reg-fullname-error">
-                    <span id="reg-fullname-error" class="field-validation-valid form-feedback-error" data-valmsg-for="FullName" data-valmsg-replace="true" role="alert" aria-live="polite" style="display: none;"></span>
+                    <span id="reg-fullname-error" class="field-validation-valid form-feedback-error" data-valmsg-for="FullName" data-valmsg-replace="true" role="alert" aria-live="polite" style="display: none; color: #EF4444; font-size: 12px; font-weight: 600; margin-top: 6px;"></span>
                 </div>
 
                 <div class="form-group">
@@ -325,15 +329,20 @@ color: #EF4444;
 
             <!-- Bước 2: Nhập OTP -->
             <div id="reg-step-2" style="display: none;">
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h4 style="margin-bottom: 6px; font-size: 18px; font-weight: 700;">Nhập mã xác thực OTP</h4>
-                    <p style="font-size: 13px; color: #64748B;">Mã xác thực 6 số đã gửi tới <strong id="otp-target-email">@targetEmailMask</strong></p>
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h4 style="margin: 0; font-size: 18px; font-weight: 700;">Nhập mã xác thực OTP</h4>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="reg-otp" style="text-align: center; display: block;">Mã xác thực OTP (6 số) <span class="required">*</span></label>
-                    <input type="text" id="reg-otp" class="form-control" placeholder="••••••" maxlength="6" style="text-align: center; font-size: 24px; letter-spacing: 8px; font-weight: 700;" required data-val="true" data-val-required="Vui lòng nhập mã OTP" data-val-regex="Mã OTP phải có đúng 6 chữ số" data-val-regex-pattern="^\d{6}$" aria-required="true" aria-invalid="false" aria-describedby="reg-otp-error">
-                    <span id="reg-otp-error" class="field-validation-valid form-feedback-error" data-valmsg-for="Otp" data-valmsg-replace="true" role="alert" aria-live="polite" style="display: none; text-align: center;">Mã OTP không đúng hoặc đã hết hạn!</span>
+                    <input type="text" id="reg-otp" class="form-control" placeholder="••••••" maxlength="6" 
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                           onkeydown="if(event.key === 'Enter'){ event.preventDefault(); goToRegStep3(); }"
+                           style="text-align: center; font-size: 24px; letter-spacing: 8px; font-weight: 700;" 
+                           required data-val="true" data-val-required="Vui lòng nhập mã OTP" 
+                           data-val-regex="Mã OTP phải có đúng 6 chữ số" data-val-regex-pattern="^\d{6}$" 
+                           aria-required="true" aria-invalid="false" aria-describedby="reg-otp-error">
+                    <span id="reg-otp-error" class="field-validation-valid form-feedback-error" data-valmsg-for="Otp" data-valmsg-replace="true" role="alert" aria-live="polite" style="display: none; text-align: center; color: #EF4444; font-size: 13px; font-weight: 600; margin-top: 8px;">Mã OTP không đúng hoặc đã hết hạn!</span>
                 </div>
 
                 <button type="button" class="btn btn-primary" style="width: 100%; height: 48px; background: #434CE8; border-radius: 12px; font-weight: 700; margin-bottom: 12px;" onclick="goToRegStep3()">Xác thực OTP</button>
@@ -347,23 +356,24 @@ color: #EF4444;
             <div id="reg-step-3" style="display: none;">
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 6px; font-size: 18px; font-weight: 700;">Thiết lập mật khẩu</h4>
-                    <p style="font-size: 13px; color: #64748B;">Mật khẩu tối thiểu 8 ký tự</p>
+                    <p style="font-size: 13px; color: #64748B;">Nhập mật khẩu để bảo vệ tài khoản của bạn</p>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="reg-pass">Thiết lập mật khẩu <span class="required">*</span></label>
-                    <input type="password" id="reg-pass" class="form-control" placeholder="Nhập mật khẩu mới (tối thiểu 8 ký tự)" oninput="checkPassStrength(this.value)" required data-val="true" data-val-required="Vui lòng nhập mật khẩu mới" data-val-length="Mật khẩu tối thiểu 8 ký tự" data-val-length-min="8" aria-required="true" aria-invalid="false" aria-describedby="reg-pass-error">
-                    <div class="strength-meter">
-                        <div id="strength-bar" class="strength-fill"></div>
-                    </div>
-                    <div id="strength-text" style="font-size: 12px; color: #64748B; margin-top: 6px; font-weight: 600;">Độ mạnh: Chưa nhập</div>
-                    <span id="reg-pass-error" class="field-validation-valid form-feedback-error" data-valmsg-for="Password" data-valmsg-replace="true" role="alert" aria-live="polite" style="display: none;"></span>
+                    <input type="password" id="reg-pass" class="form-control" placeholder="Nhập mật khẩu mới" oninput="checkPassStrength(this.value)" required data-val="true" data-val-required="Vui lòng nhập mật khẩu mới" aria-required="true" aria-invalid="false" aria-describedby="reg-pass-error">
+                    <span id="reg-pass-error" class="field-validation-valid form-feedback-error" data-valmsg-for="Password" data-valmsg-replace="true" role="alert" aria-live="polite" style="display: none; color: #EF4444; font-size: 12px; font-weight: 600; margin-top: 6px;"></span>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="reg-pass-confirm">Xác nhận mật khẩu <span class="required">*</span></label>
                     <input type="password" id="reg-pass-confirm" class="form-control" placeholder="Nhập lại mật khẩu mới" required data-val="true" data-val-required="Vui lòng xác nhận mật khẩu" data-val-equalto="Mật khẩu xác nhận không khớp" aria-required="true" aria-invalid="false" aria-describedby="reg-pass-match-error">
                     <span id="reg-pass-match-error" class="field-validation-valid form-feedback-error" data-valmsg-for="ConfirmPassword" data-valmsg-replace="true" role="alert" aria-live="polite" style="display: none;">Mật khẩu xác nhận không khớp!</span>
+                </div>
+
+                <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                    <input type="checkbox" id="show-reg-passwords" onchange="toggleRegPasswords(this.checked)" style="width: 16px; height: 16px; accent-color: #434CE8; cursor: pointer;">
+                    <label for="show-reg-passwords" style="font-size: 13px; color: #475569; cursor: pointer; user-select: none; margin: 0;">Hiển thị mật khẩu</label>
                 </div>
 
                 <button type="button" id="btn-complete-reg" class="btn btn-primary" style="width: 100%; height: 48px; background: #434CE8; border-radius: 12px; font-weight: 700; margin-bottom: 12px;" onclick="completeRegister()">Hoàn tất Đăng ký</button>
@@ -406,8 +416,13 @@ color: #EF4444;
                 <form onsubmit="handleVerifyForgotOtp(event)" novalidate>
                     <div class="form-group">
                         <label class="form-label" for="forgot-otp">Mã xác thực OTP (6 số)<span class="required">*</span></label>
-                        <input type="text" id="forgot-otp" class="form-control" placeholder="••••••" maxlength="6" style="text-align: center; font-size: 22px; letter-spacing: 6px; font-weight: 700;" required data-val="true" data-val-required="Vui lòng nhập mã OTP" data-val-regex="Mã OTP gồm 6 chữ số" data-val-regex-pattern="^\d{6}$" aria-required="true" aria-invalid="false" aria-describedby="forgot-otp-error">
-                        <span id="forgot-otp-error" class="field-validation-valid form-feedback-error" data-valmsg-for="Otp" data-valmsg-replace="true" role="alert" aria-live="polite" style="display: none; text-align: center;">Mã OTP không chính xác hoặc đã hết hạn!</span>
+                        <input type="text" id="forgot-otp" class="form-control" placeholder="••••••" maxlength="6" 
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                               style="text-align: center; font-size: 24px; letter-spacing: 8px; font-weight: 700;" 
+                               required data-val="true" data-val-required="Vui lòng nhập mã OTP" 
+                               data-val-regex="Mã OTP gồm 6 chữ số" data-val-regex-pattern="^\d{6}$" 
+                               aria-required="true" aria-invalid="false" aria-describedby="forgot-otp-error">
+                        <span id="forgot-otp-error" class="field-validation-valid form-feedback-error" data-valmsg-for="Otp" data-valmsg-replace="true" role="alert" aria-live="polite" style="display: none; text-align: center; color: #EF4444; font-size: 13px; font-weight: 600; margin-top: 8px;">Mã OTP không chính xác hoặc đã hết hạn!</span>
                     </div>
 
                     <div style="text-align: right; margin-bottom: 18px;">
@@ -424,18 +439,19 @@ color: #EF4444;
                 <form onsubmit="handleResetPasswordSubmit(event)" novalidate>
                     <div class="form-group">
                         <label class="form-label" for="forgot-new-pass">Mật khẩu mới <span class="required">*</span></label>
-                        <input type="password" id="forgot-new-pass" class="form-control" placeholder="Nhập mật khẩu mới (tối thiểu 8 ký tự)" oninput="checkForgotPassStrength(this.value)" required data-val="true" data-val-required="Vui lòng nhập mật khẩu mới" data-val-length="Mật khẩu tối thiểu 8 ký tự" data-val-length-min="8" aria-required="true" aria-invalid="false" aria-describedby="forgot-new-pass-error">
-                        <div class="strength-meter">
-                            <div id="forgot-strength-bar" class="strength-fill"></div>
-                        </div>
-                        <div id="forgot-strength-text" style="font-size: 12px; color: #64748B; margin-top: 6px; font-weight: 600;">Độ mạnh: Chưa nhập</div>
-                        <span id="forgot-new-pass-error" class="field-validation-valid form-feedback-error" data-valmsg-for="NewPassword" data-valmsg-replace="true" role="alert" aria-live="polite" style="display: none;"></span>
+                        <input type="password" id="forgot-new-pass" class="form-control" placeholder="Nhập mật khẩu mới" oninput="checkForgotPassStrength(this.value)" required data-val="true" data-val-required="Vui lòng nhập mật khẩu mới" aria-required="true" aria-invalid="false" aria-describedby="forgot-new-pass-error">
+                        <span id="forgot-new-pass-error" class="field-validation-valid form-feedback-error" data-valmsg-for="NewPassword" data-valmsg-replace="true" role="alert" aria-live="polite" style="display: none; color: #EF4444; font-size: 12px; font-weight: 600; margin-top: 6px;"></span>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="forgot-confirm-pass">Xác nhận mật khẩu mới <span class="required">*</span></label>
-                        <input type="password" id="forgot-confirm-pass" class="form-control" placeholder="Nhập lại mật khẩu mới" required data-val="true" data-val-required="Vui lòng nhập lại mật khẩu mới" data-val-equalto="Mật khẩu xác nhận không khớp" aria-required="true" aria-invalid="false" aria-describedby="forgot-pass-match-error">
-                        <span id="forgot-pass-match-error" class="field-validation-valid form-feedback-error" data-valmsg-for="ConfirmPassword" data-valmsg-replace="true" role="alert" aria-live="polite" style="display: none;">Mật khẩu xác nhận không khớp!</span>
+                        <input type="password" id="forgot-confirm-pass" class="form-control" placeholder="Nhập lại mật khẩu mới" required data-val="true" data-val-required="Vui lòng nhập lại mật khẩu mới" aria-required="true" aria-invalid="false" aria-describedby="forgot-pass-match-error">
+                        <span id="forgot-pass-match-error" class="field-validation-valid form-feedback-error" data-valmsg-for="ConfirmPassword" data-valmsg-replace="true" role="alert" aria-live="polite" style="display: none; color: #EF4444; font-size: 12px; font-weight: 600; margin-top: 6px;">Mật khẩu xác nhận không khớp!</span>
+                    </div>
+
+                    <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                        <input type="checkbox" id="show-forgot-passwords" onchange="toggleForgotPasswords(this.checked)" style="width: 16px; height: 16px; accent-color: #434CE8; cursor: pointer;">
+                        <label for="show-forgot-passwords" style="font-size: 13px; color: #475569; cursor: pointer; user-select: none; margin: 0;">Hiển thị mật khẩu</label>
                     </div>
 
                     <button type="submit" id="btn-reset-password" class="btn btn-primary" style="width: 100%; height: 48px; background: #434CE8; border-radius: 12px; font-weight: 700; margin-bottom: 12px;">Thiết lập mật khẩu mới</button>
@@ -451,41 +467,64 @@ color: #EF4444;
 @section scripts {
 <script>
     function switchAuthMode(mode) {
-    const authTabs = document.getElementById('main-auth-tabs');
-    const loginTab = document.getElementById('tab-login-btn');
-    const regTab = document.getElementById('tab-register-btn');
-    const loginView = document.getElementById('login-view');
-    const regView = document.getElementById('register-view');
-    const forgotView = document.getElementById('forgot-password-view');
+        const authTabs = document.getElementById('main-auth-tabs');
+        const loginTab = document.getElementById('tab-login-btn');
+        const regTab = document.getElementById('tab-register-btn');
+        const loginView = document.getElementById('login-view');
+        const regView = document.getElementById('register-view');
+        const forgotView = document.getElementById('forgot-password-view');
 
-    if (mode === 'login') {
-    authTabs.style.display = 'flex';
-    loginTab.classList.add('active');
-    regTab.classList.remove('active');
-    loginView.style.display = 'block';
-    regView.style.display = 'none';
-    forgotView.style.display = 'none';
-}
-else if (mode === 'register')
-{
-    authTabs.style.display = 'flex';
-    regTab.classList.add('active');
-    loginTab.classList.remove('active');
-    loginView.style.display = 'none';
-    regView.style.display = 'block';
-    forgotView.style.display = 'none';
-}
-else if (mode === 'forgot')
-{
-    authTabs.style.display = 'none';
-    loginView.style.display = 'none';
-    regView.style.display = 'none';
-    forgotView.style.display = 'block';
-    document.getElementById('forgot-step-1').style.display = 'block';
-    document.getElementById('forgot-step-2').style.display = 'none';
-    document.getElementById('forgot-step-3').style.display = 'none';
-}
-}
+        const loginPass = document.getElementById('login-password');
+        const loginEye = document.getElementById('icon-toggle-login-pass');
+        if (loginPass && loginEye) {
+            loginPass.type = 'password';
+            loginEye.className = 'bi bi-eye';
+            loginEye.style.color = '#64748B';
+        }
+
+        if (mode === 'login') {
+            authTabs.style.display = 'flex';
+            loginTab.classList.add('active');
+            regTab.classList.remove('active');
+            loginView.style.display = 'block';
+            regView.style.display = 'none';
+            forgotView.style.display = 'none';
+        }
+        else if (mode === 'register')
+        {
+            authTabs.style.display = 'flex';
+            regTab.classList.add('active');
+            loginTab.classList.remove('active');
+            loginView.style.display = 'none';
+            regView.style.display = 'block';
+            forgotView.style.display = 'none';
+        }
+        else if (mode === 'forgot')
+        {
+            authTabs.style.display = 'none';
+            loginView.style.display = 'none';
+            regView.style.display = 'none';
+            forgotView.style.display = 'block';
+            document.getElementById('forgot-step-1').style.display = 'block';
+            document.getElementById('forgot-step-2').style.display = 'none';
+            document.getElementById('forgot-step-3').style.display = 'none';
+        }
+    }
+
+    function toggleLoginPassword() {
+        const input = document.getElementById('login-password');
+        const icon = document.getElementById('icon-toggle-login-pass');
+        if (!input || !icon) return;
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'bi bi-eye-slash';
+            icon.style.color = '#434CE8';
+        } else {
+            input.type = 'password';
+            icon.className = 'bi bi-eye';
+            icon.style.color = '#64748B';
+        }
+    }
 
 // --- GOOGLE SIGN-IN INTEGRATION (GIS SDK + OAuth 2.0 Flow) ---
 function parseJwt(token) {
@@ -501,100 +540,145 @@ return null;
 }
 }
 
-function handleGoogleCredentialResponse(response) {
-if (response && response.credential) {
-var idToken = response.credential;
-var payload = parseJwt(idToken);
-if (payload) {
-var email = payload.email || '';
-var name = payload.name || payload.given_name || email.split('@@')[0];
-var picture = payload.picture || '';
-postGoogleAuth(idToken, email, name, picture);
-return;
-}
-}
-showToast('Xác thực Google ID Token thất bại!', 'error');
-}
+        function handleGoogleCredentialResponse(response) {
+            if (response && response.credential) {
+                var idToken = response.credential;
+                var payload = parseJwt(idToken);
+                if (payload) {
+                    var email = payload.email || '';
+                    var familyName = (payload.family_name || '').trim();
+                    var givenName = (payload.given_name || '').trim();
+                    var displayName = (payload.name || '').trim();
 
-function postGoogleAuth(idToken, email, name, avatar) {
-showToast('Đang kết nối xác thực ID Token tới máy chủ...', 'info');
-$.ajax({
-url: '@Url.Action("GoogleLogin", "Account")',
-type: 'POST',
-data: { idToken: idToken || '', googleEmail: email, googleName: name, googleAvatar: avatar },
-success: function (res) {
-if (res.success) {
-showToast(res.message, 'success');
-setTimeout(function () {
-window.location.href = res.redirectUrl || '@Url.Action("Index", "Home")';
-}, 800);
-}
-else
-{
-    showToast(res.message || 'Đăng nhập bằng Google không thành công!', 'error');
-}
-},
-error: function () {
-showToast('Có lỗi xảy ra khi kết nối máy chủ!', 'error');
-}
-});
-}
+                    var fullName = '';
+                    if (familyName && givenName) {
+                        fullName = familyName + ' ' + givenName;
+                    } else if (displayName) {
+                        fullName = displayName;
+                    } else if (givenName) {
+                        fullName = givenName;
+                    }
 
-function initGoogleIdentity() {
-if (window.google && window.google.accounts && window.google.accounts.id) {
-try {
-window.google.accounts.id.initialize({
-client_id: "16112335076-7inckr0r5mo4og4gmi70c5t10j82bg4o.apps.googleusercontent.com",
-callback: handleGoogleCredentialResponse
-});
-} catch(e) {
-console.log("Google GIS Init Error:", e);
-}
-}
-}
+                    var picture = payload.picture || '';
+                    postGoogleAuth(idToken, email, fullName, picture, givenName, familyName);
+                    return;
+                }
+            }
+            showToast('Xác thực Google ID Token thất bại!', 'error');
+        }
 
-window.addEventListener('load', function() {
-initGoogleIdentity();
-});
+        function setGoogleBtnLoading(loading) {
+            var btn = document.querySelector('.btn-google');
+            if (!btn) return;
+            if (loading) {
+                btn.style.opacity = '0.6';
+                btn.style.pointerEvents = 'none';
+            } else {
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            }
+        }
 
-function triggerGoogleOAuthPopup() {
-if (window.google && window.google.accounts && window.google.accounts.oauth2) {
-try {
-var client = window.google.accounts.oauth2.initTokenClient({
-client_id: '16112335076-7inckr0r5mo4og4gmi70c5t10j82bg4o.apps.googleusercontent.com',
-scope: 'email profile openid',
-callback: function (tokenResponse) {
-if (tokenResponse && tokenResponse.access_token) {
-showToast('Đã nhận token từ Google. Đang xác thực...', 'info');
-fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-headers: { Authorization: 'Bearer ' + tokenResponse.access_token }
-})
-.then(function (res) { return res.json(); })
-.then(function (user) {
-if (user && user.email) {
-postGoogleAuth('', user.email, user.name || user.given_name || user.email.split('@@')[0], user.picture || '');
-}
-else
-{
-    showToast('Không thể lấy thông tin người dùng từ Google!', 'error');
-}
-})
-.catch(function () {
-showToast('Lỗi khi truy xuất thông tin từ Google!', 'error');
-});
-}
-}
-});
-client.requestAccessToken();
-} catch(e) {
-console.log("OAuth2 Popup Error:", e);
-}
-}
-else
-{
-    showToast('Đang tải thư viện Google, vui lòng thử lại sau giây lát...', 'info');
-}
-}
+        function postGoogleAuth(idToken, email, name, avatar, givenName, familyName) {
+            setGoogleBtnLoading(true);
+            $.ajax({
+                url: '@Url.Action("GoogleLogin", "Account")',
+                type: 'POST',
+                data: { 
+                    idToken: idToken || '', 
+                    googleEmail: email, 
+                    googleName: name || '', 
+                    googleAvatar: avatar || '',
+                    googleGivenName: givenName || '',
+                    googleFamilyName: familyName || ''
+                },
+                success: function (res) {
+                    if (res.success) {
+                        window.location.href = res.redirectUrl || '@Url.Action("Index", "Home")';
+                    }
+                    else
+                    {
+                        setGoogleBtnLoading(false);
+                        showToast(res.message || 'Đăng nhập bằng Google không thành công!', 'error');
+                    }
+                },
+                error: function () {
+                    setGoogleBtnLoading(false);
+                    showToast('Có lỗi xảy ra khi kết nối máy chủ!', 'error');
+                }
+            });
+        }
+
+        function initGoogleIdentity() {
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                try {
+                    window.google.accounts.id.initialize({
+                        client_id: "16112335076-7inckr0r5mo4og4gmi70c5t10j82bg4o.apps.googleusercontent.com",
+                        callback: handleGoogleCredentialResponse
+                    });
+                } catch(e) {
+                    console.log("Google GIS Init Error:", e);
+                }
+            }
+        }
+
+        window.addEventListener('load', function() {
+            initGoogleIdentity();
+        });
+
+        function triggerGoogleOAuthPopup() {
+            if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+                try {
+                    var client = window.google.accounts.oauth2.initTokenClient({
+                        client_id: '16112335076-7inckr0r5mo4og4gmi70c5t10j82bg4o.apps.googleusercontent.com',
+                        scope: 'email profile openid',
+                        callback: function (tokenResponse) {
+                            if (tokenResponse && tokenResponse.access_token) {
+                                setGoogleBtnLoading(true);
+                                fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                                    headers: { Authorization: 'Bearer ' + tokenResponse.access_token }
+                                })
+                                .then(function (res) { return res.json(); })
+                                .then(function (user) {
+                                    if (user && user.email) {
+                                        var familyName = (user.family_name || '').trim();
+                                        var givenName = (user.given_name || '').trim();
+                                        var displayName = (user.name || '').trim();
+
+                                        var fullName = '';
+                                        if (familyName && givenName) {
+                                            fullName = familyName + ' ' + givenName;
+                                        } else if (displayName) {
+                                            fullName = displayName;
+                                        } else if (givenName) {
+                                            fullName = givenName;
+                                        }
+
+                                        postGoogleAuth('', user.email, fullName, user.picture || '', givenName, familyName);
+                                    }
+                                    else
+                                    {
+                                        setGoogleBtnLoading(false);
+                                        showToast('Không thể lấy thông tin người dùng từ Google!', 'error');
+                                    }
+                                })
+                                .catch(function () {
+                                    setGoogleBtnLoading(false);
+                                    showToast('Lỗi khi truy xuất thông tin từ Google!', 'error');
+                                });
+                            }
+                        }
+                    });
+                        client.requestAccessToken();
+                    } catch(e) {
+                        console.log("OAuth2 Popup Error:", e);
+                    }
+                }
+                else
+                {
+                    showToast('Đang tải thư viện Google, vui lòng thử lại sau giây lát...', 'info');
+                }
+            }
 
 function handleGoogleLogin() {
 if (window.google && window.google.accounts) {
@@ -632,6 +716,30 @@ function cancelForgotPassword() {
 switchAuthMode('login');
 }
 
+// --- ĐỊNH DẠNG HỌ VÀ TÊN VALIDATOR ---
+function validateFullName(name) {
+    if (!name || name.trim().length === 0) {
+        return 'Vui lòng nhập Họ và tên!';
+    }
+    const trimmed = name.trim();
+    const hasDigit = /[0-9]/.test(trimmed);
+    const hasSpecial = /[^\p{L}\s0-9]/u.test(trimmed);
+
+    if (hasDigit && hasSpecial) {
+        return 'Họ và tên chỉ được chứa chữ cái, không được chứa chữ số và ký tự đặc biệt!';
+    }
+    if (hasDigit) {
+        return 'Họ và tên không được chứa chữ số (0-9)!';
+    }
+    if (hasSpecial) {
+        return 'Họ và tên không được chứa ký tự đặc biệt!';
+    }
+    if (trimmed.length < 2) {
+        return 'Họ và tên phải có tối thiểu 2 ký tự!';
+    }
+    return '';
+}
+
 // --- ĐỊNH DẠNG EMAIL VALIDATOR ---
 function isValidEmailFormat(email) {
 if (!email) return false;
@@ -656,13 +764,14 @@ if (emailErrorEl) emailErrorEl.style.display = 'none';
 if (fullnameInput) fullnameInput.setAttribute('aria-invalid', 'false');
 if (emailInput) emailInput.setAttribute('aria-invalid', 'false');
 
-if (!fullname) {
-if (fullnameErrorEl) {
-fullnameErrorEl.innerText = 'Vui lòng nhập Họ và tên!';
-fullnameErrorEl.style.display = 'block';
-}
-if (fullnameInput) fullnameInput.setAttribute('aria-invalid', 'true');
-isValid = false;
+const fullnameErr = validateFullName(fullname);
+if (fullnameErr) {
+    if (fullnameErrorEl) {
+        fullnameErrorEl.innerText = fullnameErr;
+        fullnameErrorEl.style.display = 'block';
+    }
+    if (fullnameInput) fullnameInput.setAttribute('aria-invalid', 'true');
+    isValid = false;
 }
 
 if (!email) {
@@ -674,7 +783,7 @@ if (emailInput) emailInput.setAttribute('aria-invalid', 'true');
 isValid = false;
 } else if (!isValidEmailFormat(email)) {
 if (emailErrorEl) {
-emailErrorEl.innerText = 'Định dạng Email không hợp lệ! Vui lòng nhập đủ ký tự @@, tên miền và đuôi (ví dụ: example@@gmail.com)';
+emailErrorEl.innerText = 'Định dạng Email không hợp lệ!';
 emailErrorEl.style.display = 'block';
 }
 if (emailInput) emailInput.setAttribute('aria-invalid', 'true');
@@ -682,7 +791,7 @@ isValid = false;
 }
 
 if (!isValid) {
-showToast('Vui lòng kiểm tra lại định dạng thông tin trước khi tiếp tục!', 'error');
+showToast(fullnameErr || 'Vui lòng kiểm tra lại định dạng thông tin trước khi tiếp tục!', 'error');
 return;
 }
 
@@ -692,34 +801,38 @@ url: '@Url.Action("SendOtp", "Account")',
 type: 'POST',
 data: { fullName: fullname, email: email },
 success: function (res) {
-if (res.success) {
-document.getElementById('reg-email-error').style.display = 'none';
-document.getElementById('otp-target-email').innerText = email;
-document.getElementById('reg-step-1').style.display = 'none';
-document.getElementById('reg-step-2').style.display = 'block';
-document.getElementById('step-dot-1').classList.add('done');
-document.getElementById('step-dot-2').classList.add('active');
-showToast(res.message, 'info');
-}
-else
-{
-    document.getElementById('reg-email-error').innerText = res.message;
-    document.getElementById('reg-email-error').style.display = 'block';
-    if (emailInput) emailInput.setAttribute('aria-invalid', 'true');
-    showToast(res.message, 'error');
-}
-},
-error: function () {
-showToast('Có lỗi xảy ra khi kết nối máy chủ!', 'error');
-}
-});
-}
+                    if (res.success) {
+                        document.getElementById('reg-email-error').style.display = 'none';
+                        document.getElementById('reg-step-1').style.display = 'none';
+                        document.getElementById('reg-step-2').style.display = 'block';
+                        document.getElementById('step-dot-1').classList.add('done');
+                        document.getElementById('step-dot-2').classList.add('active');
 
-function backToRegStep1() {
-document.getElementById('reg-step-2').style.display = 'none';
-document.getElementById('reg-step-1').style.display = 'block';
-document.getElementById('step-dot-2').classList.remove('active');
-}
+                        const otpInput = document.getElementById('reg-otp');
+                        if (otpInput) {
+                            otpInput.value = '';
+                            otpInput.focus();
+                        }
+                    }
+                    else
+                    {
+                        document.getElementById('reg-email-error').innerText = res.message;
+                        document.getElementById('reg-email-error').style.display = 'block';
+                        if (emailInput) emailInput.setAttribute('aria-invalid', 'true');
+                        showToast(res.message, 'error');
+                    }
+                },
+                error: function () {
+                    showToast('Có lỗi xảy ra khi kết nối máy chủ!', 'error');
+                }
+            });
+        }
+
+        function backToRegStep1() {
+            document.getElementById('reg-step-2').style.display = 'none';
+            document.getElementById('reg-step-1').style.display = 'block';
+            document.getElementById('step-dot-2').classList.remove('active');
+        }
 
 function resendRegOtp(e) {
 if (e) e.preventDefault();
@@ -727,15 +840,59 @@ const fullname = document.getElementById('reg-fullname').value.trim();
 const email = document.getElementById('reg-email').value.trim();
 if (!email) return;
 
+const resendBtn = document.getElementById('resend-otp-btn');
+if (resendBtn) {
+    resendBtn.innerText = 'Đang gửi lại...';
+    resendBtn.style.pointerEvents = 'none';
+}
+
+const otpInput = document.getElementById('reg-otp');
+if (otpInput) {
+    otpInput.value = '';
+    otpInput.focus();
+}
+const otpErrorEl = document.getElementById('reg-otp-error');
+if (otpErrorEl) otpErrorEl.style.display = 'none';
+
 $.ajax({
 url: '@Url.Action("SendOtp", "Account")',
 type: 'POST',
 data: { fullName: fullname, email: email },
 success: function (res) {
-showToast(res.message, res.success ? 'info' : 'error');
+    if (res.success) {
+        if (resendBtn) {
+            resendBtn.innerText = '✓ OTP đã được gửi lại vào email!';
+            resendBtn.style.color = '#10B981';
+            setTimeout(() => {
+                if (resendBtn) {
+                    resendBtn.innerText = 'Chưa nhận được mã? Gửi lại OTP';
+                    resendBtn.style.color = '#434CE8';
+                    resendBtn.style.pointerEvents = 'auto';
+                }
+            }, 4000);
+        }
+    } else {
+        if (otpErrorEl) {
+            otpErrorEl.innerText = res.message || 'Không thể gửi lại mã OTP!';
+            otpErrorEl.style.display = 'block';
+        }
+        if (resendBtn) {
+            resendBtn.innerText = 'Chưa nhận được mã? Gửi lại OTP';
+            resendBtn.style.color = '#434CE8';
+            resendBtn.style.pointerEvents = 'auto';
+        }
+    }
 },
 error: function () {
-showToast('Có lỗi kết nối khi gửi lại OTP!', 'error');
+    if (otpErrorEl) {
+        otpErrorEl.innerText = 'Có lỗi kết nối khi gửi lại OTP!';
+        otpErrorEl.style.display = 'block';
+    }
+    if (resendBtn) {
+        resendBtn.innerText = 'Chưa nhận được mã? Gửi lại OTP';
+        resendBtn.style.color = '#434CE8';
+        resendBtn.style.pointerEvents = 'auto';
+    }
 }
 });
 }
@@ -743,144 +900,269 @@ showToast('Có lỗi kết nối khi gửi lại OTP!', 'error');
 // --- BƯỚC 2 ĐĂNG KÝ: XÁC THỰC OTP QUA SERVER AJAX ---
 function goToRegStep3() {
 const email = document.getElementById('reg-email').value.trim();
-const otp = document.getElementById('reg-otp').value.trim();
-const otpErrorEl = document.getElementById('reg-otp-error');
 const otpInputEl = document.getElementById('reg-otp');
+const otp = otpInputEl ? otpInputEl.value.trim() : '';
+const otpErrorEl = document.getElementById('reg-otp-error');
 
+// 1. Kiểm tra 6 chữ số
 if (!otp || !/^\d{6}$/.test(otp)) {
 otpErrorEl.innerText = 'Vui lòng nhập đúng 6 chữ số mã OTP!';
 otpErrorEl.style.display = 'block';
-if (otpInputEl) otpInputEl.setAttribute('aria-invalid', 'true');
+if (otpInputEl) {
+    otpInputEl.setAttribute('aria-invalid', 'true');
+    otpInputEl.value = '';
+    otpInputEl.focus();
+}
 return;
 }
 otpErrorEl.style.display = 'none';
 if (otpInputEl) otpInputEl.setAttribute('aria-invalid', 'false');
 
-showToast('Đang kiểm tra mã OTP với máy chủ...', 'info');
+const verifyBtn = document.querySelector('#reg-step-2 button.btn-primary');
+if (verifyBtn) {
+    verifyBtn.disabled = true;
+    verifyBtn.innerText = 'Đang kiểm tra...';
+}
 
+// 2. Gửi AJAX kiểm tra tính đúng sai của mã OTP
 $.ajax({
 url: '@Url.Action("VerifyRegisterOtp", "Account")',
 type: 'POST',
 data: { email: email, otp: otp },
 success: function (res) {
+if (verifyBtn) {
+    verifyBtn.disabled = false;
+    verifyBtn.innerText = 'Xác thực OTP';
+}
+
+// Reset lại ô nhập OTP sau khi kiểm tra
+if (otpInputEl) {
+    otpInputEl.value = '';
+}
+
 if (res.success) {
+window.regVerifiedOtp = otp;
 document.getElementById('reg-step-2').style.display = 'none';
 document.getElementById('reg-step-3').style.display = 'block';
 document.getElementById('step-dot-2').classList.add('done');
 document.getElementById('step-dot-3').classList.add('active');
-showToast(res.message, 'success');
 }
 else
 {
-    otpErrorEl.innerText = res.message;
+    otpErrorEl.innerText = res.message || 'Mã OTP không đúng hoặc đã hết hạn!';
     otpErrorEl.style.display = 'block';
-    if (otpInputEl) otpInputEl.setAttribute('aria-invalid', 'true');
-    showToast(res.message, 'error');
+    if (otpInputEl) {
+        otpInputEl.setAttribute('aria-invalid', 'true');
+        otpInputEl.value = '';
+        otpInputEl.focus();
+    }
 }
 },
 error: function () {
-showToast('Có lỗi kết nối khi xác thực OTP với máy chủ!', 'error');
+if (verifyBtn) {
+    verifyBtn.disabled = false;
+    verifyBtn.innerText = 'Xác thực OTP';
 }
-});
-}
-
-// --- ĐO ĐỘ MẠNH MẬT KHẨU ---
-function checkPassStrength(val) {
-const bar = document.getElementById('strength-bar');
-const txt = document.getElementById('strength-text');
-let score = 0;
-if (val.length >= 8) score += 35;
-if (/[A-Z]/.test(val)) score += 25;
-if (/[0-9]/.test(val)) score += 20;
-if (/[^A-Za-z0-9]/.test(val)) score += 20;
-
-bar.style.width = score + '%';
-if (score < 40) {
-bar.style.backgroundColor = '#EF4444';
-txt.innerText = 'Độ mạnh: Rất yếu (< 8 ký tự)';
-txt.style.color = '#EF4444';
-}
-else if (score < 75)
-{
-    bar.style.backgroundColor = '#F59E0B';
-    txt.innerText = 'Độ mạnh: Trung bình';
-    txt.style.color = '#F59E0B';
-}
-else
-{
-    bar.style.backgroundColor = '#10B981';
-    txt.innerText = 'Độ mạnh: Rất mạnh (An toàn)';
-    txt.style.color = '#10B981';
-}
-}
-
-function backToRegStep2() {
-document.getElementById('reg-step-3').style.display = 'none';
-document.getElementById('reg-step-2').style.display = 'block';
-document.getElementById('step-dot-3').classList.remove('active');
-document.getElementById('step-dot-2').classList.remove('done');
-document.getElementById('step-dot-2').classList.add('active');
-}
-
-// --- BƯỚC 3 ĐĂNG KÝ: HOÀN TẤT ĐĂNG KÝ ---
-function completeRegister() {
-const fullname = document.getElementById('reg-fullname').value.trim();
-const email = document.getElementById('reg-email').value.trim();
-const otp = document.getElementById('reg-otp').value.trim();
-const p1 = document.getElementById('reg-pass').value;
-const p2 = document.getElementById('reg-pass-confirm').value;
-
-if (!p1) {
-showToast('Vui lòng nhập mật khẩu mới!', 'error');
-return;
-}
-if (p1.length < 8) {
-showToast('Mật khẩu phải từ 8 ký tự trở lên!', 'error');
-return;
-}
-if (p1 !== p2) {
-document.getElementById('reg-pass-match-error').style.display = 'block';
-showToast('Mật khẩu xác nhận không khớp!', 'error');
-return;
-}
-document.getElementById('reg-pass-match-error').style.display = 'none';
-
-const btn = document.getElementById('btn-complete-reg');
-if (btn) {
-btn.disabled = true;
-btn.innerText = 'Đang xử lý đăng ký...';
-}
-
-$.ajax({
-url: '@Url.Action("VerifyOtpAndRegister", "Account")',
-type: 'POST',
-data: { fullName: fullname, email: email, otp: otp, password: p1 },
-success: function (res) {
-if (res.success) {
-showToast(res.message, 'success');
-setTimeout(function () {
-window.location.href = res.redirectUrl || '@Url.Action("Index", "Home")';
-}, 1000);
-}
-else
-{
-    showToast(res.message, 'error');
-    if (btn) {
-    btn.disabled = false;
-    btn.innerText = 'Hoàn tất Đăng ký';
-}
-}
-},
-error: function (xhr, status, error) {
-console.error('Registration Error:', error);
-showToast('Có lỗi xảy ra trên máy chủ khi đăng ký. Vui lòng thử lại!', 'error');
-if (btn) {
-btn.disabled = false;
-btn.innerText = 'Hoàn tất Đăng ký';
+otpErrorEl.innerText = 'Có lỗi kết nối khi xác thực OTP với máy chủ!';
+otpErrorEl.style.display = 'block';
+if (otpInputEl) {
+    otpInputEl.value = '';
+    otpInputEl.focus();
 }
 }
 });
 }
+
+        // --- TỰ ĐỘNG CHECK VALIDATE THIẾT LẬP MẬT KHẨU DƯỚI HỆ THỐNG ---
+        // Không hiện lên giao diện, chỉ khi nào nhập thiếu các ràng buộc liên quan mới hiện thông báo
+        function getMissingPasswordRequirements(pass) {
+            const missing = [];
+            if (!pass || pass.length < 8) {
+                missing.push('tối thiểu 8 ký tự');
+            }
+            if (!pass || !/[A-Z]/.test(pass)) {
+                missing.push('chữ in hoa (A-Z)');
+            }
+            if (!pass || !/[0-9]/.test(pass)) {
+                missing.push('chữ số (0-9)');
+            }
+            if (!pass || !/[^A-Za-z0-9]/.test(pass)) {
+                missing.push('ký tự đặc biệt (!@@#$%^&*...)');
+            }
+            return missing;
+        }
+
+        function checkPassStrength(val) {
+            const passErrorEl = document.getElementById('reg-pass-error');
+            if (!passErrorEl) return;
+
+            // Nếu người dùng chưa nhập gì hoặc ô trống -> Tự động ẩn thông báo
+            if (!val || val.length === 0) {
+                passErrorEl.style.display = 'none';
+                return;
+            }
+
+            // Tự check validate dưới hệ thống, chỉ khi nào nhập thiếu các ràng buộc mới hiện thông báo
+            const missing = getMissingPasswordRequirements(val);
+            if (missing.length > 0) {
+                passErrorEl.innerText = 'Mật khẩu còn thiếu: ' + missing.join(', ') + '.';
+                passErrorEl.style.display = 'block';
+                passErrorEl.style.color = '#EF4444';
+            } else {
+                // Đủ tất cả ràng buộc -> Ẩn thông báo lỗi
+                passErrorEl.style.display = 'none';
+            }
+        }
+
+        function toggleRegPasswords(show) {
+            const p1 = document.getElementById('reg-pass');
+            const p2 = document.getElementById('reg-pass-confirm');
+            const type = show ? 'text' : 'password';
+            if (p1) p1.type = type;
+            if (p2) p2.type = type;
+        }
+
+        function backToRegStep2() {
+            document.getElementById('reg-step-3').style.display = 'none';
+            document.getElementById('reg-step-2').style.display = 'block';
+            document.getElementById('step-dot-3').classList.remove('active');
+            document.getElementById('step-dot-2').classList.remove('done');
+            document.getElementById('step-dot-2').classList.add('active');
+
+            const passErrorEl = document.getElementById('reg-pass-error');
+            if (passErrorEl) passErrorEl.style.display = 'none';
+            const matchErrorEl = document.getElementById('reg-pass-match-error');
+            if (matchErrorEl) matchErrorEl.style.display = 'none';
+
+            const showPassCb = document.getElementById('show-reg-passwords');
+            if (showPassCb) {
+                showPassCb.checked = false;
+                toggleRegPasswords(false);
+            }
+
+            const otpInputEl = document.getElementById('reg-otp');
+            if (otpInputEl) {
+                otpInputEl.value = '';
+                otpInputEl.focus();
+            }
+        }
+
+        // --- BƯỚC 3 ĐĂNG KÝ: HOÀN TẤT ĐĂNG KÝ ---
+        function completeRegister() {
+            const fullname = document.getElementById('reg-fullname').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const otp = (document.getElementById('reg-otp') ? document.getElementById('reg-otp').value.trim() : '') || window.regVerifiedOtp || '';
+            const p1 = document.getElementById('reg-pass').value;
+            const p2 = document.getElementById('reg-pass-confirm').value;
+
+            const passErrorEl = document.getElementById('reg-pass-error');
+            if (passErrorEl) passErrorEl.style.display = 'none';
+
+            if (!p1) {
+                if (passErrorEl) {
+                    passErrorEl.innerText = 'Vui lòng nhập mật khẩu mới!';
+                    passErrorEl.style.display = 'block';
+                }
+                showToast('Vui lòng nhập mật khẩu mới!', 'error');
+                return;
+            }
+
+            const missing = getMissingPasswordRequirements(p1);
+            if (missing.length > 0) {
+                const msg = 'Mật khẩu còn thiếu: ' + missing.join(', ') + '.';
+                if (passErrorEl) {
+                    passErrorEl.innerText = msg;
+                    passErrorEl.style.display = 'block';
+                }
+                showToast(msg, 'error');
+                return;
+            }
+
+            if (p1 !== p2) {
+                document.getElementById('reg-pass-match-error').style.display = 'block';
+                showToast('Mật khẩu xác nhận không khớp!', 'error');
+                return;
+            }
+            document.getElementById('reg-pass-match-error').style.display = 'none';
+
+            const btn = document.getElementById('btn-complete-reg');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = 'Đang xử lý đăng ký...';
+            }
+
+            $.ajax({
+                url: '@Url.Action("VerifyOtpAndRegister", "Account")',
+                type: 'POST',
+                data: { fullName: fullname, email: email, otp: otp, password: p1 },
+                success: function (res) {
+                    if (res.success) {
+                        showToast(res.message || 'Đăng ký tài khoản thành công! Vui lòng đăng nhập.', 'success');
+
+                        // Reset các trường nhập liệu của form đăng ký
+                        document.getElementById('reg-fullname').value = '';
+                        document.getElementById('reg-email').value = '';
+                        if (document.getElementById('reg-otp')) document.getElementById('reg-otp').value = '';
+                        document.getElementById('reg-pass').value = '';
+                        document.getElementById('reg-pass-confirm').value = '';
+                        window.regVerifiedOtp = null;
+
+                        const showPassCb = document.getElementById('show-reg-passwords');
+                        if (showPassCb) {
+                            showPassCb.checked = false;
+                            toggleRegPasswords(false);
+                        }
+
+                        // Reset các bước đăng ký về bước 1
+                        document.getElementById('reg-step-3').style.display = 'none';
+                        document.getElementById('reg-step-2').style.display = 'none';
+                        document.getElementById('reg-step-1').style.display = 'block';
+                        document.getElementById('step-dot-1').className = 'step-item active';
+                        document.getElementById('step-dot-2').className = 'step-item';
+                        document.getElementById('step-dot-3').className = 'step-item';
+
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerText = 'Hoàn tất Đăng ký';
+                        }
+
+                        // Chuyển sang form Login và điền sẵn email vừa đăng ký
+                        setTimeout(function () {
+                            switchAuthMode('login');
+                            const loginEmailInput = document.getElementById('login-email');
+                            if (loginEmailInput) {
+                                loginEmailInput.value = email;
+                            }
+                            const loginPassInput = document.getElementById('login-password');
+                            if (loginPassInput) {
+                                loginPassInput.value = '';
+                                loginPassInput.focus();
+                            }
+                        }, 800);
+                    }
+                    else
+                    {
+                        if (passErrorEl) {
+                            passErrorEl.innerText = res.message;
+                            passErrorEl.style.display = 'block';
+                        }
+                        showToast(res.message, 'error');
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerText = 'Hoàn tất Đăng ký';
+                        }
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Registration Error:', error);
+                    showToast('Có lỗi xảy ra trên máy chủ khi đăng ký. Vui lòng thử lại!', 'error');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = 'Hoàn tất Đăng ký';
+                    }
+                }
+            });
+        }
 
 // --- KHÔI PHỤC MẬT KHẨU (3 BƯỚC) ---
 // Bước 1: Gửi mã OTP về Email
@@ -902,11 +1184,11 @@ return;
 
 if (!isValidEmailFormat(email)) {
 if (emailErrorEl) {
-emailErrorEl.innerText = 'Định dạng Email không hợp lệ! Vui lòng nhập đủ ký tự @@, tên miền và đuôi (ví dụ: example@@gmail.com)';
+emailErrorEl.innerText = 'Định dạng Email không hợp lệ!';
 emailErrorEl.style.display = 'block';
 }
 if (emailInput) emailInput.setAttribute('aria-invalid', 'true');
-showToast('Định dạng Email không hợp lệ! Vui lòng kiểm tra lại.', 'error');
+showToast('Định dạng Email không hợp lệ!', 'error');
 return;
 }
 
@@ -934,7 +1216,6 @@ document.getElementById('forgot-target-email').innerText = email;
 document.getElementById('forgot-step-1').style.display = 'none';
 document.getElementById('forgot-step-2').style.display = 'block';
 document.getElementById('forgot-step-3').style.display = 'none';
-showToast(res.message, 'info');
 }
 else
 {
@@ -954,164 +1235,208 @@ showToast('Có lỗi kết nối máy chủ!', 'error');
 });
 }
 
+function cancelForgotPassword() {
+    switchAuthMode('login');
+}
+
 function backToForgotStep1() {
-document.getElementById('forgot-step-2').style.display = 'none';
-document.getElementById('forgot-step-3').style.display = 'none';
-document.getElementById('forgot-step-1').style.display = 'block';
+    document.getElementById('forgot-step-2').style.display = 'none';
+    document.getElementById('forgot-step-3').style.display = 'none';
+    document.getElementById('forgot-step-1').style.display = 'block';
+    const otpInput = document.getElementById('forgot-otp');
+    if (otpInput) otpInput.value = '';
+    const otpErr = document.getElementById('forgot-otp-error');
+    if (otpErr) otpErr.style.display = 'none';
 }
 
 function resendForgotOtp(e) {
-if (e) e.preventDefault();
-const email = document.getElementById('forgot-email').value.trim();
-if (!email) return;
+    if (e) e.preventDefault();
+    const email = document.getElementById('forgot-email').value.trim();
+    if (!email) return;
 
-showToast('Đang gửi lại mã OTP...', 'info');
-
-$.ajax({
-url: '@Url.Action("SendForgotOtp", "Account")',
-type: 'POST',
-data: { email: email },
-success: function (res) {
-showToast(res.message, res.success ? 'info' : 'error');
-},
-error: function () {
-showToast('Có lỗi kết nối khi gửi lại OTP!', 'error');
-}
-});
+    $.ajax({
+        url: '@Url.Action("SendForgotOtp", "Account")',
+        type: 'POST',
+        data: { email: email },
+        success: function (res) {
+            if (res.success) {
+                const otpInput = document.getElementById('forgot-otp');
+                if (otpInput) {
+                    otpInput.value = '';
+                    otpInput.focus();
+                }
+                const otpErr = document.getElementById('forgot-otp-error');
+                if (otpErr) otpErr.style.display = 'none';
+            } else {
+                showToast(res.message, 'error');
+            }
+        },
+        error: function () {
+            showToast('Có lỗi kết nối khi gửi lại OTP!', 'error');
+        }
+    });
 }
 
 // Bước 2: Xác nhận mã OTP duy nhất
 function handleVerifyForgotOtp(e) {
-e.preventDefault();
-const email = document.getElementById('forgot-email').value.trim();
-const otp = document.getElementById('forgot-otp').value.trim();
+    e.preventDefault();
+    const email = document.getElementById('forgot-email').value.trim();
+    const otp = document.getElementById('forgot-otp').value.trim();
 
-if (otp.length < 6) {
-document.getElementById('forgot-otp-error').innerText = 'Vui lòng nhập đủ 6 chữ số mã OTP!';
-document.getElementById('forgot-otp-error').style.display = 'block';
-return;
-}
-document.getElementById('forgot-otp-error').style.display = 'none';
+    if (otp.length < 6) {
+        document.getElementById('forgot-otp-error').innerText = 'Vui lòng nhập đủ 6 chữ số mã OTP!';
+        document.getElementById('forgot-otp-error').style.display = 'block';
+        return;
+    }
+    document.getElementById('forgot-otp-error').style.display = 'none';
 
-const btn = document.getElementById('btn-verify-forgot-otp');
-if (btn) {
-btn.disabled = true;
-btn.innerText = 'Đang xác thực OTP...';
-}
+    const btn = document.getElementById('btn-verify-forgot-otp');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Đang xác thực OTP...';
+    }
 
-$.ajax({
-url: '@Url.Action("VerifyForgotOtp", "Account")',
-type: 'POST',
-data: { email: email, otp: otp },
-success: function (res) {
-if (btn) {
-btn.disabled = false;
-btn.innerText = 'Xác nhận mã OTP';
-}
-if (res.success) {
-document.getElementById('forgot-step-2').style.display = 'none';
-document.getElementById('forgot-step-3').style.display = 'block';
-}
-else
-{
-    document.getElementById('forgot-otp-error').innerText = res.message;
-    document.getElementById('forgot-otp-error').style.display = 'block';
-    showToast(res.message, 'error');
-}
-},
-error: function () {
-if (btn) {
-btn.disabled = false;
-btn.innerText = 'Xác nhận mã OTP';
-}
-showToast('Lỗi kết nối khi xác thực OTP!', 'error');
-}
-});
+    $.ajax({
+        url: '@Url.Action("VerifyForgotOtp", "Account")',
+        type: 'POST',
+        data: { email: email, otp: otp },
+        success: function (res) {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = 'Xác nhận mã OTP';
+            }
+            if (res.success) {
+                document.getElementById('forgot-step-2').style.display = 'none';
+                document.getElementById('forgot-step-3').style.display = 'block';
+                const p1 = document.getElementById('forgot-new-pass');
+                if (p1) p1.focus();
+            }
+            else
+            {
+                document.getElementById('forgot-otp-error').innerText = res.message;
+                document.getElementById('forgot-otp-error').style.display = 'block';
+                showToast(res.message, 'error');
+            }
+        },
+        error: function () {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = 'Xác nhận mã OTP';
+            }
+            showToast('Lỗi kết nối khi xác thực OTP!', 'error');
+        }
+    });
 }
 
 function checkForgotPassStrength(val) {
-const bar = document.getElementById('forgot-strength-bar');
-const txt = document.getElementById('forgot-strength-text');
-let score = 0;
-if (val.length >= 8) score += 35;
-if (/[A-Z]/.test(val)) score += 25;
-if (/[0-9]/.test(val)) score += 20;
-if (/[^A-Za-z0-9]/.test(val)) score += 20;
+    const passErrorEl = document.getElementById('forgot-new-pass-error');
+    if (!passErrorEl) return;
 
-bar.style.width = score + '%';
-if (score < 40) {
-bar.style.backgroundColor = '#EF4444';
-txt.innerText = 'Độ mạnh: Rất yếu';
-txt.style.color = '#EF4444';
+    if (!val || val.length === 0) {
+        passErrorEl.style.display = 'none';
+        return;
+    }
+
+    const missing = getMissingPasswordRequirements(val);
+    if (missing.length > 0) {
+        passErrorEl.innerText = 'Mật khẩu còn thiếu: ' + missing.join(', ') + '.';
+        passErrorEl.style.display = 'block';
+        passErrorEl.style.color = '#EF4444';
+    } else {
+        passErrorEl.style.display = 'none';
+    }
 }
-else if (score < 75)
-{
-    bar.style.backgroundColor = '#F59E0B';
-    txt.innerText = 'Độ mạnh: Trung bình';
-    txt.style.color = '#F59E0B';
-}
-else
-{
-    bar.style.backgroundColor = '#10B981';
-    txt.innerText = 'Độ mạnh: Rất mạnh';
-    txt.style.color = '#10B981';
-}
+
+function toggleForgotPasswords(show) {
+    const p1 = document.getElementById('forgot-new-pass');
+    const p2 = document.getElementById('forgot-confirm-pass');
+    const type = show ? 'text' : 'password';
+    if (p1) p1.type = type;
+    if (p2) p2.type = type;
 }
 
 // Bước 3: Thiết lập mật khẩu mới
 function handleResetPasswordSubmit(e) {
-e.preventDefault();
-const email = document.getElementById('forgot-email').value.trim();
-const otp = document.getElementById('forgot-otp').value.trim();
-const p1 = document.getElementById('forgot-new-pass').value;
-const p2 = document.getElementById('forgot-confirm-pass').value;
+    e.preventDefault();
+    const email = document.getElementById('forgot-email').value.trim();
+    const otp = document.getElementById('forgot-otp').value.trim();
+    const p1 = document.getElementById('forgot-new-pass').value;
+    const p2 = document.getElementById('forgot-confirm-pass').value;
 
-if (p1.length < 8) {
-showToast('Mật khẩu tối thiểu phải 8 ký tự!', 'error');
-return;
-}
-if (p1 !== p2) {
-document.getElementById('forgot-pass-match-error').style.display = 'block';
-showToast('Mật khẩu xác nhận không khớp!', 'error');
-return;
-}
-document.getElementById('forgot-pass-match-error').style.display = 'none';
+    const passErrorEl = document.getElementById('forgot-new-pass-error');
+    const matchErrorEl = document.getElementById('forgot-pass-match-error');
 
-const btn = document.getElementById('btn-reset-password');
-if (btn) {
-btn.disabled = true;
-btn.innerText = 'Đang cập nhật mật khẩu...';
-}
+    const missing = getMissingPasswordRequirements(p1);
+    if (missing.length > 0) {
+        if (passErrorEl) {
+            passErrorEl.innerText = 'Mật khẩu còn thiếu: ' + missing.join(', ') + '.';
+            passErrorEl.style.display = 'block';
+            passErrorEl.style.color = '#EF4444';
+        }
+        showToast('Mật khẩu chưa đáp ứng đầy đủ yêu cầu bảo mật!', 'error');
+        return;
+    } else {
+        if (passErrorEl) passErrorEl.style.display = 'none';
+    }
 
-$.ajax({
-url: '@Url.Action("ResetPassword", "Account")',
-type: 'POST',
-data: { email: email, otp: otp, newPassword: p1 },
-success: function (res) {
-if (btn) {
-btn.disabled = false;
-btn.innerText = 'Thiết lập mật khẩu mới';
-}
-if (res.success) {
-showToast(res.message, 'success');
-setTimeout(function () {
-switchAuthMode('login');
-document.getElementById('login-email').value = email;
-}, 1200);
-}
-else
-{
-    showToast(res.message, 'error');
-}
-},
-error: function () {
-if (btn) {
-btn.disabled = false;
-btn.innerText = 'Thiết lập mật khẩu mới';
-}
-showToast('Có lỗi xảy ra khi đặt lại mật khẩu!', 'error');
-}
-});
+    if (p1 !== p2) {
+        if (matchErrorEl) matchErrorEl.style.display = 'block';
+        showToast('Mật khẩu xác nhận không khớp!', 'error');
+        return;
+    }
+    if (matchErrorEl) matchErrorEl.style.display = 'none';
+
+    const btn = document.getElementById('btn-reset-password');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Đang cập nhật mật khẩu...';
+    }
+
+    $.ajax({
+        url: '@Url.Action("ResetPassword", "Account")',
+        type: 'POST',
+        data: { email: email, otp: otp, newPassword: p1 },
+        success: function (res) {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = 'Thiết lập mật khẩu mới';
+            }
+            if (res.success) {
+                // Reset form values
+                document.getElementById('forgot-email').value = '';
+                document.getElementById('forgot-otp').value = '';
+                document.getElementById('forgot-new-pass').value = '';
+                document.getElementById('forgot-confirm-pass').value = '';
+                const chk = document.getElementById('show-forgot-passwords');
+                if (chk) {
+                    chk.checked = false;
+                    toggleForgotPasswords(false);
+                }
+
+                switchAuthMode('login');
+                document.getElementById('login-email').value = email;
+                const loginPass = document.getElementById('login-password');
+                if (loginPass) loginPass.focus();
+            }
+            else
+            {
+                showToast(res.message, 'error');
+                if (res.message && res.message.includes('Mật khẩu')) {
+                    if (passErrorEl) {
+                        passErrorEl.innerText = res.message;
+                        passErrorEl.style.display = 'block';
+                    }
+                }
+            }
+        },
+        error: function () {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = 'Thiết lập mật khẩu mới';
+            }
+            showToast('Có lỗi xảy ra khi đặt lại mật khẩu!', 'error');
+        }
+    });
 }
 
 // --- GẮN EVENT LISTENERS KIỂM TRA ĐỊNH DẠNG EMAIL TỰ ĐỘNG KHÔNG CẦN CHỜ SUBMIT ---
@@ -1147,10 +1472,82 @@ return false;
 });
 }
 
+bindFullNameInputEvents();
 bindEmailInputEvents('reg-email', 'reg-email-error');
 bindEmailInputEvents('login-email', 'login-email-error');
 bindEmailInputEvents('forgot-email', 'forgot-email-error');
+
+const regPassInput = document.getElementById('reg-pass');
+const regPassConfirmInput = document.getElementById('reg-pass-confirm');
+if (regPassConfirmInput && regPassInput) {
+    regPassConfirmInput.addEventListener('input', function () {
+        const matchError = document.getElementById('reg-pass-match-error');
+        if (matchError && this.value === regPassInput.value) {
+            matchError.style.display = 'none';
+        }
+    });
+}
+
+const forgotPassInput = document.getElementById('forgot-new-pass');
+const forgotPassConfirmInput = document.getElementById('forgot-confirm-pass');
+if (forgotPassConfirmInput && forgotPassInput) {
+    forgotPassConfirmInput.addEventListener('input', function () {
+        const matchError = document.getElementById('forgot-pass-match-error');
+        if (matchError && this.value === forgotPassInput.value) {
+            matchError.style.display = 'none';
+        }
+    });
+}
 });
+
+function bindFullNameInputEvents() {
+    const input = document.getElementById('reg-fullname');
+    const errorEl = document.getElementById('reg-fullname-error');
+    if (!input || !errorEl) return;
+
+    input.addEventListener('input', function () {
+        const val = this.value;
+        if (!val || val.length === 0) {
+            errorEl.style.display = 'none';
+            input.setAttribute('aria-invalid', 'false');
+            return;
+        }
+        const hasDigit = /[0-9]/.test(val);
+        const hasSpecial = /[^\p{L}\s0-9]/u.test(val);
+
+        if (hasDigit && hasSpecial) {
+            errorEl.innerText = 'Họ và tên chỉ được chứa chữ cái, không được chứa chữ số và ký tự đặc biệt!';
+            errorEl.style.display = 'block';
+            input.setAttribute('aria-invalid', 'true');
+        } else if (hasDigit) {
+            errorEl.innerText = 'Họ và tên không được chứa chữ số (0-9)!';
+            errorEl.style.display = 'block';
+            input.setAttribute('aria-invalid', 'true');
+        } else if (hasSpecial) {
+            errorEl.innerText = 'Họ và tên không được chứa ký tự đặc biệt!';
+            errorEl.style.display = 'block';
+            input.setAttribute('aria-invalid', 'true');
+        } else {
+            errorEl.style.display = 'none';
+            input.setAttribute('aria-invalid', 'false');
+        }
+    });
+
+    input.addEventListener('blur', function () {
+        const val = this.value.trim();
+        if (val) {
+            const err = validateFullName(val);
+            if (err) {
+                errorEl.innerText = err;
+                errorEl.style.display = 'block';
+                input.setAttribute('aria-invalid', 'true');
+            } else {
+                errorEl.style.display = 'none';
+                input.setAttribute('aria-invalid', 'false');
+            }
+        }
+    });
+}
 
 function bindEmailInputEvents(inputId, errorId) {
 const input = document.getElementById(inputId);
@@ -1161,7 +1558,7 @@ input.addEventListener('blur', function () {
 const val = input.value.trim();
 if (val && !isValidEmailFormat(val)) {
 if (errorEl) {
-errorEl.innerText = 'Định dạng Email không hợp lệ! Vui lòng nhập đủ ký tự @@, tên miền và đuôi (ví dụ: tenban@@gmail.com)';
+errorEl.innerText = 'Định dạng Email không hợp lệ!';
 errorEl.style.display = 'block';
 }
 input.setAttribute('aria-invalid', 'true');

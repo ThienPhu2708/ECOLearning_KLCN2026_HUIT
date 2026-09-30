@@ -14,6 +14,11 @@ namespace ECOLearning.Controllers
         // GET: Course (UC4: Tìm kiếm & Lọc nâng cao đa tiêu chí)
         public ActionResult Index(string search, string category, bool? isFree, bool? isPaid, string level, double? minRating, string sort)
         {
+            if (!User.Identity.IsAuthenticated && Session["UserId"] == null)
+            {
+                return RedirectToAction("Login", "Account", new { returnUrl = Request.RawUrl });
+            }
+
             var query = db.KhoaHoc
                 .Include(k => k.NguoiDung)
                 .Include(k => k.DanhMuc)
@@ -94,6 +99,11 @@ namespace ECOLearning.Controllers
         // GET: Course/Details/5 (Chi tiết khóa học & Video Preview)
         public ActionResult Details(string id)
         {
+            if (!User.Identity.IsAuthenticated && Session["UserId"] == null)
+            {
+                return RedirectToAction("Login", "Account", new { returnUrl = Request.RawUrl });
+            }
+
             if (string.IsNullOrEmpty(id))
             {
                 var firstCourse = db.KhoaHoc.FirstOrDefault(k => k.trangThai == "Đã xuất bản" || k.trangThai == "Đã duyệt" || k.trangThai == "Active");
@@ -129,9 +139,14 @@ namespace ECOLearning.Controllers
             }
 
             // Cho phép Giảng viên tạo khóa học hoặc Admin xem thử khóa học chưa duyệt
-            var currentUser = Session["User"] as NguoiDung;
-            var sessionRole = Session["Role"]?.ToString();
             int currentUserId = (Session["UserId"] as int?) ?? 0;
+            var currentUser = Session["User"] as NguoiDung;
+            if (currentUser == null && currentUserId > 0)
+            {
+                currentUser = db.NguoiDung.Find(currentUserId);
+                Session["User"] = currentUser;
+            }
+            var sessionRole = Session["Role"]?.ToString();
             bool isOwnerOrAdmin = (sessionRole == "Admin" || (course.maGiaoVien == currentUserId && currentUserId > 0));
 
             if (!isOwnerOrAdmin && course.trangThai != "Đã xuất bản" && course.trangThai != "Đã duyệt" && course.trangThai != "Active")
@@ -159,7 +174,94 @@ namespace ECOLearning.Controllers
                 .ToList();
             ViewBag.Chapters = chapters;
 
+            var unchapteredLessons = db.BaiHoc
+                .Where(b => b.maChuong == null && b.maBaiHoc.StartsWith(course.maKhoaHoc + "_"))
+                .OrderBy(b => b.thuTu)
+                .ToList();
+            ViewBag.UnchapteredLessons = unchapteredLessons;
+
             return View(course);
+        }
+
+        // POST: Course/EnrollFree
+        [HttpPost]
+        public ActionResult EnrollFree(string courseId)
+        {
+            int currentUserId = (Session["UserId"] as int?) ?? 0;
+            var currentUser = Session["User"] as NguoiDung;
+            if (currentUser == null && currentUserId > 0)
+            {
+                currentUser = db.NguoiDung.Find(currentUserId);
+                Session["User"] = currentUser;
+            }
+
+            if (currentUser == null)
+            {
+                return Json(new
+                {
+                    success = false,
+                    requireLogin = true,
+                    message = "Vui lòng đăng nhập để đăng ký khóa học!"
+                });
+            }
+
+            if (string.IsNullOrEmpty(courseId))
+            {
+                return Json(new { success = false, message = "Mã khóa học không hợp lệ!" });
+            }
+
+            var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == courseId);
+            if (course == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy khóa học!" });
+            }
+
+            // Kiểm tra giá: chỉ cho phép đăng ký trực tiếp nếu giá = 0 hoặc khuyến mãi = 0
+            decimal effectivePrice = (course.giaKhuyenMai.HasValue && course.giaKhuyenMai.Value >= 0 && course.giaKhuyenMai.Value < course.giaBan)
+                ? course.giaKhuyenMai.Value
+                : course.giaBan;
+
+            if (effectivePrice > 0)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = "Khóa học này có học phí. Vui lòng thêm vào giỏ hàng và tiến hành thanh toán!"
+                });
+            }
+
+            // Kiểm tra đã đăng ký chưa
+            var existingDK = db.DangKyKhoaHoc.FirstOrDefault(d => d.maHocVien == currentUser.maNguoiDung && d.maKhoaHoc == courseId);
+            if (existingDK != null)
+            {
+                return Json(new
+                {
+                    success = true,
+                    isAlreadyEnrolled = true,
+                    message = "Bạn đã đăng ký khóa học này rồi! Đang chuyển đến không gian học tập...",
+                    redirectUrl = Url.Action("MyCourses", "Learning")
+                });
+            }
+
+            // Tạo bản ghi đăng ký mới (maDangKy tối đa 20 ký tự)
+            string dkId = "DK" + DateTime.Now.ToString("yyMMddHHmmss") + (new Random().Next(1000, 9999));
+            var dk = new DangKyKhoaHoc
+            {
+                maDangKy = dkId,
+                ngayDangKy = DateTime.Now,
+                trangThaiDK = "Đã kích hoạt",
+                maHocVien = currentUser.maNguoiDung,
+                maKhoaHoc = courseId
+            };
+            db.DangKyKhoaHoc.Add(dk);
+            db.SaveChanges();
+
+            return Json(new
+            {
+                success = true,
+                message = "Đăng ký khóa học thành công! Đang chuyển đến trang Khóa học của tôi...",
+                redirectUrl = Url.Action("MyCourses", "Learning")
+            });
         }
 
         protected override void Dispose(bool disposing)

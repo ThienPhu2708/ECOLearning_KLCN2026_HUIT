@@ -196,6 +196,51 @@ namespace ECOLearning.Areas.Admin.Controllers
                 }
             }
 
+            // Bài học không phân chương (maChuong == null)
+            var unchapteredLessons = db.BaiHoc
+                .Where(b => b.maChuong == null && b.maBaiHoc.StartsWith(k.maKhoaHoc + "_"))
+                .OrderBy(b => b.thuTu)
+                .ToList();
+
+            if (unchapteredLessons.Any())
+            {
+                var chDetail = new ChuongHocDetail
+                {
+                    MaChuong = "no_chapter",
+                    TenChuong = "Bài học độc lập (Không phân chương)"
+                };
+
+                foreach (var bh in unchapteredLessons)
+                {
+                    var bhDetail = new BaiHocDetail
+                    {
+                        MaBaiHoc = bh.maBaiHoc,
+                        TenBaiHoc = bh.tenBaiHoc,
+                        VideoUrl = bh.duongDanVideo,
+                        ThoiLuong = bh.thoiLuong,
+                        CoXemThu = bh.choXemThu
+                    };
+
+                    if (bh.TaiNguyen != null)
+                    {
+                        foreach (var tn in bh.TaiNguyen)
+                        {
+                            bhDetail.TaiNguyens.Add(new TaiNguyenDetail
+                            {
+                                MaTaiNguyen = tn.maTaiNguyen,
+                                TenTaiNguyen = tn.tenTaiNguyen,
+                                FileUrl = tn.duongDan,
+                                LoaiFile = tn.loaiTaiNguyen
+                            });
+                        }
+                    }
+
+                    chDetail.BaiHocs.Add(bhDetail);
+                }
+
+                detail.ChuongHocs.Add(chDetail);
+            }
+
             return Json(new { success = true, data = detail }, JsonRequestBehavior.AllowGet);
         }
 

@@ -1,34 +1,55 @@
 @model List<ECOLearning.Models.KhoaHoc>
 @{
-ViewBag.Title = "Trang Chủ - Nền tảng Đào tạo Trực tuyến";
-bool isLoggedIn = User.Identity.IsAuthenticated || Session["UserId"] != null;
-var courses = Model ?? new List<ECOLearning.Models.KhoaHoc>();
-var categories = ViewBag.Categories as List<ECOLearning.Models.DanhMuc> ?? new List<ECOLearning.Models.DanhMuc>();
+    bool isLoggedIn = User.Identity.IsAuthenticated || Session["UserId"] != null;
+    ViewBag.Title = isLoggedIn ? "Trang Chủ - Nền tảng Đào tạo Trực tuyến" : "Chào mừng đến với ECOLearning";
+    var courses = Model ?? new List<ECOLearning.Models.KhoaHoc>();
+    var categories = ViewBag.Categories as List<ECOLearning.Models.DanhMuc> ?? new List<ECOLearning.Models.DanhMuc>();
 
-var iconStyles = new[] {
-new { Icon = "bi-laptop", Bg = "#EEF2FF", Color = "#434CE8" },
-new { Icon = "bi-palette", Bg = "#FFF7ED", Color = "#EA580C" },
-new { Icon = "bi-bar-chart-line", Bg = "#ECFDF5", Color = "#10B981" },
-new { Icon = "bi-rocket-takeoff", Bg = "#F0F9FF", Color = "#0284C7" },
-new { Icon = "bi-code-slash", Bg = "#F3E8FF", Color = "#9333EA" },
-new { Icon = "bi-megaphone", Bg = "#FCE7F3", Color = "#DB2777" },
-new { Icon = "bi-briefcase", Bg = "#FEF3C7", Color = "#D97706" }
-};
+    var iconStyles = new[] {
+        new { Icon = "bi-laptop", Bg = "#EEF2FF", Color = "#434CE8" },
+        new { Icon = "bi-palette", Bg = "#FFF7ED", Color = "#EA580C" },
+        new { Icon = "bi-bar-chart-line", Bg = "#ECFDF5", Color = "#10B981" },
+        new { Icon = "bi-rocket-takeoff", Bg = "#F0F9FF", Color = "#0284C7" },
+        new { Icon = "bi-code-slash", Bg = "#F3E8FF", Color = "#9333EA" },
+        new { Icon = "bi-megaphone", Bg = "#FCE7F3", Color = "#DB2777" },
+        new { Icon = "bi-briefcase", Bg = "#FEF3C7", Color = "#D97706" }
+    };
 }
 
 <!-- Hero Section -->
-<section class="hero-section" style="margin: 0 !important; padding-top: 40px; padding-bottom: 72px; background: #FFFFFF; border-bottom: 1px solid var(--border-color, #E2E8F0); position: relative; overflow: hidden;">
+<section class="hero-section" style="margin: 0 !important; padding-top: 48px; padding-bottom: 72px; background: #FFFFFF; border-bottom: 1px solid var(--border-color, #E2E8F0); position: relative; overflow: hidden;">
     <div class="safe-container">
         <div style="display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 48px; align-items: center;">
             <div>
                 <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background-color: var(--primary-light, #EEF2FF); color: var(--primary, #434CE8); border: 1px solid #C7D2FE; font-size: 13px; font-weight: 700; border-radius: 9999px; margin-bottom: 20px; letter-spacing: 0.05em;">
-                    <i class="bi bi-stars"></i> LEARNING, MADE PERSONAL
+                    @if (isLoggedIn)
+                    {
+                        <text><i class="bi bi-stars"></i> LEARNING, MADE PERSONAL</text>
+                    }
+                    else
+                    {
+                        <text><i class="bi bi-shield-check"></i> NỀN TẢNG ĐÀO TẠO TRỰC TUYẾN CHUẨN MỰC</text>
+                    }
                 </div>
                 <h1 style="font-size: var(--fs-h1, 40px); line-height: 48px; font-weight: 800; color: var(--text-heading, #0F172A); margin-bottom: 20px;">
-                    Tìm kiếm khóa học phù hợp cho lộ trình phát triển của bạn
+                    @if (isLoggedIn)
+                    {
+                        <span>Tìm kiếm khóa học phù hợp cho lộ trình phát triển của bạn</span>
+                    }
+                    else
+                    {
+                        <span>Khởi đầu hành trình chinh phục tri thức cùng ECOLearning</span>
+                    }
                 </h1>
                 <p style="font-size: 17px; line-height: 28px; color: var(--text-secondary, #475569); margin-bottom: 32px; max-width: 520px;">
-                    Khám phá hàng trăm khóa học trực tuyến thực chiến từ các chuyên gia hàng đầu. Hệ thống tự động đề xuất dựa trên sở thích và định hướng phát triển sự nghiệp của bạn.
+                    @if (isLoggedIn)
+                    {
+                        <span>Khám phá hàng trăm khóa học trực tuyến thực chiến từ các chuyên gia hàng đầu. Hệ thống tự động đề xuất dựa trên sở thích và định hướng phát triển sự nghiệp của bạn.</span>
+                    }
+                    else
+                    {
+                        <span>Hệ thống đào tạo trực tuyến chuẩn mực kết hợp lý thuyết và dự án thực tế. Đăng nhập ngay hôm nay để truy cập trang chủ, mở khóa hàng trăm khóa học chất lượng cao và đồng hành cùng chuyên gia.</span>
+                    }
                 </p>
                 <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
                     @if (isLoggedIn)
@@ -38,14 +59,18 @@ new { Icon = "bi-briefcase", Bg = "#FEF3C7", Color = "#D97706" }
                     }
                     else
                     {
-                        <a href="@Url.Action("Login", "Account", new { area = "", mode = "login" })" class="btn btn-primary btn-lg" style="text-decoration: none;">Đăng nhập ngay</a>
-                        <a href="@Url.Action("Login", "Account", new { area = "", mode = "register" })" class="btn btn-outline btn-lg" style="text-decoration: none;">Đăng ký tài khoản miễn phí</a>
+                        <a href="@Url.Action("Login", "Account", new { area = "", mode = "login" })" class="btn btn-primary btn-lg" style="text-decoration: none; padding: 14px 28px; font-weight: 700; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 14px rgba(67, 76, 232, 0.35);">
+                            <i class="bi bi-box-arrow-in-right" style="font-size: 18px;"></i> Đăng nhập hệ thống
+                        </a>
+                        <a href="@Url.Action("Login", "Account", new { area = "", mode = "register" })" class="btn btn-outline btn-lg" style="text-decoration: none; padding: 14px 28px; font-weight: 700; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px;">
+                            <i class="bi bi-person-plus" style="font-size: 18px;"></i> Đăng ký tài khoản mới
+                        </a>
                     }
                 </div>
             </div>
 
             <div style="position: relative; background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%); border-radius: var(--radius-3xl, 24px); padding: 30px; box-shadow: 0 20px 40px -15px rgba(67, 76, 232, 0.15); min-height: 380px; display: flex; align-items: center; justify-content: center;">
-                <img src="assets/images/banners/hero_section.jpg"
+                <img src="@Url.Content("~/assets/images/banners/hero_section.jpg")"
                 alt="E-Learning Illustration"
                 style="width: 100%; max-width: 440px; border-radius: 18px; object-fit: cover; box-shadow: var(--shadow-card);" />
 
@@ -60,6 +85,19 @@ new { Icon = "bi-briefcase", Bg = "#FEF3C7", Color = "#D97706" }
                             <div style="font-size: 11px; font-weight: 700; color: var(--primary, #434CE8); letter-spacing: 0.05em; text-transform: uppercase;">GỢI Ý TỐT NHẤT</div>
                             <div style="font-size: 14px; font-weight: 700; color: var(--text-heading, #0F172A);">Web Development Masterclass</div>
                             <div style="font-size: 12px; color: var(--text-secondary, #64748B);">Dựa trên lịch sử quan tâm của bạn</div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <!-- Floating Welcome Card -->
+                    <div style="position: absolute; bottom: 24px; left: 24px; background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(10px); border: 1px solid #C7D2FE; padding: 14px 20px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(67, 76, 232, 0.15); display: flex; align-items: center; gap: 14px;">
+                        <div style="width: 42px; height: 42px; border-radius: 12px; background: #EEF2FF; color: #434CE8; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                            <i class="bi bi-shield-lock-fill"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 13px; font-weight: 700; color: #0F172A;">Hệ thống bảo mật</div>
+                            <div style="font-size: 12px; color: #64748B;">Đăng nhập để vào trang chủ & xem khóa học</div>
                         </div>
                     </div>
                 }
@@ -240,6 +278,29 @@ cursor: not-allowed;
                                     @teacherName
                                 </div>
 
+                                @if (!string.IsNullOrWhiteSpace(course.mucTieuDauRa))
+                                {
+                                    var cardOutcomes = course.mucTieuDauRa
+                                        .Split(new[] { "\r\n", "\r", "\n", ";", "," }, StringSplitOptions.RemoveEmptyEntries)
+                                        .Select(s => s.Trim().TrimStart('-', '•', '*').Trim())
+                                        .Where(s => !string.IsNullOrEmpty(s))
+                                        .Take(2)
+                                        .ToList();
+
+                                    if (cardOutcomes.Any())
+                                    {
+                                        <div class="course-card-outcomes" style="margin: 8px 0 10px 0; display: flex; flex-direction: column; gap: 4px; border-top: 1px dashed var(--border-color, #E2E8F0); padding-top: 8px;">
+                                            @foreach (var oc in cardOutcomes)
+                                            {
+                                                <div style="font-size: 12px; color: var(--text-secondary, #64748B); display: flex; align-items: flex-start; gap: 6px; line-height: 1.4;">
+                                                    <i class="bi bi-check2 text-primary" style="font-size: 14px; flex-shrink: 0; margin-top: 1px;"></i>
+                                                    <span style="display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;" title="@oc">@oc</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                }
+
                                 <div class="course-rating">
                                     @if (hasRatings)
                                     {
@@ -326,6 +387,29 @@ cursor: not-allowed;
                                     @teacherName
                                 </div>
 
+                                @if (!string.IsNullOrWhiteSpace(course.mucTieuDauRa))
+                                {
+                                    var cardOutcomes = course.mucTieuDauRa
+                                        .Split(new[] { "\r\n", "\r", "\n", ";", "," }, StringSplitOptions.RemoveEmptyEntries)
+                                        .Select(s => s.Trim().TrimStart('-', '•', '*').Trim())
+                                        .Where(s => !string.IsNullOrEmpty(s))
+                                        .Take(2)
+                                        .ToList();
+
+                                    if (cardOutcomes.Any())
+                                    {
+                                        <div class="course-card-outcomes" style="margin: 8px 0 10px 0; display: flex; flex-direction: column; gap: 4px; border-top: 1px dashed var(--border-color, #E2E8F0); padding-top: 8px;">
+                                            @foreach (var oc in cardOutcomes)
+                                            {
+                                                <div style="font-size: 12px; color: var(--text-secondary, #64748B); display: flex; align-items: flex-start; gap: 6px; line-height: 1.4;">
+                                                    <i class="bi bi-check2 text-primary" style="font-size: 14px; flex-shrink: 0; margin-top: 1px;"></i>
+                                                    <span style="display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;" title="@oc">@oc</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                }
+
                                 <div class="course-rating">
                                     @if (hasRatings)
                                     {
@@ -362,6 +446,152 @@ cursor: not-allowed;
         }
     </div>
 </section>
+}
+else
+{
+    <!-- TRANG CHÀO MỪNG KHI CHƯA ĐĂNG NHẬP: TUYỆT ĐỐI KHÔNG HIỂN THỊ KHÓA HỌC -->
+
+    <!-- Section 1: Ưu điểm & Giá trị vượt trội của nền tảng -->
+    <section style="padding: 72px 0; background: var(--bg-canvas, #F8FAFC); border-bottom: 1px solid var(--border-color, #E2E8F0);">
+        <div class="safe-container">
+            <div style="text-align: center; max-width: 720px; margin: 0 auto 52px;">
+                <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; font-size: 12.5px; font-weight: 700; border-radius: 9999px; margin-bottom: 16px; letter-spacing: 0.05em; text-transform: uppercase;">
+                    <i class="bi bi-patch-check-fill"></i> Giá trị cốt lõi
+                </div>
+                <h2 style="font-size: 32px; font-weight: 800; color: #0F172A; margin-bottom: 16px; line-height: 1.3;">
+                    Tại sao ECOLearning là điểm khởi đầu lý tưởng cho sự nghiệp của bạn?
+                </h2>
+                <p style="font-size: 16px; color: #64748B; line-height: 1.6; margin: 0;">
+                    Chương trình đào tạo được xây dựng theo tiêu chuẩn quốc tế, trang bị trọn vẹn kỹ năng thực chiến và lộ trình thăng tiến rõ ràng cho người học.
+                </p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;">
+                <!-- Feature 1 -->
+                <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 18px; padding: 32px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column;">
+                    <div style="width: 56px; height: 56px; border-radius: 16px; background: #EEF2FF; color: #434CE8; display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 22px;">
+                        <i class="bi bi-code-square"></i>
+                    </div>
+                    <h3 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 12px;">100% Thực chiến dự án</h3>
+                    <p style="font-size: 14px; color: #64748B; line-height: 1.6; margin: 0; flex-grow: 1;">
+                        Không chỉ học lý thuyết, học viên được trực tiếp tham gia xây dựng các dự án thực tế sát với yêu cầu tuyển dụng thực tế của doanh nghiệp.
+                    </p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 18px; padding: 32px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column;">
+                    <div style="width: 56px; height: 56px; border-radius: 16px; background: #ECFDF5; color: #10B981; display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 22px;">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <h3 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 12px;">Giảng viên chuyên gia</h3>
+                    <p style="font-size: 14px; color: #64748B; line-height: 1.6; margin: 0; flex-grow: 1;">
+                        Đội ngũ giảng viên, Tech Lead nhiều năm kinh nghiệm tại các tập đoàn lớn, luôn tận tình giải đáp và định hướng học tập 24/7.
+                    </p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 18px; padding: 32px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column;">
+                    <div style="width: 56px; height: 56px; border-radius: 16px; background: #FFF7ED; color: #EA580C; display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 22px;">
+                        <i class="bi bi-phone"></i>
+                    </div>
+                    <h3 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 12px;">Linh hoạt mọi thiết bị</h3>
+                    <p style="font-size: 14px; color: #64748B; line-height: 1.6; margin: 0; flex-grow: 1;">
+                        Truy cập bài giảng mọi lúc trên máy tính, điện thoại, máy tính bảng với chuẩn video Full HD mượt mà và lưu tiến trình tự động.
+                    </p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 18px; padding: 32px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column;">
+                    <div style="width: 56px; height: 56px; border-radius: 16px; background: #F3E8FF; color: #9333EA; display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 22px;">
+                        <i class="bi bi-award"></i>
+                    </div>
+                    <h3 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 12px;">Chứng chỉ uy tín</h3>
+                    <p style="font-size: 14px; color: #64748B; line-height: 1.6; margin: 0; flex-grow: 1;">
+                        Được cấp chứng chỉ số định danh sau khi hoàn thành khóa học, xác thực năng lực chuyên môn để tự tin nộp hồ sơ xin việc.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 2: Thống kê ấn tượng (Platform Stats) -->
+    <section style="padding: 60px 0; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); color: #FFFFFF; position: relative; overflow: hidden;">
+        <div class="safe-container">
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; text-align: center;">
+                <div style="padding: 10px;">
+                    <div style="font-size: 42px; font-weight: 800; color: #38BDF8; margin-bottom: 6px; letter-spacing: -0.02em;">15,000+</div>
+                    <div style="font-size: 15px; color: #CBD5E1; font-weight: 500;">Học viên tin tưởng lựa chọn</div>
+                </div>
+                <div style="padding: 10px;">
+                    <div style="font-size: 42px; font-weight: 800; color: #A78BFA; margin-bottom: 6px; letter-spacing: -0.02em;">500+</div>
+                    <div style="font-size: 15px; color: #CBD5E1; font-weight: 500;">Bài giảng video chuyên sâu</div>
+                </div>
+                <div style="padding: 10px;">
+                    <div style="font-size: 42px; font-weight: 800; color: #34D399; margin-bottom: 6px; letter-spacing: -0.02em;">98%</div>
+                    <div style="font-size: 15px; color: #CBD5E1; font-weight: 500;">Đánh giá hài lòng & có việc</div>
+                </div>
+                <div style="padding: 10px;">
+                    <div style="font-size: 42px; font-weight: 800; color: #FBBF24; margin-bottom: 6px; letter-spacing: -0.02em;">24/7</div>
+                    <div style="font-size: 15px; color: #CBD5E1; font-weight: 500;">Đồng hành hỗ trợ học viên</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: Lộ trình 4 bước bắt đầu học tập (How it works) -->
+    <section style="padding: 72px 0; background: #FFFFFF; border-bottom: 1px solid var(--border-color, #E2E8F0);">
+        <div class="safe-container">
+            <div style="text-align: center; max-width: 680px; margin: 0 auto 52px;">
+                <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; font-size: 12.5px; font-weight: 700; border-radius: 9999px; margin-bottom: 16px; letter-spacing: 0.05em; text-transform: uppercase;">
+                    <i class="bi bi-compass"></i> Quy trình tinh gọn
+                </div>
+                <h2 style="font-size: 32px; font-weight: 800; color: #0F172A; margin-bottom: 16px;">
+                    Bắt đầu dễ dàng với 4 bước chinh phục tri thức
+                </h2>
+                <p style="font-size: 16px; color: #64748B;">
+                    Chỉ cần vài phút để khởi đầu và sẵn sàng trải nghiệm hệ thống học tập hiện đại.
+                </p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;">
+                <!-- Step 1 -->
+                <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 18px; padding: 28px 22px;">
+                    <div style="font-size: 32px; font-weight: 900; color: #CBD5E1; line-height: 1; margin-bottom: 16px;">01</div>
+                    <h4 style="font-size: 16px; font-weight: 700; color: #0F172A; margin-bottom: 8px;">Đăng ký / Đăng nhập</h4>
+                    <p style="font-size: 13.5px; color: #64748B; line-height: 1.5; margin: 0;">
+                        Tạo tài khoản cá nhân nhanh chóng trong 30 giây để bắt đầu kích hoạt quyền truy cập hệ thống.
+                    </p>
+                </div>
+
+                <!-- Step 2 -->
+                <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 18px; padding: 28px 22px;">
+                    <div style="font-size: 32px; font-weight: 900; color: #CBD5E1; line-height: 1; margin-bottom: 16px;">02</div>
+                    <h4 style="font-size: 16px; font-weight: 700; color: #0F172A; margin-bottom: 8px;">Vào Trang Chủ & Chọn khóa</h4>
+                    <p style="font-size: 13.5px; color: #64748B; line-height: 1.5; margin: 0;">
+                        Khám phá kho khóa học đa ngành nghề với các gợi ý học tập cá nhân hóa chuẩn xác.
+                    </p>
+                </div>
+
+                <!-- Step 3 -->
+                <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 18px; padding: 28px 22px;">
+                    <div style="font-size: 32px; font-weight: 900; color: #CBD5E1; line-height: 1; margin-bottom: 16px;">03</div>
+                    <h4 style="font-size: 16px; font-weight: 700; color: #0F172A; margin-bottom: 8px;">Học tương tác & Thực hành</h4>
+                    <p style="font-size: 13.5px; color: #64748B; line-height: 1.5; margin: 0;">
+                        Theo dõi video chất lượng cao, ghi chú trực tiếp và hoàn thành bài kiểm tra cuối bài học.
+                    </p>
+                </div>
+
+                <!-- Step 4 -->
+                <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 18px; padding: 28px 22px;">
+                    <div style="font-size: 32px; font-weight: 900; color: #CBD5E1; line-height: 1; margin-bottom: 16px;">04</div>
+                    <h4 style="font-size: 16px; font-weight: 700; color: #0F172A; margin-bottom: 8px;">Nhận chứng chỉ tốt nghiệp</h4>
+                    <p style="font-size: 13.5px; color: #64748B; line-height: 1.5; margin: 0;">
+                        Hoàn thành lộ trình từ 80% trở lên để nhận chứng nhận hoàn thành và đánh giá sao chất lượng.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
 }
 
 @section scripts {

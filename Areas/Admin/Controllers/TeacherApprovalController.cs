@@ -62,7 +62,8 @@ namespace ECOLearning.Areas.Admin.Controllers
                 }
 
                 // 2. Cập nhật trạng thái đơn đăng ký
-                bool updated = TeacherApplicationService.UpdateStatus(appId, "Approved");
+                int? adminId = Session["UserId"] != null ? Convert.ToInt32(Session["UserId"]) : (int?)null;
+                bool updated = TeacherApplicationService.UpdateStatus(appId, "Approved", null, adminId);
 
                 if (updated)
                 {
@@ -103,7 +104,8 @@ namespace ECOLearning.Areas.Admin.Controllers
                     return Json(new { success = false, message = "Không tìm thấy hồ sơ xét duyệt!" });
                 }
 
-                bool updated = TeacherApplicationService.UpdateStatus(appId, "Rejected", rejectionReason.Trim());
+                int? adminId = Session["UserId"] != null ? Convert.ToInt32(Session["UserId"]) : (int?)null;
+                bool updated = TeacherApplicationService.UpdateStatus(appId, "Rejected", rejectionReason.Trim(), adminId);
 
                 if (updated)
                 {

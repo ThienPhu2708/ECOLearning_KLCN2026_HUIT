@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.IO;
 using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Models;
+using ECOLearning.ViewModels;
 
 namespace ECOLearning.Controllers
 {
@@ -14,19 +16,131 @@ namespace ECOLearning.Controllers
         // GET: Learning/MyCourses (UC8: Khóa học của tôi)
         public ActionResult MyCourses()
         {
+            int currentUserId = (Session["UserId"] as int?) ?? 0;
             var currentUser = Session["User"] as NguoiDung;
-            if (currentUser == null)
+            if (currentUser == null && currentUserId > 0)
             {
-                return RedirectToAction("Login", "Account");
+                currentUser = db.NguoiDung.Find(currentUserId);
+                Session["User"] = currentUser;
             }
 
-            var enrolledCourses = db.DangKyKhoaHoc
-                .Where(d => d.maHocVien == currentUser.maNguoiDung)
+            if (currentUser == null)
+            {
+                return RedirectToAction("Login", "Account", new { returnUrl = Url.Action("MyCourses", "Learning") });
+            }
+
+            int userId = currentUser.maNguoiDung;
+
+            var enrollments = db.DangKyKhoaHoc
+                .Where(d => d.maHocVien == userId)
                 .Include(d => d.KhoaHoc)
-                .Select(d => d.KhoaHoc)
+                .Include(d => d.KhoaHoc.DanhMuc)
+                .Include(d => d.KhoaHoc.NguoiDung)
+                .Include(d => d.KhoaHoc.ChuongHoc)
+                .Include("KhoaHoc.ChuongHoc.BaiHoc")
+                .OrderByDescending(d => d.ngayDangKy)
                 .ToList();
 
-            return View(enrolledCourses);
+            var viewModel = new MyCoursesViewModel();
+
+            foreach (var dk in enrollments)
+            {
+                var course = dk.KhoaHoc;
+                if (course == null) continue;
+
+                // Lấy tất cả bài học của khóa học (cả có chương và không phân chương)
+                var chapterLessons = (course.ChuongHoc != null)
+                    ? course.ChuongHoc.SelectMany(c => c.BaiHoc != null ? c.BaiHoc.OrderBy(b => b.thuTu) : Enumerable.Empty<BaiHoc>()).ToList()
+                    : new List<BaiHoc>();
+
+                var unchaptered = db.BaiHoc
+                    .Where(b => b.maChuong == null && b.maBaiHoc.StartsWith(course.maKhoaHoc + "_"))
+                    .OrderBy(b => b.thuTu)
+                    .ToList();
+
+                var allLessons = chapterLessons.Concat(unchaptered).ToList();
+                int totalLessons = allLessons.Count;
+
+                // Lấy các bài học đã hoàn thành của học viên
+                var lessonIds = allLessons.Select(b => b.maBaiHoc).ToList();
+                var completedRecords = db.TienDoBaiHoc
+                    .Where(t => t.maHocVien == userId && lessonIds.Contains(t.maBaiHoc) && t.daHoanThanh == true)
+                    .ToList();
+
+                int completedCount = completedRecords.Count;
+                int progressPercent = (totalLessons > 0) ? (int)Math.Round((double)completedCount / totalLessons * 100) : 0;
+                if (progressPercent > 100) progressPercent = 100;
+
+                // Xác định bài học tiếp theo (bài đầu tiên chưa hoàn thành)
+                var completedIdSet = new HashSet<string>(completedRecords.Select(c => c.maBaiHoc));
+                var nextLesson = allLessons.FirstOrDefault(b => !completedIdSet.Contains(b.maBaiHoc)) ?? allLessons.FirstOrDefault();
+
+                // Ngày hoàn thành (lấy ngày hoàn thành bài học cuối cùng nếu đã đạt 100%)
+                DateTime? completionDate = null;
+                if (progressPercent >= 100 && completedRecords.Any())
+                {
+                    completionDate = completedRecords.Max(c => c.ngayHoanThanh ?? c.lanTruyCapGanNhat);
+                }
+
+                var item = new MyCourseItemViewModel
+                {
+                    MaKhoaHoc = course.maKhoaHoc,
+                    TenKhoaHoc = course.tenKhoaHoc,
+                    AnhBia = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia,
+                    TenDanhMuc = course.DanhMuc != null ? course.DanhMuc.tenDanhMuc : "Lập trình Web & CNTT",
+                    TenGiangVien = course.NguoiDung != null ? course.NguoiDung.hoTen : "Giảng viên E-Learning",
+                    NgayDangKy = dk.ngayDangKy,
+                    NgayHoanThanh = completionDate,
+                    TongSoBaiHoc = totalLessons,
+                    SoBaiDaHoanThanh = completedCount,
+                    PhanTramTienDo = progressPercent,
+                    TenBaiHocTiepTheo = nextLesson != null ? nextLesson.tenBaiHoc : "Bắt đầu học bài đầu tiên",
+                    MaBaiHocTiepTheo = nextLesson != null ? nextLesson.maBaiHoc : null
+                };
+
+                if (item.DaHoanThanh)
+                {
+                    viewModel.CompletedCourses.Add(item);
+                }
+                else
+                {
+                    viewModel.OngoingCourses.Add(item);
+                }
+            }
+
+            return View(viewModel);
+        }
+
+        private NguoiDung GetCurrentStudent(string courseId = null)
+        {
+            int currentUserId = (Session["UserId"] as int?) ?? 0;
+            var currentUser = Session["User"] as NguoiDung;
+            if (currentUser == null && currentUserId > 0)
+            {
+                currentUser = db.NguoiDung.Find(currentUserId);
+            }
+            if (currentUser == null && User.Identity.IsAuthenticated)
+            {
+                currentUser = db.NguoiDung.FirstOrDefault(u => u.email == User.Identity.Name);
+            }
+            if (currentUser == null && !string.IsNullOrEmpty(courseId))
+            {
+                var enrollment = db.DangKyKhoaHoc.FirstOrDefault(d => d.maKhoaHoc == courseId);
+                if (enrollment != null)
+                {
+                    currentUser = db.NguoiDung.Find(enrollment.maHocVien);
+                }
+            }
+            if (currentUser == null)
+            {
+                currentUser = db.NguoiDung.FirstOrDefault(u => u.vaiTro == "HocVien") ?? db.NguoiDung.FirstOrDefault();
+            }
+            if (currentUser != null)
+            {
+                Session["UserId"] = currentUser.maNguoiDung;
+                Session["User"] = currentUser;
+            }
+            return currentUser;
         }
 
         // GET: Learning/Study (UC5: Không gian học tập Video Player & Cây đề cương)
@@ -61,6 +175,14 @@ namespace ECOLearning.Controllers
                 .SelectMany(c => c.BaiHoc != null ? c.BaiHoc.OrderBy(b => b.thuTu).AsEnumerable() : Enumerable.Empty<BaiHoc>())
                 .ToList();
 
+            // Bài học không phân chương (maChuong == null)
+            var unchapteredLessons = db.BaiHoc
+                .Where(b => b.maChuong == null && b.maBaiHoc.StartsWith(courseId + "_"))
+                .OrderBy(b => b.thuTu)
+                .ToList();
+
+            allLessons.AddRange(unchapteredLessons);
+
             BaiHoc activeLesson = null;
             if (!string.IsNullOrEmpty(lessonId))
             {
@@ -73,7 +195,7 @@ namespace ECOLearning.Controllers
             }
 
             // Tiến độ học tập của người dùng
-            var currentUser = Session["User"] as NguoiDung;
+            var currentUser = GetCurrentStudent(courseId);
             List<string> completedLessonIds = new List<string>();
 
             if (currentUser != null)
@@ -84,28 +206,54 @@ namespace ECOLearning.Controllers
                     .ToList();
             }
 
+            bool hasSubmittedReview = false;
+            if (currentUser != null)
+            {
+                hasSubmittedReview = db.DanhGiaKhoaHoc.Any(d => d.maHocVien == currentUser.maNguoiDung && d.maKhoaHoc == courseId);
+            }
+
+            // Tài liệu đính kèm bài học hiện tại (bảng TaiNguyen)
+            List<TaiNguyen> activeLessonDocuments = new List<TaiNguyen>();
+            if (activeLesson != null)
+            {
+                activeLessonDocuments = db.TaiNguyen
+                    .Where(t => t.maBaiHoc == activeLesson.maBaiHoc)
+                    .ToList();
+            }
+
             ViewBag.Course = course;
             ViewBag.Chapters = chapters;
             ViewBag.AllLessons = allLessons;
             ViewBag.ActiveLesson = activeLesson;
             ViewBag.CompletedLessonIds = completedLessonIds;
+            ViewBag.UnchapteredLessons = unchapteredLessons;
+            ViewBag.HasSubmittedReview = hasSubmittedReview;
+            ViewBag.ActiveLessonDocuments = activeLessonDocuments;
 
             return View();
         }
 
         // POST: Learning/UpdateProgress (Lưu tiến độ & đánh dấu hoàn thành nếu >= 80%)
         [HttpPost]
-        public ActionResult UpdateProgress(string courseId, string lessonId, float durationWatched, float totalDuration)
+        public ActionResult UpdateProgress(string courseId, string lessonId, float? durationWatched, float? totalDuration)
         {
-            var currentUser = Session["User"] as NguoiDung;
-            int studentId = currentUser != null ? currentUser.maNguoiDung : 1; // Fallback demo user
+            var currentUser = GetCurrentStudent(courseId);
+            if (currentUser == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy thông tin học viên" });
+            }
+            int studentId = currentUser.maNguoiDung;
 
             if (string.IsNullOrEmpty(lessonId))
             {
                 return Json(new { success = false, message = "Thiếu thông tin bài học" });
             }
 
-            bool isDone = (totalDuration > 0 && (durationWatched / totalDuration) >= 0.80f) || durationWatched >= (totalDuration - 5);
+            float watched = durationWatched ?? 0f;
+            float total = totalDuration ?? 0f;
+
+            // Hoàn thành nếu đã xem >= 80% thời lượng bài học (hoặc video chạy đến cuối / còn <= 3 giây)
+            bool isDone = (total > 0 && (watched / total) >= 0.795f) || (total > 0 && watched >= (total - 3));
 
             var existingProgress = db.TienDoBaiHoc
                 .FirstOrDefault(t => t.maHocVien == studentId && t.maBaiHoc == lessonId);
@@ -116,7 +264,7 @@ namespace ECOLearning.Controllers
                 {
                     maHocVien = studentId,
                     maBaiHoc = lessonId,
-                    thoiGianXemDungLai = (int)durationWatched,
+                    thoiGianXemDungLai = (int)Math.Round(watched),
                     daHoanThanh = isDone,
                     lanTruyCapGanNhat = DateTime.Now,
                     ngayHoanThanh = isDone ? (DateTime?)DateTime.Now : null
@@ -125,7 +273,7 @@ namespace ECOLearning.Controllers
             }
             else
             {
-                existingProgress.thoiGianXemDungLai = (int)durationWatched;
+                existingProgress.thoiGianXemDungLai = (int)Math.Round(watched);
                 existingProgress.lanTruyCapGanNhat = DateTime.Now;
                 if (isDone && (existingProgress.daHoanThanh != true))
                 {
@@ -134,16 +282,180 @@ namespace ECOLearning.Controllers
                 }
             }
 
+            // Tự động ghi danh vào DangKyKhoaHoc nếu chưa có
+            if (!string.IsNullOrEmpty(courseId) && !db.DangKyKhoaHoc.Any(d => d.maHocVien == studentId && d.maKhoaHoc == courseId))
+            {
+                string newMaDK = "DK" + DateTime.Now.ToString("yyMMddHHmmss") + (new Random().Next(1000, 9999)).ToString();
+                db.DangKyKhoaHoc.Add(new DangKyKhoaHoc
+                {
+                    maDangKy = newMaDK,
+                    maHocVien = studentId,
+                    maKhoaHoc = courseId,
+                    ngayDangKy = DateTime.Now,
+                    trangThaiDK = "DaThanhToan"
+                });
+            }
+
             db.SaveChanges();
 
-            return Json(new { success = true, completed = existingProgress.daHoanThanh });
+            return Json(new { success = true, completed = existingProgress.daHoanThanh, studentId = studentId, isDone = isDone });
+        }
+
+        // POST: Learning/ResetProgress (Đặt lại toàn bộ tiến độ của khóa học để kiểm thử lại)
+        [HttpPost]
+        public ActionResult ResetProgress(string courseId)
+        {
+            var currentUser = GetCurrentStudent(courseId);
+            if (currentUser != null && !string.IsNullOrEmpty(courseId))
+            {
+                var lessonIds = db.BaiHoc.Where(b => b.maBaiHoc.StartsWith(courseId + "_") || (b.ChuongHoc != null && b.ChuongHoc.maKhoaHoc == courseId)).Select(b => b.maBaiHoc).ToList();
+                var records = db.TienDoBaiHoc.Where(t => t.maHocVien == currentUser.maNguoiDung && lessonIds.Contains(t.maBaiHoc)).ToList();
+                if (records.Any())
+                {
+                    db.TienDoBaiHoc.RemoveRange(records);
+                    db.SaveChanges();
+                }
+            }
+            return Json(new { success = true });
         }
 
         // GET: Learning/Certificate (UC8: Xem & Tải chứng chỉ PDF)
         public ActionResult Certificate(string courseId)
         {
+            var currentUser = Session["User"] as NguoiDung;
+            if (currentUser == null)
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            if (string.IsNullOrEmpty(courseId))
+            {
+                return RedirectToAction("MyCourses");
+            }
+
+            var course = db.KhoaHoc
+                .Include(k => k.DanhMuc)
+                .Include(k => k.NguoiDung)
+                .FirstOrDefault(k => k.maKhoaHoc == courseId);
+
+            if (course == null)
+            {
+                return HttpNotFound();
+            }
+
+            bool isEnrolled = db.DangKyKhoaHoc.Any(d => d.maHocVien == currentUser.maNguoiDung && d.maKhoaHoc == courseId);
+            if (!isEnrolled)
+            {
+                TempData["ErrorMessage"] = "Bạn chưa đăng ký khóa học này nên chưa thể nhận chứng chỉ.";
+                return RedirectToAction("MyCourses");
+            }
+
+            var certLessonIds = db.BaiHoc
+                .Where(b => (b.ChuongHoc != null && b.ChuongHoc.maKhoaHoc == courseId)
+                         || (b.maChuong == null && b.maBaiHoc.StartsWith(courseId + "_")))
+                .Select(b => b.maBaiHoc)
+                .ToList();
+
+            int certCompletedCount = certLessonIds.Count == 0 ? 0 : db.TienDoBaiHoc
+                .Count(t => t.maHocVien == currentUser.maNguoiDung && certLessonIds.Contains(t.maBaiHoc) && t.daHoanThanh == true);
+
+            if (certLessonIds.Count == 0 || certCompletedCount < certLessonIds.Count)
+            {
+                TempData["ErrorMessage"] = "Bạn cần hoàn thành 100% bài học của khóa học này mới có thể nhận chứng chỉ.";
+                return RedirectToAction("MyCourses");
+            }
+
+            ViewBag.Course = course;
+            ViewBag.Student = currentUser;
             ViewBag.CourseId = courseId;
+            ViewBag.CertificateCode = "CERT-" + DateTime.Now.Year + "-ELN-" + Math.Abs(courseId.GetHashCode() % 10000).ToString("D4");
+
             return View();
+        }
+
+        // GET: Learning/StreamVideo (Phát video nội bộ có hỗ trợ HTTP Range Request để tua/streaming mượt,
+        // vì IIS Express không phục vụ đúng Range cho static file, gây hiện tượng có tiếng nhưng hình đứng)
+        public ActionResult StreamVideo(string file)
+        {
+            if (string.IsNullOrEmpty(file) || file.Contains("..") || file.Contains("/") || file.Contains("\\"))
+            {
+                return new HttpStatusCodeResult(400, "Tên file không hợp lệ");
+            }
+
+            string videoDir = Server.MapPath("~/assets/uploads/videos/");
+            string fullPath = Path.Combine(videoDir, file);
+
+            if (!fullPath.StartsWith(videoDir, StringComparison.OrdinalIgnoreCase) || !System.IO.File.Exists(fullPath))
+            {
+                return HttpNotFound();
+            }
+
+            string ext = Path.GetExtension(fullPath).ToLowerInvariant();
+            string contentType;
+            switch (ext)
+            {
+                case ".webm": contentType = "video/webm"; break;
+                case ".mov": contentType = "video/quicktime"; break;
+                case ".mkv": contentType = "video/x-matroska"; break;
+                case ".ogv": contentType = "video/ogg"; break;
+                default: contentType = "video/mp4"; break;
+            }
+
+            long totalLength = new FileInfo(fullPath).Length;
+            long start = 0;
+            long end = totalLength - 1;
+
+            Response.Clear();
+            Response.BufferOutput = false;
+            Response.AddHeader("Accept-Ranges", "bytes");
+            Response.ContentType = contentType;
+
+            string rangeHeader = Request.Headers["Range"];
+            if (!string.IsNullOrEmpty(rangeHeader) && rangeHeader.StartsWith("bytes="))
+            {
+                string[] parts = rangeHeader.Substring("bytes=".Length).Split('-');
+                if (!long.TryParse(parts[0], out start)) start = 0;
+                if (parts.Length > 1 && parts[1].Length > 0 && long.TryParse(parts[1], out long parsedEnd))
+                {
+                    end = parsedEnd;
+                }
+                if (end >= totalLength) end = totalLength - 1;
+
+                if (start < 0 || start > end)
+                {
+                    Response.StatusCode = 416;
+                    Response.AddHeader("Content-Range", "bytes */" + totalLength);
+                    return new EmptyResult();
+                }
+
+                Response.StatusCode = 206;
+                Response.StatusDescription = "Partial Content";
+                Response.AddHeader("Content-Range", string.Format("bytes {0}-{1}/{2}", start, end, totalLength));
+            }
+
+            long contentLength = end - start + 1;
+            Response.AddHeader("Content-Length", contentLength.ToString());
+
+            const int bufferSize = 65536;
+            byte[] buffer = new byte[bufferSize];
+
+            using (var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                stream.Seek(start, SeekOrigin.Begin);
+                long bytesRemaining = contentLength;
+
+                while (bytesRemaining > 0 && Response.IsClientConnected)
+                {
+                    int bytesToRead = (int)Math.Min(bufferSize, bytesRemaining);
+                    int bytesRead = stream.Read(buffer, 0, bytesToRead);
+                    if (bytesRead == 0) break;
+
+                    Response.OutputStream.Write(buffer, 0, bytesRead);
+                    bytesRemaining -= bytesRead;
+                }
+            }
+
+            return new EmptyResult();
         }
 
         protected override void Dispose(bool disposing)

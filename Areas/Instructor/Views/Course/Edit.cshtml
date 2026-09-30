@@ -54,15 +54,36 @@
         <div class="grid-12">
             <div class="col-6">
                 <div class="form-group">
-                    <label class="form-label">Giá bán (VNĐ) <span class="required">*</span></label>
-                    @Html.TextBoxFor(m => m.GiaBan, new { @class = "form-control", type = "number", min = "0", step = "10000", required = "required" })
+                    <label class="form-label" for="GiaBanDisplay">Giá bán (VNĐ) <span class="required">*</span></label>
+                    <div style="position: relative;">
+                        <input type="text" id="GiaBanDisplay" class="form-control" 
+                               placeholder="Ví dụ: 799.000" 
+                               value="@(Model.GiaBan > 0 ? Model.GiaBan.ToString("N0") : (Model.GiaBan == 0 ? "0" : ""))" 
+                               style="padding-right: 52px; font-weight: 600; font-size: 15px;" required autocomplete="off" />
+                        <span style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-weight: 700; color: #64748B; font-size: 13px; pointer-events: none;">VNĐ</span>
+                    </div>
+                    @Html.HiddenFor(m => m.GiaBan, new { id = "GiaBan" })
                     @Html.ValidationMessageFor(m => m.GiaBan, "", new { style = "color: var(--status-danger); font-size: 13px;" })
+                    <div id="gia-ban-words" style="display: none; font-size: 12px; color: #64748B; margin-top: 5px; font-style: italic;"></div>
                 </div>
             </div>
             <div class="col-6">
                 <div class="form-group">
-                    <label class="form-label">Giá khuyến mãi (VNĐ - tùy chọn)</label>
-                    @Html.TextBoxFor(m => m.GiaKhuyenMai, new { @class = "form-control", type = "number", min = "0", step = "10000" })
+                    <label class="form-label" for="GiaKhuyenMaiDisplay">Giá khuyến mãi (VNĐ - tùy chọn)</label>
+                    <div style="position: relative;">
+                        <input type="text" id="GiaKhuyenMaiDisplay" class="form-control" 
+                               placeholder="Ví dụ: 599.000" 
+                               value="@(Model.GiaKhuyenMai.HasValue && Model.GiaKhuyenMai.Value > 0 ? Model.GiaKhuyenMai.Value.ToString("N0") : (Model.GiaKhuyenMai.HasValue && Model.GiaKhuyenMai.Value == 0 ? "0" : ""))" 
+                               style="padding-right: 52px; font-weight: 600; font-size: 15px;" autocomplete="off" />
+                        <span style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-weight: 700; color: #64748B; font-size: 13px; pointer-events: none;">VNĐ</span>
+                    </div>
+                    @Html.HiddenFor(m => m.GiaKhuyenMai, new { id = "GiaKhuyenMai" })
+                    @Html.ValidationMessageFor(m => m.GiaKhuyenMai, "", new { style = "color: var(--status-danger); font-size: 13px;" })
+                    <div id="gia-km-words" style="display: none; font-size: 12px; color: #64748B; margin-top: 5px; font-style: italic;"></div>
+                    <div id="discount-calc-badge" style="display: none; margin-top: 6px; font-size: 12px; font-weight: 700; color: #059669; align-items: center; gap: 4px;"></div>
+                    <div id="discount-warning" style="display: none; margin-top: 6px; font-size: 12px; font-weight: 600; color: #EF4444;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Giá khuyến mãi phải nhỏ hơn hoặc bằng giá bán!
+                    </div>
                 </div>
             </div>
         </div>
@@ -73,8 +94,41 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">Mục tiêu đầu ra của học viên</label>
-            @Html.TextAreaFor(m => m.MucTieuDauRa, new { @class = "form-control", rows = "3" })
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <label class="form-label" style="margin-bottom: 0; font-weight: 700;">
+                    <i class="bi bi-card-checklist me-1 text-primary"></i> Mục tiêu đầu ra của học viên (Nhập theo từng dòng)
+                </label>
+                <button type="button" class="btn btn-sm btn-link text-decoration-none" id="btn-toggle-outcomes-mode" onclick="toggleOutcomesInputMode()" style="font-size: 13px; color: var(--primary);">
+                    <i class="bi bi-textarea-t me-1"></i> Chuyển sang ô văn bản
+                </button>
+            </div>
+            
+            <p class="caption" style="color: var(--text-secondary); margin-bottom: 10px;">
+                Nhập từng mục tiêu học viên sẽ đạt được sau khóa học. Hệ thống sẽ tự động đồng bộ theo từng dòng ở Trang chủ và Trang chi tiết khóa học.
+            </p>
+
+            <!-- CHẾ ĐỘ 1: NHẬP THEO TỪNG DÒNG (DYNAMIC ROWS) -->
+            <div id="outcomes-rows-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
+                <!-- Render bằng JavaScript -->
+            </div>
+
+            <div style="margin-bottom: 14px;" id="outcomes-add-btn-wrapper">
+                <button type="button" class="btn btn-sm btn-outline" style="border-color: var(--primary); color: var(--primary); border-radius: 8px;" onclick="addOutcomeRow('')">
+                    <i class="bi bi-plus-lg me-1"></i> Thêm dòng mục tiêu mới
+                </button>
+                <span class="caption text-muted ms-2">(Hoặc nhấn <strong>Enter</strong> để tự động thêm dòng tiếp theo)</span>
+            </div>
+
+            <!-- CHẾ ĐỘ 2 / HIDDEN INPUT: TEXTAREA ĐỒNG BỘ VỚI SERVER -->
+            <div id="outcomes-raw-wrapper" style="display: none;">
+                @Html.TextAreaFor(m => m.MucTieuDauRa, new { 
+                    @class = "form-control", 
+                    id = "MucTieuDauRa", 
+                    rows = "5", 
+                    placeholder = "Nhập mỗi mục tiêu đầu ra trên một dòng:\n- Nắm vững kiến thức nền tảng C# từ cơ bản đến nâng cao\n- Tự tay xây dựng được ứng dụng thực tế\n- Tự tin đi phỏng vấn xin việc..."
+                })
+                <span class="caption text-muted" style="margin-top: 4px; display: block;">Mỗi dòng sẽ được hiển thị như một mục tiêu riêng biệt có dấu tích.</span>
+            </div>
         </div>
 
         <div class="form-group">
@@ -103,3 +157,346 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <script>
+        function formatVndNumber(val) {
+            if (val === null || val === undefined || val === '') return '';
+            let digits = val.toString().replace(/\D/g, '');
+            if (!digits) return '';
+            digits = digits.replace(/^0+(?=\d)/, '');
+            return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
+
+        function readVndInWords(n) {
+            if (!n || n === '0' || parseInt(n, 10) === 0) return 'Miễn phí (0 đồng)';
+            const num = parseInt(n, 10);
+            if (isNaN(num)) return '';
+
+            const defaultNumbers = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+            const units = ['', 'nghìn', 'triệu', 'tỷ', 'nghìn tỷ', 'triệu tỷ'];
+
+            function readThree(b, isFirst) {
+                let str = '';
+                const hundred = Math.floor(b / 100);
+                const ten = Math.floor((b % 100) / 10);
+                const one = b % 10;
+
+                if (hundred > 0 || !isFirst) {
+                    str += defaultNumbers[hundred] + ' trăm ';
+                }
+                if (ten > 1) {
+                    str += defaultNumbers[ten] + ' mươi ';
+                    if (one === 1) str += 'mốt ';
+                    else if (one === 5) str += 'lăm ';
+                    else if (one > 0) str += defaultNumbers[one] + ' ';
+                } else if (ten === 1) {
+                    str += 'mười ';
+                    if (one === 5) str += 'lăm ';
+                    else if (one > 0) str += defaultNumbers[one] + ' ';
+                } else if (ten === 0 && one > 0) {
+                    if (hundred > 0 || !isFirst) str += 'lẻ ';
+                    str += defaultNumbers[one] + ' ';
+                }
+                return str;
+            }
+
+            let temp = num;
+            let groups = [];
+            while (temp > 0) {
+                groups.push(temp % 1000);
+                temp = Math.floor(temp / 1000);
+            }
+
+            let result = '';
+            for (let i = groups.length - 1; i >= 0; i--) {
+                if (groups[i] > 0) {
+                    result += readThree(groups[i], i === groups.length - 1) + units[i] + ' ';
+                }
+            }
+
+            result = result.trim();
+            if (!result) return '';
+            return result.charAt(0).toUpperCase() + result.slice(1) + ' đồng';
+        }
+
+        function setupVndInput(displayId, hiddenId, wordsId, onChangeCallback) {
+            const displayEl = document.getElementById(displayId);
+            const hiddenEl = document.getElementById(hiddenId);
+            const wordsEl = wordsId ? document.getElementById(wordsId) : null;
+
+            if (!displayEl) return;
+
+            function syncValue() {
+                const originalVal = displayEl.value;
+                const cursorPos = displayEl.selectionStart || 0;
+                const digitsBeforeCursor = originalVal.slice(0, cursorPos).replace(/\D/g, '').length;
+
+                const rawDigits = originalVal.replace(/\D/g, '');
+                const formatted = formatVndNumber(rawDigits);
+
+                displayEl.value = formatted;
+                if (hiddenEl) {
+                    hiddenEl.value = rawDigits;
+                }
+
+                // Restore cursor position
+                let newCursorPos = 0;
+                let countedDigits = 0;
+                for (let i = 0; i < formatted.length; i++) {
+                    if (/\d/.test(formatted[i])) countedDigits++;
+                    if (countedDigits <= digitsBeforeCursor) {
+                        newCursorPos = i + 1;
+                    } else {
+                        break;
+                    }
+                }
+                if (digitsBeforeCursor === 0) newCursorPos = 0;
+                try {
+                    displayEl.setSelectionRange(newCursorPos, newCursorPos);
+                } catch (e) {}
+
+                // Display words
+                if (wordsEl) {
+                    if (rawDigits) {
+                        wordsEl.innerText = '= ' + readVndInWords(rawDigits);
+                        wordsEl.style.display = 'block';
+                    } else {
+                        wordsEl.style.display = 'none';
+                        wordsEl.innerText = '';
+                    }
+                }
+
+                if (typeof onChangeCallback === 'function') {
+                    onChangeCallback(rawDigits);
+                }
+            }
+
+            displayEl.addEventListener('input', syncValue);
+            displayEl.addEventListener('blur', syncValue);
+            displayEl.addEventListener('paste', function () {
+                setTimeout(syncValue, 0);
+            });
+
+            // Backspace handling across dots
+            displayEl.addEventListener('keydown', function (e) {
+                if (e.key === 'Backspace') {
+                    const pos = displayEl.selectionStart;
+                    if (pos === displayEl.selectionEnd && pos > 0 && displayEl.value[pos - 1] === '.') {
+                        e.preventDefault();
+                        const val = displayEl.value;
+                        displayEl.value = val.slice(0, pos - 2) + val.slice(pos - 1);
+                        displayEl.setSelectionRange(pos - 1, pos - 1);
+                        syncValue();
+                    }
+                }
+            });
+
+            // Initialize
+            if (displayEl.value) {
+                syncValue();
+            }
+        }
+
+        function checkPriceComparison() {
+            const rawGiaBan = document.getElementById('GiaBan') ? parseInt(document.getElementById('GiaBan').value || '0', 10) : 0;
+            const rawGiaKm = document.getElementById('GiaKhuyenMai') && document.getElementById('GiaKhuyenMai').value ? parseInt(document.getElementById('GiaKhuyenMai').value, 10) : null;
+            const badge = document.getElementById('discount-calc-badge');
+            const warning = document.getElementById('discount-warning');
+
+            if (badge) badge.style.display = 'none';
+            if (warning) warning.style.display = 'none';
+
+            if (rawGiaKm !== null && !isNaN(rawGiaKm) && rawGiaKm >= 0) {
+                if (rawGiaKm > rawGiaBan) {
+                    if (warning) warning.style.display = 'block';
+                } else if (rawGiaBan > 0 && rawGiaKm < rawGiaBan) {
+                    const saved = rawGiaBan - rawGiaKm;
+                    const percent = Math.round((saved / rawGiaBan) * 100);
+                    if (badge) {
+                        badge.innerHTML = '<i class="bi bi-tag-fill me-1"></i> Giảm ' + percent + '% (Tiết kiệm ' + formatVndNumber(saved) + ' đ)';
+                        badge.style.display = 'inline-flex';
+                    }
+                }
+            }
+        }
+
+        // ==================== QUẢN LÝ MỤC TIÊU ĐẦU RA THEO TỪNG DÒNG ====================
+        let isOutcomesRawMode = false;
+
+        function initOutcomesList() {
+            const rawVal = document.getElementById('MucTieuDauRa')?.value || '';
+            const container = document.getElementById('outcomes-rows-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            let lines = [];
+            if (rawVal.indexOf('\n') >= 0 || rawVal.indexOf('\r') >= 0) {
+                lines = rawVal.split(/\r?\n/).map(s => s.trim().replace(/^[-•*]\s*/, '')).filter(s => s.length > 0);
+            } else if (rawVal.indexOf(';') >= 0) {
+                lines = rawVal.split(';').map(s => s.trim().replace(/^[-•*]\s*/, '')).filter(s => s.length > 0);
+            } else if (rawVal.indexOf(',') >= 0 && rawVal.length > 30) {
+                lines = rawVal.split(',').map(s => s.trim().replace(/^[-•*]\s*/, '')).filter(s => s.length > 0);
+            } else if (rawVal.trim().length > 0) {
+                lines = [rawVal.trim().replace(/^[-•*]\s*/, '')];
+            }
+
+            if (lines.length === 0) {
+                addOutcomeRow('');
+                addOutcomeRow('');
+            } else {
+                lines.forEach(text => addOutcomeRow(text));
+            }
+        }
+
+        function addOutcomeRow(text) {
+            const container = document.getElementById('outcomes-rows-container');
+            if (!container) return null;
+
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'outcome-row-item';
+            rowDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; animation: fadeIn 0.2s;';
+
+            const indexSpan = document.createElement('span');
+            indexSpan.className = 'outcome-index-badge';
+            indexSpan.style.cssText = 'width: 28px; height: 28px; border-radius: 50%; background: #EEF2FF; color: #434CE8; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control outcome-input-field';
+            input.value = text || '';
+            input.placeholder = 'Nhập mục tiêu học viên sẽ đạt được...';
+            input.style.cssText = 'flex: 1; height: 42px; font-size: 14px;';
+
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const newRow = addOutcomeRow('');
+                    if (newRow) {
+                        const newInput = newRow.querySelector('input');
+                        if (newInput) newInput.focus();
+                    }
+                }
+            });
+
+            input.addEventListener('input', syncOutcomesToTextarea);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'btn btn-outline btn-sm';
+            deleteBtn.title = 'Xóa dòng này';
+            deleteBtn.style.cssText = 'height: 42px; width: 42px; border-color: #E2E8F0; color: #EF4444; display: flex; align-items: center; justify-content: center; border-radius: 8px; flex-shrink: 0;';
+            deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+            deleteBtn.onclick = function () {
+                const rows = container.querySelectorAll('.outcome-row-item');
+                if (rows.length > 1) {
+                    rowDiv.remove();
+                    updateOutcomeBadges();
+                    syncOutcomesToTextarea();
+                } else {
+                    input.value = '';
+                    syncOutcomesToTextarea();
+                }
+            };
+
+            rowDiv.appendChild(indexSpan);
+            rowDiv.appendChild(input);
+            rowDiv.appendChild(deleteBtn);
+            container.appendChild(rowDiv);
+
+            updateOutcomeBadges();
+            syncOutcomesToTextarea();
+            return rowDiv;
+        }
+
+        function updateOutcomeBadges() {
+            const container = document.getElementById('outcomes-rows-container');
+            if (!container) return;
+            const badges = container.querySelectorAll('.outcome-index-badge');
+            badges.forEach((b, idx) => {
+                b.textContent = (idx + 1);
+            });
+        }
+
+        function syncOutcomesToTextarea() {
+            const container = document.getElementById('outcomes-rows-container');
+            const textarea = document.getElementById('MucTieuDauRa');
+            if (!container || !textarea) return;
+
+            const inputs = container.querySelectorAll('.outcome-input-field');
+            const lines = [];
+            inputs.forEach(inp => {
+                const val = inp.value.trim();
+                if (val.length > 0) {
+                    lines.push(val);
+                }
+            });
+
+            textarea.value = lines.join('\n');
+        }
+
+        function syncTextareaToOutcomes() {
+            initOutcomesList();
+        }
+
+        function toggleOutcomesInputMode() {
+            const rowsContainer = document.getElementById('outcomes-rows-container');
+            const addBtnWrapper = document.getElementById('outcomes-add-btn-wrapper');
+            const rawWrapper = document.getElementById('outcomes-raw-wrapper');
+            const toggleBtn = document.getElementById('btn-toggle-outcomes-mode');
+
+            isOutcomesRawMode = !isOutcomesRawMode;
+            if (isOutcomesRawMode) {
+                syncOutcomesToTextarea();
+                if (rowsContainer) rowsContainer.style.display = 'none';
+                if (addBtnWrapper) addBtnWrapper.style.display = 'none';
+                if (rawWrapper) rawWrapper.style.display = 'block';
+                if (toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-list-check me-1"></i> Chuyển sang nhập từng dòng';
+            } else {
+                syncTextareaToOutcomes();
+                if (rowsContainer) rowsContainer.style.display = 'flex';
+                if (addBtnWrapper) addBtnWrapper.style.display = 'block';
+                if (rawWrapper) rawWrapper.style.display = 'none';
+                if (toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-textarea-t me-1"></i> Chuyển sang ô văn bản';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            setupVndInput('GiaBanDisplay', 'GiaBan', 'gia-ban-words', function () {
+                checkPriceComparison();
+            });
+            setupVndInput('GiaKhuyenMaiDisplay', 'GiaKhuyenMai', 'gia-km-words', function () {
+                checkPriceComparison();
+            });
+            checkPriceComparison();
+            initOutcomesList();
+
+            // Form submit safety
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    if (!isOutcomesRawMode) {
+                        syncOutcomesToTextarea();
+                    }
+
+                    const rawGiaBan = (document.getElementById('GiaBanDisplay') ? document.getElementById('GiaBanDisplay').value : '').replace(/\D/g, '');
+                    const rawGiaKm = (document.getElementById('GiaKhuyenMaiDisplay') ? document.getElementById('GiaKhuyenMaiDisplay').value : '').replace(/\D/g, '');
+
+                    if (document.getElementById('GiaBan')) document.getElementById('GiaBan').value = rawGiaBan;
+                    if (document.getElementById('GiaKhuyenMai')) document.getElementById('GiaKhuyenMai').value = rawGiaKm;
+
+                    const numGiaBan = parseInt(rawGiaBan || '0', 10);
+                    const numGiaKm = rawGiaKm ? parseInt(rawGiaKm, 10) : null;
+
+                    if (numGiaKm !== null && numGiaKm > numGiaBan) {
+                        e.preventDefault();
+                        alert('Giá khuyến mãi không được lớn hơn giá bán!');
+                        const kmEl = document.getElementById('GiaKhuyenMaiDisplay');
+                        if (kmEl) kmEl.focus();
+                        return false;
+                    }
+                });
+            }
+        });
+    </script>
+}

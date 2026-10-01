@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
@@ -57,12 +57,25 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 model.TotalStudents = paidDetails.Select(ct => ct.DonHang?.maHocVien).Distinct().Count();
             }
 
-            // 4. Đánh giá trung bình
+            // Học viên mới trong tháng
+            model.NewStudentsThisMonth = enrollments
+                .Where(dk => dk.ngayDangKy.HasValue && dk.ngayDangKy.Value.Month == currentMonth && dk.ngayDangKy.Value.Year == currentYear)
+                .Select(dk => dk.maHocVien).Distinct().Count();
+
+            // 4. Đánh giá trung bình & phân bổ sao
             var reviews = db.DanhGiaKhoaHoc
-                .Where(dg => courseIds.Contains(dg.maKhoaHoc))
+                .Where(dg => courseIds.Contains(dg.maKhoaHoc) && dg.soSao >= 1 && dg.soSao <= 5)
                 .ToList();
 
-            model.AverageRating = reviews.Any() ? Math.Round(reviews.Average(dg => dg.soSao), 1) : 5.0;
+            model.TotalReviews = reviews.Count;
+            model.AverageRating = reviews.Any() ? Math.Round(reviews.Average(dg => dg.soSao), 1) : 0;
+
+            // Phân bổ sao: index 0 = 5 sao, index 4 = 1 sao
+            model.RatingDistribution[0] = reviews.Count(r => r.soSao == 5);
+            model.RatingDistribution[1] = reviews.Count(r => r.soSao == 4);
+            model.RatingDistribution[2] = reviews.Count(r => r.soSao == 3);
+            model.RatingDistribution[3] = reviews.Count(r => r.soSao == 2);
+            model.RatingDistribution[4] = reviews.Count(r => r.soSao == 1);
 
             // 5. Biểu đồ doanh thu 12 tháng
             model.ChartLabels = new List<string> { "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12" };
@@ -72,7 +85,6 @@ namespace ECOLearning.Areas.Instructor.Controllers
                     .Where(ct => ct.DonHang != null && ct.DonHang.ngayDat.HasValue && ct.DonHang.ngayDat.Value.Month == m && ct.DonHang.ngayDat.Value.Year == currentYear)
                     .Sum(ct => (decimal?)ct.donGia) ?? 0;
                 
-                // Quy đổi Triệu VNĐ hiển thị biểu đồ
                 model.RevenueChartData.Add(Math.Round(mRev / 1000000m, 2));
             }
 
@@ -84,7 +96,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 if (kStudents == 0) kStudents = kDetails.Count;
 
                 var kReviews = reviews.Where(dg => dg.maKhoaHoc == k.maKhoaHoc).ToList();
-                double kRating = kReviews.Any() ? Math.Round(kReviews.Average(dg => dg.soSao), 1) : 5.0;
+                double kRating = kReviews.Any() ? Math.Round(kReviews.Average(dg => dg.soSao), 1) : 0;
 
                 return new TopCourseItem
                 {
@@ -103,8 +115,31 @@ namespace ECOLearning.Areas.Instructor.Controllers
 
             model.TopCourses = topList;
 
+            // 7. Danh sách tất cả khóa học để hiển thị bảng cuối trang
+            var allDanhMuc = db.DanhMuc.ToList();
+            model.RecentCourses = teacherCourses
+                .OrderByDescending(k => k.maKhoaHoc)
+                .Take(10)
+                .Select(k =>
+                {
+                    int soHV = enrollments.Count(dk => dk.maKhoaHoc == k.maKhoaHoc);
+                    string tenDM = allDanhMuc.FirstOrDefault(dm => dm.maDanhMuc == k.maDanhMuc)?.tenDanhMuc ?? "Khác";
+                    return new InstructorCourseItem
+                    {
+                        MaKhoaHoc = k.maKhoaHoc,
+                        TenKhoaHoc = k.tenKhoaHoc,
+                        AnhBia = k.anhBia,
+                        TenDanhMuc = tenDM,
+                        GiaBan = k.giaBan,
+                        GiaKhuyenMai = k.giaKhuyenMai,
+                        SoHocVien = soHV,
+                        TrangThai = k.trangThai ?? "BanNhap"
+                    };
+                }).ToList();
+
             ViewBag.BreadcrumbCurrent = "Dashboard tổng quan";
             return View(model);
         }
+
     }
 }

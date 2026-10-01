@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Web.Mvc;
 
@@ -20,15 +20,22 @@ namespace ECOLearning.Areas.Instructor.Models
         public decimal MonthRevenue { get; set; }
         public int TotalStudents { get; set; }
         public double AverageRating { get; set; }
+        public int TotalReviews { get; set; }
+        public int NewStudentsThisMonth { get; set; }
         public List<string> ChartLabels { get; set; }
         public List<decimal> RevenueChartData { get; set; }
         public List<TopCourseItem> TopCourses { get; set; }
+        // Phân bổ đánh giá: index 0 = 5 sao, index 4 = 1 sao
+        public int[] RatingDistribution { get; set; }
+        public List<InstructorCourseItem> RecentCourses { get; set; }
 
         public InstructorDashboardViewModel()
         {
             ChartLabels = new List<string>();
             RevenueChartData = new List<decimal>();
             TopCourses = new List<TopCourseItem>();
+            RatingDistribution = new int[5];
+            RecentCourses = new List<InstructorCourseItem>();
         }
     }
 
@@ -44,6 +51,7 @@ namespace ECOLearning.Areas.Instructor.Models
         public string TrangThai { get; set; }
         public DateTime? NgayTao { get; set; }
         public int SoBaiHoc { get; set; }
+        public bool CoVideo { get; set; }
         public string LyDoTuChoi { get; set; }
     }
 
@@ -60,7 +68,28 @@ namespace ECOLearning.Areas.Instructor.Models
         public string MaDanhMuc { get; set; }
         public string AnhBia { get; set; }
         public string TrangThai { get; set; }
+        public List<CourseChapterInput> Chapters { get; set; } = new List<CourseChapterInput>();
+        public List<CourseLessonInput> Lessons { get; set; } = new List<CourseLessonInput>();
+        public System.Web.HttpPostedFileBase CoverImageFile { get; set; }
         public IEnumerable<SelectListItem> Categories { get; set; }
+    }
+
+    public class CourseChapterInput
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+    }
+    public class CourseLessonInput
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+        public int? ChapterIndex { get; set; }
+        public bool Preview { get; set; }
+        public string VideoToken { get; set; }
+        public int Duration { get; set; }
+        public List<string> AttachmentTokens { get; set; } = new List<string>();
+        public System.Web.HttpPostedFileBase VideoFile { get; set; }
+        public System.Web.HttpPostedFileBase AttachmentFile { get; set; }
     }
 
     public class TaiNguyenItem
@@ -102,6 +131,7 @@ namespace ECOLearning.Areas.Instructor.Models
 
     public class CurriculumViewModel
     {
+        public string TrangThai { get; set; }
         public string MaKhoaHoc { get; set; }
         public string TenKhoaHoc { get; set; }
         public List<ChuongHocItem> ChuongHocs { get; set; }
@@ -127,8 +157,24 @@ namespace ECOLearning.Areas.Instructor.Models
         public int? SoSao { get; set; }
     }
 
+    public class CourseAnalyticsItem
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string Status { get; set; }
+        public decimal Revenue { get; set; }
+        public int Registrations { get; set; }
+        public int Reviews { get; set; }
+        public double? AverageProgress { get; set; }
+    }
+
     public class InstructorAnalyticsViewModel
     {
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public int TotalStudents { get; set; }
+        public List<int> RegistrationData { get; set; } = new List<int>();
+        public List<CourseAnalyticsItem> Courses { get; set; } = new List<CourseAnalyticsItem>();
         public string Period { get; set; }
         public decimal TotalRevenue { get; set; }
         public int TotalRegistrations { get; set; }

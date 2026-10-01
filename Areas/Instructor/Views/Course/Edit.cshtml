@@ -1,4 +1,4 @@
-@model ECOLearning.Areas.Instructor.Models.CourseCreateOrEditViewModel
+﻿@model ECOLearning.Areas.Instructor.Models.CourseCreateOrEditViewModel
 @{
     ViewBag.Title = "Chỉnh Sửa Khóa Học";
 }
@@ -490,7 +490,7 @@
 
                     if (numGiaKm !== null && numGiaKm > numGiaBan) {
                         e.preventDefault();
-                        alert('Giá khuyến mãi không được lớn hơn giá bán!');
+                        instructorNotice('Giá khuyến mãi không được lớn hơn giá bán!');
                         const kmEl = document.getElementById('GiaKhuyenMaiDisplay');
                         if (kmEl) kmEl.focus();
                         return false;

@@ -1,490 +1,983 @@
-@model ECOLearning.Areas.Instructor.Models.CourseCreateOrEditViewModel
+﻿@model ECOLearning.Areas.Instructor.Models.CourseCreateOrEditViewModel
 @{
-    ViewBag.Title = "Khởi Tạo Khóa Học Mới";
+    bool isEditing = !string.IsNullOrEmpty(Model.MaKhoaHoc);
+    ViewBag.ShowCourseBreadcrumb = true;
+    ViewBag.Title = isEditing ? "Chỉnh sửa khóa học" : "Tạo Khóa Học Mới";
+    ViewBag.BreadcrumbCurrent = isEditing ? "Chỉnh sửa khóa học" : "Tạo khóa học mới";
 }
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-    <div>
-        <h1 class="h2" style="margin-top: 6px;">Khởi Tạo Khóa Học Mới</h1>
-        <p class="body-2" style="color: var(--text-secondary);">Điền thông tin khóa học, thiết lập học phí và danh mục đào tạo</p>
-    </div>
-    <div>
-        <a href="@Url.Action("Index", "Course", new { area = "Instructor" })" class="btn btn-outline">
-            <i class="bi bi-chevron-left me-1"></i> Quay lại danh sách
-        </a>
+<style>
+/* ── Stepper ───────────────────────────────────────────────────── */
+.stepper-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 20px; padding: 20px 32px; margin-bottom: 28px; box-shadow: var(--shadow-card); }
+.stepper-wrapper { display: flex; align-items: center; justify-content: space-between; }
+.stepper-step { display: flex; align-items: center; gap: 14px; cursor: pointer; }
+.step-number { width: 38px; height: 38px; border-radius: 50%; background: var(--bg-canvas); border: 2px solid var(--border-color); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; transition: all 0.2s; }
+.stepper-step.active .step-number { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: 0 4px 12px rgba(67,76,232,.35); }
+.stepper-step.completed .step-number { background: #ECFDF5; border-color: #10B981; color: #10B981; }
+.step-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.stepper-step.active .step-label { color: var(--primary); }
+.stepper-step.completed .step-label { color: #10B981; }
+.step-title { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+.stepper-step.active .step-title { color: var(--text-heading); font-weight: 700; }
+.stepper-divider { flex: 1; height: 2px; background: var(--border-color); margin: 0 20px; }
+.stepper-divider.completed { background: #10B981; }
+
+.curriculum-toolbar { display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+.chapter-toggle { display:inline-flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; font-weight:600; color:var(--text-secondary); position:relative; }
+.chapter-toggle input { position:absolute; right:0; width:40px; height:24px; opacity:0; cursor:pointer; margin:0; }
+.toggle-track { width:40px; height:24px; border-radius:20px; background:#CBD5E1; transition:background .2s; pointer-events:none; }
+.toggle-track::after { content:''; display:block; width:18px; height:18px; margin:3px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.15); transition:transform .2s; }
+.chapter-toggle input:checked + .toggle-track { background:var(--primary); }
+.chapter-toggle input:checked + .toggle-track::after { transform:translateX(16px); }
+.chapter-toggle input:focus-visible + .toggle-track { outline:2px solid var(--primary); outline-offset:3px; }
+
+/* ── Wizard panels ─────────────────────────────────────────────── */
+.wizard-panel { display: none; }
+.wizard-panel.active { display: block; animation: fadeIn .25s ease; }
+@@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+/* ── Footer actions ────────────────────────────────────────────── */
+.step-footer { position: fixed; left: calc(var(--sidebar-width) + 32px); right: 32px; bottom: 16px; z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 -4px 24px rgba(15,23,42,.08); margin: 0; }
+#course-wizard-form { padding-bottom: 120px; }
+@@media (max-width: 992px) { .step-footer { left: 16px; right: 16px; } }
+@@media (max-width: 576px) { .step-footer { bottom: 8px; padding: 12px; flex-wrap: wrap; } .step-footer > div { margin-left: auto; flex-wrap: wrap; } #course-wizard-form { padding-bottom: 160px; } }
+/* ── Checklist ─────────────────────────────────────────────────── */
+.chk-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: var(--bg-canvas); border: 1px solid var(--border-color); font-size: 14px; margin-bottom: 8px; }
+.chk-item.passed { border-color: #A7F3D0; background: #ECFDF5; color: #065F46; }
+.chk-item.failed { border-color: #FECACA; background: #FEF2F2; color: #991B1B; }
+</style>
+
+<!-- STEPPER HEADER -->
+<div class="stepper-card">
+    <div class="stepper-wrapper">
+        <div class="stepper-step active" id="si-1" onclick="jumpToStep(1)">
+            <div class="step-number" id="sn-1">1</div>
+            <div><div class="step-label">Bước 1</div><div class="step-title">Thông tin cơ bản</div></div>
+        </div>
+        <div class="stepper-divider" id="sd-1"></div>
+        <div class="stepper-step" id="si-2" onclick="jumpToStep(2)">
+            <div class="step-number" id="sn-2">2</div>
+            <div><div class="step-label">Bước 2</div><div class="step-title">Đề cương & Bài giảng</div></div>
+        </div>
+        <div class="stepper-divider" id="sd-2"></div>
+        <div class="stepper-step" id="si-3" onclick="jumpToStep(3)">
+            <div class="step-number" id="sn-3">3</div>
+            <div><div class="step-label">Bước 3</div><div class="step-title">Xem lại & Gửi duyệt</div></div>
+        </div>
     </div>
 </div>
 
-<div class="card" style="max-width: 900px; margin: 0 auto; padding: 28px 32px;">
-    @using (Html.BeginForm("Create", "Course", new { area = "Instructor" }, FormMethod.Post))
-    {
-        @Html.AntiForgeryToken()
-        @Html.ValidationSummary(true, "", new { @class = "alert alert-danger", style = "color: var(--status-danger); margin-bottom: 20px;" })
+@using (Html.BeginForm(isEditing ? "Edit" : "Create", "Course", new { area = "Instructor" }, FormMethod.Post, new { id = "course-wizard-form", enctype = "multipart/form-data", novalidate = "novalidate" }))
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.MaKhoaHoc)
+    @Html.ValidationSummary(false, "", new { @class = "form-feedback-error" })
 
-        <div class="form-group">
-            <label class="form-label">Tên khóa học <span class="required">*</span></label>
-            @Html.TextBoxFor(m => m.TenKhoaHoc, new { @class = "form-control", placeholder = "Ví dụ: Làm Chủ Lập Trình React Native & TypeScript", required = "required" })
-            @Html.ValidationMessageFor(m => m.TenKhoaHoc, "", new { style = "color: var(--status-danger); font-size: 13px;" })
-        </div>
-
+    <!-- ============================================================ -->
+    <!-- BƯỚC 1: THÔNG TIN CƠ BẢN                                     -->
+    <!-- ============================================================ -->
+    <div class="wizard-panel active" id="sp-1">
         <div class="grid-12">
-            <div class="col-6">
-                <div class="form-group">
-                    <label class="form-label">Danh mục đào tạo <span class="required">*</span></label>
-                    @Html.DropDownListFor(m => m.MaDanhMuc, Model.Categories, "-- Chọn danh mục --", new { @class = "form-control", required = "required" })
-                    @Html.ValidationMessageFor(m => m.MaDanhMuc, "", new { style = "color: var(--status-danger); font-size: 13px;" })
+            <!-- LEFT -->
+            <div class="col-8">
+                <div class="card" style="margin-bottom: 24px;">
+                    <h3 class="h3" style="margin-bottom: 20px;">Thông tin khóa học cơ bản</h3>
+
+                    <div class="form-group">
+                        <label class="form-label">Tiêu đề khóa học <span class="required">*</span></label>
+                        @Html.TextBoxFor(m => m.TenKhoaHoc, new { @class = "form-control", id = "inp-title", placeholder = "Ví dụ: Xây dựng Web hiện đại với React & Node.js", required = "required" })
+                        <div id="err-title" class="form-feedback-error" style="display:none;">Vui lòng nhập tiêu đề!</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Mô tả ngắn gọn <span class="required">*</span></label>
+                        @Html.TextBoxFor(m => m.MoTaNgan, new { @class = "form-control", id = "inp-short", placeholder = "Tóm tắt 1-2 câu về giá trị cốt lõi của khóa học..." })
+                        <div id="err-short" class="form-feedback-error" style="display:none;">Vui lòng nhập mô tả ngắn!</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Mô tả chi tiết <span class="required">*</span></label>
+                        @Html.TextAreaFor(m => m.MoTa, new { @class = "form-control", id = "inp-desc", rows = "5", placeholder = "Mô tả lộ trình học, kiến thức thu được và dự án thực hành..." })
+                        <div id="err-desc" class="form-feedback-error" style="display:none;">Vui lòng nhập mô tả chi tiết!</div>
+                    </div>
+                    <div class="grid-12">
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label class="form-label">Danh mục đào tạo <span class="required">*</span></label>
+                                @Html.DropDownListFor(m => m.MaDanhMuc, Model.Categories, "-- Chọn danh mục --", new { @class = "form-control", id = "inp-cat", required = "required" })
+                                <div id="err-cat" class="form-feedback-error" style="display:none;">Vui lòng chọn danh mục!</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label class="form-label">Cấp độ tiếp cận</label>
+                                <select name="CapDo" id="inp-level" class="form-control">
+                                    <option value="Cơ bản" @(Model.CapDo == "Cơ bản" ? "selected" : "")>Cơ bản (Cho người mới)</option>
+                                    <option value="Trung cấp" @(Model.CapDo == "Trung cấp" ? "selected" : "")>Trung cấp</option>
+                                    <option value="Nâng cao" @(Model.CapDo == "Nâng cao" ? "selected" : "")>Nâng cao & Chuyên sâu</option>
+                                    <option value="Tất cả cấp độ">Tất cả cấp độ</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Objectives List -->
+                <div class="card">
+                    <h3 class="h3" style="margin-bottom: 12px;">Mục tiêu đầu ra của học viên</h3>
+                    <p class="caption" style="margin-bottom: 16px; color: var(--text-secondary);">Học viên sẽ làm được những gì sau khi hoàn thành khóa học này?</p>
+
+                    <div id="objectives-list">
+                        <div class="form-group" style="display: flex; gap: 8px; margin-bottom: 10px;">
+                            <input type="text" class="form-control objective-input" placeholder="Ví dụ: Tự thiết kế kiến trúc Microservices với NestJS và Kafka">
+                            <button type="button" class="btn btn-secondary btn-sm" style="width: 38px; padding: 0;" onclick="this.parentElement.remove()">✕</button>
+                        </div>
+                        <div class="form-group" style="display: flex; gap: 8px; margin-bottom: 10px;">
+                            <input type="text" class="form-control objective-input" placeholder="Ví dụ: Đóng gói và triển khai ứng dụng trên môi trường Docker">
+                            <button type="button" class="btn btn-secondary btn-sm" style="width: 38px; padding: 0;" onclick="this.parentElement.remove()">✕</button>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-outline btn-sm" onclick="addObjective()">+ Thêm mục tiêu kiến thức</button>
+                    @Html.HiddenFor(m => m.MucTieuDauRa, new { id = "MucTieuDauRa-hidden" })
                 </div>
             </div>
-            <div class="col-6">
-                <div class="form-group">
-                    <label class="form-label">Cấp độ tiếp cận</label>
-                    <select name="CapDo" class="form-control">
-                        <option value="Cơ bản" selected>Cơ bản (Cho người mới)</option>
-                        <option value="Trung cấp">Trung cấp</option>
-                        <option value="Nâng cao">Nâng cao & Chuyên sâu</option>
-                    </select>
+
+            <!-- RIGHT -->
+            <div class="col-4">
+                <!-- Ảnh bìa -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <h3 class="h3" style="margin-bottom: 8px;">Ảnh bìa khóa học</h3>
+                    <p class="caption" style="margin-bottom: 14px; color: var(--text-muted);">Tỷ lệ 16:9 (1280×720px). Để trống sẽ dùng ảnh mặc định.</p>
+                    <div style="display: flex; gap: 8px;">
+                        @Html.TextBoxFor(m => m.AnhBia, new { @class = "form-control", id = "inp-thumb", placeholder = "Nhập URL ảnh bìa..." })
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('cover-file-input').click()" style="white-space: nowrap;">📂 Tải lên</button>
+                    </div>
+                    <input type="file" id="cover-file-input" name="CoverImageFile" accept="image/*" style="display: none;" />
+                    <div id="thumb-preview-wrap" style="margin-top: 12px; border-radius: 12px; overflow: hidden; aspect-ratio: 16/9; background: var(--bg-canvas); display: none;">
+                        <img id="thumb-preview-img" src="" style="width:100%; height:100%; object-fit:cover;" />
+                    </div>
+                </div>
+
+                <!-- Giá bán -->
+                <div class="card">
+                    <h3 class="h3" style="margin-bottom: 16px;">Học phí & Giá bán</h3>
+
+                    <div class="form-group">
+                        <label class="form-label">Giá bán (VNĐ) <span class="required">*</span></label>
+                        <input type="text" id="gia-ban-display" class="form-control" placeholder="Ví dụ: 799,000" autocomplete="off" required />
+                        @Html.HiddenFor(m => m.GiaBan, new { id = "GiaBan-hidden" })
+                        <div id="err-price" class="form-feedback-error" style="display:none;">Vui lòng nhập giá bán hợp lệ!</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Giá khuyến mãi (VNĐ - tùy chọn)</label>
+                        <input type="text" id="gia-km-display" class="form-control" placeholder="Ví dụ: 599,000" autocomplete="off" />
+                        @Html.HiddenFor(m => m.GiaKhuyenMai, new { id = "GiaKhuyenMai-hidden" })
+                    </div>
+
+                    <div class="caption" style="background: var(--bg-canvas); padding: 10px 12px; border-radius: 10px; color: var(--text-secondary); line-height: 1.5;">
+                        💡 Giá = 0 sẽ tự động gắn nhãn "Miễn phí".
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="grid-12">
-            <div class="col-6">
-                <div class="form-group">
-                    <label class="form-label" for="GiaBanDisplay">Giá bán (VNĐ) <span class="required">*</span></label>
-                    <div style="position: relative;">
-                        <input type="text" id="GiaBanDisplay" class="form-control" 
-                               placeholder="Ví dụ: 799.000" 
-                               value="@(Model.GiaBan > 0 ? Model.GiaBan.ToString("N0") : (Model.GiaBan == 0 ? "0" : ""))" 
-                               style="padding-right: 52px; font-weight: 600; font-size: 15px;" required autocomplete="off" />
-                        <span style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-weight: 700; color: #64748B; font-size: 13px; pointer-events: none;">VNĐ</span>
-                    </div>
-                    @Html.HiddenFor(m => m.GiaBan, new { id = "GiaBan" })
-                    @Html.ValidationMessageFor(m => m.GiaBan, "", new { style = "color: var(--status-danger); font-size: 13px;" })
-                    <div id="gia-ban-words" style="display: none; font-size: 12px; color: #64748B; margin-top: 5px; font-style: italic;"></div>
-                </div>
+        <!-- Footer step 1 -->
+        <div class="step-footer">
+            <a href="@Url.Action("Index", "Course", new { area = "Instructor" })" class="btn btn-secondary">Hủy bỏ</a>
+            <div style="display:flex; gap:10px;">
+                <button type="submit" name="actionType" value="draft" class="btn btn-outline">@(isEditing ? "Lưu thay đổi" : "Lưu bản nháp")</button>
+                <button type="button" class="btn btn-primary" onclick="proceedToStep2()">Tiếp tục</button>
             </div>
-            <div class="col-6">
-                <div class="form-group">
-                    <label class="form-label" for="GiaKhuyenMaiDisplay">Giá khuyến mãi (VNĐ - tùy chọn)</label>
-                    <div style="position: relative;">
-                        <input type="text" id="GiaKhuyenMaiDisplay" class="form-control" 
-                               placeholder="Ví dụ: 599.000" 
-                               value="@(Model.GiaKhuyenMai.HasValue && Model.GiaKhuyenMai.Value > 0 ? Model.GiaKhuyenMai.Value.ToString("N0") : (Model.GiaKhuyenMai.HasValue && Model.GiaKhuyenMai.Value == 0 ? "0" : ""))" 
-                               style="padding-right: 52px; font-weight: 600; font-size: 15px;" autocomplete="off" />
-                        <span style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-weight: 700; color: #64748B; font-size: 13px; pointer-events: none;">VNĐ</span>
-                    </div>
-                    @Html.HiddenFor(m => m.GiaKhuyenMai, new { id = "GiaKhuyenMai" })
-                    @Html.ValidationMessageFor(m => m.GiaKhuyenMai, "", new { style = "color: var(--status-danger); font-size: 13px;" })
-                    <div id="gia-km-words" style="display: none; font-size: 12px; color: #64748B; margin-top: 5px; font-style: italic;"></div>
-                    <div id="discount-calc-badge" style="display: none; margin-top: 6px; font-size: 12px; font-weight: 700; color: #059669; align-items: center; gap: 4px;"></div>
-                    <div id="discount-warning" style="display: none; margin-top: 6px; font-size: 12px; font-weight: 600; color: #EF4444;">
-                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Giá khuyến mãi phải nhỏ hơn hoặc bằng giá bán!
-                    </div>
+        </div>
+    </div>
+
+    <style>
+        .curriculum-section-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-2xl);
+            padding: 20px 24px;
+            margin-bottom: 20px;
+        }
+        .lesson-item-box {
+            background: var(--bg-canvas);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 16px;
+            margin-top: 12px;
+        }
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- BƯỚC 2: ĐỀ CƯƠNG & BÀI GIẢNG  -->
+    <!-- ============================================================ -->
+    <div class="wizard-panel" id="sp-2">
+
+        <div id="warn-no-video" class="card" style="display:none; background:#FEF2F2; border:1px solid #FECACA; margin-bottom:24px; padding:16px 20px;">
+            <div style="display:flex; align-items:center; gap:12px; color:#991B1B;">
+                <span style="font-size:24px;">⚠️</span>
+                <div>
+                    <strong style="font-size:15px;">Khóa học chưa có video bài giảng!</strong>
+                    <div style="font-size:13px; margin-top:2px;">Vui lòng thêm ít nhất 1 video trước khi chuyển sang Bước 3.</div>
                 </div>
             </div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">Mô tả ngắn (Giới thiệu nổi bật)</label>
-            @Html.TextBoxFor(m => m.MoTaNgan, new { @class = "form-control", placeholder = "Tóm tắt nội dung khóa học trong 1 - 2 câu ngắn gọn..." })
-        </div>
-
-        <div class="form-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <label class="form-label" style="margin-bottom: 0; font-weight: 700;">
-                    <i class="bi bi-card-checklist me-1 text-primary"></i> Mục tiêu đầu ra của học viên (Nhập theo từng dòng)
-                </label>
-                <button type="button" class="btn btn-sm btn-link text-decoration-none" id="btn-toggle-outcomes-mode" onclick="toggleOutcomesInputMode()" style="font-size: 13px; color: var(--primary);">
-                    <i class="bi bi-textarea-t me-1"></i> Chuyển sang ô văn bản
-                </button>
-            </div>
+        <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:24px;">
             
-            <p class="caption" style="color: var(--text-secondary); margin-bottom: 10px;">
-                Nhập từng mục tiêu học viên sẽ đạt được sau khóa học. Hệ thống sẽ tự động đồng bộ theo từng dòng ở Trang chủ và Trang chi tiết khóa học.
-            </p>
-
-            <!-- CHẾ ĐỘ 1: NHẬP THEO TỪNG DÒNG (DYNAMIC ROWS) -->
-            <div id="outcomes-rows-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
-                <!-- Render bằng JavaScript -->
-            </div>
-
-            <div style="margin-bottom: 14px;" id="outcomes-add-btn-wrapper">
-                <button type="button" class="btn btn-sm btn-outline" style="border-color: var(--primary); color: var(--primary); border-radius: 8px;" onclick="addOutcomeRow('')">
-                    <i class="bi bi-plus-lg me-1"></i> Thêm dòng mục tiêu mới
-                </button>
-                <span class="caption text-muted ms-2">(Hoặc nhấn <strong>Enter</strong> để tự động thêm dòng tiếp theo)</span>
-            </div>
-
-            <!-- CHẾ ĐỘ 2 / HIDDEN INPUT: TEXTAREA ĐỒNG BỘ VỚI SERVER -->
-            <div id="outcomes-raw-wrapper" style="display: none;">
-                @Html.TextAreaFor(m => m.MucTieuDauRa, new { 
-                    @class = "form-control", 
-                    id = "MucTieuDauRa", 
-                    rows = "5", 
-                    placeholder = "Nhập mỗi mục tiêu đầu ra trên một dòng:\n- Nắm vững kiến thức nền tảng C# từ cơ bản đến nâng cao\n- Tự tay xây dựng được ứng dụng thực tế\n- Tự tin đi phỏng vấn xin việc..."
-                })
-                <span class="caption text-muted" style="margin-top: 4px; display: block;">Mỗi dòng sẽ được hiển thị như một mục tiêu riêng biệt có dấu tích.</span>
+            <div class="curriculum-toolbar">
+                <label class="chapter-toggle" for="chapter-mode">
+                    <span>Chia theo chương</span>
+                    <input type="checkbox" id="chapter-mode" role="switch" onchange="updateCurriculumMode()">
+                    <span class="toggle-track" aria-hidden="true"></span>
+                </label>
+                <button type="button" id="curriculum-add" class="btn btn-primary" onclick="addCurriculumItem()">+ Thêm bài học</button>
             </div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">Mô tả chi tiết khóa học</label>
-            @Html.TextAreaFor(m => m.MoTa, new { @class = "form-control", rows = "5", placeholder = "Giới thiệu đầy đủ lộ trình, các công nghệ và kiến thức trong khóa..." })
+        <!-- VIDEO UPLOAD PROGRESS SIMULATION HUD -->
+        <div id="upload-progress-hud" style="display: none; background: #EEF2FF; border: 1px solid rgba(67, 76, 232, 0.2); border-radius: 12px; margin-bottom: 24px; padding: 16px 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <strong style="color: var(--primary); font-size: 15px;" id="upload-file-name">Đang tải lên: bai-giang-01.mp4 (0.0GB / 1.5GB)</strong>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-upload" style="background:#fff;">Hủy tải lên</button>
+            </div>
+            <div style="background: rgba(67, 76, 232, 0.2); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px;">
+                <div id="upload-fill-bar" style="background: var(--primary); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary);">
+                <span id="upload-speed-text">Định dạng: MP4 (1080p) • Tốc độ: 14.2 MB/s</span>
+                <span id="upload-percent-text">0% • Đang xử lý...</span>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">Link ảnh bìa (Thumbnail URL)</label>
-            @Html.TextBoxFor(m => m.AnhBia, new { @class = "form-control", placeholder = "https://images.unsplash.com/..." })
-            <span class="caption" style="color: var(--text-muted);">Để trống sẽ dùng ảnh mặc định chuẩn của hệ thống.</span>
+        <p id="chapter-empty" class="caption" style="display:none; padding:28px; text-align:center; border:1px dashed var(--border-color); border-radius:16px;">Chưa có chương. Nhấn “Thêm chương mới” để bắt đầu.</p>
+        <div id="curriculum-container">
+            <div class="curriculum-section-card" id="standalone-card">
+                <strong style="font-size:16px;">Danh sách bài học</strong>
+                <div id="standalone-lessons"></div>
+            </div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px; border-top: 1px solid var(--border-color); padding-top: 20px;">
-            <a href="@Url.Action("Index", "Course", new { area = "Instructor" })" class="btn btn-secondary">Hủy</a>
-            <button type="submit" name="actionType" value="draft" class="btn btn-outline">Lưu bản nháp</button>
-            <button type="submit" name="actionType" value="submit" class="btn btn-primary">Gửi duyệt xuất bản</button>
+        <div class="step-footer">
+            <button type="button" class="btn btn-secondary" onclick="jumpToStep(1)">← Quay lại Bước 1</button>
+            <div style="display:flex; gap:10px;">
+                <button type="submit" name="actionType" value="draft" class="btn btn-outline">@(isEditing ? "Lưu thay đổi" : "Lưu bản nháp")</button>
+                <button type="button" class="btn btn-primary" onclick="proceedToStep3()">Tiếp tục</button>
+            </div>
         </div>
-    }
-</div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- BƯỚC 3: XEM LẠI & GỬI DUYỆT                                 -->
+    <!-- ============================================================ -->
+    <div class="wizard-panel" id="sp-3">
+        <div class="grid-12" style="margin-bottom:24px;">
+
+            <!-- LEFT: Summary -->
+            <div class="col-7">
+                <div class="card" style="margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h3 class="h3">1. Thông tin cơ bản</h3>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="jumpToStep(1)">Chỉnh sửa</button>
+                    </div>
+                    <table class="table" style="font-size:13px; margin:0;">
+                        <tbody>
+                            <tr><td style="width:140px; color:var(--text-secondary); font-weight:600;">Tiêu đề:</td><td><strong id="rv-title">—</strong></td></tr>
+                            <tr><td style="color:var(--text-secondary); font-weight:600;">Danh mục:</td><td><span id="rv-cat" class="badge badge-primary">—</span></td></tr>
+                            <tr><td style="color:var(--text-secondary); font-weight:600;">Cấp độ:</td><td><span id="rv-level">—</span></td></tr>
+                            <tr><td style="color:var(--text-secondary); font-weight:600;">Giá bán:</td><td><strong style="color:var(--primary);" id="rv-price">—</strong></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h3 class="h3">2. Cấu trúc đề cương</h3>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="jumpToStep(2)">Chỉnh sửa</button>
+                    </div>
+                    <div class="grid-12" style="text-align:center;">
+                        <div class="col-4"><div style="background:var(--bg-canvas); padding:12px; border-radius:12px;"><div style="font-size:20px; font-weight:800;" id="rv-sec">0</div><div class="caption">Số chương</div></div></div>
+                        <div class="col-4"><div style="background:var(--bg-canvas); padding:12px; border-radius:12px;"><div style="font-size:20px; font-weight:800;" id="rv-les">0</div><div class="caption">Số bài học</div></div></div>
+                        <div class="col-4"><div style="background:var(--bg-canvas); padding:12px; border-radius:12px;"><div style="font-size:20px; font-weight:800; color:#10B981;" id="rv-vid">0</div><div class="caption">Video</div></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Checklist -->
+            <div class="col-5">
+                <div class="card">
+                    <h3 class="h3" style="margin-bottom:12px;">Kiểm tra điều kiện xuất bản</h3>
+                    <p class="caption" style="margin-bottom:16px; color:var(--text-muted);">Cần đáp ứng đủ các tiêu chí trước khi gửi Admin duyệt</p>
+                    <div id="chk-title" class="chk-item">⬜ Tiêu đề khóa học</div>
+                    <div id="chk-desc"  class="chk-item">⬜ Mô tả chi tiết</div>
+                    <div id="chk-cat"   class="chk-item">⬜ Danh mục đào tạo</div>
+                    <div id="chk-price" class="chk-item">⬜ Giá bán hợp lệ</div>
+                    <div id="chk-vid"   class="chk-item">⬜ Ít nhất 1 video bài giảng</div>
+                    <div id="chk-warn"  style="display:none; margin-top:14px; padding:10px; background:#FEF2F2; color:#991B1B; font-size:12px; border-radius:8px;">
+                        ⚠️ Chưa đủ điều kiện gửi duyệt! Vui lòng bổ sung thông tin còn thiếu.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="step-footer">
+            <button type="button" class="btn btn-secondary" onclick="jumpToStep(2)">← Quay lại Bước 2</button>
+            <div style="display:flex; gap:10px;">
+                <button type="submit" name="actionType" value="draft" class="btn btn-outline">@(isEditing ? "Lưu thay đổi" : "Lưu bản nháp")</button>
+                <button type="submit" name="actionType" value="submit" id="btn-submit" class="btn btn-primary"
+                        onclick="return confirmSubmit()">Gửi xét duyệt khóa học</button>
+            </div>
+        </div>
+    </div>
+    <!-- MODAL ATTACHMENT UPLOAD -->
+    <div class="modal-overlay" id="attach-modal">
+        <div class="modal-container" style="background:#fff; border-radius:12px; width:100%; max-width:480px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:1px solid var(--border-color);">
+                <h3 class="h3" style="margin:0;">Đính kèm tài liệu học tập (PDF/ZIP)</h3>
+                <button type="button" class="btn btn-secondary btn-sm" style="padding:4px 10px;" onclick="closeAttachModal()">✕</button>
+            </div>
+            <div class="modal-body" style="padding:24px;">
+                <div class="form-group">
+                    <label class="form-label">Chọn tệp tài liệu (PDF, Word, ZIP, Code)</label>
+                    <input type="file" id="attach-file-input" class="form-control" style="padding:10px;">
+                </div>
+                <div class="caption" style="color:var(--text-secondary); margin-top:12px; line-height:1.5;">Dung lượng tối đa: 50MB/tệp. Tài liệu đính kèm sẽ hiển thị ở khu vực bài học của học viên.</div>
+            </div>
+            <div class="modal-footer" style="padding:16px 24px; border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:12px; background:var(--bg-canvas); border-bottom-left-radius:12px; border-bottom-right-radius:12px;">
+                <button type="button" class="btn btn-secondary" onclick="closeAttachModal()">Hủy</button>
+                <button type="button" class="btn btn-primary" onclick="simulateAttachUpload()">Tải lên</button>
+            </div>
+        </div>
+    </div>
+}
+
+<dialog id="curriculum-dialog" aria-labelledby="curriculum-dialog-title" style="border:1px solid var(--border-color);border-radius:20px;padding:0;width:440px;max-width:calc(100vw - 32px);box-shadow:0 24px 64px rgba(15,23,42,.2);color:var(--text-heading);">
+    <div style="padding:24px;">
+        <h3 class="h3" id="curriculum-dialog-title" style="margin-bottom:18px;"></h3>
+        <label id="curriculum-dialog-label" for="curriculum-dialog-input" class="form-label">Tên</label>
+        <input id="curriculum-dialog-input" class="form-control" type="text" maxlength="200" autocomplete="off">
+        <p id="curriculum-dialog-error" class="form-feedback-error" style="display:none;margin-top:8px;">Vui lòng nhập tên.</p>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:24px;">
+            <button type="button" class="btn btn-secondary" onclick="closeCurriculumDialog()">Hủy</button>
+            <button type="button" id="curriculum-dialog-save" class="btn btn-primary" onclick="saveCurriculumDialog()">Lưu</button>
+        </div>
+    </div>
+</dialog>
+<style>
+.lesson-video-link { display:inline-flex; align-items:center; gap:5px; max-width:100%; vertical-align:middle; }
+.lesson-play-icon { display:inline-flex; flex:0 0 16px; color:var(--primary); }
+.lesson-play-icon svg { display:block; }
+.lesson-video-filename { overflow-wrap:anywhere; }
+.lesson-video-link:hover .lesson-play-icon { filter:brightness(.85); }
+.lesson-video-link:focus-visible { outline:2px solid var(--primary); outline-offset:3px; border-radius:4px; }
+.lesson-video-badge { display:inline-block; margin-left:12px; padding:2px 10px; border-radius:20px; color:#16A34A; background:#F0FDF4; white-space:nowrap; }
+.lesson-documents { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:12px; font-size:12px; }
+.lesson-document-chip { display:inline-flex; align-items:center; gap:10px; padding:7px 10px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-surface); }
+.lesson-document-chip a { color:var(--text-heading); text-decoration:none; }
+.lesson-document-chip button { border:0; background:transparent; color:#EF4444; cursor:pointer; font-size:18px; line-height:1; padding:0; }
+.lesson-document-count { padding:2px 10px; background:#F1F5F9; color:#64748B; border-radius:20px; }
+.lesson-item .caption a { overflow-wrap:anywhere; color:#64748B; text-decoration:none; }
+
+.lesson-item-box.lesson-item { padding:18px 20px; background:#fff; border-radius:12px; }
+.lesson-header { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.lesson-title { font-size:14px; color:var(--text-heading); min-width:0; overflow-wrap:anywhere; }
+.lesson-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.lesson-actions .btn { height:34px; padding:0 12px; font-size:12px; border-radius:8px; }
+.lesson-preview { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary); margin-right:8px; cursor:pointer; white-space:nowrap; }
+.lesson-preview input { width:14px; height:14px; margin:0; accent-color:var(--primary); }
+.lesson-delete { display:flex; align-items:center; justify-content:center; width:34px; height:34px; padding:0; border:1px solid #FEE2E2; border-radius:8px; background:#FFF5F5; color:#EF4444; cursor:pointer; }
+.lesson-delete:hover { background:#FEE2E2; }
+.lesson-media { display:flex; align-items:center; gap:12px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border-color); color:var(--text-muted); min-width:0; }
+.lesson-media .lesson-video-link { min-width:0; flex:1; }
+.lesson-media .lesson-video-filename { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lesson-media .lesson-video-badge { flex-shrink:0; margin-left:auto; font-size:11px; }
+.lesson-documents { padding-top:12px; margin-top:0; }
+.lesson-documents > span:first-child { color:var(--text-muted); font-size:12px; }
+.lesson-document-chip { background:#F8FAFC; }
+.lesson-document-chip a { display:inline-flex; align-items:center; gap:6px; }
+@@media (max-width:768px) { .lesson-header { align-items:flex-start; flex-direction:column; gap:12px; } .lesson-actions { flex-wrap:wrap; width:100%; } .lesson-delete { margin-left:auto; } .lesson-media { flex-wrap:wrap; } }
+
+#curriculum-dialog { position:fixed; inset:0; margin:auto; max-height:calc(100vh - 32px); overflow:auto; } #curriculum-dialog::backdrop { background:rgba(15,23,42,.4); }</style>
+
+<dialog id="video-preview-dialog" aria-labelledby="video-preview-title">
+    <div class="video-preview-header">
+        <strong id="video-preview-title"></strong>
+        <button type="button" class="btn btn-secondary btn-sm" aria-label="Đóng video" onclick="document.getElementById('video-preview-dialog').close()">✕</button>
+    </div>
+    <video id="video-preview-player" controls playsinline preload="metadata"></video>
+</dialog>
+<style>
+#video-preview-dialog { position:fixed; inset:0; margin:auto; padding:0; border:1px solid var(--border-color); border-radius:16px; width:900px; max-width:calc(100vw - 32px); max-height:calc(100vh - 32px); overflow:auto; background:var(--bg-surface); box-shadow:0 24px 64px rgba(15,23,42,.25); }
+#video-preview-dialog::backdrop { background:rgba(15,23,42,.65); }
+.video-preview-header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 20px; }
+#video-preview-title { overflow-wrap:anywhere; }
+#video-preview-player { display:block; width:100%; max-height:calc(100vh - 120px); background:#000; }
+</style>
+
+<dialog id="wizard-library" aria-labelledby="wizard-library-title" style="position:fixed;inset:0;margin:auto;padding:24px;border:1px solid var(--border-color);border-radius:18px;width:700px;max-width:calc(100vw - 32px);max-height:80vh;overflow:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px;"><h3 class="h3" id="wizard-library-title">Chọn từ thư viện</h3><button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('wizard-library').close()">Đóng</button></div>
+    <div style="display:flex;gap:10px;margin-bottom:16px;"><select id="wizard-library-kind" class="form-control" style="width:150px;" onchange="renderLibraryPicker()"><option value="">Tất cả</option><option value="video">Video</option><option value="document">Tài liệu</option></select><input id="wizard-library-search" class="form-control" placeholder="Tìm tên tệp..." oninput="renderLibraryPicker()"></div>
+    <div id="wizard-library-files"></div>
+</dialog>
+<style>#wizard-library::backdrop { background:rgba(15,23,42,.45); }</style>
 
 @section Scripts {
-    <script>
-        function formatVndNumber(val) {
-            if (val === null || val === undefined || val === '') return '';
-            let digits = val.toString().replace(/\D/g, '');
-            if (!digits) return '';
-            digits = digits.replace(/^0+(?=\d)/, '');
-            return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+<script>
+var curriculumDialogCallback = null;
+var curriculumDialogConfirmation = false;
+function openCurriculumDialog(title, label, value, callback, buttonText, confirmation) {
+    var dialog = document.getElementById('curriculum-dialog');
+    curriculumDialogCallback = callback; curriculumDialogConfirmation = !!confirmation;
+    document.getElementById('curriculum-dialog-title').textContent = title;
+    var input = document.getElementById('curriculum-dialog-input');
+    input.value = value; input.style.display = confirmation ? 'none' : 'block';
+    var labelEl = document.getElementById('curriculum-dialog-label');
+    labelEl.textContent = label; labelEl.style.display = confirmation ? 'none' : 'block';
+    document.getElementById('curriculum-dialog-error').style.display = 'none';
+    document.getElementById('curriculum-dialog-save').textContent = buttonText;
+    dialog.showModal();
+    if (!confirmation) { input.focus(); input.select(); }
+}
+function closeCurriculumDialog() { document.getElementById('curriculum-dialog').close(); curriculumDialogCallback = null; }
+function saveCurriculumDialog() {
+    var value = document.getElementById('curriculum-dialog-input').value.trim();
+    if (!curriculumDialogConfirmation && !value) {
+        document.getElementById('curriculum-dialog-error').style.display = 'block';
+        document.getElementById('curriculum-dialog-input').focus(); return;
+    }
+    var callback = curriculumDialogCallback; closeCurriculumDialog(); if (callback) callback(value);
+}
+document.getElementById('curriculum-dialog-input').addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') { event.preventDefault(); saveCurriculumDialog(); }
+});
+document.getElementById('curriculum-dialog').addEventListener('close', function() { curriculumDialogCallback = null; });
+
+var currentStep = 1;
+var uploadedVideos = 0;
+
+// ── Price format ─────────────────────────────────────────────────
+function parseRaw(v) { return v.replace(/[^0-9]/g, ''); }
+function formatVND(raw) { var n = parseInt(raw, 10); return Number.isNaN(n) ? '' : n.toLocaleString('vi-VN'); }
+
+function setupPrice(dispId, hidId) {
+    var inp = document.getElementById(dispId), hid = document.getElementById(hidId);
+    if (hid.value && parseInt(hid.value) > 0) inp.value = formatVND(hid.value);
+    inp.addEventListener('keypress', function(e) { if (!/[0-9]/.test(e.key)) e.preventDefault(); });
+    inp.addEventListener('input',    function()  { hid.value = parseRaw(this.value) || '0'; });
+    inp.addEventListener('blur',     function()  { var r = parseRaw(this.value); this.value = formatVND(r); hid.value = r || '0'; });
+    inp.addEventListener('focus',    function()  { var r = parseRaw(this.value); this.value = r || ''; });
+}
+setupPrice('gia-ban-display', 'GiaBan-hidden');
+    // Init display values
+    if (document.getElementById('GiaBan-hidden').value) { document.getElementById('gia-ban-display').value = formatVND(document.getElementById('GiaBan-hidden').value); }
+    if (document.getElementById('GiaKhuyenMai-hidden').value) { document.getElementById('gia-km-display').value = formatVND(document.getElementById('GiaKhuyenMai-hidden').value); }
+setupPrice('gia-km-display',  'GiaKhuyenMai-hidden');
+
+// ── Thumb URL preview ────────────────────────────────────────────
+document.getElementById('inp-thumb').addEventListener('blur', function() {
+    var url = this.value.trim();
+    var wrap = document.getElementById('thumb-preview-wrap');
+    var img  = document.getElementById('thumb-preview-img');
+    if (url) { img.src = url; wrap.style.display = 'block'; }
+    else { wrap.style.display = 'none'; }
+});
+
+document.getElementById('cover-file-input').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (file) {
+        var reader = new FileReader();
+        reader.onload = function(e2) {
+            var wrap = document.getElementById('thumb-preview-wrap');
+            var img  = document.getElementById('thumb-preview-img');
+            img.src = e2.target.result;
+            wrap.style.display = 'block';
+            document.getElementById('inp-thumb').value = file.name;
         }
+        reader.readAsDataURL(file);
+    }
+});
 
-        function readVndInWords(n) {
-            if (!n || n === '0' || parseInt(n, 10) === 0) return 'Miễn phí (0 đồng)';
-            const num = parseInt(n, 10);
-            if (isNaN(num)) return '';
+// ── Stepper ──────────────────────────────────────────────────────
+function updateStepper() {
+    for (var i = 1; i <= 3; i++) {
+        var si = document.getElementById('si-' + i);
+        var sn = document.getElementById('sn-' + i);
+        var sd = document.getElementById('sd-' + i);
+        if (i < currentStep)      { si.className = 'stepper-step completed'; sn.innerText = '✓'; if (sd) sd.className = 'stepper-divider completed'; }
+        else if (i === currentStep){ si.className = 'stepper-step active';   sn.innerText = i;   if (sd) sd.className = 'stepper-divider'; }
+        else                       { si.className = 'stepper-step';           sn.innerText = i;   if (sd) sd.className = 'stepper-divider'; }
+    }
+    document.querySelectorAll('.wizard-panel').forEach(function(p, idx) {
+        p.classList.toggle('active', idx + 1 === currentStep);
+    });
+    window.scrollTo({ top: 100, behavior: 'smooth' });
+    if (currentStep === 3) populateReview();
+}
 
-            const defaultNumbers = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
-            const units = ['', 'nghìn', 'triệu', 'tỷ', 'nghìn tỷ', 'triệu tỷ'];
+function jumpToStep(n) {
+    if (n > 1 && !validateStep1(false)) { currentStep = 1; updateStepper(); showToast('Vui lòng hoàn thiện thông tin bắt buộc ở Bước 1!', 'error'); return; }
+    if (n === 3) { proceedToStep3(); return; }
+    currentStep = n; updateStepper();
+}
 
-            function readThree(b, isFirst) {
-                let str = '';
-                const hundred = Math.floor(b / 100);
-                const ten = Math.floor((b % 100) / 10);
-                const one = b % 10;
+// ── Validate step 1 ──────────────────────────────────────────────
+function validateStep1(showErr) {
+    if (showErr === undefined) showErr = true;
+    var ok = true;
+    function chk(id, errId) {
+        var v = document.getElementById(id).value.trim();
+        document.getElementById(errId).style.display = (!v && showErr) ? 'block' : 'none';
+        if (!v) ok = false;
+    }
+    chk('inp-title', 'err-title');
+    chk('inp-cat',   'err-cat');
+    // Price
+    var raw = parseRaw(document.getElementById('gia-ban-display').value) || document.getElementById('GiaBan-hidden').value;
+    var priceOk = raw !== '' && parseInt(raw, 10) >= 0;
+    document.getElementById('err-price').style.display = (!priceOk && showErr) ? 'block' : 'none';
+    if (!priceOk) ok = false;
+    return ok;
+}
 
-                if (hundred > 0 || !isFirst) {
-                    str += defaultNumbers[hundred] + ' trăm ';
-                }
-                if (ten > 1) {
-                    str += defaultNumbers[ten] + ' mươi ';
-                    if (one === 1) str += 'mốt ';
-                    else if (one === 5) str += 'lăm ';
-                    else if (one > 0) str += defaultNumbers[one] + ' ';
-                } else if (ten === 1) {
-                    str += 'mười ';
-                    if (one === 5) str += 'lăm ';
-                    else if (one > 0) str += defaultNumbers[one] + ' ';
-                } else if (ten === 0 && one > 0) {
-                    if (hundred > 0 || !isFirst) str += 'lẻ ';
-                    str += defaultNumbers[one] + ' ';
-                }
-                return str;
-            }
+function proceedToStep2() {
+    if (!validateStep1()) { showToast('Vui lòng điền đầy đủ thông tin bắt buộc!', 'error'); return; }
+    currentStep = 2; updateStepper();
+}
 
-            let temp = num;
-            let groups = [];
-            while (temp > 0) {
-                groups.push(temp % 1000);
-                temp = Math.floor(temp / 1000);
-            }
+// ── Validate step 2 ──────────────────────────────────────────────
+function proceedToStep3() {
+    countVideos();
+    var warn = document.getElementById('warn-no-video');
+    if (pendingUploads > 0) { showToast('Vui lòng đợi tải tệp hoàn tất.', 'info'); return; }
+    if (uploadedVideos === 0) {
+        warn.style.display = 'block';
+        warn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast('⚠ Chưa có video bài giảng nào!', 'error');
+        return;
+    }
+    warn.style.display = 'none';
+    currentStep = 3; updateStepper();
+}
 
-            let result = '';
-            for (let i = groups.length - 1; i >= 0; i--) {
-                if (groups[i] > 0) {
-                    result += readThree(groups[i], i === groups.length - 1) + units[i] + ' ';
-                }
-            }
+// ── Review step 3 ────────────────────────────────────────────────
+function populateReview() {
+    countVideos();
+    var title = document.getElementById('inp-title').value.trim();
+    var catEl  = document.getElementById('inp-cat');
+    var catTxt = catEl.options[catEl.selectedIndex] ? catEl.options[catEl.selectedIndex].text : '—';
+    var level  = document.getElementById('inp-level').value;
+    var raw    = parseRaw(document.getElementById('gia-ban-display').value) || document.getElementById('GiaBan-hidden').value;
 
-            result = result.trim();
-            if (!result) return '';
-            return result.charAt(0).toUpperCase() + result.slice(1) + ' đồng';
-        }
+    var price = '—';
+    if (raw !== '' && parseInt(raw, 10) === 0) {
+        price = 'Miễn phí';
+    } else if (raw !== '' && parseInt(raw, 10) > 0) {
+        price = parseInt(raw, 10).toLocaleString('vi-VN') + ' đ';
+    }
 
-        function setupVndInput(displayId, hiddenId, wordsId, onChangeCallback) {
-            const displayEl = document.getElementById(displayId);
-            const hiddenEl = document.getElementById(hiddenId);
-            const wordsEl = wordsId ? document.getElementById(wordsId) : null;
+    document.getElementById('rv-title').innerText = title || '—';
+    document.getElementById('rv-cat').innerText   = catTxt;
+    document.getElementById('rv-level').innerText = level;
+    document.getElementById('rv-price').innerText = price;
 
-            if (!displayEl) return;
+    var secs = document.querySelectorAll('#curriculum-container .curriculum-section-card:not(#standalone-card)').length;
+    var less = document.querySelectorAll('.lesson-item').length;
+    document.getElementById('rv-sec').innerText = secs;
+    document.getElementById('rv-les').innerText = less;
+    document.getElementById('rv-vid').innerText = uploadedVideos;
 
-            function syncValue() {
-                const originalVal = displayEl.value;
-                const cursorPos = displayEl.selectionStart || 0;
-                const digitsBeforeCursor = originalVal.slice(0, cursorPos).replace(/\D/g, '').length;
+    function setChk(id, pass, label) {
+        var el = document.getElementById(id);
+        el.className = 'chk-item ' + (pass ? 'passed' : 'failed');
+        el.innerHTML = (pass ? '✓ ' : '✕ ') + label;
+    }
+    setChk('chk-title', !!title,              'Tiêu đề khóa học');
+    setChk('chk-desc',  !!document.getElementById('inp-desc').value.trim(), 'Mô tả chi tiết');
+    setChk('chk-cat',   !!catEl.value,        'Danh mục đào tạo');
+    setChk('chk-price', raw !== '' && parseInt(raw, 10) >= 0, 'Giá bán hợp lệ');
+    setChk('chk-vid',   uploadedVideos > 0,   'Ít nhất 1 video bài giảng');
 
-                const rawDigits = originalVal.replace(/\D/g, '');
-                const formatted = formatVndNumber(rawDigits);
+    var allPass = !!title && !!catEl.value && raw !== '' && parseInt(raw, 10) >= 0 && uploadedVideos > 0;
+    document.getElementById('chk-warn').style.display = allPass ? 'none' : 'block';
+    var btn = document.getElementById('btn-submit');
+    btn.disabled = !allPass;
+    btn.style.opacity = allPass ? '1' : '0.5';
+}
 
-                displayEl.value = formatted;
-                if (hiddenEl) {
-                    hiddenEl.value = rawDigits;
-                }
+var submitConfirmed = false;
+function confirmSubmit() {
+    if (!validateStep1()) { currentStep = 1; updateStepper(); showToast('Vui lòng kiểm tra tên khóa học, danh mục và giá bán.', 'error'); return false; }
+    if (pendingUploads > 0) { showToast('Vui lòng đợi tải tệp hoàn tất.', 'info'); return false; }
+    if (!countVideos()) { currentStep = 2; updateStepper(); showToast('Vui lòng tải ít nhất một video trước khi gửi duyệt.', 'error'); return false; }
+    if (submitConfirmed) { submitConfirmed = false; return true; }
+    openCurriculumDialog('Gửi khóa học lên kiểm duyệt?', '', '', function() {
+        submitConfirmed = true;
+        document.getElementById('course-wizard-form').requestSubmit(document.getElementById('btn-submit'));
+        submitConfirmed = false;
+    }, 'Gửi xét duyệt', true);
+    return false;
+}
 
-                // Restore cursor position
-                let newCursorPos = 0;
-                let countedDigits = 0;
-                for (let i = 0; i < formatted.length; i++) {
-                    if (/\d/.test(formatted[i])) countedDigits++;
-                    if (countedDigits <= digitsBeforeCursor) {
-                        newCursorPos = i + 1;
-                    } else {
-                        break;
-                    }
-                }
-                if (digitsBeforeCursor === 0) newCursorPos = 0;
-                try {
-                    displayEl.setSelectionRange(newCursorPos, newCursorPos);
-                } catch (e) {}
-
-                // Display words
-                if (wordsEl) {
-                    if (rawDigits) {
-                        wordsEl.innerText = '= ' + readVndInWords(rawDigits);
-                        wordsEl.style.display = 'block';
-                    } else {
-                        wordsEl.style.display = 'none';
-                        wordsEl.innerText = '';
-                    }
-                }
-
-                if (typeof onChangeCallback === 'function') {
-                    onChangeCallback(rawDigits);
-                }
-            }
-
-            displayEl.addEventListener('input', syncValue);
-            displayEl.addEventListener('blur', syncValue);
-            displayEl.addEventListener('paste', function () {
-                setTimeout(syncValue, 0);
-            });
-
-            // Backspace handling across dots
-            displayEl.addEventListener('keydown', function (e) {
-                if (e.key === 'Backspace') {
-                    const pos = displayEl.selectionStart;
-                    if (pos === displayEl.selectionEnd && pos > 0 && displayEl.value[pos - 1] === '.') {
-                        e.preventDefault();
-                        const val = displayEl.value;
-                        displayEl.value = val.slice(0, pos - 2) + val.slice(pos - 1);
-                        displayEl.setSelectionRange(pos - 1, pos - 1);
-                        syncValue();
-                    }
-                }
-            });
-
-            // Initialize
-            if (displayEl.value) {
-                syncValue();
-            }
-        }
-
-        function checkPriceComparison() {
-            const rawGiaBan = document.getElementById('GiaBan') ? parseInt(document.getElementById('GiaBan').value || '0', 10) : 0;
-            const rawGiaKm = document.getElementById('GiaKhuyenMai') && document.getElementById('GiaKhuyenMai').value ? parseInt(document.getElementById('GiaKhuyenMai').value, 10) : null;
-            const badge = document.getElementById('discount-calc-badge');
-            const warning = document.getElementById('discount-warning');
-
-            if (badge) badge.style.display = 'none';
-            if (warning) warning.style.display = 'none';
-
-            if (rawGiaKm !== null && !isNaN(rawGiaKm) && rawGiaKm >= 0) {
-                if (rawGiaKm > rawGiaBan) {
-                    if (warning) warning.style.display = 'block';
-                } else if (rawGiaBan > 0 && rawGiaKm < rawGiaBan) {
-                    const saved = rawGiaBan - rawGiaKm;
-                    const percent = Math.round((saved / rawGiaBan) * 100);
-                    if (badge) {
-                        badge.innerHTML = '<i class="bi bi-tag-fill me-1"></i> Giảm ' + percent + '% (Tiết kiệm ' + formatVndNumber(saved) + ' đ)';
-                        badge.style.display = 'inline-flex';
-                    }
-                }
-            }
-        }
-
-        // ==================== QUẢN LÝ MỤC TIÊU ĐẦU RA THEO TỪNG DÒNG ====================
-        let isOutcomesRawMode = false;
-
-        function initOutcomesList() {
-            const rawVal = document.getElementById('MucTieuDauRa')?.value || '';
-            const container = document.getElementById('outcomes-rows-container');
-            if (!container) return;
-            container.innerHTML = '';
-
-            let lines = [];
-            if (rawVal.indexOf('\n') >= 0 || rawVal.indexOf('\r') >= 0) {
-                lines = rawVal.split(/\r?\n/).map(s => s.trim().replace(/^[-•*]\s*/, '')).filter(s => s.length > 0);
-            } else if (rawVal.indexOf(';') >= 0) {
-                lines = rawVal.split(';').map(s => s.trim().replace(/^[-•*]\s*/, '')).filter(s => s.length > 0);
-            } else if (rawVal.indexOf(',') >= 0 && rawVal.length > 30) {
-                lines = rawVal.split(',').map(s => s.trim().replace(/^[-•*]\s*/, '')).filter(s => s.length > 0);
-            } else if (rawVal.trim().length > 0) {
-                lines = [rawVal.trim().replace(/^[-•*]\s*/, '')];
-            }
-
-            if (lines.length === 0) {
-                addOutcomeRow('');
-                addOutcomeRow('');
-            } else {
-                lines.forEach(text => addOutcomeRow(text));
-            }
-        }
-
-        function addOutcomeRow(text) {
-            const container = document.getElementById('outcomes-rows-container');
-            if (!container) return null;
-
-            const rowDiv = document.createElement('div');
-            rowDiv.className = 'outcome-row-item';
-            rowDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; animation: fadeIn 0.2s;';
-
-            const indexSpan = document.createElement('span');
-            indexSpan.className = 'outcome-index-badge';
-            indexSpan.style.cssText = 'width: 28px; height: 28px; border-radius: 50%; background: #EEF2FF; color: #434CE8; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;';
-
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.className = 'form-control outcome-input-field';
-            input.value = text || '';
-            input.placeholder = 'Nhập mục tiêu học viên sẽ đạt được...';
-            input.style.cssText = 'flex: 1; height: 42px; font-size: 14px;';
-
-            input.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const newRow = addOutcomeRow('');
-                    if (newRow) {
-                        const newInput = newRow.querySelector('input');
-                        if (newInput) newInput.focus();
-                    }
-                }
-            });
-
-            input.addEventListener('input', syncOutcomesToTextarea);
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.type = 'button';
-            deleteBtn.className = 'btn btn-outline btn-sm';
-            deleteBtn.title = 'Xóa dòng này';
-            deleteBtn.style.cssText = 'height: 42px; width: 42px; border-color: #E2E8F0; color: #EF4444; display: flex; align-items: center; justify-content: center; border-radius: 8px; flex-shrink: 0;';
-            deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
-            deleteBtn.onclick = function () {
-                const rows = container.querySelectorAll('.outcome-row-item');
-                if (rows.length > 1) {
-                    rowDiv.remove();
-                    updateOutcomeBadges();
-                    syncOutcomesToTextarea();
-                } else {
-                    input.value = '';
-                    syncOutcomesToTextarea();
-                }
-            };
-
-            rowDiv.appendChild(indexSpan);
-            rowDiv.appendChild(input);
-            rowDiv.appendChild(deleteBtn);
-            container.appendChild(rowDiv);
-
-            updateOutcomeBadges();
-            syncOutcomesToTextarea();
-            return rowDiv;
-        }
-
-        function updateOutcomeBadges() {
-            const container = document.getElementById('outcomes-rows-container');
-            if (!container) return;
-            const badges = container.querySelectorAll('.outcome-index-badge');
-            badges.forEach((b, idx) => {
-                b.textContent = (idx + 1);
-            });
-        }
-
-        function syncOutcomesToTextarea() {
-            const container = document.getElementById('outcomes-rows-container');
-            const textarea = document.getElementById('MucTieuDauRa');
-            if (!container || !textarea) return;
-
-            const inputs = container.querySelectorAll('.outcome-input-field');
-            const lines = [];
-            inputs.forEach(inp => {
-                const val = inp.value.trim();
-                if (val.length > 0) {
-                    lines.push(val);
-                }
-            });
-
-            textarea.value = lines.join('\n');
-        }
-
-        function syncTextareaToOutcomes() {
-            initOutcomesList();
-        }
-
-        function toggleOutcomesInputMode() {
-            const rowsContainer = document.getElementById('outcomes-rows-container');
-            const addBtnWrapper = document.getElementById('outcomes-add-btn-wrapper');
-            const rawWrapper = document.getElementById('outcomes-raw-wrapper');
-            const toggleBtn = document.getElementById('btn-toggle-outcomes-mode');
-
-            isOutcomesRawMode = !isOutcomesRawMode;
-            if (isOutcomesRawMode) {
-                syncOutcomesToTextarea();
-                if (rowsContainer) rowsContainer.style.display = 'none';
-                if (addBtnWrapper) addBtnWrapper.style.display = 'none';
-                if (rawWrapper) rawWrapper.style.display = 'block';
-                if (toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-list-check me-1"></i> Chuyển sang nhập từng dòng';
-            } else {
-                syncTextareaToOutcomes();
-                if (rowsContainer) rowsContainer.style.display = 'flex';
-                if (addBtnWrapper) addBtnWrapper.style.display = 'block';
-                if (rawWrapper) rawWrapper.style.display = 'none';
-                if (toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-textarea-t me-1"></i> Chuyển sang ô văn bản';
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            setupVndInput('GiaBanDisplay', 'GiaBan', 'gia-ban-words', function () {
-                checkPriceComparison();
-            });
-            setupVndInput('GiaKhuyenMaiDisplay', 'GiaKhuyenMai', 'gia-km-words', function () {
-                checkPriceComparison();
-            });
-            checkPriceComparison();
-            initOutcomesList();
-
-            // Form submit safety
-            const form = document.querySelector('form');
-            if (form) {
-                form.addEventListener('submit', function (e) {
-                    if (!isOutcomesRawMode) {
-                        syncOutcomesToTextarea();
-                    }
-
-                    const rawGiaBan = (document.getElementById('GiaBanDisplay') ? document.getElementById('GiaBanDisplay').value : '').replace(/\D/g, '');
-                    const rawGiaKm = (document.getElementById('GiaKhuyenMaiDisplay') ? document.getElementById('GiaKhuyenMaiDisplay').value : '').replace(/\D/g, '');
-
-                    if (document.getElementById('GiaBan')) document.getElementById('GiaBan').value = rawGiaBan;
-                    if (document.getElementById('GiaKhuyenMai')) document.getElementById('GiaKhuyenMai').value = rawGiaKm;
-
-                    const numGiaBan = parseInt(rawGiaBan || '0', 10);
-                    const numGiaKm = rawGiaKm ? parseInt(rawGiaKm, 10) : null;
-
-                    if (numGiaKm !== null && numGiaKm > numGiaBan) {
-                        e.preventDefault();
-                        alert('Giá khuyến mãi không được lớn hơn giá bán!');
-                        const kmEl = document.getElementById('GiaKhuyenMaiDisplay');
-                        if (kmEl) kmEl.focus();
-                        return false;
-                    }
-                });
-            }
+// ── Curriculum Builder ───────────────────────────────────────────
+function updateCurriculumMode() {
+    document.querySelectorAll('#curriculum-container .curriculum-section-card').forEach(function(section) {
+        section.querySelectorAll('.lesson-item').forEach(function(lesson, index) {
+            var number = lesson.querySelector('.lesson-number');
+            var label = 'Bài ' + (index + 1) + ': ';
+            if (number && number.textContent !== label) number.textContent = label;
         });
-    </script>
+    });
+    document.querySelectorAll('#curriculum-container .curriculum-section-card:not(#standalone-card)').forEach(function(chapter, index) {
+        var count = chapter.querySelector('.chapter-lesson-count');
+        var countLabel = chapter.querySelectorAll('.lesson-item').length + ' bài học';
+        if (count && count.textContent !== countLabel) count.textContent = countLabel;
+        var number = chapter.querySelector('.chapter-number');
+        var label = 'Chương ' + (index + 1) + ': ';
+        if (number && number.textContent !== label) number.textContent = label;
+    });
+    var chapterMode = document.getElementById('chapter-mode').checked;
+    document.getElementById('curriculum-add').textContent = chapterMode ? '+ Thêm chương mới' : '+ Thêm bài học';
+    var hasStandaloneLessons = !!document.querySelector('#standalone-lessons .lesson-item');
+    document.getElementById('standalone-card').style.display = chapterMode && !hasStandaloneLessons ? 'none' : 'block';
+    document.getElementById('chapter-empty').style.display = chapterMode && !document.querySelector('#curriculum-container .curriculum-section-card:not(#standalone-card)') ? 'block' : 'none';
+}
+function addCurriculumItem() {
+    if (document.getElementById('chapter-mode').checked) addSection();
+    else addStandaloneLesson();
+    updateCurriculumMode();
+}
+new MutationObserver(updateCurriculumMode).observe(document.getElementById('curriculum-container'), { childList:true, subtree:true });
+
+var restoringCurriculum = false;
+var secCount = 0;
+
+function addSection(initialTitle) {
+    if (initialTitle === undefined) { openCurriculumDialog('Thêm chương mới', 'Tên chương', '', function(title) { addSection(title); }, 'Thêm chương'); return; }
+    var title = initialTitle;
+    if (!title) return;
+    secCount++;
+    var id = 'sec-' + secCount;
+    var lesId = id + '-lessons';
+    var div = document.createElement('div');
+    div.className = 'curriculum-section-card';
+    div.id = id;
+    div.innerHTML =
+        '<div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-bottom:1px solid var(--border-color);margin-bottom:16px;">' +
+            '<div><strong id="' + id + '-title" style="font-size:16px; color:var(--text-heading);">' + '<span class="chapter-number"></span><span class="chapter-name">' + escapeText(title) + '</span></strong><div class="caption chapter-lesson-count">0 bài học</div></div>' +
+            '<div style="display:flex;gap:8px;">' +
+                '<button type="button" class="btn btn-outline btn-sm" onclick="addLesson(\'' + lesId + '\')">+ Thêm bài học</button>' +
+                '<button type="button" class="btn btn-secondary btn-sm" onclick="editSection(\'' + id + '\',\'' + id + '-title\')">Sửa</button>' +
+                '<button type="button" class="btn btn-danger btn-sm" onclick="document.getElementById(\'' + id + '\').remove()">Xóa</button>' +
+            '</div>' +
+        '</div>' +
+        '<div id="' + lesId + '"></div>';
+    div.dataset.chapterIndex = secCount;
+    document.getElementById('curriculum-container').appendChild(div);
+    if (!restoringCurriculum && typeof showToast === 'function') showToast('Đã thêm chương mới!', 'success');
+    return lesId;
+}
+
+function editSection(secId, titleId) {
+    var el = document.getElementById(titleId).querySelector('.chapter-name');
+    openCurriculumDialog('Chỉnh sửa chương', 'Tên chương', el.innerText, function(title) { el.innerText = title; }, 'Lưu thay đổi');
+}
+
+function escapeText(value) { var el = document.createElement('span'); el.textContent = value; return el.innerHTML; }
+function addStandaloneLesson() {
+    addLesson('standalone-lessons');
+}
+function editLessonTitle(lessonId) {
+    var lesson = document.getElementById(lessonId);
+    if (!lesson) return;
+    var name = lesson.querySelector('.lesson-name');
+    openCurriculumDialog('Chỉnh sửa bài học', 'Tên bài học', name.textContent, function(value) {
+        name.textContent = value;
+    }, 'Lưu thay đổi');
+}
+function countVideos() {
+    uploadedVideos = Array.from(document.querySelectorAll('.lesson-item')).filter(function(el) { return !!el.dataset.videoToken; }).length;
+    return uploadedVideos;
+}
+var lesCount = 0;
+function addLesson(containerId, initialTitle) {
+    if (initialTitle === undefined) { openCurriculumDialog('Thêm bài học', 'Tên bài học', '', function(title) { addLesson(containerId, title); }, 'Thêm bài học'); return; }
+    var title = initialTitle;
+    if (!title) return;
+    lesCount++;
+    var lid = 'les-' + lesCount;
+    var div = document.createElement('div');
+    div.className = 'lesson-item-box lesson-item';
+    div.id = lid;
+    div.innerHTML =
+        '<div class="lesson-header">' +
+            '<strong class="lesson-title"><span class="lesson-number"></span><span class="lesson-name">' + escapeText(title) + '</span></strong>' +
+            '<div class="lesson-actions">' +
+                '<button type="button" class="btn btn-outline btn-sm" onclick="openLibraryPicker(\'' + lid + '\')">Chọn từ thư viện</button>' +
+                '<button type="button" class="btn btn-outline btn-sm" onclick="editLessonTitle(\'' + lid + '\')">Sửa tên</button>' +
+                '<label class="lesson-preview"><input type="checkbox"> Xem thử</label>' +
+                '<button type="button" class="btn btn-secondary btn-sm" onclick="showAttachModal(\'' + lid + '\')">Thêm tài liệu</button>' +
+                '<button type="button" class="btn btn-primary btn-sm" onclick="simulateUpload(\'' + lid + '\')">Tải video</button>' +
+                '<button type="button" class="lesson-delete" aria-label="Xóa bài học" title="Xóa bài học" onclick="document.getElementById(\'' + lid + '\').remove()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg></button>' +
+            '</div>' +
+        '</div>' +
+        '<div class="lesson-media caption" id="' + lid + '-status">Chưa có video bài giảng</div>';
+    document.getElementById(containerId).appendChild(div);
+    if (!restoringCurriculum && typeof showToast === 'function') showToast('Đã thêm bài học mới!', 'success');
+    return div;
+}
+
+function libraryVideoDuration(url) {
+    return new Promise(function(resolve) {
+        var player = document.createElement('video'), done = false;
+        function finish(value) { if (done) return; done = true; player.removeAttribute('src'); player.load(); resolve(value); }
+        player.preload = 'metadata'; player.onloadedmetadata = function() { finish(Number.isFinite(player.duration) ? Math.round(player.duration) : 0); };
+        player.onerror = function() { finish(0); }; player.src = url;
+        setTimeout(function() { finish(0); }, 10000);
+    });
+}
+var libraryPickerFiles = [], libraryPickerLesson = null;
+async function openLibraryPicker(lessonId) {
+    libraryPickerLesson = document.getElementById(lessonId);
+    document.getElementById('wizard-library').showModal();
+    document.getElementById('wizard-library-files').textContent = 'Đang tải thư viện...';
+    try { var response = await fetch('@Url.Action("List", "Resource", new { area = "Instructor" })'); var result = await response.json(); if (!result.success) throw new Error('Không thể tải thư viện.'); libraryPickerFiles = result.files; renderLibraryPicker(); }
+    catch (error) { document.getElementById('wizard-library-files').textContent = 'Không thể tải thư viện. Vui lòng đóng và thử lại.'; }
+}
+function renderLibraryPicker() {
+    var box = document.getElementById('wizard-library-files'); box.replaceChildren();
+    var kind = document.getElementById('wizard-library-kind').value, query = document.getElementById('wizard-library-search').value.toLowerCase();
+    var files = libraryPickerFiles.filter(function(file) { return (!kind || file.Kind === kind) && file.Name.toLowerCase().includes(query); });
+    if (!files.length) { box.textContent = 'Chưa có tệp phù hợp. Bạn có thể tải tệp mới lên trong bài học.'; return; }
+    files.forEach(function(file) {
+        var row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--border-color);';
+        var text = document.createElement('div'); var title = document.createElement('strong'); title.textContent = file.Name; title.style.cssText = 'font-size:13px;overflow-wrap:anywhere;';
+        var subtitle = document.createElement('div'); subtitle.className = 'caption'; subtitle.textContent = (file.Kind === 'video' ? 'Video' : 'Tài liệu') + ' · ' + (file.Courses.length ? file.Courses.join(', ') : 'Chưa gắn khóa học'); text.append(title, subtitle);
+        var button = document.createElement('button'); button.type = 'button'; button.className = 'btn btn-primary btn-sm'; button.textContent = 'Chọn';
+        button.onclick = async function() {
+            button.disabled = true; pendingUploads++;
+            try {
+                var data = new FormData(); data.append('url', file.Url); data.append('__RequestVerificationToken', document.querySelector('#course-wizard-form input[name="__RequestVerificationToken"]').value);
+                var response = await fetch('@Url.Action("Select", "Resource", new { area = "Instructor" })', {method:'POST', body:data}); var uploaded = await response.json();
+                if (!uploaded.success) throw new Error(uploaded.message);
+                if (!libraryPickerLesson || !libraryPickerLesson.isConnected) return;
+                if (file.Kind === 'video') { var seconds = uploaded.duration || await libraryVideoDuration(uploaded.url); renderVideo(libraryPickerLesson, uploaded, seconds); }
+                else { libraryPickerLesson.attachments = libraryPickerLesson.attachments || []; if (!libraryPickerLesson.attachments.some(function(item) {return item.url === uploaded.url;})) libraryPickerLesson.attachments.push(uploaded); renderAttachments(libraryPickerLesson); }
+                document.getElementById('wizard-library').close();
+            } catch (error) { showToast(error.message, 'error'); } finally { button.disabled = false; pendingUploads--; }
+        };
+        row.append(text, button); box.appendChild(row);
+    });
+}
+
+var pendingUploads = 0;
+function uploadLessonFile(file, kind, progress) {
+    pendingUploads++;
+    return new Promise(function(resolve, reject) {
+        var data = new FormData(); data.append('file', file); data.append('kind', kind);
+        data.append('__RequestVerificationToken', document.querySelector('#course-wizard-form input[name="__RequestVerificationToken"]').value);
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '@Url.Action("UploadLessonFile", "Course", new { area = "Instructor" })');
+        xhr.upload.onprogress = function(event) { if (event.lengthComputable && progress) progress(Math.round(event.loaded / event.total * 100)); };
+        xhr.onload = function() {
+            pendingUploads--;
+            try { var result = JSON.parse(xhr.responseText); if (xhr.status >= 200 && xhr.status < 300 && result.success) resolve(result); else reject(new Error(result.message || 'Không thể tải tệp lên.')); }
+            catch (error) { reject(new Error('Không thể tải tệp lên. Vui lòng thử lại.')); }
+        };
+        xhr.onerror = function() { pendingUploads--; reject(new Error('Mất kết nối khi tải tệp.')); };
+        xhr.send(data);
+    });
+}
+function videoDuration(file) {
+    return new Promise(function(resolve) {
+        var video = document.createElement('video'), url = URL.createObjectURL(file), done = false;
+        function finish(value) { if (done) return; done = true; URL.revokeObjectURL(url); resolve(value); }
+        video.preload = 'metadata'; video.onloadedmetadata = function() { finish(Number.isFinite(video.duration) ? Math.round(video.duration) : 0); };
+        video.onerror = function() { finish(0); }; video.src = url;
+        setTimeout(function() { finish(0); }, 10000);
+    });
+}
+function durationLabel(seconds) { return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0'); }
+function previewLessonVideo(url, name) {
+    var dialog = document.getElementById('video-preview-dialog');
+    var player = document.getElementById('video-preview-player');
+    document.getElementById('video-preview-title').textContent = name;
+    player.src = url;
+    dialog.showModal();
+    player.play().catch(function() {});
+}
+document.getElementById('video-preview-dialog').addEventListener('close', function() {
+    var player = document.getElementById('video-preview-player');
+    player.pause(); player.removeAttribute('src'); player.load();
+});
+document.getElementById('video-preview-dialog').addEventListener('click', function(event) {
+    if (event.target !== this) return;
+    var bounds = this.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) this.close();
+});
+
+function renderVideo(lesson, uploaded, duration) {
+    lesson.dataset.videoToken = uploaded.token; lesson.dataset.videoDuration = duration;
+    lesson.dataset.videoName = uploaded.name; lesson.dataset.videoUrl = uploaded.url;
+    var status = document.getElementById(lesson.id + '-status'); status.textContent = '';
+    var link = document.createElement('a'); link.href = uploaded.url; link.setAttribute('aria-label', 'Xem nhanh video ' + uploaded.name);
+    link.onclick = function(event) { event.preventDefault(); previewLessonVideo(uploaded.url, uploaded.name); };
+    link.className = 'lesson-video-link';
+    var play = document.createElement('span'); play.className = 'lesson-play-icon'; play.setAttribute('aria-hidden', 'true');
+    play.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="currentColor"/><path d="M6.3 4.6L11 8L6.3 11.4V4.6Z" fill="white"/></svg>';
+    var filename = document.createElement('span'); filename.className = 'lesson-video-filename';
+    filename.textContent = uploaded.name + (duration ? ' (' + durationLabel(duration) + ')' : '');
+    link.append(play, filename); status.appendChild(link);
+    var badge = document.createElement('span'); badge.textContent = '✓ Có video'; badge.className = 'lesson-video-badge'; status.appendChild(badge);
+    lesson.querySelectorAll('button').forEach(function(btn) { if (btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf('simulateUpload') >= 0) btn.textContent = 'Thay video'; });
+    countVideos();
+}
+function simulateUpload(lesId) {
+    var lesson = document.getElementById(lesId), input = document.createElement('input');
+    input.type = 'file'; input.accept = '.mp4,.webm,.mov,.mkv,.m4v,.ogv';
+    input.onchange = async function() {
+        var file = input.files[0]; if (!file) return;
+        var status = document.getElementById(lesId + '-status');
+        status.textContent = 'Đang tải lên: ' + file.name + ' (0%)';
+        try {
+            var results = await Promise.all([uploadLessonFile(file, 'video', function(percent) { status.textContent = 'Đang tải lên: ' + file.name + ' (' + percent + '%)'; }), videoDuration(file)]);
+            if (!lesson.isConnected) return;
+            renderVideo(lesson, results[0], results[1]);
+            document.getElementById('warn-no-video').style.display = 'none';
+        } catch (error) {
+            if (lesson.dataset.videoToken) renderVideo(lesson, {token:lesson.dataset.videoToken,name:lesson.dataset.videoName,url:lesson.dataset.videoUrl}, Number(lesson.dataset.videoDuration));
+            else status.textContent = 'Tải lên thất bại. Vui lòng thử lại.';
+            showToast(error.message, 'error');
+        }
+    }; input.click();
+}
+function renderAttachments(lesson) {
+    var items = lesson.attachments || [], box = lesson.querySelector('.lesson-documents');
+    if (!box) { box = document.createElement('div'); box.className = 'lesson-documents'; lesson.appendChild(box); }
+    box.replaceChildren(); if (!items.length) return;
+    var label = document.createElement('span'); label.textContent = 'Tài liệu đính kèm:'; box.appendChild(label);
+    items.forEach(function(item) {
+        var chip = document.createElement('span'); chip.className = 'lesson-document-chip';
+        var link = document.createElement('a'); link.href = item.url; link.target = '_blank'; link.rel = 'noopener';
+        var dot = item.name.lastIndexOf('.'); link.textContent = (dot > 0 ? item.name.substring(0, dot) + ' (' + item.name.substring(dot + 1).toUpperCase() + ')' : item.name);
+        var icon = document.createElement('span'); icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6v20h12V6zM14 2v5h5M9 12h6M9 16h6"/></svg>'; link.prepend(icon);
+        var remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', 'Xóa tài liệu ' + item.name);
+        remove.onclick = function() { lesson.attachments = items.filter(function(entry) { return entry.token !== item.token; }); renderAttachments(lesson); };
+        chip.append(link, remove); box.appendChild(chip);
+    });
+}
+function serializeCurriculum() {
+    var form = document.getElementById('course-wizard-form');
+    form.querySelectorAll('.curriculum-binding').forEach(function(el) { el.remove(); });
+    function hidden(name, value) { var el = document.createElement('input'); el.type = 'hidden'; el.className = 'curriculum-binding'; el.name = name; el.value = value; form.appendChild(el); }
+    var chapterIndices = {};
+    document.querySelectorAll('#curriculum-container .curriculum-section-card:not(#standalone-card)').forEach(function(chapter, i) {
+        chapterIndices[chapter.id] = i;
+        hidden('Chapters[' + i + '].Id', chapter.dataset.existingId || '');
+        hidden('Chapters[' + i + '].Title', chapter.querySelector('.chapter-name').textContent);
+    });
+    document.querySelectorAll('#curriculum-container .lesson-item').forEach(function(lesson, i) {
+        var prefix = 'Lessons[' + i + ']';
+        hidden(prefix + '.Id', lesson.dataset.existingId || '');
+        hidden(prefix + '.Title', lesson.querySelector('.lesson-name').textContent);
+        var chapter = lesson.closest('.curriculum-section-card');
+        hidden(prefix + '.ChapterIndex', chapter.id === 'standalone-card' ? '' : chapterIndices[chapter.id]);
+        hidden(prefix + '.Preview', lesson.querySelector('input[type=checkbox]').checked ? 'true' : 'false');
+        hidden(prefix + '.VideoToken', lesson.dataset.videoToken || '');
+        hidden(prefix + '.Duration', lesson.dataset.videoDuration || '0');
+        (lesson.attachments || []).forEach(function(item, index) { hidden(prefix + '.AttachmentTokens[' + index + ']', item.token); });
+    });
+}
+var savedChapters = @Html.Raw(System.Web.Helpers.Json.Encode((Model.Chapters ?? new List<ECOLearning.Areas.Instructor.Models.CourseChapterInput>()).Select(c => new { c.Id, c.Title })));
+var savedLessons = @Html.Raw(System.Web.Helpers.Json.Encode((Model.Lessons ?? new List<ECOLearning.Areas.Instructor.Models.CourseLessonInput>()).Select(l => new { l.Id, l.Title, l.ChapterIndex, l.Preview, l.VideoToken, l.Duration, l.AttachmentTokens })));
+var savedUploads = @Html.Raw(System.Web.Helpers.Json.Encode(Session["CourseWizardUploads"] ?? new Dictionary<string, string[]>()));
+restoringCurriculum = true;
+var restoredContainers = savedChapters.map(function(chapter) { var container = addSection(chapter.Title); document.getElementById(container).closest(".curriculum-section-card").dataset.existingId = chapter.Id || ""; return container; });
+savedLessons.forEach(function(lesson) {
+    var container = lesson.ChapterIndex == null ? 'standalone-lessons' : restoredContainers[lesson.ChapterIndex];
+    if (!container) return;
+    var row = addLesson(container, lesson.Title); row.dataset.existingId = lesson.Id || ''; row.querySelector('input[type=checkbox]').checked = lesson.Preview;
+    var video = savedUploads[lesson.VideoToken];
+    if (video) renderVideo(row, {token:lesson.VideoToken, url:video[1], name:video[2]}, lesson.Duration);
+    row.attachments = (lesson.AttachmentTokens || []).filter(function(token) { return !!savedUploads[token]; }).map(function(token) { return {token:token,url:savedUploads[token][1],name:savedUploads[token][2]}; });
+    renderAttachments(row);
+});
+if (@Html.Raw(isEditing ? "true" : "false") && new URLSearchParams(window.location.search).get('step') === '2') { currentStep = 2; updateStepper(); }
+restoringCurriculum = false;
+document.getElementById('chapter-mode').checked = savedChapters.length > 0;
+updateCurriculumMode();
+if (savedLessons.length && !@Html.Raw(isEditing ? "true" : "false")) {
+    showToast('Đề cương và các tệp đã tải lên được giữ lại.', 'info');
+}
+</script>
+
+<script>
+// ── Objectives Builder ───────────────────────────────────────────
+function addObjective() {
+    var list = document.getElementById('objectives-list');
+    var div = document.createElement('div');
+    div.className = 'form-group';
+    div.style.cssText = 'display: flex; gap: 8px; margin-bottom: 10px;';
+    div.innerHTML = '<input type="text" class="form-control objective-input" placeholder="Thêm mục tiêu...">' +
+                    '<button type="button" class="btn btn-secondary btn-sm" style="width: 38px; padding: 0;" onclick="this.parentElement.remove()">✕</button>';
+    list.appendChild(div);
+}
+
+var storedObjectives = document.getElementById('MucTieuDauRa-hidden').value;
+if (storedObjectives) {
+    document.getElementById('objectives-list').replaceChildren();
+    storedObjectives.split(/\r?\n/).filter(Boolean).forEach(function(value) { addObjective(); var inputs = document.querySelectorAll('.objective-input'); inputs[inputs.length - 1].value = value; });
+}
+if (document.getElementById('inp-thumb').value) document.getElementById('inp-thumb').dispatchEvent(new Event('blur'));
+
+// ── Form Submit Interceptor ───────────────────────────────────────────
+document.getElementById('course-wizard-form').addEventListener('submit', function(e) {
+    if (!validateStep1()) {
+        e.preventDefault(); currentStep = 1; updateStepper();
+        showToast('Vui lòng kiểm tra tên khóa học, danh mục và giá bán.', 'error');
+        var invalid = !document.getElementById('inp-title').value.trim() ? 'inp-title' : !document.getElementById('inp-cat').value ? 'inp-cat' : 'gia-ban-display';
+        document.getElementById(invalid).focus(); return;
+    }
+    if (e.submitter && e.submitter.value === 'submit' && !countVideos()) {
+        e.preventDefault(); currentStep = 2; updateStepper(); showToast('Vui lòng tải ít nhất một video trước khi gửi duyệt.', 'error'); return;
+    }
+    if (pendingUploads > 0) { e.preventDefault(); showToast('Vui lòng đợi tải tệp hoàn tất.', 'info'); return; }
+    serializeCurriculum();
+    var objectives = [];
+    document.querySelectorAll('.objective-input').forEach(function(input) {
+        if (input.value.trim() !== '') {
+            objectives.push(input.value.trim());
+        }
+    });
+    document.getElementById('MucTieuDauRa-hidden').value = objectives.join('\n');
+});
+
+// ── Attachment Modal ───────────────────────────────────────────
+var currentAttachLessonId = null;
+
+function showAttachModal(lessonId) {
+    currentAttachLessonId = lessonId;
+    document.getElementById('attach-file-input').value = '';
+    document.getElementById('attach-modal').classList.add('active');
+}
+
+function closeAttachModal() {
+    document.getElementById('attach-modal').classList.remove('active');
+    currentAttachLessonId = null;
+}
+
+async function simulateAttachUpload() {
+    var input = document.getElementById('attach-file-input');
+    if (!input.files.length) { showToast('Vui lòng chọn tệp tài liệu.', 'error'); return; }
+    var lesson = document.getElementById(currentAttachLessonId), file = input.files[0]; if (!lesson) return;
+    closeAttachModal();
+    var status = document.createElement('div'); status.className = 'caption'; status.textContent = 'Đang tải tài liệu: ' + file.name; lesson.appendChild(status);
+    try {
+        var uploaded = await uploadLessonFile(file, 'document', function(percent) { status.textContent = 'Đang tải tài liệu: ' + file.name + ' (' + percent + '%)'; });
+        if (!lesson.isConnected) return;
+        lesson.attachments = lesson.attachments || []; lesson.attachments.push(uploaded); renderAttachments(lesson);
+    } catch (error) { showToast(error.message, 'error'); }
+    finally { status.remove(); }
+}
+</script>
 }

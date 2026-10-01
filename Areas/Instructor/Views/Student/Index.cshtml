@@ -1,20 +1,19 @@
-@model List<ECOLearning.Areas.Instructor.Models.InstructorStudentItem>
+﻿@model List<ECOLearning.Areas.Instructor.Models.InstructorStudentItem>
 @{
 ViewBag.Title = "Quản Lý Học Viên";
 var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
 }
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-    <div>
-        <h1 class="h2" style="margin-top: 6px;">Quản Lý Học Viên</h1>
-        <p class="body-2" style="color: var(--text-secondary);">Theo dõi tiến độ học tập, thời gian tham gia và đánh giá của học viên (UC11)</p>
-    </div>
-</div>
-
+<style>
+.student-filter-fields { display:flex;gap:12px;align-items:center;flex:1;min-width:0;flex-wrap:wrap; }
+.student-filter-fields .teacher-select { flex:1;min-width:200px; }
+.student-result-count { display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:9px;background:#eef0ff;color:var(--primary);font-size:13px;white-space:nowrap; }
+.student-empty-icon { width:64px;height:64px;border-radius:18px;background:#eef0ff;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;color:var(--primary); }
+</style>
 <!-- FILTER & SEARCH BAR -->
 <div class="card" style="margin-bottom: 24px; padding: 16px 20px;">
     <form method="get" action="@Url.Action("Index", "Student", new { area = "Instructor" })" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-        <div style="display: flex; gap: 12px; align-items: center; flex: 1; min-width: 300px;">
+        <div class="student-filter-fields">
             <select name="courseId" class="form-control" style="max-width: 300px;">
                 <option value="">Tất cả khóa học của bạn</option>
                 @if (teacherCourses != null)
@@ -28,10 +27,10 @@ var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
                 }
             </select>
             <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Tìm kiếm theo họ tên hoặc email..." style="max-width: 320px;">
-            <button type="submit" class="btn btn-secondary">Lọc</button>
+            <button type="submit" class="btn btn-primary">Lọc</button>
         </div>
         <div>
-            <span class="caption" style="font-weight: 600; color: var(--text-secondary);">Tổng số: <strong>@(Model != null ? Model.Count : 0)</strong> học viên</span>
+            <span class="student-result-count"><strong>@(Model != null ? Model.Count : 0)</strong> kết quả</span>
         </div>
     </form>
 </div>
@@ -90,13 +89,13 @@ var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
                 {
                     <tr>
                         <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 48px 24px;">
-                            <div style="width: 52px; height: 52px; border-radius: 50%; background: var(--bg-canvas); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: var(--text-muted); font-size: 24px;">
-                                <i class="bi bi-people-fill"></i>
+                            <div class="student-empty-icon">
+                                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0112 0v2M16 5a3 3 0 010 6M18 14a5 5 0 013 4v2"/></svg>
                             </div>
                             <p class="body-1" style="font-weight: 600; color: var(--text-heading); margin-bottom: 4px;">
-                                Khóa học hiện tại chưa có học viên nào ghi danh
+                                @(string.IsNullOrWhiteSpace(ViewBag.Search as string) ? "Chưa có học viên ghi danh" : "Không tìm thấy học viên phù hợp")
                             </p>
-                            <span class="caption">Khi có học viên mua và tham gia khóa học, thông tin học tập sẽ hiển thị tại đây.</span>
+                            <span class="caption">@(string.IsNullOrWhiteSpace(ViewBag.Search as string) ? "Học viên và tiến độ học tập sẽ xuất hiện tại đây khi có lượt ghi danh." : "Thử đổi từ khóa hoặc chọn tất cả khóa học để tìm lại.")</span>
                         </td>
                     </tr>
                 }

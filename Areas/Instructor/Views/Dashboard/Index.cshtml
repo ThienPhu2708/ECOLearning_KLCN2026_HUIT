@@ -1,145 +1,174 @@
-@model ECOLearning.Areas.Instructor.Models.InstructorDashboardViewModel
+﻿@model ECOLearning.Areas.Instructor.Models.InstructorDashboardViewModel
 @{
-ViewBag.Title = "Dashboard Giảng Viên";
+    ViewBag.Title = "Dashboard Giảng Viên";
+    string instructorName = Session["FullName"] as string ?? "Giảng viên";
 }
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px;">
+<style>
+.dashboard-courses-table { min-width:900px;width:100%; }
+.dashboard-courses-table th,.dashboard-courses-table td { white-space:nowrap;vertical-align:middle; }
+.dashboard-courses-table th:first-child { min-width:220px; }
+.dashboard-courses-table td:first-child img { flex-shrink:0; }
+.dashboard-courses-table .badge { white-space:nowrap;display:inline-block; }
+.dashboard-courses-table .btn { white-space:nowrap; }
+
+.dashboard-stat { position:relative;overflow:hidden; }
+.dashboard-stat .kpi-info h4 { padding-right:40px; }
+.dashboard-stat-icon { position:absolute;right:20px;top:20px;display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.8); }
+.dashboard-stat-revenue { background:#f2efff;border-color:#ded7fa; }
+.dashboard-stat-revenue .kpi-value,.dashboard-stat-revenue .dashboard-stat-icon { color:#6554c0; }
+.dashboard-stat-month { background:#edf9f3;border-color:#ccebdc; }
+.dashboard-stat-month .kpi-value,.dashboard-stat-month .dashboard-stat-icon { color:#238566; }
+.dashboard-stat-students { background:#eef6ff;border-color:#d4e5f7; }
+.dashboard-stat-students .kpi-value,.dashboard-stat-students .dashboard-stat-icon { color:#3277ba; }
+.dashboard-stat-rating { background:#fff7e9;border-color:#f3e1bf; }
+.dashboard-stat-rating .kpi-value,.dashboard-stat-rating .dashboard-stat-icon { color:#b7791f; }
+</style>
+
+<!-- Page Header -->
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 28px;">
     <div>
-        <h1 class="h2" style="margin-top: 6px;">Tổng Quan Giảng Dạy</h1>
-        <p class="body-2" style="color: var(--text-secondary);">Theo dõi doanh thu, tăng trưởng học viên và hiệu quả các khóa học của bạn</p>
+        <p style="font-size: 26px; line-height: 1.4; font-weight: 400; letter-spacing: -0.5px; margin: 0; color: var(--text-secondary);">Xin chào, <strong style="font-weight: 700; color: var(--primary);">@instructorName</strong></p>
     </div>
     <div style="display: flex; gap: 10px;">
         <a href="@Url.Action("Create", "Course", new { area = "Instructor" })" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i> Tạo khóa học mới
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Tạo khóa học mới
         </a>
     </div>
 </div>
 
-<!-- 4 METRIC CARDS COMPLIANT WITH 3.3.1.3 -->
-<div class="grid-12" style="margin-bottom: 32px;">
+<!-- ============================================================ -->
+<!-- 4 KPI CARDS                                                   -->
+<!-- ============================================================ -->
+<div class="grid-12" style="margin-bottom: 32px; align-items: stretch;">
 
-    <!-- Card 1: Total Revenue -->
-    <div class="col-3">
-        <div class="card" style="padding: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Tổng doanh thu</span>
-                <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(13, 148, 136, 0.1); color: #0D9488; display: flex; align-items: center; justify-content: center;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="1" x2="12" y2="23"></line>
-                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                    </svg>
+    <!-- KPI 1: Tổng doanh thu -->
+    <div class="col-3" style="display: flex; flex-direction: column;">
+        <div class="kpi-card dashboard-stat dashboard-stat-revenue" style="flex: 1; justify-content: flex-start;">
+            <span class="dashboard-stat-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 9h18M15 14h3"/></svg></span>
+            <div class="kpi-info" style="width: 100%;">
+                <h4>Tổng doanh thu</h4>
+                <div class="kpi-value">
+                    @{
+                        if (Model.TotalRevenue >= 1000000)
+                        { @((Model.TotalRevenue / 1000000m).ToString("0.##") + "M") }
+                        else
+                        { @Model.TotalRevenue.ToString("#,##0 đ") }
+                    }
+                </div>
+                <div class="caption" style="color: var(--text-secondary); margin-top: 4px;">
+                    Tích lũy từ tất cả đơn hàng
                 </div>
             </div>
-            <div style="font-size: 24px; font-weight: 800; color: #0D9488; margin-bottom: 4px;">
-                @Model.TotalRevenue.ToString("#,##0 đ")
-            </div>
-            <span class="caption" style="color: var(--text-muted);">Tích lũy từ tất cả đơn hàng</span>
         </div>
     </div>
 
-    <!-- Card 2: Month Revenue -->
-    <div class="col-3">
-        <div class="card" style="padding: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Doanh thu tháng @DateTime.Now.Month</span>
-                <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(59, 130, 246, 0.1); color: #3B82F6; display: flex; align-items: center; justify-content: center;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                        <polyline points="17 6 23 6 23 12"></polyline>
-                    </svg>
+    <!-- KPI 2: Doanh thu tháng này -->
+    <div class="col-3" style="display: flex; flex-direction: column;">
+        <div class="kpi-card dashboard-stat dashboard-stat-month" style="flex: 1; justify-content: flex-start;">
+            <span class="dashboard-stat-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m4 16 5-5 4 3 7-9M15 5h5v5"/></svg></span>
+            <div class="kpi-info" style="width: 100%;">
+                <h4>Doanh thu tháng @DateTime.Now.Month</h4>
+                <div class="kpi-value">
+                    @{
+                        if (Model.MonthRevenue >= 1000000)
+                        { @((Model.MonthRevenue / 1000000m).ToString("0.##") + "M") }
+                        else
+                        { @Model.MonthRevenue.ToString("#,##0 đ") }
+                    }
+                </div>
+                <div class="kpi-trend positive" style="margin-top: 4px;">
+                    <span>Trong 30 ngày qua</span>
                 </div>
             </div>
-            <div style="font-size: 24px; font-weight: 800; color: var(--text-heading); margin-bottom: 4px;">
-                @Model.MonthRevenue.ToString("#,##0 đ")
-            </div>
-            <span class="caption" style="color: var(--status-success); font-weight: 600;">Tích lũy doanh thu</span>
         </div>
     </div>
 
-    <!-- Card 3: Total Students -->
-    <div class="col-3">
-        <div class="card" style="padding: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Tổng học viên</span>
-                <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(16, 185, 129, 0.1); color: #10B981; display: flex; align-items: center; justify-content: center;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="9" cy="7" r="4"></circle>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                    </svg>
+    <!-- KPI 3: Tổng học viên -->
+    <div class="col-3" style="display: flex; flex-direction: column;">
+        <div class="kpi-card dashboard-stat dashboard-stat-students" style="flex: 1; justify-content: flex-start;">
+            <span class="dashboard-stat-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0112 0v2M16 5a3 3 0 010 6M18 14a5 5 0 013 4v2"/></svg></span>
+            <div class="kpi-info" style="width: 100%;">
+                <h4>Tổng số học viên</h4>
+                <div class="kpi-value">
+                    @Model.TotalStudents.ToString("#,##0")
+                </div>
+                <div class="kpi-trend positive" style="margin-top: 4px;">
+                    @if (Model.NewStudentsThisMonth > 0)
+                    {
+                        <span>+@Model.NewStudentsThisMonth học viên mới tháng này</span>
+                    }
+                    else
+                    {
+                        <span style="color: var(--text-muted); background: none; font-weight: normal; padding: 0;">Học viên đã ghi danh</span>
+                    }
                 </div>
             </div>
-            <div style="font-size: 24px; font-weight: 800; color: var(--text-heading); margin-bottom: 4px;">
-                @Model.TotalStudents.ToString("#,##0")
-            </div>
-            <span class="caption" style="color: var(--text-muted);">Học viên đã ghi danh</span>
         </div>
     </div>
 
-    <!-- Card 4: Average Rating -->
-    <div class="col-3">
-        <div class="card" style="padding: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Đánh giá trung bình</span>
-                <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(245, 158, 11, 0.1); color: #F59E0B; display: flex; align-items: center; justify-content: center;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B" stroke-width="1">
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                    </svg>
+    <!-- KPI 4: Điểm đánh giá TB -->
+    <div class="col-3" style="display: flex; flex-direction: column;">
+        <div class="kpi-card dashboard-stat dashboard-stat-rating" style="flex: 1; justify-content: flex-start;">
+            <span class="dashboard-stat-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg></span>
+            <div class="kpi-info" style="width: 100%;">
+                <h4>Điểm đánh giá TB</h4>
+                <div class="kpi-value">
+                    @(Model.TotalReviews > 0 ? Model.AverageRating.ToString("0.0") : "—") <span style="color: #F59E0B;">★</span>
+                </div>
+                <div class="caption" style="color: var(--text-secondary); margin-top: 4px;">
+                    @(Model.TotalReviews > 0 ? "Dựa trên " + Model.TotalReviews + " nhận xét" : "Chưa có đánh giá")
                 </div>
             </div>
-            <div style="font-size: 24px; font-weight: 800; color: #F59E0B; margin-bottom: 4px;">
-                @Model.AverageRating.ToString("0.0") <i class="bi bi-star-fill"></i>
-            </div>
-            <span class="caption" style="color: var(--text-muted);">Dựa trên phản hồi học viên</span>
         </div>
     </div>
 
 </div>
 
-<!-- REVENUE LINE CHART & TOP COURSES -->
-<div class="grid-12" style="margin-bottom: 32px;">
+<!-- ============================================================ -->
+<!-- CHARTS: Doanh thu + Phân bổ sao                             -->
+<!-- ============================================================ -->
+<div class="grid-12" style="margin-bottom: 32px; align-items: stretch;">
 
-    <!-- Biểu đồ biến động doanh thu 12 tháng -->
-    <div class="col-8">
-        <div class="card">
+    <!-- Biểu đồ doanh thu 12 tháng -->
+    <div class="col-8" style="display: flex; flex-direction: column;">
+        <div class="card" style="flex: 1;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <div>
-                    <h3 class="h3">Biến Động Doanh Thu Khóa Học</h3>
-                    <span class="caption">Doanh thu tích lũy qua các tháng trong năm (Triệu VNĐ)</span>
+                    <h3 class="h3">Biến động doanh thu giảng dạy (VNĐ)</h3>
+                    <span class="caption">Cập nhật thời gian thực theo từng tháng</span>
                 </div>
-                <span class="badge badge-primary" style="background: #CCFBF1; color: #0D9488;">Năm @DateTime.Now.Year</span>
+                <div class="custom-select-wrapper" style="position: relative; width: 140px;">
+                    <div class="form-control dropdown-btn" onclick="toggleCustomDropdown(event)" style="width: 100%; height: 36px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #fff; user-select: none;">
+                        <span id="chart-filter-label">Năm nay</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                    <div id="revenue-chart-menu" class="dropdown-menu custom-dropdown-menu" style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #fff; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); z-index: 50; display: none; padding: 4px 0; overflow: hidden;">
+                        <div class="dropdown-item custom-option" onclick="handleChartFilter('year', 'Năm nay')">Năm nay</div>
+                        <div class="dropdown-item custom-option" onclick="handleChartFilter('month', 'Tháng này')">Tháng này</div>
+                        <div class="dropdown-item custom-option" onclick="handleChartFilter('week', '7 ngày qua')">7 ngày qua</div>
+                    </div>
+                </div>
             </div>
             <div id="instructor-revenue-chart"></div>
         </div>
     </div>
 
-    <!-- Top 3 Khóa học mang lại doanh thu cao nhất -->
-    <div class="col-4">
-        <div class="card">
-            <h3 class="h3" style="margin-bottom: 6px;">Top Khóa Học Nổi Bật</h3>
-            <span class="caption" style="display: block; margin-bottom: 16px;">3 khóa học mang lại doanh thu cao nhất</span>
+    <!-- Biểu đồ phân bổ sao đánh giá -->
+    <div class="col-4" style="display: flex; flex-direction: column;">
+        <div class="card" style="flex: 1;">
+            <h3 class="h3" style="margin-bottom: 6px;">Phân bổ đánh giá sao</h3>
+            <span class="caption" style="display: block; margin-bottom: 20px;">Chất lượng nhận xét toàn bộ khóa học</span>
 
-            @if (Model.TopCourses != null && Model.TopCourses.Any())
+            @if (Model.TotalReviews > 0)
             {
-                <div style="display: flex; flex-direction: column; gap: 14px;">
-                    @foreach (var course in Model.TopCourses)
-                    {
-                        <div style="display: flex; align-items: center; gap: 12px; padding: 10px; background: var(--bg-canvas, #F8FAFC); border-radius: var(--radius-xl); border: 1px solid var(--border-color);">
-                            <img src="@course.AnhBia" alt="@course.TenKhoaHoc" style="width: 52px; height: 52px; border-radius: 10px; object-fit: cover;" />
-                            <div style="flex: 1; min-width: 0;">
-                                <strong style="display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-heading);">@course.TenKhoaHoc</strong>
-                                <span style="font-size: 12px; color: #0D9488; font-weight: 700;">@course.DoanhThu.ToString("#,##0 đ")</span>
-                                <span style="font-size: 11px; color: var(--text-muted); margin-left: 8px;">@course.SoHocVien học viên</span>
-                            </div>
-                        </div>
-                    }
-                </div>
+                <div id="instructor-rating-chart"></div>
             }
             else
             {
-                <div style="text-align: center; color: var(--text-secondary); padding: 32px 16px;">
-                    <p class="body-2">Chưa có khóa học nào phát sinh doanh thu.</p>
+                <div style="text-align:center; padding: 32px 0; color: var(--text-muted);">
+                    <p class="body-2">Chưa có đánh giá nào.</p>
                 </div>
             }
         </div>
@@ -147,20 +176,178 @@ ViewBag.Title = "Dashboard Giảng Viên";
 
 </div>
 
+<!-- ============================================================ -->
+<!-- BẢNG KHÓA HỌC ĐANG PHỤ TRÁCH                               -->
+<!-- ============================================================ -->
+<div class="card" style="margin-bottom: 32px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <h3 class="h3">Khóa học đang phụ trách</h3>
+            <span class="caption">Quản lý nội dung, kiểm duyệt và số lượng học viên</span>
+        </div>
+        <a href="@Url.Action("Index", "Course", new { area = "Instructor" })" class="btn btn-outline btn-sm">Xem tất cả khóa học →</a>
+    </div>
+
+    @if (Model.RecentCourses != null && Model.RecentCourses.Any())
+    {
+        <div class="table-responsive">
+            <table class="table dashboard-courses-table">
+                <thead>
+                    <tr>
+                        <th>Khóa học</th>
+                        <th>Danh mục</th>
+                        <th>Giá bán</th>
+                        <th>Số học viên</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var course in Model.RecentCourses)
+                    {
+                        string badgeClass = "badge-secondary";
+                        string badgeText = "Bản nháp";
+                        string btnClass = "btn-primary";
+                        string btnAction = Url.Action("Details", "Course", new { area = "Instructor", id = course.MaKhoaHoc });
+
+                        if (course.TrangThai == "DaDuyet" || course.TrangThai == "Đã duyệt")
+                        {
+                            badgeClass = "badge-success"; badgeText = "Đã xuất bản";
+                            btnClass = "btn-outline";
+                        }
+                        else if (course.TrangThai == "ChoDuyet" || course.TrangThai == "Chờ duyệt")
+                        {
+                            badgeClass = "badge-warning"; badgeText = "Chờ duyệt";
+                            btnClass = "btn-secondary";
+                        }
+                        else if (course.TrangThai == "TuChoi" || course.TrangThai == "Từ chối")
+                        {
+                            badgeClass = "badge-danger"; badgeText = "Bị từ chối";
+                            btnClass = "btn-secondary";
+                        }
+
+                        decimal displayPrice = course.GiaKhuyenMai.HasValue && course.GiaKhuyenMai.Value > 0
+                            ? course.GiaKhuyenMai.Value : course.GiaBan;
+
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <img src="@(string.IsNullOrEmpty(course.AnhBia) ? "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=120&auto=format&fit=crop&q=80" : course.AnhBia)"
+                                         style="width: 52px; height: 36px; border-radius: 6px; object-fit: cover; flex-shrink: 0;" alt="ảnh bìa" />
+                                    <strong style="font-size: 14px; color: var(--text-heading);">@course.TenKhoaHoc</strong>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-primary">@course.TenDanhMuc</span></td>
+                            <td><strong>@displayPrice.ToString("#,##0 đ")</strong></td>
+                            <td>@course.SoHocVien học viên</td>
+                            <td><span class="badge @badgeClass">@badgeText</span></td>
+                            <td>
+                                <a href="@btnAction" class="btn btn-primary btn-sm">Xem chi tiết</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div style="text-align: center; padding: 48px 0; color: var(--text-secondary);">
+            <p class="body-2" style="margin-bottom: 12px;">Bạn chưa có khóa học nào. Hãy tạo khóa học đầu tiên!</p>
+            <a href="@Url.Action("Create", "Course", new { area = "Instructor" })" class="btn btn-primary">Tạo khóa học ngay</a>
+        </div>
+    }
+</div>
+
+<style>
+.dashboard-courses-table { min-width:900px;width:100%; }
+.dashboard-courses-table th,.dashboard-courses-table td { white-space:nowrap;vertical-align:middle; }
+.dashboard-courses-table th:first-child { min-width:220px; }
+.dashboard-courses-table td:first-child img { flex-shrink:0; }
+.dashboard-courses-table .badge { white-space:nowrap;display:inline-block; }
+.dashboard-courses-table .btn { white-space:nowrap; }
+
+    .custom-option {
+        padding: 8px 12px; 
+        font-size: 13px; 
+        cursor: pointer; 
+        color: var(--text-heading);
+        transition: all 0.2s;
+    }
+    .custom-option:hover {
+        background-color: var(--text-heading, #1F2937);
+        color: #fff;
+    }
+    .dropdown-menu.active {
+        display: block !important;
+    }
+</style>
+
 @section Scripts {
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-    const revData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RevenueChartData));
-    const chartLabels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartLabels));
+    function toggleCustomDropdown(e) {
+        e.stopPropagation();
+        var menu = document.getElementById('revenue-chart-menu');
+        if (menu) {
+            menu.classList.toggle('active');
+        }
+    }
 
-    if (window.Charts && typeof Charts.renderLineChart === 'function') {
-    Charts.renderLineChart('instructor-revenue-chart', {
-    data: revData,
-    labels: chartLabels,
-    color: '#0D9488',
-    fillColor: 'rgba(13, 148, 136, 0.08)'
+    // Đóng dropdown khi click ra ngoài
+    window.addEventListener('click', function() {
+        var menu = document.getElementById('revenue-chart-menu');
+        if (menu && menu.classList.contains('active')) {
+            menu.classList.remove('active');
+        }
     });
-}
-});
+
+    function handleChartFilter(val, label) {
+        document.getElementById('chart-filter-label').innerText = label;
+        var menu = document.getElementById('revenue-chart-menu');
+        if (menu) menu.classList.remove('active');
+        
+        if (typeof window.updateRevenueChart === 'function') {
+            window.updateRevenueChart(val);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // ── Biểu đồ doanh thu 12 tháng từ DB ──────────────────────────────
+        var revData    = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RevenueChartData));
+        var chartLabels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartLabels));
+
+        if (window.Charts && typeof Charts.renderLineChart === 'function') {
+            Charts.renderLineChart('instructor-revenue-chart', {
+                data:      revData,
+                labels:    chartLabels,
+                color:     '#0D9488',
+                fillColor: 'rgba(13, 148, 136, 0.08)'
+            });
+        }
+
+        window.updateRevenueChart = function(val) {
+            console.log('Bộ lọc biểu đồ thay đổi:', val);
+            // Có thể dùng AJAX gọi API lấy dữ liệu mới rồi update lại biểu đồ
+        };
+
+        @if (Model.TotalReviews > 0)
+        {
+            // ── Biểu đồ phân bổ sao từ DB ─────────────────────────────────
+            <text>
+        var ratingDist = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RatingDistribution));
+        if (window.Charts && typeof Charts.renderBarChart === 'function') {
+            Charts.renderBarChart('instructor-rating-chart', {
+                data: [
+                    { label: '5 ★', value: @(Model.TotalReviews > 0 ? Math.Round((double)Model.RatingDistribution[0] / Model.TotalReviews * 100, 0) : 0), color: '#10B981' },
+                    { label: '4 ★', value: @(Model.TotalReviews > 0 ? Math.Round((double)Model.RatingDistribution[1] / Model.TotalReviews * 100, 0) : 0), color: '#434CE8' },
+                    { label: '3 ★', value: @(Model.TotalReviews > 0 ? Math.Round((double)Model.RatingDistribution[2] / Model.TotalReviews * 100, 0) : 0), color: '#F59E0B' },
+                    { label: '2 ★', value: @(Model.TotalReviews > 0 ? Math.Round((double)Model.RatingDistribution[3] / Model.TotalReviews * 100, 0) : 0), color: '#F97316' },
+                    { label: '1 ★', value: @(Model.TotalReviews > 0 ? Math.Round((double)Model.RatingDistribution[4] / Model.TotalReviews * 100, 0) : 0), color: '#EF4444' }
+                ]
+            });
+        }
+            </text>
+        }
+    });
 </script>
 }

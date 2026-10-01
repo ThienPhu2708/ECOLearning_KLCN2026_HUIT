@@ -115,7 +115,8 @@ function initToastContainer() {
 }
 
 function showToast(message, type = 'success') {
-  const container = document.getElementById('toast-container') || document.body;
+  initToastContainer();
+  const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
   
   const colors = {

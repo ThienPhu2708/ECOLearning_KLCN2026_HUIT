@@ -1,6 +1,7 @@
-@model ECOLearning.Areas.Instructor.Models.InstructorPayoutViewModel
+﻿@model ECOLearning.Areas.Instructor.Models.InstructorPayoutViewModel
 @{
     ViewBag.Title = "Nhận Thanh Toán Khóa Học";
+    var paymentProfile = ViewBag.PaymentProfile as ECOLearning.Models.TeacherApplication;
 }
 
 @if (TempData["SuccessMessage"] != null)
@@ -16,17 +17,10 @@
     </div>
 }
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-    <div>
-        <h1 class="h2" style="margin-top: 6px;">Quản Lý & Nhận Thanh Toán</h1>
-        <p class="body-2" style="color: var(--text-secondary);">Theo dõi số dư doanh thu, gửi yêu cầu rút tiền và kiểm tra lịch sử đối soát (UC13)</p>
-    </div>
-</div>
-
 <!-- 3 BALANCE CARDS -->
 <div class="grid-12" style="margin-bottom: 28px;">
 
-    <!-- Card 1: Available Balance -->
+   
     <div class="col-4">
         <div class="card" style="padding: 24px; background: linear-gradient(135deg, #0D9488 0%, #0F766E 100%); color: #ffffff;">
             <span class="caption" style="color: rgba(255, 255, 255, 0.8); font-weight: 600;">Số dư khả dụng có thể rút</span>
@@ -37,7 +31,7 @@
         </div>
     </div>
 
-    <!-- Card 2: Pending Balance -->
+   
     <div class="col-4">
         <div class="card" style="padding: 24px;">
             <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Đang chờ đối soát / phê duyệt</span>
@@ -48,7 +42,7 @@
         </div>
     </div>
 
-    <!-- Card 3: Total Paid -->
+   
     <div class="col-4">
         <div class="card" style="padding: 24px;">
             <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Tổng tiền đã chi trả thành công</span>
@@ -64,63 +58,39 @@
 <!-- PAYOUT FORM & TRANSACTION HISTORY -->
 <div class="grid-12">
 
-    <!-- Form Gửi Yêu Cầu Thanh Toán (UC13) -->
+   
     <div class="col-5">
         <div class="card">
             <h3 class="h3" style="margin-bottom: 6px;">Yêu Cầu Rút Tiền</h3>
-            <span class="caption" style="display: block; margin-bottom: 20px;">Chuyển doanh thu khóa học về tài khoản ngân hàng của bạn</span>
+            <span class="caption" style="display: block; margin-bottom: 20px;">Gửi yêu cầu để bộ phận phụ trách kiểm tra và chi trả vào tài khoản của bạn</span>
 
-            @using (Html.BeginForm("RequestPayout", "Payout", new { area = "Instructor" }, FormMethod.Post))
+            @using (Html.BeginForm("RequestPayout", "Payout", new { area = "Instructor" }, FormMethod.Post, new { id = "payout-request-form", novalidate = "novalidate", onsubmit = "return validatePayoutRequest(this)" }))
             {
                 @Html.AntiForgeryToken()
 
                 <div class="form-group">
                     <label class="form-label">Số tiền cần rút (VNĐ) <span class="required">*</span></label>
-                    <input type="number" name="soTien" class="form-control" min="500000" step="50000" placeholder="Tối thiểu 500,000 đ" value="@Math.Min(Model.AvailableBalance, 2000000)" required />
+                    <input type="number" name="soTien" class="form-control" min="500000" step="1" max="@Model.AvailableBalance.ToString(System.Globalization.CultureInfo.InvariantCulture)" placeholder="Tối thiểu 500,000 đ" value="@(Model.AvailableBalance >= 500000 ? Math.Min(decimal.Truncate(Model.AvailableBalance), 2000000).ToString(System.Globalization.CultureInfo.InvariantCulture) : "")" required />
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Ngân hàng nhận tiền <span class="required">*</span></label>
-                    <select name="nganHang" class="form-control" required>
-                        <option value="Vietcombank">Vietcombank - Ngoại thương Việt Nam</option>
-                        <option value="Techcombank">Techcombank - Kỹ thương Việt Nam</option>
-                        <option value="MBBank">MBBank - Quân Đội</option>
-                        <option value="BIDV">BIDV - Đầu tư & Phát triển</option>
-                        <option value="VietinBank">VietinBank - Công Thương</option>
-                        <option value="ACB">ACB - Á Châu</option>
-                        <option value="TPBank">TPBank - Tiên Phong</option>
-                    </select>
+                <div style="padding:18px;background:#f3f4fc;border:1px solid var(--border-color);border-radius:12px;">
+                    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:14px;"><strong>Tài khoản nhận tiền</strong><button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('payment-info-dialog').showModal()">Đổi thông tin</button></div>
+                    @if (paymentProfile != null)
+                    {
+                        <div class="caption">Ngân hàng</div><p style="margin:4px 0 12px;font-weight:600;">@paymentProfile.BankName</p>
+                        <div class="caption">Số tài khoản</div><p style="margin:4px 0 12px;font-weight:600;">@paymentProfile.AccountNumber</p>
+                        <div class="caption">Chủ tài khoản</div><p style="margin:4px 0 0;font-weight:600;">@paymentProfile.AccountName</p>
+                    }
+                    else { <p class="caption">Chưa có thông tin tài khoản trong hồ sơ giáo viên.</p> }
                 </div>
-
-                <div class="form-group">
-                    <label class="form-label">Số tài khoản ngân hàng <span class="required">*</span></label>
-                    <input type="text" name="soTaiKhoan" class="form-control" placeholder="Ví dụ: 0123456789" required />
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Tên chủ tài khoản (In hoa không dấu) <span class="required">*</span></label>
-                    <input type="text" name="tenChuTaiKhoan" class="form-control" placeholder="Ví dụ: NGUYEN VAN A" required />
-                </div>
-
                 <div style="margin-top: 24px;">
-                    @if (Model.AvailableBalance >= 500000)
-                    {
-                        <button type="submit" class="btn btn-primary" style="width: 100%; height: 44px;">
-                            Gửi yêu cầu nhận thanh toán
-                        </button>
-                    }
-                    else
-                    {
-                        <button type="button" class="btn btn-secondary" style="width: 100%; height: 44px;" disabled title="Số dư chưa đạt tối thiểu 500,000 đ">
-                            Số dư khả dụng chưa đạt 500.000 đ
-                        </button>
-                    }
+                    <button type="submit" class="btn btn-primary" style="width:100%;height:44px;">Rút tiền</button>
                 </div>
             }
         </div>
     </div>
 
-    <!-- Bảng Lịch Sử Thanh Toán -->
+   
     <div class="col-7">
         <div class="card" style="padding: 0; overflow: hidden;">
             <div style="padding: 18px 24px; border-bottom: 1px solid var(--border-color);">
@@ -183,3 +153,43 @@
     </div>
 
 </div>
+
+<style>#payment-info-dialog { position:fixed;inset:0;margin:auto;width:480px;max-width:calc(100vw - 32px);max-height:90vh;overflow:auto;padding:24px;border:1px solid var(--border-color);border-radius:18px; } #payment-info-dialog::backdrop { background:rgba(15,23,42,.45); }</style>
+<dialog id="payment-info-dialog" aria-labelledby="payment-info-title">
+    <h3 class="h3" id="payment-info-title">Đổi thông tin thanh toán</h3>
+    <p class="caption" style="margin:8px 0 20px;">Thông tin được lưu vào hồ sơ và dùng cho yêu cầu mới. Các yêu cầu đã gửi giữ nguyên tài khoản.</p>
+    @using (Html.BeginForm("UpdatePaymentInfo", "Payout", new { area = "Instructor" }, FormMethod.Post))
+    {
+        @Html.AntiForgeryToken()
+                <div class="form-group">
+                    <label class="form-label">Ngân hàng nhận tiền <span class="required">*</span></label>
+                    <input name="nganHang" class="form-control" maxlength="100" value="@(paymentProfile != null ? paymentProfile.BankName : "")" required />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Số tài khoản ngân hàng <span class="required">*</span></label>
+                    <input type="text" name="soTaiKhoan" value="@(paymentProfile != null ? paymentProfile.AccountNumber : "")" class="form-control" placeholder="Ví dụ: 0123456789" inputmode="numeric" pattern="[0-9]{4,50}" maxlength="50" required />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tên chủ tài khoản (In hoa không dấu) <span class="required">*</span></label>
+                    <input type="text" name="tenChuTaiKhoan" value="@(paymentProfile != null ? paymentProfile.AccountName : "")" class="form-control" placeholder="Ví dụ: NGUYEN VAN A" maxlength="100" required />
+                </div>
+
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;"><button type="button" class="btn btn-outline" onclick="document.getElementById('payment-info-dialog').close()">Hủy</button><button type="submit" class="btn btn-primary">Lưu thông tin</button></div>
+    }
+</dialog>
+
+<script>
+function validatePayoutRequest(form) {
+    var available = @Model.AvailableBalance.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    var hasBank = @(paymentProfile != null ? "true" : "false");
+    var input = form.querySelector('[name="soTien"]'), amount = Number(input.value);
+    if (available < 500000) { instructorNotice('Số dư khả dụng chưa đạt mức rút tối thiểu 500.000 đ.'); return false; }
+    if (!input.value || !Number.isFinite(amount) || amount < 500000 || !Number.isInteger(amount)) { instructorNotice('Vui lòng nhập số tiền nguyên từ 500.000 đ trở lên.'); input.focus(); return false; }
+    if (amount > available) { instructorNotice('Số tiền yêu cầu vượt quá số dư khả dụng.'); input.focus(); return false; }
+    if (!hasBank) { instructorNotice('Vui lòng bổ sung thông tin tài khoản ngân hàng qua nút Đổi thông tin trước khi rút tiền.'); return false; }
+    return true;
+}
+</script>

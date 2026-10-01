@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
@@ -55,6 +55,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
                     TrangThai = k.trangThai ?? "Bản nháp",
                     NgayTao = DateTime.Now,
                     SoBaiHoc = lessonCount,
+                    CoVideo = db.BaiHoc.Any(b => b.duongDanVideo != null && b.duongDanVideo.Trim() != "" &&
+                        ((b.ChuongHoc != null && b.ChuongHoc.maKhoaHoc == k.maKhoaHoc) ||
+                         (b.maChuong == null && b.maBaiHoc.StartsWith(k.maKhoaHoc + "_")))),
                     LyDoTuChoi = k.KiemDuyetKhoaHoc != null ? k.KiemDuyetKhoaHoc.OrderByDescending(kd => kd.ngayGui).Select(kd => kd.lyDoTuChoi).FirstOrDefault() : null
                 };
             }).ToList();
@@ -87,6 +90,44 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 kd.trangThai = "Chờ duyệt";
                 kd.lyDoTuChoi = null;
             }
+        }
+
+        private Dictionary<string, string[]> CourseUploads
+        {
+            get {
+                var files = Session["CourseWizardUploads"] as Dictionary<string, string[]>;
+                if (files == null) { files = new Dictionary<string, string[]>(); Session["CourseWizardUploads"] = files; }
+                return files;
+            }
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public JsonResult UploadLessonFile(System.Web.HttpPostedFileBase file, string kind)
+        {
+            if (file == null || file.ContentLength == 0) return Json(new { success = false, message = "Vui lòng chọn tệp." });
+            string extension = System.IO.Path.GetExtension(file.FileName).ToLowerInvariant();
+            var videos = new[] { ".mp4", ".webm", ".mov", ".mkv", ".m4v", ".ogv" };
+            var documents = new[] { ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip", ".txt", ".csv" };
+            if ((kind != "video" && kind != "document") || !(kind == "video" ? videos : documents).Contains(extension))
+                return Json(new { success = false, message = "Định dạng tệp không được hỗ trợ." });
+            if (kind == "document" && file.ContentLength > 50 * 1024 * 1024)
+                return Json(new { success = false, message = "Tài liệu không được lớn hơn 50MB." });
+            string url = SaveCourseFile(file, kind == "video" ? "~/assets/uploads/videos/" : "~/Uploads/CourseResources/");
+            string token = Guid.NewGuid().ToString("N");
+            string name = System.IO.Path.GetFileName(file.FileName);
+            ResourceController.Register(Server, CurrentTeacherId, kind, name, url, file.ContentLength);
+            CourseUploads[token] = new[] { kind, url, name };
+            return Json(new { success = true, token, url, name });
+        }
+
+        private string SaveCourseFile(System.Web.HttpPostedFileBase file, string folder)
+        {
+            if (file == null || file.ContentLength == 0) return null;
+            string directory = Server.MapPath(folder);
+            System.IO.Directory.CreateDirectory(directory);
+            string name = Guid.NewGuid().ToString("N") + System.IO.Path.GetExtension(file.FileName).ToLowerInvariant();
+            file.SaveAs(System.IO.Path.Combine(directory, name));
+            return Url.Content(folder + name);
         }
 
         // GET: Instructor/Course/Create
@@ -157,6 +198,26 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 ModelState.AddModelError("MaDanhMuc", "Vui lòng chọn danh mục đào tạo!");
             }
 
+            var chapters = model.Chapters ?? new List<CourseChapterInput>();
+            var lessons = model.Lessons ?? new List<CourseLessonInput>();
+            var allowedVideos = new[] { ".mp4", ".webm", ".mov", ".mkv", ".m4v", ".ogv" };
+            foreach (var chapter in chapters)
+                if (string.IsNullOrWhiteSpace(chapter.Title)) ModelState.AddModelError("", "Vui lòng nhập tên chương.");
+            foreach (var lesson in lessons)
+            {
+                if (!string.IsNullOrEmpty(lesson.VideoToken) && (!CourseUploads.ContainsKey(lesson.VideoToken) || CourseUploads[lesson.VideoToken][0] != "video"))
+                    ModelState.AddModelError("", "Video tải lên không hợp lệ. Vui lòng tải lại.");
+                foreach (string token in lesson.AttachmentTokens ?? new List<string>())
+                    if (!CourseUploads.ContainsKey(token) || CourseUploads[token][0] != "document") ModelState.AddModelError("", "Tài liệu tải lên không hợp lệ.");
+                if (string.IsNullOrWhiteSpace(lesson.Title)) ModelState.AddModelError("", "Vui lòng nhập tên bài học.");
+                if (lesson.ChapterIndex.HasValue && (lesson.ChapterIndex.Value < 0 || lesson.ChapterIndex.Value >= chapters.Count))
+                    ModelState.AddModelError("", "Chương của bài học không hợp lệ.");
+                if (lesson.VideoFile != null && lesson.VideoFile.ContentLength > 0 && !allowedVideos.Contains(System.IO.Path.GetExtension(lesson.VideoFile.FileName).ToLowerInvariant()))
+                    ModelState.AddModelError("", "Video phải có định dạng MP4, WebM, MOV, MKV, M4V hoặc OGV.");
+            }
+            if (actionType == "submit" && !lessons.Any(l => (l.VideoFile != null && l.VideoFile.ContentLength > 0) || (!string.IsNullOrEmpty(l.VideoToken) && CourseUploads.ContainsKey(l.VideoToken) && CourseUploads[l.VideoToken][0] == "video")))
+                ModelState.AddModelError("", "Vui lòng thêm ít nhất một video bài giảng trước khi gửi duyệt.");
+
             if (!ModelState.IsValid)
             {
                 model.Categories = db.DanhMuc.Select(c => new SelectListItem
@@ -165,6 +226,19 @@ namespace ECOLearning.Areas.Instructor.Controllers
                     Text = c.tenDanhMuc
                 }).ToList();
                 return View(model);
+            }
+
+            // Xử lý upload ảnh bìa từ máy tính
+            if (model.CoverImageFile != null && model.CoverImageFile.ContentLength > 0)
+            {
+                var fileName = System.IO.Path.GetFileName(model.CoverImageFile.FileName);
+                var path = System.IO.Path.Combine(Server.MapPath("~/Content/Uploads/CourseImages/"), fileName);
+
+                // Đảm bảo thư mục tồn tại
+                System.IO.Directory.CreateDirectory(Server.MapPath("~/Content/Uploads/CourseImages/"));
+
+                model.CoverImageFile.SaveAs(path);
+                model.AnhBia = "/Content/Uploads/CourseImages/" + fileName;
             }
 
             // Sinh mã khóa học tự động KH + timestamp
@@ -188,6 +262,42 @@ namespace ECOLearning.Areas.Instructor.Controllers
 
             db.KhoaHoc.Add(course);
 
+            var chapterIds = new List<string>();
+            for (int i = 0; i < chapters.Count; i++)
+            {
+                string chapterId = "CH" + Guid.NewGuid().ToString("N").Substring(0, 18);
+                chapterIds.Add(chapterId);
+                db.ChuongHoc.Add(new ChuongHoc { maChuong = chapterId, maKhoaHoc = courseId, tenChuong = chapters[i].Title.Trim(), thuTu = i + 1 });
+            }
+            for (int i = 0; i < lessons.Count; i++)
+            {
+                var input = lessons[i];
+                string lessonId = courseId + "_" + (i + 1);
+                string videoUrl = !string.IsNullOrEmpty(input.VideoToken) ? CourseUploads[input.VideoToken][1] : SaveCourseFile(input.VideoFile, "~/assets/uploads/videos/");
+                db.BaiHoc.Add(new BaiHoc {
+                    maBaiHoc = lessonId,
+                    maChuong = input.ChapterIndex.HasValue ? chapterIds[input.ChapterIndex.Value] : null,
+                    tenBaiHoc = input.Title.Trim(), thuTu = i + 1, choXemThu = input.Preview,
+                    duongDanVideo = videoUrl, thoiLuong = Math.Max(0, input.Duration)
+                });
+                foreach (string token in input.AttachmentTokens ?? new List<string>())
+                {
+                    var uploaded = CourseUploads[token];
+                    db.TaiNguyen.Add(new TaiNguyen {
+                        maTaiNguyen = "TN" + Guid.NewGuid().ToString("N").Substring(0, 18), maBaiHoc = lessonId,
+                        tenTaiNguyen = uploaded[2], duongDan = uploaded[1], loaiTaiNguyen = System.IO.Path.GetExtension(uploaded[2])
+                    });
+                }
+                string attachmentUrl = SaveCourseFile(input.AttachmentFile, "~/Uploads/CourseResources/");
+                if (attachmentUrl != null)
+                    db.TaiNguyen.Add(new TaiNguyen {
+                        maTaiNguyen = "TN" + Guid.NewGuid().ToString("N").Substring(0, 18),
+                        maBaiHoc = lessonId, tenTaiNguyen = System.IO.Path.GetFileName(input.AttachmentFile.FileName),
+                        duongDan = attachmentUrl, loaiTaiNguyen = System.IO.Path.GetExtension(input.AttachmentFile.FileName)
+                    });
+            }
+
+
             if (actionType == "submit")
             {
                 CreateOrUpdateKiemDuyetRecord(courseId);
@@ -202,6 +312,18 @@ namespace ECOLearning.Areas.Instructor.Controllers
             return RedirectToAction("Index");
         }
 
+        public ActionResult Details(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return HttpNotFound();
+
+            int teacherId = CurrentTeacherId;
+            var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == id && k.maGiaoVien == teacherId);
+            if (course == null) return HttpNotFound();
+
+            ViewBag.BreadcrumbCurrent = "Chi tiết khóa học";
+            return View(course);
+        }
+
         // GET: Instructor/Course/Edit/5
         public ActionResult Edit(string id)
         {
@@ -210,6 +332,12 @@ namespace ECOLearning.Areas.Instructor.Controllers
             int teacherId = CurrentTeacherId;
             var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == id && k.maGiaoVien == teacherId);
             if (course == null) return HttpNotFound();
+            if (course.trangThai == "Chờ duyệt" || course.trangThai == "ChoDuyet")
+            {
+                TempData["ErrorMessage"] = "Khóa học đang chờ duyệt. Vui lòng hủy yêu cầu duyệt trước khi chỉnh sửa.";
+                return RedirectToAction("Details", new { id = course.maKhoaHoc });
+            }
+
 
             var model = new CourseCreateOrEditViewModel
             {
@@ -231,8 +359,25 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 }).ToList()
             };
 
+            var storedChapters = db.ChuongHoc.Where(c => c.maKhoaHoc == id).OrderBy(c => c.thuTu).ToList();
+            model.Chapters = storedChapters.Select(c => new CourseChapterInput { Id = c.maChuong, Title = c.tenChuong }).ToList();
+            var storedLessons = db.BaiHoc.Where(l => (l.ChuongHoc != null && l.ChuongHoc.maKhoaHoc == id) || (l.maChuong == null && l.maBaiHoc.StartsWith(id + "_"))).OrderBy(l => l.thuTu).ToList();
+            foreach (var lesson in storedLessons) {
+                var input = new CourseLessonInput { Id = lesson.maBaiHoc, Title = lesson.tenBaiHoc, Preview = lesson.choXemThu ?? false, Duration = lesson.thoiLuong ?? 0,
+                    ChapterIndex = lesson.maChuong == null ? (int?)null : storedChapters.FindIndex(c => c.maChuong == lesson.maChuong) };
+                if (!string.IsNullOrWhiteSpace(lesson.duongDanVideo)) {
+                    input.VideoToken = Guid.NewGuid().ToString("N");
+                    CourseUploads[input.VideoToken] = new[] { "video", lesson.duongDanVideo, System.IO.Path.GetFileName(lesson.duongDanVideo) };
+                }
+                foreach (var resource in lesson.TaiNguyen) {
+                    string token = Guid.NewGuid().ToString("N");
+                    CourseUploads[token] = new[] { "document", resource.duongDan, resource.tenTaiNguyen };
+                    input.AttachmentTokens.Add(token);
+                }
+                model.Lessons.Add(input);
+            }
             ViewBag.BreadcrumbCurrent = "Chỉnh sửa khóa học";
-            return View(model);
+            return View("Create", model);
         }
 
         // POST: Instructor/Course/Edit/5
@@ -243,6 +388,12 @@ namespace ECOLearning.Areas.Instructor.Controllers
             int teacherId = CurrentTeacherId;
             var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == model.MaKhoaHoc && k.maGiaoVien == teacherId);
             if (course == null) return HttpNotFound();
+            if (course.trangThai == "Chờ duyệt" || course.trangThai == "ChoDuyet")
+            {
+                TempData["ErrorMessage"] = "Khóa học đang chờ duyệt. Vui lòng hủy yêu cầu duyệt trước khi chỉnh sửa.";
+                return RedirectToAction("Details", new { id = course.maKhoaHoc });
+            }
+
 
             // Normalize formatted VND price from Request.Form if needed
             string rawGiaBan = Request.Form["GiaBan"];
@@ -287,6 +438,22 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 ModelState.AddModelError("GiaKhuyenMai", "Giá khuyến mãi không được lớn hơn giá bán!");
             }
 
+            var chapters = model.Chapters ?? new List<CourseChapterInput>();
+            var lessons = model.Lessons ?? new List<CourseLessonInput>();
+            var existingChapters = db.ChuongHoc.Where(c => c.maKhoaHoc == course.maKhoaHoc).ToList();
+            var existingLessons = db.BaiHoc.Where(l => (l.ChuongHoc != null && l.ChuongHoc.maKhoaHoc == course.maKhoaHoc) || (l.maChuong == null && l.maBaiHoc.StartsWith(course.maKhoaHoc + "_"))).ToList();
+            foreach (var chapter in chapters)
+                if (string.IsNullOrWhiteSpace(chapter.Title) || (!string.IsNullOrEmpty(chapter.Id) && !existingChapters.Any(c => c.maChuong == chapter.Id))) ModelState.AddModelError("", "Chương không hợp lệ.");
+            foreach (var lesson in lessons) {
+                if (string.IsNullOrWhiteSpace(lesson.Title) || (!string.IsNullOrEmpty(lesson.Id) && !existingLessons.Any(l => l.maBaiHoc == lesson.Id))) ModelState.AddModelError("", "Bài học không hợp lệ.");
+                if (lesson.ChapterIndex.HasValue && (lesson.ChapterIndex.Value < 0 || lesson.ChapterIndex.Value >= chapters.Count)) ModelState.AddModelError("", "Chương của bài học không hợp lệ.");
+                if (!string.IsNullOrEmpty(lesson.VideoToken) && (!CourseUploads.ContainsKey(lesson.VideoToken) || CourseUploads[lesson.VideoToken][0] != "video")) ModelState.AddModelError("", "Video không hợp lệ. Vui lòng tải lại.");
+                foreach (string token in lesson.AttachmentTokens ?? new List<string>())
+                    if (!CourseUploads.ContainsKey(token) || CourseUploads[token][0] != "document") ModelState.AddModelError("", "Tài liệu không hợp lệ.");
+            }
+            var deletedLessons = existingLessons.Where(l => !lessons.Any(input => input.Id == l.maBaiHoc)).ToList();
+            if (deletedLessons.Any(l => l.TienDoBaiHoc.Any())) ModelState.AddModelError("", "Không thể xóa bài học đã có tiến độ của học viên.");
+            if (actionType == "submit" && !lessons.Any(l => !string.IsNullOrEmpty(l.VideoToken) && CourseUploads.ContainsKey(l.VideoToken))) ModelState.AddModelError("", "Vui lòng thêm ít nhất một video trước khi gửi duyệt.");
             if (!ModelState.IsValid)
             {
                 model.Categories = db.DanhMuc.Select(c => new SelectListItem
@@ -294,8 +461,37 @@ namespace ECOLearning.Areas.Instructor.Controllers
                     Value = c.maDanhMuc,
                     Text = c.tenDanhMuc
                 }).ToList();
-                return View(model);
+                return View("Create", model);
             }
+
+            if (model.CoverImageFile != null && model.CoverImageFile.ContentLength > 0)
+                model.AnhBia = SaveCourseFile(model.CoverImageFile, "~/Content/Uploads/CourseImages/");
+            var chapterIds = new List<string>();
+            for (int i = 0; i < chapters.Count; i++) {
+                var input = chapters[i];
+                var chapter = existingChapters.FirstOrDefault(c => c.maChuong == input.Id);
+                if (chapter == null) { chapter = new ChuongHoc { maChuong = "CH" + Guid.NewGuid().ToString("N").Substring(0,18), maKhoaHoc = course.maKhoaHoc }; db.ChuongHoc.Add(chapter); }
+                chapter.tenChuong = input.Title.Trim(); chapter.thuTu = i + 1; chapterIds.Add(chapter.maChuong);
+            }
+            int nextSequence = 1;
+            for (int i = 0; i < lessons.Count; i++) {
+                var input = lessons[i]; var lesson = existingLessons.FirstOrDefault(l => l.maBaiHoc == input.Id);
+                if (lesson == null) {
+                    while (existingLessons.Any(l => l.maBaiHoc == course.maKhoaHoc + "_" + nextSequence)) nextSequence++;
+                    lesson = new BaiHoc { maBaiHoc = course.maKhoaHoc + "_" + nextSequence++ }; db.BaiHoc.Add(lesson);
+                }
+                lesson.maChuong = input.ChapterIndex.HasValue ? chapterIds[input.ChapterIndex.Value] : null;
+                lesson.tenBaiHoc = input.Title.Trim(); lesson.thuTu = i + 1; lesson.choXemThu = input.Preview; lesson.thoiLuong = Math.Max(0,input.Duration);
+                lesson.duongDanVideo = string.IsNullOrEmpty(input.VideoToken) ? null : CourseUploads[input.VideoToken][1];
+                var wantedResources = (input.AttachmentTokens ?? new List<string>()).Select(token => CourseUploads[token]).ToList();
+                foreach (var resource in lesson.TaiNguyen.ToList())
+                    if (!wantedResources.Any(r => r[1] == resource.duongDan && r[2] == resource.tenTaiNguyen)) db.TaiNguyen.Remove(resource);
+                foreach (var resource in wantedResources)
+                    if (!lesson.TaiNguyen.Any(r => r.duongDan == resource[1] && r.tenTaiNguyen == resource[2]))
+                        db.TaiNguyen.Add(new TaiNguyen { maTaiNguyen = "TN" + Guid.NewGuid().ToString("N").Substring(0,18), maBaiHoc = lesson.maBaiHoc, tenTaiNguyen = resource[2], duongDan = resource[1], loaiTaiNguyen = System.IO.Path.GetExtension(resource[2]) });
+            }
+            foreach (var lesson in deletedLessons) { db.TaiNguyen.RemoveRange(lesson.TaiNguyen.ToList()); db.BaiHoc.Remove(lesson); }
+            foreach (var chapter in existingChapters.Where(c => !chapters.Any(input => input.Id == c.maChuong))) db.ChuongHoc.Remove(chapter);
 
             course.tenKhoaHoc = model.TenKhoaHoc.Trim();
             course.moTa = model.MoTa;
@@ -312,15 +508,6 @@ namespace ECOLearning.Areas.Instructor.Controllers
 
             if (actionType == "submit")
             {
-                // Kiểm tra có bài học chưa (bao gồm cả bài học không phân chương)
-                bool hasLessons = (course.ChuongHoc != null && course.ChuongHoc.Any(c => c.BaiHoc != null && c.BaiHoc.Any()))
-                    || db.BaiHoc.Any(b => b.maChuong == null && b.maBaiHoc.StartsWith(course.maKhoaHoc + "_"));
-
-                if (!hasLessons)
-                {
-                    TempData["ErrorMessage"] = "Khóa học không có nội dung bài học! Vui lòng thêm bài học trước khi gửi duyệt.";
-                    return RedirectToAction("Index");
-                }
                 course.trangThai = "Chờ duyệt";
                 CreateOrUpdateKiemDuyetRecord(course.maKhoaHoc);
             }
@@ -339,6 +526,12 @@ namespace ECOLearning.Areas.Instructor.Controllers
             int teacherId = CurrentTeacherId;
             var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == id && k.maGiaoVien == teacherId);
             if (course == null) return HttpNotFound();
+            if (course.trangThai == "Chờ duyệt" || course.trangThai == "ChoDuyet")
+            {
+                TempData["ErrorMessage"] = "Khóa học đang chờ duyệt. Vui lòng hủy yêu cầu duyệt trước khi chỉnh sửa.";
+                return RedirectToAction("Details", new { id = course.maKhoaHoc });
+            }
+
 
             bool hasLessons = (course.ChuongHoc != null && course.ChuongHoc.Any(c => c.BaiHoc != null && c.BaiHoc.Any()))
                 || db.BaiHoc.Any(b => b.maChuong == null && b.maBaiHoc.StartsWith(course.maKhoaHoc + "_"));
@@ -357,6 +550,34 @@ namespace ECOLearning.Areas.Instructor.Controllers
             return RedirectToAction("Index");
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult CancelApproval(string id)
+        {
+            int teacherId = CurrentTeacherId;
+            var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == id && k.maGiaoVien == teacherId);
+            if (course == null) return HttpNotFound();
+
+            if (course.trangThai != "Chờ duyệt" && course.trangThai != "ChoDuyet")
+            {
+                TempData["ErrorMessage"] = "Không thể hủy vì khóa học không ở trạng thái chờ duyệt.";
+                return RedirectToAction("Index");
+            }
+
+            course.trangThai = "Bản nháp";
+
+            var kd = db.KiemDuyetKhoaHoc.FirstOrDefault(x => x.maKhoaHoc == course.maKhoaHoc && x.trangThai == "Chờ duyệt");
+            if (kd != null)
+            {
+                db.KiemDuyetKhoaHoc.Remove(kd);
+            }
+
+            db.SaveChanges();
+
+            TempData["SuccessMessage"] = string.Format("Đã hủy yêu cầu duyệt khóa học '{0}' thành công. Bạn có thể tiếp tục chỉnh sửa.", course.tenKhoaHoc);
+            return RedirectToAction("Details", new { id = id });
+        }
+
         // POST: Instructor/Course/Delete/5
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -365,6 +586,12 @@ namespace ECOLearning.Areas.Instructor.Controllers
             int teacherId = CurrentTeacherId;
             var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == id && k.maGiaoVien == teacherId);
             if (course == null) return HttpNotFound();
+            if (course.trangThai == "Chờ duyệt" || course.trangThai == "ChoDuyet")
+            {
+                TempData["ErrorMessage"] = "Khóa học đang chờ duyệt. Vui lòng hủy yêu cầu duyệt trước khi chỉnh sửa.";
+                return RedirectToAction("Details", new { id = course.maKhoaHoc });
+            }
+
 
             // Kiểm tra ràng buộc học viên
             int studentCount = course.DangKyKhoaHoc != null ? course.DangKyKhoaHoc.Count : 0;

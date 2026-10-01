@@ -1,0 +1,237 @@
+@using ECOLearning.Services
+@{
+    var course = (ECOLearning.Models.KhoaHoc)ViewBag.Course;
+    var lastLock = (ECOLearning.Models.ViolationAction)ViewBag.LastLock;
+    var lastPermanent = (ECOLearning.Models.ViolationAction)ViewBag.LastPermanent;
+    var messages = (List<ECOLearning.Models.ViolationMessage>)ViewBag.Messages;
+    var reports = (List<ECOLearning.Models.ViolationReport>)ViewBag.Reports;
+    bool hasDiscussion = ViewBag.HasDiscussion == true;
+    ViewBag.Title = "Xử lý vi phạm";
+
+    bool isLocked = course.trangThai == CourseStatus.TamKhoa;
+    bool isBanned = course.trangThai == CourseStatus.KhoaVinhVien;
+    bool waitingAdmin = isLocked && lastLock != null && lastLock.trangThaiXuLy == ViolationReportService.StepWaitingAdmin;
+    bool waitingTeacher = isLocked && lastLock != null && !waitingAdmin;
+
+    string countdown = "";
+    bool overdue = false;
+    if (waitingTeacher && lastLock.hanPhanHoi.HasValue)
+    {
+        var left = lastLock.hanPhanHoi.Value - DateTime.Now;
+        overdue = left.TotalSeconds <= 0;
+        countdown = overdue ? "Đã quá hạn" : (left.Days > 0 ? $"Còn {left.Days} ngày {left.Hours} giờ" : $"Còn {left.Hours} giờ {left.Minutes} phút");
+    }
+
+    string draftLoai = TempData["DraftLoai"] as string ?? ViolationReportService.MessageFixed;
+    string draftNoiDung = TempData["DraftNoiDung"] as string ?? "";
+    var lastAdminRequest = messages.LastOrDefault(m => m.vaiTroGui == "Admin");
+}
+
+<style>
+    .vio-card { margin-bottom: 24px; }
+    .vio-note { margin-top: 16px; padding: 14px 16px; border-radius: 12px; }
+    .vio-note-warn { background: #FFF7ED; border: 1px solid #FDBA74; }
+    .vio-note-danger { background: #FEF2F2; border: 1px solid #FCA5A5; }
+    .vio-report { padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 12px; }
+    .vio-option { display: flex; gap: 10px; padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 12px; cursor: pointer; }
+    .vio-option:has(input:checked) { border-color: var(--primary); background: #F5F6FF; }
+    .vio-msg { padding: 12px 14px; border-radius: 12px; }
+    .vio-msg-admin { background: #FFF7ED; border: 1px solid #FDBA74; margin-right: 40px; }
+    .vio-msg-me { background: #EEF2FF; border: 1px solid #C7D2FE; margin-left: 40px; }
+</style>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div style="padding: 12px 16px; background: #ECFDF5; border: 1px solid #10B981; color: #065F46; border-radius: 12px; margin-bottom: 20px; font-size: 14px; font-weight: 600;">
+        ✓ @TempData["SuccessMessage"]
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div style="padding: 12px 16px; background: #FEF2F2; border: 1px solid #EF4444; color: #991B1B; border-radius: 12px; margin-bottom: 20px; font-size: 14px; font-weight: 600;">
+        ✕ @TempData["ErrorMessage"]
+    </div>
+}
+
+<!-- TÌNH TRẠNG -->
+<div class="card vio-card" style="@(isBanned ? "border-color: #FCA5A5;" : "border-color: #FDBA74;")">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
+        <div>
+            <h1 class="h2" style="margin: 0 0 6px 0;">@course.tenKhoaHoc</h1>
+            <div class="caption" style="color: var(--text-secondary);">Mã: <code>@course.maKhoaHoc</code></div>
+        </div>
+        <div style="text-align: right;">
+            @if (isBanned)
+            {
+                <span class="badge badge-danger" style="font-size: 13px;">Khóa vĩnh viễn</span>
+            }
+            else if (waitingAdmin)
+            {
+                <span class="badge badge-primary" style="font-size: 13px;">Đã gửi — chờ quản trị viên xem xét</span>
+            }
+            else if (waitingTeacher)
+            {
+                <span class="badge badge-warning" style="font-size: 13px;">Tạm khóa — cần bạn xử lý</span>
+                if (!string.IsNullOrEmpty(countdown))
+                {
+                    <div style="margin-top: 8px; font-weight: 700; color: @(overdue ? "#DC2626" : "#C2410C");">
+                        <i class="bi bi-hourglass-split"></i> @countdown
+                        <span class="caption" style="font-weight: 400; color: var(--text-secondary);">(hạn @lastLock.hanPhanHoi.Value.ToString("dd/MM/yyyy HH:mm"))</span>
+                    </div>
+                }
+            }
+            else
+            {
+                <span class="badge badge-success" style="font-size: 13px;">Đã mở lại</span>
+            }
+        </div>
+    </div>
+
+    @if (isBanned && lastPermanent != null)
+    {
+        <div class="vio-note vio-note-danger">
+            <strong>Lý do khóa vĩnh viễn:</strong> @lastPermanent.lyDo
+            <div class="caption" style="margin-top: 6px; color: var(--text-secondary);">Khóa học không còn được bán và học viên không thể tiếp tục học. Dữ liệu khóa học vẫn được lưu giữ.</div>
+        </div>
+    }
+    else if (lastLock != null)
+    {
+        <div class="vio-note vio-note-warn">
+            <div><strong>Lý do tạm khóa:</strong> @lastLock.lyDo</div>
+            @if (waitingTeacher && lastAdminRequest != null)
+            {
+                <div style="margin-top: 8px;"><strong>Quản trị viên yêu cầu sửa thêm:</strong> @lastAdminRequest.noiDung</div>
+            }
+            @if (isLocked)
+            {
+                <div class="caption" style="margin-top: 8px; color: var(--text-secondary);">
+                    Trong thời gian tạm khóa: khóa học bị ẩn khỏi trang bán và tìm kiếm; học viên đã mua vẫn học bình thường.
+                    Nếu quá hạn mà chưa xử lý, quản trị viên có thể khóa vĩnh viễn khóa học.
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- NỘI DUNG BỊ BÁO CÁO -->
+<div class="card vio-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+        <h3 class="h3" style="margin: 0;">Nội dung bị báo cáo (@reports.Count)</h3>
+        @if (isLocked)
+        {
+            <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = course.maKhoaHoc })" class="btn btn-sm btn-primary"><i class="bi bi-pencil-square me-1"></i> Chỉnh sửa khóa học</a>
+        }
+    </div>
+    @if (reports.Any())
+    {
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            @foreach (var r in reports)
+            {
+                <div class="vio-report">
+                    <span class="badge badge-danger">@r.loaiViPham</span>
+                    <strong style="margin-left: 6px;">@(string.IsNullOrEmpty(r.tenBaiHoc) ? "Toàn khóa học" : "Bài: " + r.tenBaiHoc)</strong>
+                    <div style="white-space: pre-wrap; margin-top: 6px; color: var(--text-secondary);">@r.moTa</div>
+                    <div class="caption" style="margin-top: 4px; color: var(--text-muted);">Học viên báo cáo lúc @r.ngayTao.ToString("dd/MM/yyyy HH:mm")</div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p style="color: var(--text-secondary); margin: 0;">Không có báo cáo chi tiết. Xem lý do ở trên.</p>
+    }
+</div>
+
+<!-- CHỌN CÁCH XỬ LÝ -->
+@if (waitingTeacher && hasDiscussion)
+{
+    <div class="card vio-card">
+        <h3 class="h3" style="margin-bottom: 14px;">Chọn cách xử lý</h3>
+        @using (Html.BeginForm("Respond", "Violation", new { area = "Instructor", id = course.maKhoaHoc }, FormMethod.Post))
+        {
+            @Html.AntiForgeryToken()
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                <label class="vio-option">
+                    <input type="radio" name="loai" value="@ViolationReportService.MessageFixed" @(draftLoai != ViolationReportService.MessageAppeal ? "checked" : "") onchange="updateResponseLabel()" />
+                    <span>
+                        <strong>Tôi đã chỉnh sửa nội dung</strong>
+                        <span class="caption" style="display: block; color: var(--text-secondary);">Đã sửa hoặc gỡ phần vi phạm, gửi quản trị viên kiểm tra lại để mở bán.</span>
+                    </span>
+                </label>
+                <label class="vio-option">
+                    <input type="radio" name="loai" value="@ViolationReportService.MessageAppeal" @(draftLoai == ViolationReportService.MessageAppeal ? "checked" : "") onchange="updateResponseLabel()" />
+                    <span>
+                        <strong>Tôi không đồng ý / khiếu nại</strong>
+                        <span class="caption" style="display: block; color: var(--text-secondary);">Nội dung không vi phạm. Giải thích và nêu căn cứ (giấy phép, nguồn tài liệu...).</span>
+                    </span>
+                </label>
+            </div>
+            <label class="form-label" id="response-label">Mô tả những gì bạn đã chỉnh sửa <span style="color: #DC2626;">*</span></label>
+            <textarea name="noiDung" class="form-control" rows="5" minlength="10" maxlength="2000" required
+                      placeholder="Ví dụ: Đã thay video bài 3 bằng video tự quay, đã sửa lại công thức ở bài 5...">@draftNoiDung</textarea>
+            <div style="display: flex; justify-content: flex-end; margin-top: 14px;">
+                <button type="submit" class="btn btn-primary" onclick="return instructorConfirmSubmit(this, 'Gửi phản hồi cho quản trị viên? Sau khi gửi bạn cần chờ quản trị viên xem xét.')">
+                    <i class="bi bi-send me-1"></i> Gửi xem xét lại
+                </button>
+            </div>
+        }
+    </div>
+}
+else if (waitingTeacher)
+{
+    <div class="card vio-card" style="background: #F8FAFC;">
+        <i class="bi bi-info-circle-fill me-1"></i>
+        Chức năng gửi phản hồi chưa sẵn sàng. Vui lòng chỉnh sửa khóa học theo lý do ở trên và liên hệ quản trị viên.
+    </div>
+}
+else if (waitingAdmin)
+{
+    <div class="card vio-card" style="background: #EEF2FF; border-color: #C7D2FE;">
+        <i class="bi bi-info-circle-fill me-1" style="color: #434CE8;"></i>
+        Bạn đã gửi phản hồi. Quản trị viên sẽ xem xét và <strong>mở lại</strong> khóa học, hoặc <strong>yêu cầu sửa thêm</strong>.
+        Trong lúc chờ, bạn vẫn có thể tiếp tục hoàn thiện nội dung khóa học.
+    </div>
+}
+
+<!-- LỊCH SỬ TRAO ĐỔI -->
+@if (hasDiscussion && lastLock != null)
+{
+    <div class="card">
+        <h3 class="h3" style="margin-bottom: 16px;">Lịch sử trao đổi</h3>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div class="vio-msg vio-msg-admin">
+                <div class="caption" style="color: var(--text-secondary);">@lastLock.ngayXuLy.ToString("dd/MM/yyyy HH:mm") • Quản trị viên</div>
+                <div style="margin-top: 4px;"><span class="badge badge-warning">Tạm khóa</span> @lastLock.lyDo</div>
+            </div>
+            @foreach (var m in messages)
+            {
+                bool fromMe = m.vaiTroGui == "GiaoVien";
+                <div class="vio-msg @(fromMe ? "vio-msg-me" : "vio-msg-admin")">
+                    <div class="caption" style="color: var(--text-secondary);">@m.ngayGui.ToString("dd/MM/yyyy HH:mm") • @(fromMe ? "Bạn" : "Quản trị viên")</div>
+                    <div style="margin-top: 4px;">
+                        <span class="badge @(m.loai == ViolationReportService.MessageAppeal ? "badge-danger" : (fromMe ? "badge-success" : "badge-primary"))">@m.loai</span>
+                        @if (m.hanPhanHoiMoi.HasValue)
+                        {
+                            <span class="caption" style="margin-left: 6px;">Hạn mới: @m.hanPhanHoiMoi.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                        }
+                    </div>
+                    <div style="white-space: pre-wrap; margin-top: 6px;">@m.noiDung</div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        function updateResponseLabel() {
+            var appeal = document.querySelector('input[name="loai"][value="@ViolationReportService.MessageAppeal"]');
+            var label = document.getElementById('response-label');
+            if (!label) return;
+            label.innerHTML = (appeal && appeal.checked)
+                ? 'Lý do bạn cho rằng nội dung không vi phạm <span style="color: #DC2626;">*</span>'
+                : 'Mô tả những gì bạn đã chỉnh sửa <span style="color: #DC2626;">*</span>';
+        }
+        document.addEventListener('DOMContentLoaded', updateResponseLabel);
+    </script>
+}

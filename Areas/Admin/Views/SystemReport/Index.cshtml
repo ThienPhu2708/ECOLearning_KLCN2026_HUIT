@@ -1,6 +1,7 @@
 @model ECOLearning.Areas.Admin.Models.SystemReportViewModel
 @{
 ViewBag.Title = "Báo Cáo Thống Kê Toàn Hệ Thống";
+bool isFiltered = Model.FilterCategory != "" || Model.FilterTeacherId.HasValue;
 }
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px;">
@@ -9,7 +10,7 @@ ViewBag.Title = "Báo Cáo Thống Kê Toàn Hệ Thống";
         <p class="body-2" style="color: var(--text-secondary);">Tổng hợp số liệu doanh thu sàn, sản lượng đơn hàng và cơ cấu theo chuyên ngành</p>
     </div>
     <div style="display: flex; gap: 10px;">
-        <a href="@Url.Action("ExportExcel", "SystemReport", new { area = "Admin", period = Model.Period })" class="btn btn-outline">
+        <a href="@Url.Action("ExportExcel", "SystemReport", new { area = "Admin", period = Model.Period, category = Model.FilterCategory, teacher = Model.FilterTeacherId })" class="btn btn-outline">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
@@ -17,7 +18,7 @@ ViewBag.Title = "Báo Cáo Thống Kê Toàn Hệ Thống";
             </svg>
             Xuất Excel
         </a>
-        <button class="btn btn-primary" onclick="exportSystemReport('pdf')">
+        <a href="@Url.Action("ExportPdf", "SystemReport", new { area = "Admin", period = Model.Period, category = Model.FilterCategory, teacher = Model.FilterTeacherId })" class="btn btn-primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                 <polyline points="14 2 14 8 20 8"></polyline>
@@ -26,7 +27,7 @@ ViewBag.Title = "Báo Cáo Thống Kê Toàn Hệ Thống";
                 <polyline points="10 9 9 9 8 9"></polyline>
             </svg>
             Xuất Báo Cáo PDF
-        </button>
+        </a>
     </div>
 </div>
 
@@ -36,24 +37,47 @@ ViewBag.Title = "Báo Cáo Thống Kê Toàn Hệ Thống";
         <div style="display: flex; align-items: center; gap: 14px;">
             <label class="caption" style="font-weight: 700; color: var(--text-heading);">Khoảng thời gian:</label>
             <div style="display: flex; gap: 8px;">
-                <a href="@Url.Action("Index", "SystemReport", new { area = "Admin", period = "month" })"
+                <a href="@Url.Action("Index", "SystemReport", new { area = "Admin", period = "month", category = Model.FilterCategory, teacher = Model.FilterTeacherId })"
                 class="btn btn-sm @(Model.Period == "month" ? "btn-primary" : "btn-secondary")">Theo Tháng</a>
-                <a href="@Url.Action("Index", "SystemReport", new { area = "Admin", period = "quarter" })"
+                <a href="@Url.Action("Index", "SystemReport", new { area = "Admin", period = "quarter", category = Model.FilterCategory, teacher = Model.FilterTeacherId })"
                 class="btn btn-sm @(Model.Period == "quarter" ? "btn-primary" : "btn-secondary")">Theo Quý</a>
-                <a href="@Url.Action("Index", "SystemReport", new { area = "Admin", period = "year" })"
+                <a href="@Url.Action("Index", "SystemReport", new { area = "Admin", period = "year", category = Model.FilterCategory, teacher = Model.FilterTeacherId })"
                 class="btn btn-sm @(Model.Period == "year" ? "btn-primary" : "btn-secondary")">Theo Năm</a>
             </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 12px;">
+        <!-- Phân tích dữ liệu: lọc theo danh mục / giáo viên -->
+        <form method="get" action="@Url.Action("Index", "SystemReport", new { area = "Admin" })" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <input type="hidden" name="period" value="@Model.Period" />
             <label class="caption" style="font-weight: 700; color: var(--text-heading);">Phân tích dữ liệu:</label>
-            <select class="form-control" style="width: 220px; height: 38px; font-size: 13px;" onchange="if(window.showToast) showToast('Đang lọc dữ liệu phân tích...', 'info');">
-                <option>Toàn bộ hệ thống</option>
-                <option>Chỉ tính các giao dịch thanh toán</option>
-                <option>Phân bổ theo giáo viên</option>
+            <select name="category" class="form-control" style="width: 200px; height: 38px; font-size: 13px;">
+                <option value="">Tất cả danh mục</option>
+                @foreach (var c in Model.CategoryOptions)
+                {
+                    <option value="@c.Value" @(c.Selected ? "selected" : "")>@c.Text</option>
+                }
             </select>
-        </div>
+            <select name="teacher" class="form-control" style="width: 200px; height: 38px; font-size: 13px;">
+                <option value="">Tất cả giáo viên</option>
+                @foreach (var t in Model.TeacherOptions)
+                {
+                    <option value="@t.Value" @(t.Selected ? "selected" : "")>@t.Text</option>
+                }
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm" style="height: 38px;">Áp dụng</button>
+            @if (isFiltered)
+            {
+                <a href="@Url.Action("Index", "SystemReport", new { area = "Admin", period = Model.Period })" class="btn btn-secondary btn-sm" style="height: 38px; display: inline-flex; align-items: center;">Bỏ lọc</a>
+            }
+        </form>
     </div>
+    @if (isFiltered)
+    {
+        <div style="margin-top: 12px;">
+            <span class="badge badge-primary" style="font-size: 12px;"><i class="bi bi-funnel-fill"></i> Đang phân tích: @Model.FilterLabel</span>
+            <span class="caption" style="color: var(--text-secondary); margin-left: 6px;">Toàn bộ số liệu, biểu đồ và file xuất Excel/PDF bên dưới chỉ tính trong phạm vi này.</span>
+        </div>
+    }
 </div>
 
 <!-- THỐNG KÊ GIÁO VIÊN & KHÓA HỌC THEO TRẠNG THÁI -->
@@ -135,14 +159,14 @@ ViewBag.Title = "Báo Cáo Thống Kê Toàn Hệ Thống";
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <div>
                     <h3 class="h3">Tăng Trưởng Doanh Thu & Đơn Hàng Hoàn Tất</h3>
-                    <span class="caption">Biểu đồ đối sánh doanh thu (Triệu VNĐ) và lượng đơn thanh toán thành công</span>
+                    <span class="caption">Trục trái: doanh thu (triệu VNĐ) • Trục phải: số đơn thanh toán thành công</span>
                 </div>
                 <div style="display: flex; gap: 16px; font-size: 12px; font-weight: 700;">
                     <span style="display: flex; align-items: center; gap: 6px; color: var(--primary);">
                         <span style="width: 12px; height: 3px; background: var(--primary);"></span> Doanh thu
                     </span>
                     <span style="display: flex; align-items: center; gap: 6px; color: var(--status-success);">
-                        <span style="width: 12px; height: 3px; background: var(--status-success);"></span> Đơn hoàn tất
+                        <span style="width: 14px; height: 0; border-top: 3px dashed var(--status-success);"></span> Đơn hoàn tất
                     </span>
                 </div>
             </div>
@@ -154,12 +178,66 @@ ViewBag.Title = "Báo Cáo Thống Kê Toàn Hệ Thống";
     <!-- Biểu đồ tròn: Tỷ trọng doanh thu theo danh mục đào tạo (UC16) -->
     <div class="col-4">
         <div class="card">
-            <h3 class="h3" style="margin-bottom: 6px;">Cơ Cấu Doanh Thu Danh Mục</h3>
-            <span class="caption" style="display: block; margin-bottom: 20px;">Biểu đồ Donut Chart tỷ trọng % toàn sàn</span>
+            <h3 class="h3" style="margin-bottom: 6px;">@(Model.CategorySegmentsByCourse ? "Cơ Cấu Theo Khóa Học" : "Cơ Cấu Theo Danh Mục")</h3>
+            <span class="caption" style="display: block; margin-bottom: 20px;">
+                @(Model.CategorySegmentsByRevenue ? "Tỷ trọng % theo doanh thu" : "Chưa phát sinh doanh thu — tỷ trọng % theo số khóa học")
+            </span>
             <div id="system-category-donut"></div>
         </div>
     </div>
 
+</div>
+
+<!-- DOANH THU THEO GIÁO VIÊN -->
+<div class="card" style="padding: 0; overflow: hidden; margin-bottom: 32px;">
+    <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-color);">
+        <h3 class="h3" style="margin: 0;">Doanh thu theo giáo viên</h3>
+        <span class="caption" style="color: var(--text-secondary);">Tính trên các đơn hàng đã thanh toán trong phạm vi phân tích</span>
+    </div>
+    <div class="table-responsive" style="border: none; border-radius: 0;">
+        <table class="table" data-paginate="10">
+            <thead>
+                <tr>
+                    <th>Giáo viên</th>
+                    <th style="text-align: center;">Số khóa học</th>
+                    <th style="text-align: center;">Đang bán</th>
+                    <th style="text-align: center;">Số đơn</th>
+                    <th style="text-align: right;">Doanh thu</th>
+                    <th style="width: 30%;">Tỷ trọng</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.TeacherRevenueRows.Any())
+                {
+                    foreach (var r in Model.TeacherRevenueRows)
+                    {
+                        double share = Model.TotalNetRevenue > 0 ? (double)(r.Revenue / Model.TotalNetRevenue * 100) : 0;
+                        <tr>
+                            <td>
+                                <a href="@Url.Action("Index", "SystemReport", new { area = "Admin", period = Model.Period, category = Model.FilterCategory, teacher = r.TeacherId })" style="text-decoration: none; font-weight: 700; color: var(--text-heading);">@r.TeacherName</a>
+                            </td>
+                            <td style="text-align: center;">@r.CourseCount</td>
+                            <td style="text-align: center;">@r.PublishedCourseCount</td>
+                            <td style="text-align: center;">@r.Orders</td>
+                            <td style="text-align: right;"><strong style="color: var(--primary);">@r.Revenue.ToString("#,##0 đ")</strong></td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="flex: 1; height: 8px; background: #F1F5F9; border-radius: 4px; overflow: hidden;">
+                                        <div style="width: @(share.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%; height: 100%; background: var(--primary);"></div>
+                                    </div>
+                                    <span class="caption" style="width: 48px; text-align: right;">@share.ToString("0.#")%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 24px;">Không có giáo viên nào trong phạm vi phân tích.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <!-- SUMMARY REPORT TABLE -->
@@ -333,16 +411,18 @@ changeReportPage(currentReportPage);
 
 document.addEventListener('DOMContentLoaded', () => {
 const revenueData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RevenueChartData));
+const orderData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.OrderChartData));
 const chartLabels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartLabels));
 const categorySegments = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.CategoryRevenueSegments.Select(s => new { label = s.Label, value = s.Value, color = s.Color })));
 
-if (window.Charts && typeof Charts.renderLineChart === 'function') {
-// Dual line chart simulation
-Charts.renderLineChart('dual-metrics-chart', {
-data: revenueData,
+if (window.Charts && typeof Charts.renderDualLineChart === 'function') {
+// Biểu đồ 2 trục: Doanh thu (triệu VNĐ, trục trái) & Đơn hoàn tất (trục phải)
+Charts.renderDualLineChart('dual-metrics-chart', {
 labels: chartLabels,
-color: '#434CE8',
-fillColor: 'rgba(67, 76, 232, 0.06)'
+series: [
+{ name: 'Doanh thu', data: revenueData, color: '#434CE8', fillColor: 'rgba(67, 76, 232, 0.06)', unit: 'triệu VNĐ' },
+{ name: 'Đơn hoàn tất', data: orderData, color: '#10B981', unit: 'đơn' }
+]
 });
 
 // Donut Chart compliant with UC16
@@ -351,25 +431,12 @@ segments: categorySegments
 });
 }
 
-@if (Request.QueryString["print"] == "true")
+@if (Request.QueryString["pdfError"] == "1")
 {
     <text>
-        setTimeout(() => window.print(), 800);
+        if (window.showToast) showToast('Không tạo được file PDF. Vui lòng thử lại!', 'error');
     </text>
 }
 });
-
-function exportSystemReport(format) {
-if (format === 'excel') {
-window.location.href = '@Url.Action("ExportExcel", "SystemReport", new { area = "Admin", period = Model.Period })';
-}
-else if (format === 'pdf')
-{
-    if (window.showToast) showToast('Đang khởi tạo trang in báo cáo hệ thống...', 'success');
-    setTimeout(() => {
-    window.print();
-    }, 500);
-}
-}
 </script>
 }

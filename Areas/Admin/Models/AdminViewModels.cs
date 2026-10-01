@@ -133,8 +133,32 @@ namespace ECOLearning.Areas.Admin.Models
         public string Color { get; set; }
     }
 
+    public class TeacherRevenueRow
+    {
+        public int TeacherId { get; set; }
+        public string TeacherName { get; set; }
+        public int CourseCount { get; set; }
+        public int PublishedCourseCount { get; set; }
+        public int Orders { get; set; }
+        public decimal Revenue { get; set; }
+    }
+
     public class SystemReportViewModel
     {
+        // Bộ lọc "Phân tích dữ liệu": theo danh mục / giáo viên (rỗng = toàn hệ thống)
+        public string FilterCategory { get; set; } = "";
+        public int? FilterTeacherId { get; set; }
+        public string FilterLabel { get; set; } = "Toàn bộ hệ thống";
+        public List<System.Web.Mvc.SelectListItem> CategoryOptions { get; set; } = new List<System.Web.Mvc.SelectListItem>();
+        public List<System.Web.Mvc.SelectListItem> TeacherOptions { get; set; } = new List<System.Web.Mvc.SelectListItem>();
+
+        // Doanh thu theo giáo viên
+        public List<TeacherRevenueRow> TeacherRevenueRows { get; set; } = new List<TeacherRevenueRow>();
+
+        // Cơ cấu doanh thu: theo khóa học (khi lọc 1 danh mục) / tính theo doanh thu hay theo số khóa học
+        public bool CategorySegmentsByCourse { get; set; }
+        public bool CategorySegmentsByRevenue { get; set; }
+
         // Thống kê giáo viên
         public int TotalInstructors { get; set; }
         public int InstructorsWithPublishedCourse { get; set; }

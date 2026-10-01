@@ -10,7 +10,10 @@
     bool isBanned = status == CourseStatus.KhoaVinhVien;
     bool isPublished = CourseStatus.IsPublished(status);
     int pendingCount = reports.Count(r => r.trangThai == ViolationReportService.ReportPending);
-    var lastLock = actions.FirstOrDefault(a => a.hanhDong == ViolationReportService.ActionLock);
+    var lastLock = (ECOLearning.Models.ViolationAction)ViewBag.LastLock;
+    var messages = (List<ECOLearning.Models.ViolationMessage>)ViewBag.Messages;
+    bool hasDiscussion = ViewBag.HasDiscussion == true;
+    bool waitingAdmin = isLocked && lastLock != null && lastLock.trangThaiXuLy == ViolationReportService.StepWaitingAdmin;
 }
 
 @Html.AntiForgeryToken()
@@ -64,6 +67,10 @@
             {
                 <button class="btn btn-success btn-sm" onclick="reopenCourse()">Mở lại khóa học</button>
             }
+            @if (waitingAdmin)
+            {
+                <button class="btn btn-sm" style="background: #434CE8; color: #fff;" onclick="requestChanges()">Yêu cầu sửa thêm</button>
+            }
             @if (isLocked || isPublished)
             {
                 <button class="btn btn-danger btn-sm" onclick="permanentLock()">Khóa vĩnh viễn</button>
@@ -73,19 +80,65 @@
 
     @if (isLocked && lastLock != null)
     {
-        bool overdue = lastLock.hanPhanHoi.HasValue && lastLock.hanPhanHoi.Value < DateTime.Now;
+        bool overdue = !waitingAdmin && lastLock.hanPhanHoi.HasValue && lastLock.hanPhanHoi.Value < DateTime.Now;
         <div style="margin-top: 20px; padding: 16px; border-radius: 12px; background: #FFF7ED; border: 1px solid #FDBA74;">
             <div><strong>Lý do tạm khóa:</strong> @lastLock.lyDo</div>
             <div style="margin-top: 6px;">
-                <strong>Hạn phản hồi:</strong> @(lastLock.hanPhanHoi.HasValue ? lastLock.hanPhanHoi.Value.ToString("dd/MM/yyyy HH:mm") : "-")
-                @if (overdue)
+                @if (waitingAdmin)
                 {
-                    <span class="badge badge-danger" style="margin-left: 6px;">Đã quá hạn</span>
+                    <span class="badge badge-primary">Giáo viên đã phản hồi — chờ bạn xem xét</span>
+                }
+                else
+                {
+                    if (hasDiscussion)
+                    {
+                        <span class="badge badge-warning" style="margin-right: 6px;">Chờ giáo viên xử lý</span>
+                    }
+                    <strong>Hạn phản hồi:</strong> @(lastLock.hanPhanHoi.HasValue ? lastLock.hanPhanHoi.Value.ToString("dd/MM/yyyy HH:mm") : "-")
+                    if (overdue)
+                    {
+                        <span class="badge badge-danger" style="margin-left: 6px;">Đã quá hạn</span>
+                    }
                 }
             </div>
         </div>
     }
 </div>
+
+<!-- TRAO ĐỔI VỚI GIÁO VIÊN (lần tạm khóa gần nhất, cần script 004) -->
+@if (hasDiscussion && lastLock != null)
+{
+    <div class="card" style="margin-bottom: 24px;">
+        <h3 class="h3" style="margin-bottom: 16px;">Trao đổi với giáo viên</h3>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="padding: 12px 14px; border-radius: 12px; background: #F8FAFC; border: 1px solid var(--border-color); margin-right: 40px;">
+                <div class="caption" style="color: var(--text-secondary);">@lastLock.ngayXuLy.ToString("dd/MM/yyyy HH:mm") • <strong>@lastLock.tenAdmin</strong> (Admin)</div>
+                <div style="margin-top: 4px;"><span class="badge badge-warning">Tạm khóa</span> @lastLock.lyDo</div>
+            </div>
+            @foreach (var m in messages)
+            {
+                bool fromTeacher = m.vaiTroGui == "GiaoVien";
+                <div style="padding: 12px 14px; border-radius: 12px; @(fromTeacher ? "background: #EEF2FF; border: 1px solid #C7D2FE; margin-left: 40px;" : "background: #F8FAFC; border: 1px solid var(--border-color); margin-right: 40px;")">
+                    <div class="caption" style="color: var(--text-secondary);">
+                        @m.ngayGui.ToString("dd/MM/yyyy HH:mm") • <strong>@m.tenNguoiGui</strong> (@(fromTeacher ? "Giáo viên" : "Admin"))
+                    </div>
+                    <div style="margin-top: 4px;">
+                        <span class="badge @(m.loai == ViolationReportService.MessageAppeal ? "badge-danger" : (fromTeacher ? "badge-success" : "badge-primary"))">@m.loai</span>
+                        @if (m.hanPhanHoiMoi.HasValue)
+                        {
+                            <span class="caption" style="margin-left: 6px;">Hạn mới: @m.hanPhanHoiMoi.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                        }
+                    </div>
+                    <div style="white-space: pre-wrap; margin-top: 6px;">@m.noiDung</div>
+                </div>
+            }
+            @if (!messages.Any())
+            {
+                <p style="color: var(--text-secondary); margin: 0;">Giáo viên chưa gửi phản hồi.</p>
+            }
+        </div>
+    </div>
+}
 
 <!-- DANH SÁCH BÁO CÁO -->
 <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 24px;">
@@ -93,7 +146,7 @@
         <h3 class="h3" style="margin: 0;">Báo cáo từ học viên (@reports.Count)</h3>
     </div>
     <div class="table-responsive">
-        <table class="table">
+        <table class="table" data-paginate="10">
             <thead>
                 <tr>
                     <th>Người báo cáo</th>
@@ -112,10 +165,10 @@
                         <tr>
                             <td><strong>@r.tenNguoiBaoCao</strong><div class="caption" style="color: var(--text-muted);">@r.emailNguoiBaoCao</div></td>
                             <td><span class="badge badge-primary">@r.loaiViPham</span></td>
-                            <td>@(string.IsNullOrEmpty(r.tenBaiHoc) ? (string.IsNullOrEmpty(r.maBaiHoc) ? "Toàn khóa học" : r.maBaiHoc + " (đã xóa)") : r.tenBaiHoc)</td>
+                            <td class="cell-wrap" style="min-width: 180px;">@(string.IsNullOrEmpty(r.tenBaiHoc) ? (string.IsNullOrEmpty(r.maBaiHoc) ? "Toàn khóa học" : r.maBaiHoc + " (đã xóa)") : r.tenBaiHoc)</td>
                             <td style="white-space: pre-wrap;">@r.moTa</td>
                             <td>@r.ngayTao.ToString("dd/MM/yyyy HH:mm")</td>
-                            <td>
+                            <td class="cell-wrap">
                                 @if (r.trangThai == ViolationReportService.ReportPending)
                                 {
                                     <span class="badge badge-warning">Chờ xử lý</span>
@@ -151,7 +204,7 @@
         <h3 class="h3" style="margin: 0;">Lịch sử xử lý</h3>
     </div>
     <div class="table-responsive">
-        <table class="table">
+        <table class="table" data-paginate="10">
             <thead>
                 <tr>
                     <th>Thời gian</th>
@@ -198,6 +251,7 @@
             Dismiss: '@Url.Action("Dismiss", "ViolationReport", new { area = "Admin", id = "" })',
             Lock: '@Url.Action("Lock", "ViolationReport", new { area = "Admin", id = "" })',
             Reopen: '@Url.Action("Reopen", "ViolationReport", new { area = "Admin", id = "" })',
+            RequestChanges: '@Url.Action("RequestChanges", "ViolationReport", new { area = "Admin", id = "" })',
             PermanentLock: '@Url.Action("PermanentLock", "ViolationReport", new { area = "Admin", id = "" })'
         };
 
@@ -244,7 +298,7 @@
             Swal.fire({
                 title: 'Tạm khóa khóa học?',
                 html:
-                    '<p style="text-align:left;margin:0 0 6px;">Khóa học sẽ bị ẩn khỏi trang bán và tìm kiếm. Học viên đã mua vẫn học được.</p>' +
+                    '<p style="text-align:left;margin:0 0 6px;">Khóa học sẽ bị ẩn khỏi trang bán và tìm kiếm. Học viên đã mua vẫn học được. Giáo viên sẽ thấy lý do và gửi phản hồi.</p>' +
                     '<label style="display:block;text-align:left;font-weight:600;margin-top:10px;">Lý do tạm khóa</label>' +
                     '<textarea id="swal-lock-reason" class="swal2-textarea" style="margin:6px 0 0;width:100%;" maxlength="2000"></textarea>' +
                     `<label style="display:block;text-align:left;font-weight:600;margin-top:10px;">Thời hạn phản hồi (ngày, ${minDays}–${maxDays})</label>` +
@@ -261,6 +315,29 @@
                     return { lyDo: reason, soNgay: days };
                 }
             }).then(r => { if (r.isConfirmed) postAction('Lock', r.value); });
+        }
+
+        function requestChanges() {
+            Swal.fire({
+                title: 'Yêu cầu sửa thêm?',
+                html:
+                    '<p style="text-align:left;margin:0 0 6px;">Khóa học vẫn bị tạm khóa. Giáo viên sẽ nhận yêu cầu và có thêm thời gian để xử lý.</p>' +
+                    '<label style="display:block;text-align:left;font-weight:600;margin-top:10px;">Nội dung cần sửa thêm</label>' +
+                    '<textarea id="swal-rc-content" class="swal2-textarea" style="margin:6px 0 0;width:100%;" maxlength="2000"></textarea>' +
+                    `<label style="display:block;text-align:left;font-weight:600;margin-top:10px;">Gia hạn thêm (ngày, ${minDays}–${maxDays})</label>` +
+                    `<input id="swal-rc-days" type="number" class="swal2-input" style="margin:6px 0 0;width:100%;" min="${minDays}" max="${maxDays}" value="3">`,
+                showCancelButton: true,
+                confirmButtonText: 'Gửi yêu cầu',
+                confirmButtonColor: '#434CE8',
+                cancelButtonText: 'Hủy',
+                preConfirm: () => {
+                    const content = document.getElementById('swal-rc-content').value.trim();
+                    const days = parseInt(document.getElementById('swal-rc-days').value, 10);
+                    if (content.length < 10) { Swal.showValidationMessage('Nội dung tối thiểu 10 ký tự'); return false; }
+                    if (isNaN(days) || days < minDays || days > maxDays) { Swal.showValidationMessage(`Thời hạn phải từ ${minDays} đến ${maxDays} ngày`); return false; }
+                    return { noiDung: content, soNgay: days };
+                }
+            }).then(r => { if (r.isConfirmed) postAction('RequestChanges', r.value); });
         }
 
         function reopenCourse() {

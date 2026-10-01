@@ -9,9 +9,11 @@ namespace ECOLearning.Services
 {
     /// <summary>
     /// Nghiệp vụ Báo cáo vi phạm khóa học (hậu kiểm nội dung):
-    /// Học viên báo cáo -> Admin bác bỏ, Tạm khóa (kèm hạn phản hồi), Mở lại hoặc Khóa vĩnh viễn.
-    /// (Phần giáo viên xem và phản hồi vi phạm chưa làm.)
-    /// Bảng được tạo bởi Database/Migrations/002_BaoCaoViPham.sql và 003_BaoCaoViPham_BaiHoc.sql.
+    /// Học viên báo cáo -> Admin bác bỏ hoặc Tạm khóa (kèm hạn phản hồi)
+    /// -> Giáo viên "Đã chỉnh sửa" hoặc "Khiếu nại" (Chờ Admin xem xét)
+    /// -> Admin Mở lại / Yêu cầu sửa thêm (gia hạn, quay lại Chờ GV xử lý) / Khóa vĩnh viễn.
+    /// Bảng được tạo bởi Database/Migrations/002, 003 (báo cáo + xử lý) và 004 (trao đổi với giáo viên).
+    /// Khi chưa chạy 004, phần học viên báo cáo và Admin xử lý vẫn hoạt động; phần trao đổi được ẩn.
     /// Các phương thức thay đổi dữ liệu trả về null nếu thành công, ngược lại trả về thông báo lỗi.
     /// </summary>
     public class ViolationReportService
@@ -24,6 +26,19 @@ namespace ECOLearning.Services
         public const string ActionLock = "Tạm khóa";
         public const string ActionReopen = "Mở lại";
         public const string ActionPermanentLock = "Khóa vĩnh viễn";
+
+        // Bước của một lần Tạm khóa (XuLyViPham.trangThaiXuLy, script 004)
+        public const string StepWaitingTeacher = "Chờ GV xử lý";
+        public const string StepWaitingAdmin = "Chờ Admin xem xét";
+        public const string StepClosed = "Đã kết thúc";
+
+        // Loại tin trao đổi (PhanHoiViPham.loai, script 004)
+        public const string MessageFixed = "Đã chỉnh sửa";
+        public const string MessageAppeal = "Khiếu nại";
+        public const string MessageRequestChanges = "Yêu cầu sửa thêm";
+
+        public const string DiscussionNotInstalledMessage =
+            "Chưa khởi tạo dữ liệu trao đổi vi phạm. Vui lòng chạy Database/Migrations/004_XuLyViPham_TraoDoi.sql!";
 
         public const int MinDeadlineDays = 1;
         public const int MaxDeadlineDays = 30;
@@ -63,6 +78,28 @@ namespace ECOLearning.Services
             {
                 return false;
             }
+        }
+
+        private bool? hasDiscussion;
+
+        /// <summary>Đã chạy script 004 (trao đổi giữa giáo viên và Admin) hay chưa.</summary>
+        public bool HasDiscussion()
+        {
+            if (!hasDiscussion.HasValue)
+            {
+                try
+                {
+                    hasDiscussion = db.Database.SqlQuery<int>(@"
+                        SELECT CASE WHEN OBJECT_ID(N'dbo.PhanHoiViPham', N'U') IS NOT NULL
+                                     AND COL_LENGTH(N'dbo.XuLyViPham', N'trangThaiXuLy') IS NOT NULL
+                               THEN 1 ELSE 0 END").FirstOrDefault() == 1;
+                }
+                catch
+                {
+                    hasDiscussion = false;
+                }
+            }
+            return hasDiscussion.Value;
         }
 
         #region Học viên báo cáo
@@ -155,28 +192,31 @@ namespace ECOLearning.Services
 
         /// <summary>
         /// Danh sách khóa học có báo cáo vi phạm hoặc đang bị khóa, gom theo khóa học.
-        /// filter: pending (còn báo cáo chờ xử lý) | locked (đang tạm khóa) | banned (khóa vĩnh viễn) | all
+        /// filter: pending (còn báo cáo chờ xử lý) | review (GV đã phản hồi, chờ Admin) | locked (đang tạm khóa)
+        ///         | banned (khóa vĩnh viễn) | all
         /// </summary>
         public List<ViolationCourseSummary> GetCourseSummaries(string filter)
         {
+            string stepColumn = HasDiscussion() ? "x.trangThaiXuLy" : "CAST(NULL AS NVARCHAR(50))";
             string sql = @"
                 SELECT k.maKhoaHoc, k.tenKhoaHoc, k.trangThai AS trangThaiKhoaHoc, u.hoTen AS tenGiaoVien,
                        ISNULL(SUM(CASE WHEN b.trangThai = @pending THEN 1 ELSE 0 END), 0) AS soChoXuLy,
                        COUNT(b.maBaoCao) AS tongBaoCao,
                        MAX(b.ngayTao) AS baoCaoGanNhat,
-                       lk.hanPhanHoi
+                       lk.hanPhanHoi,
+                       lk.trangThaiXuLy
                 FROM KhoaHoc k
                 INNER JOIN NguoiDung u ON u.maNguoiDung = k.maGiaoVien
                 LEFT JOIN BaoCaoViPham b ON b.maKhoaHoc = k.maKhoaHoc
                 OUTER APPLY (
-                    SELECT TOP 1 x.hanPhanHoi
+                    SELECT TOP 1 x.hanPhanHoi, " + stepColumn + @" AS trangThaiXuLy
                     FROM XuLyViPham x
                     WHERE x.maKhoaHoc = k.maKhoaHoc AND x.hanhDong = @actionLock
                     ORDER BY x.ngayXuLy DESC
                 ) lk
                 WHERE EXISTS (SELECT 1 FROM BaoCaoViPham b2 WHERE b2.maKhoaHoc = k.maKhoaHoc)
                    OR k.trangThai IN (@statusLocked, @statusBanned)
-                GROUP BY k.maKhoaHoc, k.tenKhoaHoc, k.trangThai, u.hoTen, lk.hanPhanHoi";
+                GROUP BY k.maKhoaHoc, k.tenKhoaHoc, k.trangThai, u.hoTen, lk.hanPhanHoi, lk.trangThaiXuLy";
 
             var list = db.Database.SqlQuery<ViolationCourseSummary>(sql,
                 new SqlParameter("@pending", ReportPending),
@@ -190,6 +230,9 @@ namespace ECOLearning.Services
                 case "pending":
                     list = list.Where(c => c.soChoXuLy > 0).ToList();
                     break;
+                case "review":
+                    list = list.Where(c => c.trangThaiKhoaHoc == CourseStatus.TamKhoa && c.trangThaiXuLy == StepWaitingAdmin).ToList();
+                    break;
                 case "locked":
                     list = list.Where(c => c.trangThaiKhoaHoc == CourseStatus.TamKhoa).ToList();
                     break;
@@ -199,7 +242,8 @@ namespace ECOLearning.Services
             }
 
             return list
-                .OrderByDescending(c => c.soChoXuLy)
+                .OrderByDescending(c => c.trangThaiKhoaHoc == CourseStatus.TamKhoa && c.trangThaiXuLy == StepWaitingAdmin)
+                .ThenByDescending(c => c.soChoXuLy)
                 .ThenByDescending(c => c.baoCaoGanNhat)
                 .ToList();
         }
@@ -221,9 +265,10 @@ namespace ECOLearning.Services
 
         public List<ViolationAction> GetActions(string courseId)
         {
+            string stepColumn = HasDiscussion() ? "x.trangThaiXuLy" : "CAST(NULL AS NVARCHAR(50))";
             return db.Database.SqlQuery<ViolationAction>(@"
                 SELECT x.maXuLy, x.maKhoaHoc, x.hanhDong, x.lyDo, x.hanPhanHoi, x.trangThaiTruoc,
-                       x.maAdmin, u.hoTen AS tenAdmin, x.ngayXuLy
+                       x.maAdmin, u.hoTen AS tenAdmin, x.ngayXuLy, " + stepColumn + @" AS trangThaiXuLy
                 FROM XuLyViPham x
                 INNER JOIN NguoiDung u ON u.maNguoiDung = x.maAdmin
                 WHERE x.maKhoaHoc = @maKhoaHoc
@@ -236,6 +281,37 @@ namespace ECOLearning.Services
         public ViolationAction GetLatestLock(string courseId)
         {
             return GetActions(courseId).FirstOrDefault(a => a.hanhDong == ActionLock);
+        }
+
+        /// <summary>Lịch sử trao đổi của một lần Tạm khóa, cũ nhất trước (rỗng nếu chưa chạy 004).</summary>
+        public List<ViolationMessage> GetMessages(string maXuLy)
+        {
+            if (string.IsNullOrEmpty(maXuLy) || !HasDiscussion()) return new List<ViolationMessage>();
+            return db.Database.SqlQuery<ViolationMessage>(@"
+                SELECT p.maPhanHoi, p.maXuLy, p.maNguoiGui, u.hoTen AS tenNguoiGui, p.vaiTroGui, p.loai, p.noiDung,
+                       p.hanPhanHoiMoi, p.ngayGui
+                FROM PhanHoiViPham p
+                INNER JOIN NguoiDung u ON u.maNguoiDung = p.maNguoiGui
+                WHERE p.maXuLy = @maXuLy
+                ORDER BY p.ngayGui",
+                new SqlParameter("@maXuLy", maXuLy)
+            ).ToList();
+        }
+
+        /// <summary>Số khóa học của giáo viên đang tạm khóa và chờ giáo viên xử lý (0 nếu chưa chạy 002-004).</summary>
+        public int CountWaitingForTeacher(int teacherId)
+        {
+            if (!IsInstalled() || !HasDiscussion()) return 0;
+            return db.Database.SqlQuery<int>(@"
+                SELECT COUNT(DISTINCT k.maKhoaHoc)
+                FROM KhoaHoc k
+                INNER JOIN XuLyViPham x ON x.maKhoaHoc = k.maKhoaHoc AND x.hanhDong = @actionLock AND x.trangThaiXuLy = @step
+                WHERE k.maGiaoVien = @teacherId AND k.trangThai = @statusLocked",
+                new SqlParameter("@actionLock", ActionLock),
+                new SqlParameter("@step", StepWaitingTeacher),
+                new SqlParameter("@teacherId", teacherId),
+                new SqlParameter("@statusLocked", CourseStatus.TamKhoa)
+            ).FirstOrDefault();
         }
 
         #endregion
@@ -287,7 +363,7 @@ namespace ECOLearning.Services
             using (var tx = db.Database.BeginTransaction())
             {
                 UpdateCourseStatus(courseId, CourseStatus.TamKhoa);
-                InsertAction(courseId, ActionLock, cleanReason, DateTime.Now.AddDays(soNgayPhanHoi), currentStatus, adminId);
+                InsertAction(courseId, ActionLock, cleanReason, DateTime.Now.AddDays(soNgayPhanHoi), currentStatus, adminId, StepWaitingTeacher);
                 MarkPendingReportsHandled(courseId, adminId, "Đã tạm khóa khóa học: " + Truncate(cleanReason, 900));
                 tx.Commit();
             }
@@ -314,6 +390,7 @@ namespace ECOLearning.Services
             {
                 UpdateCourseStatus(courseId, restoreStatus);
                 InsertAction(courseId, ActionReopen, cleanNote, null, currentStatus, adminId);
+                CloseLock(lastLock);
                 tx.Commit();
             }
             return null;
@@ -331,11 +408,79 @@ namespace ECOLearning.Services
             if (currentStatus != CourseStatus.TamKhoa && !CourseStatus.IsPublished(currentStatus))
                 return "Chỉ có thể khóa vĩnh viễn khóa học đang bán hoặc đang tạm khóa!";
 
+            var lastLock = currentStatus == CourseStatus.TamKhoa ? GetLatestLock(courseId) : null;
             using (var tx = db.Database.BeginTransaction())
             {
                 UpdateCourseStatus(courseId, CourseStatus.KhoaVinhVien);
                 InsertAction(courseId, ActionPermanentLock, cleanReason, null, currentStatus, adminId);
                 MarkPendingReportsHandled(courseId, adminId, "Đã khóa vĩnh viễn khóa học: " + Truncate(cleanReason, 900));
+                CloseLock(lastLock);
+                tx.Commit();
+            }
+            return null;
+        }
+
+        /// <summary>Admin chưa đồng ý với phản hồi của giáo viên: yêu cầu sửa thêm và gia hạn.</summary>
+        public string RequestMoreChanges(string courseId, int adminId, string noiDung, int soNgayGiaHan)
+        {
+            if (!HasDiscussion()) return DiscussionNotInstalledMessage;
+
+            string cleanContent = (noiDung ?? "").Trim();
+            if (cleanContent.Length < 10) return "Vui lòng nêu cụ thể nội dung cần sửa thêm (tối thiểu 10 ký tự)!";
+            if (cleanContent.Length > 2000) return "Nội dung tối đa 2000 ký tự!";
+            if (soNgayGiaHan < MinDeadlineDays || soNgayGiaHan > MaxDeadlineDays)
+                return $"Thời hạn phải từ {MinDeadlineDays} đến {MaxDeadlineDays} ngày!";
+
+            if (GetCourseStatus(courseId) != CourseStatus.TamKhoa) return "Khóa học không ở trạng thái Tạm khóa!";
+            var lastLock = GetLatestLock(courseId);
+            if (lastLock == null) return "Không tìm thấy thông tin tạm khóa của khóa học!";
+            if (lastLock.trangThaiXuLy != StepWaitingAdmin) return "Giáo viên chưa gửi phản hồi nên chưa thể yêu cầu sửa thêm!";
+
+            DateTime newDeadline = DateTime.Now.AddDays(soNgayGiaHan);
+            using (var tx = db.Database.BeginTransaction())
+            {
+                InsertMessage(lastLock.maXuLy, adminId, "Admin", MessageRequestChanges, cleanContent, newDeadline);
+                db.Database.ExecuteSqlCommand(
+                    "UPDATE XuLyViPham SET trangThaiXuLy = @step, hanPhanHoi = @han WHERE maXuLy = @maXuLy",
+                    new SqlParameter("@step", StepWaitingTeacher),
+                    new SqlParameter("@han", newDeadline),
+                    new SqlParameter("@maXuLy", lastLock.maXuLy));
+                tx.Commit();
+            }
+            return null;
+        }
+
+        #endregion
+
+        #region Giáo viên phản hồi
+
+        /// <summary>Giáo viên gửi "Đã chỉnh sửa" hoặc "Khiếu nại". Chuyển sang Chờ Admin xem xét.</summary>
+        public string SubmitTeacherResponse(string courseId, int teacherId, string loai, string noiDung)
+        {
+            if (!HasDiscussion()) return DiscussionNotInstalledMessage;
+            if (loai != MessageFixed && loai != MessageAppeal) return "Vui lòng chọn cách xử lý: Đã chỉnh sửa hoặc Khiếu nại!";
+
+            string cleanContent = (noiDung ?? "").Trim();
+            if (cleanContent.Length < 10) return "Vui lòng mô tả cụ thể (tối thiểu 10 ký tự)!";
+            if (cleanContent.Length > 2000) return "Nội dung tối đa 2000 ký tự!";
+
+            var course = db.KhoaHoc.AsNoTracking().FirstOrDefault(k => k.maKhoaHoc == courseId && k.maGiaoVien == teacherId);
+            if (course == null) return "Không tìm thấy khóa học của bạn!";
+            if (course.trangThai != CourseStatus.TamKhoa) return "Khóa học không ở trạng thái Tạm khóa nên không cần phản hồi!";
+
+            var lastLock = GetLatestLock(courseId);
+            if (lastLock == null) return "Không tìm thấy thông tin tạm khóa của khóa học!";
+            if (lastLock.trangThaiXuLy == StepWaitingAdmin) return "Bạn đã gửi phản hồi, vui lòng chờ quản trị viên xem xét!";
+
+            using (var tx = db.Database.BeginTransaction())
+            {
+                InsertMessage(lastLock.maXuLy, teacherId, "GiaoVien", loai, cleanContent, null);
+                // phanHoiGiaoVien (cột của 002) giữ phản hồi mới nhất
+                db.Database.ExecuteSqlCommand(
+                    "UPDATE XuLyViPham SET phanHoiGiaoVien = @phanHoi, ngayPhanHoi = GETDATE(), trangThaiXuLy = @step WHERE maXuLy = @maXuLy",
+                    new SqlParameter("@phanHoi", cleanContent),
+                    new SqlParameter("@step", StepWaitingAdmin),
+                    new SqlParameter("@maXuLy", lastLock.maXuLy));
                 tx.Commit();
             }
             return null;
@@ -360,18 +505,57 @@ namespace ECOLearning.Services
                 new SqlParameter("@maKhoaHoc", courseId));
         }
 
-        private void InsertAction(string courseId, string hanhDong, string lyDo, DateTime? hanPhanHoi, string trangThaiTruoc, int adminId)
+        private void InsertAction(string courseId, string hanhDong, string lyDo, DateTime? hanPhanHoi, string trangThaiTruoc, int adminId, string trangThaiXuLy = null)
         {
-            db.Database.ExecuteSqlCommand(
-                @"INSERT INTO XuLyViPham (maXuLy, maKhoaHoc, hanhDong, lyDo, hanPhanHoi, trangThaiTruoc, maAdmin, ngayXuLy)
-                  VALUES (@maXuLy, @maKhoaHoc, @hanhDong, @lyDo, @hanPhanHoi, @trangThaiTruoc, @maAdmin, GETDATE())",
+            var parameters = new List<SqlParameter>
+            {
                 new SqlParameter("@maXuLy", NewId("XL")),
                 new SqlParameter("@maKhoaHoc", courseId),
                 new SqlParameter("@hanhDong", hanhDong),
                 new SqlParameter("@lyDo", lyDo),
                 new SqlParameter("@hanPhanHoi", (object)hanPhanHoi ?? DBNull.Value),
                 new SqlParameter("@trangThaiTruoc", (object)trangThaiTruoc ?? DBNull.Value),
-                new SqlParameter("@maAdmin", adminId));
+                new SqlParameter("@maAdmin", adminId)
+            };
+
+            if (HasDiscussion())
+            {
+                parameters.Add(new SqlParameter("@trangThaiXuLy", (object)trangThaiXuLy ?? DBNull.Value));
+                db.Database.ExecuteSqlCommand(
+                    @"INSERT INTO XuLyViPham (maXuLy, maKhoaHoc, hanhDong, lyDo, hanPhanHoi, trangThaiTruoc, maAdmin, ngayXuLy, trangThaiXuLy)
+                      VALUES (@maXuLy, @maKhoaHoc, @hanhDong, @lyDo, @hanPhanHoi, @trangThaiTruoc, @maAdmin, GETDATE(), @trangThaiXuLy)",
+                    parameters.ToArray());
+            }
+            else
+            {
+                db.Database.ExecuteSqlCommand(
+                    @"INSERT INTO XuLyViPham (maXuLy, maKhoaHoc, hanhDong, lyDo, hanPhanHoi, trangThaiTruoc, maAdmin, ngayXuLy)
+                      VALUES (@maXuLy, @maKhoaHoc, @hanhDong, @lyDo, @hanPhanHoi, @trangThaiTruoc, @maAdmin, GETDATE())",
+                    parameters.ToArray());
+            }
+        }
+
+        private void CloseLock(ViolationAction lockAction)
+        {
+            if (lockAction == null || !HasDiscussion()) return;
+            db.Database.ExecuteSqlCommand(
+                "UPDATE XuLyViPham SET trangThaiXuLy = @step WHERE maXuLy = @maXuLy",
+                new SqlParameter("@step", StepClosed),
+                new SqlParameter("@maXuLy", lockAction.maXuLy));
+        }
+
+        private void InsertMessage(string maXuLy, int senderId, string senderRole, string loai, string noiDung, DateTime? hanPhanHoiMoi)
+        {
+            db.Database.ExecuteSqlCommand(
+                @"INSERT INTO PhanHoiViPham (maPhanHoi, maXuLy, maNguoiGui, vaiTroGui, loai, noiDung, hanPhanHoiMoi, ngayGui)
+                  VALUES (@maPhanHoi, @maXuLy, @maNguoiGui, @vaiTroGui, @loai, @noiDung, @hanPhanHoiMoi, GETDATE())",
+                new SqlParameter("@maPhanHoi", NewId("PH")),
+                new SqlParameter("@maXuLy", maXuLy),
+                new SqlParameter("@maNguoiGui", senderId),
+                new SqlParameter("@vaiTroGui", senderRole),
+                new SqlParameter("@loai", loai),
+                new SqlParameter("@noiDung", noiDung),
+                new SqlParameter("@hanPhanHoiMoi", (object)hanPhanHoiMoi ?? DBNull.Value));
         }
 
         private void MarkPendingReportsHandled(string courseId, int adminId, string ghiChu)

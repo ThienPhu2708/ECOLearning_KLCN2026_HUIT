@@ -62,7 +62,7 @@
                         <tr data-cat-id="@item.MaDanhMuc" data-count="@item.SoKhoaHoc">
                             <td><code>@item.MaDanhMuc</code></td>
                             <td><strong>@item.TenDanhMuc</strong></td>
-                            <td>@(string.IsNullOrEmpty(item.MoTa) ? "Chưa có mô tả" : item.MoTa)</td>
+                            <td class="cell-wrap">@(string.IsNullOrEmpty(item.MoTa) ? "Chưa có mô tả" : item.MoTa)</td>
                             <td>
                                 @if (item.SoKhoaHoc > 0)
                                 {

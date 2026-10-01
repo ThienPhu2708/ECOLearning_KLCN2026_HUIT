@@ -113,6 +113,15 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="PdfSharp-gdi, Version=1.50.5147.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>packages\PDFsharp-MigraDoc-gdi.1.50.5147\lib\net20\PdfSharp-gdi.dll</HintPath>
+    </Reference>
+    <Reference Include="MigraDoc.DocumentObjectModel-gdi, Version=1.50.5147.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>packages\PDFsharp-MigraDoc-gdi.1.50.5147\lib\net20\MigraDoc.DocumentObjectModel-gdi.dll</HintPath>
+    </Reference>
+    <Reference Include="MigraDoc.Rendering-gdi, Version=1.50.5147.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>packages\PDFsharp-MigraDoc-gdi.1.50.5147\lib\net20\MigraDoc.Rendering-gdi.dll</HintPath>
+    </Reference>
     <Reference Include="WebGrease">
       <Private>True</Private>
       <HintPath>packages\WebGrease.1.6.0\lib\WebGrease.dll</HintPath>
@@ -172,9 +181,11 @@
     <Compile Include="Models\TeacherApplication.cs" />
     <Compile Include="Services\CourseStatus.cs" />
     <Compile Include="Services\ViolationReportService.cs" />
+    <Compile Include="Services\SystemReportPdfService.cs" />
     <Compile Include="Models\ViolationReportModels.cs" />
     <Compile Include="Areas\Admin\Controllers\ViolationReportController.cs" />
     <Compile Include="Controllers\ViolationReportController.cs" />
+    <Compile Include="Areas\Instructor\Controllers\ViolationController.cs" />
     <Compile Include="Controllers\ProfileController.cs" />
     <Compile Include="Controllers\CourseController.cs" />
     <Compile Include="Controllers\CartController.cs" />
@@ -416,6 +427,10 @@
     <None Include="Database\Migrations\001_KhuyenNghi_ChoPhepGiaoVien.sql" />
     <None Include="Database\Migrations\002_BaoCaoViPham.sql" />
     <None Include="Database\Migrations\003_BaoCaoViPham_BaiHoc.sql" />
+    <None Include="Database\Migrations\004_XuLyViPham_TraoDoi.sql" />
+    <Content Include="Areas\Instructor\Views\Violation\Index.cshtml" />
+    <Content Include="assets\css\dashboard-tables.css" />
+    <Content Include="assets\js\table-pagination.js" />
     <Content Include="Areas\Admin\Views\CourseApproval\Index.cshtml" />
     <Content Include="Areas\Admin\Views\SystemReport\Index.cshtml" />
     <Content Include="Areas\Instructor\Views\_ViewStart.cshtml" />

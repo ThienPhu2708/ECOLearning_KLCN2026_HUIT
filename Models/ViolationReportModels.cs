@@ -34,6 +34,22 @@ namespace ECOLearning.Models
         public int maAdmin { get; set; }
         public string tenAdmin { get; set; }
         public DateTime ngayXuLy { get; set; }
+        // Chỉ có ở lần Tạm khóa (script 004): Chờ GV xử lý | Chờ Admin xem xét | Đã kết thúc
+        public string trangThaiXuLy { get; set; }
+    }
+
+    // Một tin trong lịch sử trao đổi giữa giáo viên và Admin của một lần Tạm khóa (script 004)
+    public class ViolationMessage
+    {
+        public string maPhanHoi { get; set; }
+        public string maXuLy { get; set; }
+        public int maNguoiGui { get; set; }
+        public string tenNguoiGui { get; set; }
+        public string vaiTroGui { get; set; }
+        public string loai { get; set; }
+        public string noiDung { get; set; }
+        public DateTime? hanPhanHoiMoi { get; set; }
+        public DateTime ngayGui { get; set; }
     }
 
     public class ViolationCourseSummary
@@ -46,5 +62,6 @@ namespace ECOLearning.Models
         public int tongBaoCao { get; set; }
         public DateTime? baoCaoGanNhat { get; set; }
         public DateTime? hanPhanHoi { get; set; }
+        public string trangThaiXuLy { get; set; }
     }
 }

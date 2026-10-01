@@ -133,7 +133,7 @@ ViewBag.Title = "Dashboard Quản Trị Viên";
     </div>
 
     <div class="table-responsive">
-        <table class="table">
+        <table class="table" data-paginate="10">
             <thead>
                 <tr>
                     <th>Tên Khóa Học</th>
@@ -150,7 +150,7 @@ ViewBag.Title = "Dashboard Quản Trị Viên";
                     foreach (var item in Model.PendingCourses)
                     {
                         <tr>
-                            <td>
+                            <td class="cell-wrap">
                                 <strong>@item.TenKhoaHoc</strong>
                             </td>
                             <td>@item.TenGiaoVien</td>

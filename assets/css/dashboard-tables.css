@@ -1,0 +1,69 @@
+/* =============================================================================
+   dashboard-tables.css — Căn chỉnh bảng trong khu vực Admin & Giáo viên
+   (chỉ nạp ở _LayoutAdmin và _LayoutInstructor, không ảnh hưởng trang học viên)
+
+   - Nội dung ô (tên, ngày, số tiền, nhãn trạng thái, nút) nằm trên 1 dòng.
+   - Tiêu đề cột được xuống dòng để bảng không rộng quá khung.
+   - Cột văn bản dài (tên khóa học, mô tả, ghi chú) vẫn xuống dòng nhưng giữ độ rộng tối thiểu:
+     thêm class "cell-wrap" cho <td> đó.
+   - Chỉ áp dụng cho bảng có <thead> (bảng dạng "nhãn: giá trị" giữ nguyên)
+     và bỏ qua .library-table (đã tự căn cột riêng).
+   ============================================================================= */
+
+.dashboard-main table:has(> thead):not(.library-table) th {
+  padding: 12px 14px;
+  line-height: 1.35;
+  vertical-align: bottom;
+}
+
+.dashboard-main table:has(> thead):not(.library-table) td {
+  padding: 14px;
+  white-space: nowrap;
+}
+
+/* Cột văn bản dài: cho xuống dòng nhưng không bị bóp quá hẹp */
+.dashboard-main table td.cell-wrap,
+.dashboard-main #approval-queue-body td:first-child {
+  white-space: normal;
+  min-width: 220px;
+  max-width: 380px;
+}
+
+/* Ô đã tự đặt white-space trong style (mô tả, lý do...) vẫn giữ cách hiển thị đó */
+.dashboard-main table td[style*="white-space"] {
+  min-width: 220px;
+}
+
+/* Nhãn trạng thái / danh mục không bao giờ bẻ đôi */
+.dashboard-main .badge {
+  white-space: nowrap;
+}
+
+/* Nút thao tác trong bảng: nằm trên 1 hàng, kể cả khi khung chứa đặt flex-wrap */
+.dashboard-main table td .btn {
+  white-space: nowrap;
+}
+.dashboard-main table:has(> thead):not(.library-table) td > div[style*="flex"] {
+  flex-wrap: nowrap !important;
+}
+
+/* Bảng tự định dạng không có class (vd. trang Duyệt hồ sơ giáo viên) nằm trong khung overflow:hidden:
+   cho phép cuộn ngang thay vì cắt mất nội dung, và cho cột "Lĩnh vực chuyên môn" (cột 3) xuống dòng */
+.dashboard-main div[style*="overflow: hidden"]:has(> table:not([class])) {
+  overflow-x: auto !important;
+}
+.dashboard-main table:not([class]):has(> thead) td:nth-child(3) {
+  white-space: normal;
+  min-width: 180px;
+  max-width: 280px;
+}
+/* Cột thao tác căn trái để nút "Chi tiết hồ sơ" thẳng hàng giữa dòng có 1 nút và dòng có 3 nút */
+.dashboard-main table:not([class]):has(> thead) th:last-child,
+.dashboard-main table:not([class]):has(> thead) td:last-child {
+  text-align: left !important;
+}
+
+/* Thanh cuộn ngang gọn khi bảng vẫn rộng hơn khung (màn hình nhỏ) */
+.dashboard-main .table-responsive {
+  -webkit-overflow-scrolling: touch;
+}

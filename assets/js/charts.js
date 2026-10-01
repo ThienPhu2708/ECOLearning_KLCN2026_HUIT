@@ -69,6 +69,95 @@ const Charts = {
     `;
   },
 
+  // 1b. Dual-axis Line Chart: 2 chỉ số khác thang đo (vd. Doanh thu triệu VNĐ & Số đơn hàng)
+  //     series[0] dùng trục Y trái, series[1] dùng trục Y phải.
+  //     options.series = [{ name, data, color, fillColor, unit }, { ... }]
+  renderDualLineChart(containerId, options = {}) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+
+    const labels = options.labels || [];
+    const series = (options.series || []).slice(0, 2);
+    if (!labels.length || !series.length) return;
+
+    const height = options.height || 260;
+    const width = 600;
+    const padding = { top: 20, right: 46, bottom: 35, left: 46 };
+    const chartW = width - padding.left - padding.right;
+    const chartH = height - padding.top - padding.bottom;
+    const stepX = labels.length > 1 ? chartW / (labels.length - 1) : 0;
+
+    // Làm tròn mức trần trục Y cho dễ đọc; dữ liệu toàn 0 thì vẫn có thang đo
+    const niceMax = (values) => {
+      const max = Math.max(0, ...values.map(v => Number(v) || 0));
+      if (max === 0) return 4;
+      const raw = max * 1.15;
+      const magnitude = Math.pow(10, Math.floor(Math.log10(raw)));
+      const steps = [1, 2, 2.5, 5, 10];
+      for (const s of steps) {
+        if (raw <= s * magnitude) return s * magnitude;
+      }
+      return 10 * magnitude;
+    };
+    const formatTick = (v) => (Math.abs(v) >= 100 || Number.isInteger(v)) ? Math.round(v).toLocaleString('vi-VN') : v.toLocaleString('vi-VN', { maximumFractionDigits: 1 });
+
+    const axes = series.map(s => ({ max: niceMax(s.data || []) }));
+
+    let gridLines = '';
+    let yLabels = '';
+    for (let i = 0; i <= 4; i++) {
+      const y = padding.top + (chartH / 4) * i;
+      gridLines += `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="#E2E8F0" stroke-dasharray="4 4" stroke-width="1" />`;
+      const ratio = (4 - i) / 4;
+      yLabels += `<text x="${padding.left - 8}" y="${y + 4}" fill="${series[0].color}" font-size="10" text-anchor="end" font-weight="600">${formatTick(axes[0].max * ratio)}</text>`;
+      if (series[1]) {
+        yLabels += `<text x="${width - padding.right + 8}" y="${y + 4}" fill="${series[1].color}" font-size="10" text-anchor="start" font-weight="600">${formatTick(axes[1].max * ratio)}</text>`;
+      }
+    }
+
+    let paths = '';
+    let circles = '';
+    series.forEach((s, sIdx) => {
+      const data = s.data || [];
+      const max = axes[sIdx].max;
+      const coords = labels.map((label, idx) => {
+        const val = Number(data[idx]) || 0;
+        return {
+          x: padding.left + idx * stepX,
+          y: padding.top + chartH - (val / max) * chartH,
+          val: val,
+          label: label
+        };
+      });
+      const dPath = coords.reduce((acc, pt, idx) => idx === 0 ? `M ${pt.x},${pt.y}` : `${acc} L ${pt.x},${pt.y}`, '');
+      if (s.fillColor) {
+        const areaPath = `${dPath} L ${coords[coords.length - 1].x},${padding.top + chartH} L ${coords[0].x},${padding.top + chartH} Z`;
+        paths += `<path d="${areaPath}" fill="${s.fillColor}" />`;
+      }
+      paths += `<path d="${dPath}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" ${sIdx === 1 ? 'stroke-dasharray="6 4"' : ''} />`;
+      coords.forEach(pt => {
+        circles += `<circle cx="${pt.x}" cy="${pt.y}" r="4" fill="#FFFFFF" stroke="${s.color}" stroke-width="2.5"><title>${pt.label} – ${s.name}: ${pt.val.toLocaleString('vi-VN')}${s.unit ? ' ' + s.unit : ''}</title></circle>`;
+      });
+    });
+
+    let xLabels = '';
+    labels.forEach((label, idx) => {
+      if (idx % 2 === 0 || labels.length <= 7) {
+        xLabels += `<text x="${padding.left + idx * stepX}" y="${height - 10}" fill="#64748B" font-size="11" text-anchor="middle" font-weight="500">${label}</text>`;
+      }
+    });
+
+    el.innerHTML = `
+      <svg viewBox="0 0 ${width} ${height}" style="width: 100%; height: auto; overflow: visible;">
+        ${gridLines}
+        ${yLabels}
+        ${paths}
+        ${circles}
+        ${xLabels}
+      </svg>
+    `;
+  },
+
   // 2. Bar Chart (Phân bổ đánh giá sao / Lượt đăng ký)
   renderBarChart(containerId, options = {}) {
     const el = document.getElementById(containerId);

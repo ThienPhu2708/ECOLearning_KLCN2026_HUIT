@@ -2,6 +2,7 @@
 @{
     ViewBag.Title = "Báo Cáo Vi Phạm Khóa Học";
     string filter = ViewBag.Filter as string ?? "pending";
+    string sort = ViewBag.Sort as string ?? "priority";
     bool notInstalled = ViewBag.NotInstalled ?? false;
 }
 
@@ -23,25 +24,41 @@
 }
 else
 {
-    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
-        <a href="@Url.Action("Index", new { filter = "pending" })" class="btn btn-sm @(filter == "pending" ? "btn-primary" : "btn-secondary")">Chờ xử lý (@ViewBag.PendingCount)</a>
-        <a href="@Url.Action("Index", new { filter = "locked" })" class="btn btn-sm @(filter == "locked" ? "btn-primary" : "btn-secondary")">Đang tạm khóa (@ViewBag.LockedCount)</a>
-        <a href="@Url.Action("Index", new { filter = "banned" })" class="btn btn-sm @(filter == "banned" ? "btn-primary" : "btn-secondary")">Khóa vĩnh viễn (@ViewBag.BannedCount)</a>
-        <a href="@Url.Action("Index", new { filter = "all" })" class="btn btn-sm @(filter == "all" ? "btn-primary" : "btn-secondary")">Tất cả (@ViewBag.AllCount)</a>
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="@Url.Action("Index", new { filter = "pending", sort = sort })" class="btn btn-sm @(filter == "pending" ? "btn-primary" : "btn-secondary")">Chờ xử lý (@ViewBag.PendingCount)</a>
+            @if (ViewBag.HasDiscussion == true)
+            {
+                <a href="@Url.Action("Index", new { filter = "review", sort = sort })" class="btn btn-sm @(filter == "review" ? "btn-primary" : "btn-secondary")">GV đã phản hồi, chờ xem xét (@ViewBag.ReviewCount)</a>
+            }
+            <a href="@Url.Action("Index", new { filter = "locked", sort = sort })" class="btn btn-sm @(filter == "locked" ? "btn-primary" : "btn-secondary")">Đang tạm khóa (@ViewBag.LockedCount)</a>
+            <a href="@Url.Action("Index", new { filter = "banned", sort = sort })" class="btn btn-sm @(filter == "banned" ? "btn-primary" : "btn-secondary")">Khóa vĩnh viễn (@ViewBag.BannedCount)</a>
+            <a href="@Url.Action("Index", new { filter = "all", sort = sort })" class="btn btn-sm @(filter == "all" ? "btn-primary" : "btn-secondary")">Tất cả (@ViewBag.AllCount)</a>
+        </div>
+        <form method="get" action="@Url.Action("Index")" style="display: flex; align-items: center; gap: 8px;">
+            <input type="hidden" name="filter" value="@filter" />
+            <label class="caption" style="font-weight: 700; color: var(--text-heading);">Sắp xếp:</label>
+            <select name="sort" class="form-control" style="height: 38px; width: 220px;" onchange="this.form.submit()">
+                <option value="priority" @(sort == "priority" ? "selected" : "")>Ưu tiên xử lý</option>
+                <option value="latest" @(sort == "latest" ? "selected" : "")>Báo cáo mới nhất</option>
+                <option value="oldest" @(sort == "oldest" ? "selected" : "")>Báo cáo cũ nhất</option>
+                <option value="deadline" @(sort == "deadline" ? "selected" : "")>Hạn phản hồi gần nhất</option>
+            </select>
+        </form>
     </div>
 
     <div class="card" style="padding: 0; overflow: hidden;">
         <div class="table-responsive">
-            <table class="table">
+            <table class="table" data-paginate="10">
                 <thead>
                     <tr>
                         <th>Khóa học</th>
                         <th>Giáo viên</th>
-                        <th>Trạng thái khóa học</th>
-                        <th style="text-align: center;">Báo cáo chờ xử lý</th>
+                        <th>Trạng thái</th>
+                        <th style="text-align: center;">Chờ xử lý</th>
                         <th style="text-align: center;">Tổng báo cáo</th>
                         <th>Báo cáo gần nhất</th>
-                        <th>Hạn phản hồi</th>
+                        <th>Tiến trình</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -54,7 +71,7 @@ else
                             bool isBanned = c.trangThaiKhoaHoc == ECOLearning.Services.CourseStatus.KhoaVinhVien;
                             bool overdue = isLocked && c.hanPhanHoi.HasValue && c.hanPhanHoi.Value < DateTime.Now;
                             <tr>
-                                <td>
+                                <td class="cell-wrap">
                                     <strong>@c.tenKhoaHoc</strong>
                                     <div class="caption" style="color: var(--text-muted);">Mã: @c.maKhoaHoc</div>
                                 </td>
@@ -84,19 +101,34 @@ else
                                     }
                                 </td>
                                 <td style="text-align: center;">@c.tongBaoCao</td>
-                                <td>@(c.baoCaoGanNhat.HasValue ? c.baoCaoGanNhat.Value.ToString("dd/MM/yyyy HH:mm") : "-")</td>
                                 <td>
-                                    @if (isLocked && c.hanPhanHoi.HasValue)
+                                    @if (c.baoCaoGanNhat.HasValue)
+                                    {
+                                        <div style="font-weight: 600;">@c.baoCaoGanNhat.Value.ToString("HH:mm")</div>
+                                        <div class="caption" style="color: var(--text-secondary);">@c.baoCaoGanNhat.Value.ToString("dd/MM/yyyy")</div>
+                                    }
+                                    else
+                                    {
+                                        <span style="color: var(--text-muted);">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (isLocked && c.trangThaiXuLy == ECOLearning.Services.ViolationReportService.StepWaitingAdmin)
+                                    {
+                                        <span class="badge badge-primary">GV đã phản hồi</span>
+                                        <div class="caption" style="color: var(--text-secondary); margin-top: 4px;">Chờ bạn xem xét</div>
+                                    }
+                                    else if (isLocked && c.hanPhanHoi.HasValue)
                                     {
                                         if (overdue)
                                         {
-                                            <span class="badge badge-danger">Đã quá hạn</span>
+                                            <span class="badge badge-danger">Quá hạn</span>
                                         }
                                         else
                                         {
-                                            <span class="badge badge-warning">Đang tạm khóa</span>
+                                            <span class="badge badge-warning">Chờ GV xử lý</span>
                                         }
-                                        <div class="caption" style="color: var(--text-secondary); margin-top: 4px;">Hạn: @c.hanPhanHoi.Value.ToString("dd/MM/yyyy HH:mm")</div>
+                                        <div class="caption" style="color: var(--text-secondary); margin-top: 4px;">Hạn: @c.hanPhanHoi.Value.ToString("HH:mm dd/MM/yyyy")</div>
                                     }
                                     else
                                     {
@@ -104,7 +136,7 @@ else
                                     }
                                 </td>
                                 <td style="text-align: right;">
-                                    <a href="@Url.Action("Detail", new { id = c.maKhoaHoc })" class="btn btn-sm btn-primary">Xem &amp; xử lý</a>
+                                    <a href="@Url.Action("Detail", new { id = c.maKhoaHoc })" class="btn btn-sm btn-primary">Xử lý</a>
                                 </td>
                             </tr>
                         }

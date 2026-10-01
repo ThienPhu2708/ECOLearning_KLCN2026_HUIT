@@ -4,6 +4,7 @@ using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Areas.Instructor.Models;
 using ECOLearning.Models;
+using ECOLearning.Services;
 
 namespace ECOLearning.Areas.Instructor.Controllers
 {
@@ -92,6 +93,50 @@ namespace ECOLearning.Areas.Instructor.Controllers
             }
         }
 
+        // Danh mục cho dropdown: chỉ danh mục đang hoạt động (Admin có thể tạm ngưng danh mục).
+        // Khi sửa khóa học thuộc danh mục đã tạm ngưng, vẫn giữ danh mục hiện tại để không mất lựa chọn.
+        private List<SelectListItem> BuildCategoryOptions(string currentCategoryId = null)
+        {
+            return db.DanhMuc
+                .Where(c => c.trangThai == null || c.trangThai == true || c.maDanhMuc == currentCategoryId)
+                .OrderBy(c => c.tenDanhMuc)
+                .ToList()
+                .Select(c => new SelectListItem
+                {
+                    Value = c.maDanhMuc,
+                    Text = c.trangThai == false ? c.tenDanhMuc + " (tạm ngưng)" : c.tenDanhMuc
+                })
+                .ToList();
+        }
+
+        // Danh mục được chọn phải tồn tại và đang hoạt động (trừ khi giữ nguyên danh mục cũ của khóa học)
+        private void ValidateCategory(string maDanhMuc, string currentCategoryId = null)
+        {
+            if (string.IsNullOrEmpty(maDanhMuc))
+            {
+                ModelState.AddModelError("MaDanhMuc", "Vui lòng chọn danh mục đào tạo!");
+                return;
+            }
+            if (maDanhMuc == currentCategoryId) return;
+
+            var cat = db.DanhMuc.FirstOrDefault(c => c.maDanhMuc == maDanhMuc);
+            if (cat == null || cat.trangThai == false)
+            {
+                ModelState.AddModelError("MaDanhMuc", "Danh mục đã chọn không tồn tại hoặc đang tạm ngưng!");
+            }
+        }
+
+        // Khóa học bị khóa do báo cáo vi phạm: trả về thông báo lỗi nếu thao tác không được phép, ngược lại null.
+        // Tạm khóa: được sửa nội dung nhưng không tự gửi duyệt / xóa. Khóa vĩnh viễn: không sửa / xóa.
+        private string GetLockedCourseError(KhoaHoc course, bool isSubmitOrDelete)
+        {
+            if (course.trangThai == CourseStatus.KhoaVinhVien)
+                return "Khóa học đã bị khóa vĩnh viễn do vi phạm nên không thể chỉnh sửa hoặc xóa!";
+            if (course.trangThai == CourseStatus.TamKhoa && isSubmitOrDelete)
+                return "Khóa học đang bị tạm khóa do vi phạm. Hãy chỉnh sửa nội dung rồi gửi phản hồi cho quản trị viên ở trang Xử lý vi phạm.";
+            return null;
+        }
+
         private Dictionary<string, string[]> CourseUploads
         {
             get {
@@ -134,11 +179,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
         public ActionResult Create()
         {
             var model = new CourseCreateOrEditViewModel();
-            model.Categories = db.DanhMuc.Select(c => new SelectListItem
-            {
-                Value = c.maDanhMuc,
-                Text = c.tenDanhMuc
-            }).ToList();
+            model.Categories = BuildCategoryOptions();
 
             model.CapDo = "Cơ bản";
             ViewBag.BreadcrumbCurrent = "Tạo khóa học mới";
@@ -193,10 +234,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 ModelState.AddModelError("GiaKhuyenMai", "Giá khuyến mãi không được lớn hơn giá bán!");
             }
 
-            if (string.IsNullOrEmpty(model.MaDanhMuc))
-            {
-                ModelState.AddModelError("MaDanhMuc", "Vui lòng chọn danh mục đào tạo!");
-            }
+            ValidateCategory(model.MaDanhMuc);
 
             var chapters = model.Chapters ?? new List<CourseChapterInput>();
             var lessons = model.Lessons ?? new List<CourseLessonInput>();
@@ -220,11 +258,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
 
             if (!ModelState.IsValid)
             {
-                model.Categories = db.DanhMuc.Select(c => new SelectListItem
-                {
-                    Value = c.maDanhMuc,
-                    Text = c.tenDanhMuc
-                }).ToList();
+                model.Categories = BuildCategoryOptions();
                 return View(model);
             }
 
@@ -337,6 +371,12 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 TempData["ErrorMessage"] = "Khóa học đang chờ duyệt. Vui lòng hủy yêu cầu duyệt trước khi chỉnh sửa.";
                 return RedirectToAction("Details", new { id = course.maKhoaHoc });
             }
+            string lockError = GetLockedCourseError(course, false);
+            if (lockError != null)
+            {
+                TempData["ErrorMessage"] = lockError;
+                return RedirectToAction("Details", new { id = course.maKhoaHoc });
+            }
 
 
             var model = new CourseCreateOrEditViewModel
@@ -352,11 +392,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 MaDanhMuc = course.maDanhMuc,
                 AnhBia = course.anhBia,
                 TrangThai = course.trangThai,
-                Categories = db.DanhMuc.Select(c => new SelectListItem
-                {
-                    Value = c.maDanhMuc,
-                    Text = c.tenDanhMuc
-                }).ToList()
+                Categories = BuildCategoryOptions(course.maDanhMuc)
             };
 
             var storedChapters = db.ChuongHoc.Where(c => c.maKhoaHoc == id).OrderBy(c => c.thuTu).ToList();
@@ -391,6 +427,15 @@ namespace ECOLearning.Areas.Instructor.Controllers
             if (course.trangThai == "Chờ duyệt" || course.trangThai == "ChoDuyet")
             {
                 TempData["ErrorMessage"] = "Khóa học đang chờ duyệt. Vui lòng hủy yêu cầu duyệt trước khi chỉnh sửa.";
+                return RedirectToAction("Details", new { id = course.maKhoaHoc });
+            }
+            // Khóa học đang tạm khóa do vi phạm: "gửi" nghĩa là lưu nội dung đã sửa rồi chuyển sang trang
+            // Xử lý vi phạm để gửi phản hồi cho Admin (không đưa vào hàng đợi kiểm duyệt)
+            if (course.trangThai == CourseStatus.TamKhoa && actionType == "submit") actionType = "violation";
+            string lockError = GetLockedCourseError(course, false);
+            if (lockError != null)
+            {
+                TempData["ErrorMessage"] = lockError;
                 return RedirectToAction("Details", new { id = course.maKhoaHoc });
             }
 
@@ -454,13 +499,11 @@ namespace ECOLearning.Areas.Instructor.Controllers
             var deletedLessons = existingLessons.Where(l => !lessons.Any(input => input.Id == l.maBaiHoc)).ToList();
             if (deletedLessons.Any(l => l.TienDoBaiHoc.Any())) ModelState.AddModelError("", "Không thể xóa bài học đã có tiến độ của học viên.");
             if (actionType == "submit" && !lessons.Any(l => !string.IsNullOrEmpty(l.VideoToken) && CourseUploads.ContainsKey(l.VideoToken))) ModelState.AddModelError("", "Vui lòng thêm ít nhất một video trước khi gửi duyệt.");
+            ValidateCategory(model.MaDanhMuc, course.maDanhMuc);
             if (!ModelState.IsValid)
             {
-                model.Categories = db.DanhMuc.Select(c => new SelectListItem
-                {
-                    Value = c.maDanhMuc,
-                    Text = c.tenDanhMuc
-                }).ToList();
+                model.TrangThai = course.trangThai;
+                model.Categories = BuildCategoryOptions(course.maDanhMuc);
                 return View("Create", model);
             }
 
@@ -513,6 +556,14 @@ namespace ECOLearning.Areas.Instructor.Controllers
             }
 
             db.SaveChanges();
+
+            if (actionType == "violation")
+            {
+                TempData["SuccessMessage"] = "Đã lưu nội dung chỉnh sửa. Hãy mô tả những gì đã sửa và gửi cho quản trị viên xem xét.";
+                TempData["DraftLoai"] = ViolationReportService.MessageFixed;
+                return RedirectToAction("Index", "Violation", new { id = course.maKhoaHoc });
+            }
+
             TempData["SuccessMessage"] = "Cập nhật thông tin khóa học thành công!";
 
             return RedirectToAction("Index");
@@ -529,6 +580,12 @@ namespace ECOLearning.Areas.Instructor.Controllers
             if (course.trangThai == "Chờ duyệt" || course.trangThai == "ChoDuyet")
             {
                 TempData["ErrorMessage"] = "Khóa học đang chờ duyệt. Vui lòng hủy yêu cầu duyệt trước khi chỉnh sửa.";
+                return RedirectToAction("Details", new { id = course.maKhoaHoc });
+            }
+            string lockError = GetLockedCourseError(course, true);
+            if (lockError != null)
+            {
+                TempData["ErrorMessage"] = lockError;
                 return RedirectToAction("Details", new { id = course.maKhoaHoc });
             }
 
@@ -589,6 +646,12 @@ namespace ECOLearning.Areas.Instructor.Controllers
             if (course.trangThai == "Chờ duyệt" || course.trangThai == "ChoDuyet")
             {
                 TempData["ErrorMessage"] = "Khóa học đang chờ duyệt. Vui lòng hủy yêu cầu duyệt trước khi chỉnh sửa.";
+                return RedirectToAction("Details", new { id = course.maKhoaHoc });
+            }
+            string lockError = GetLockedCourseError(course, true);
+            if (lockError != null)
+            {
+                TempData["ErrorMessage"] = lockError;
                 return RedirectToAction("Details", new { id = course.maKhoaHoc });
             }
 

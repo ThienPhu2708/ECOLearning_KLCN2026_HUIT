@@ -7,6 +7,7 @@
     int totalPending   = Model != null ? Model.Count(x => x.TrangThai == "ChoDuyet" || x.TrangThai == "Chờ duyệt") : 0;
     int totalPublished = Model != null ? Model.Count(x => x.TrangThai == "DaDuyet"  || x.TrangThai == "Đã xuất bản" || x.TrangThai == "Đã duyệt") : 0;
     int totalRejected  = Model != null ? Model.Count(x => x.TrangThai == "TuChoi"   || x.TrangThai == "Từ chối" || x.TrangThai == "Cần sửa đổi") : 0;
+    int totalViolation = Model != null ? Model.Count(x => x.TrangThai == "Tạm khóa" || x.TrangThai == "Khóa vĩnh viễn") : 0;
 }
 
 @if (TempData["SuccessMessage"] != null)
@@ -35,6 +36,10 @@
             {
                 <button class="btn btn-secondary btn-sm filter-btn" data-filter="rejected">Cần sửa (@totalRejected)</button>
             }
+            @if (totalViolation > 0)
+            {
+                <button class="btn btn-secondary btn-sm filter-btn" data-filter="violation" style="color: #C2410C;">Vi phạm (@totalViolation)</button>
+            }
         </div>
         <!-- Search -->
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto;">
@@ -51,7 +56,7 @@
 <!-- COURSES TABLE -->
 <div class="card" style="padding: 0; overflow: hidden;">
     <div class="table-responsive">
-        <table class="table">
+        <table class="table" data-paginate="10">
             <thead>
                 <tr>
                     <th style="width: 80px;">Ảnh</th>
@@ -60,7 +65,7 @@
                     <th>Giá bán</th>
                     <th>Học viên</th>
                     <th>Trạng thái</th>
-                    <th style="text-align: center;">Thao tác</th>
+                    <th>Thao tác</th>
                 </tr>
             </thead>
             <tbody id="course-table-body">
@@ -78,6 +83,10 @@
                         { filterKey = "pending"; badgeClass = "badge-warning"; badgeText = "Chờ duyệt"; }
                         else if (item.TrangThai == "TuChoi" || item.TrangThai == "Từ chối" || item.TrangThai == "Cần sửa đổi")
                         { filterKey = "rejected"; badgeClass = "badge-danger"; badgeText = "Cần sửa đổi"; }
+                        else if (item.TrangThai == "Tạm khóa")
+                        { filterKey = "violation"; badgeClass = "badge-warning"; badgeText = "Tạm khóa (vi phạm)"; }
+                        else if (item.TrangThai == "Khóa vĩnh viễn")
+                        { filterKey = "violation"; badgeClass = "badge-danger"; badgeText = "Khóa vĩnh viễn"; }
 
                         decimal displayPrice = item.GiaKhuyenMai.HasValue && item.GiaKhuyenMai.Value > 0
                             ? item.GiaKhuyenMai.Value : item.GiaBan;
@@ -90,7 +99,7 @@
                                          style="width: 60px; height: 38px; border-radius: 6px; object-fit: cover;" />
                                 </a>
                             </td>
-                            <td>
+                            <td class="cell-wrap">
                                 <a href="@Url.Action("Details", "Course", new { area = "Instructor", id = item.MaKhoaHoc })" style="text-decoration: none;">
                                     <strong style="color: var(--text-heading); display: block; max-width: 260px;">@item.TenKhoaHoc</strong>
                                 </a>
@@ -115,6 +124,12 @@
                                     {
                                         <span style="color: #DC2626;">Bị từ chối: @item.LyDoTuChoi</span>
                                     }
+                                    else if (filterKey == "violation")
+                                    {
+                                        <a href="@Url.Action("Index", "Violation", new { area = "Instructor", id = item.MaKhoaHoc })" style="color: #C2410C; font-weight: 600; text-decoration: none;">
+                                            <i class="bi bi-flag-fill"></i> @(item.TrangThai == "Tạm khóa" ? "Bị báo cáo vi phạm — xử lý ngay" : "Xem lý do khóa")
+                                        </a>
+                                    }
                                 </div>
                             </td>
                             <td><span class="badge badge-primary">@item.TenDanhMuc</span></td>
@@ -137,12 +152,18 @@
                             <td>@item.SoHocVien học viên</td>
                             <td><span class="badge @badgeClass">@badgeText</span></td>
                             <td>
-                                <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-start;">
                                     <a href="@Url.Action("Details", "Course", new { area = "Instructor", id = item.MaKhoaHoc })" class="btn btn-primary btn-sm" style="width: 36px; padding: 0;" title="Chi tiết">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                     
-                                    @if (filterKey == "draft" || filterKey == "rejected")
+                                    @if (filterKey == "violation")
+                                    {
+                                        <a href="@Url.Action("Index", "Violation", new { area = "Instructor", id = item.MaKhoaHoc })" class="btn btn-sm" style="width: 36px; padding: 0; background: #FFF7ED; color: #C2410C; border: 1px solid #FDBA74;" title="Xử lý vi phạm">
+                                            <i class="bi bi-flag-fill"></i>
+                                        </a>
+                                    }
+                                    @if (filterKey == "draft" || filterKey == "rejected" || item.TrangThai == "Tạm khóa")
                                     {
                                     <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = item.MaKhoaHoc })" class="btn btn-secondary btn-sm" style="width: 36px; padding: 0;" title="Sửa khóa học">
                                         <i class="bi bi-pencil-square"></i>

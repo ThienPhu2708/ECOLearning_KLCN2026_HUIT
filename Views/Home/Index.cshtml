@@ -255,6 +255,7 @@ cursor: not-allowed;
                     bool isTopTrending = enrollCount >= 3;
                     bool isHighRated = hasRatings && avgStars >= 4.5;
 
+
                     <div class="col-4">
                         <div class="course-card" onclick="window.location.href='@Url.Action("Details", "Course", new { id = course.maKhoaHoc })'" style="cursor: pointer;">
                             <div class="course-thumb">

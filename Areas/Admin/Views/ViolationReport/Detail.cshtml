@@ -1,0 +1,276 @@
+@using ECOLearning.Services
+@{
+    var course = (ECOLearning.Models.KhoaHoc)ViewBag.Course;
+    var reports = (List<ECOLearning.Models.ViolationReport>)ViewBag.Reports;
+    var actions = (List<ECOLearning.Models.ViolationAction>)ViewBag.Actions;
+    ViewBag.Title = "Xử lý báo cáo vi phạm";
+
+    string status = course.trangThai ?? CourseStatus.BanNhap;
+    bool isLocked = status == CourseStatus.TamKhoa;
+    bool isBanned = status == CourseStatus.KhoaVinhVien;
+    bool isPublished = CourseStatus.IsPublished(status);
+    int pendingCount = reports.Count(r => r.trangThai == ViolationReportService.ReportPending);
+    var lastLock = actions.FirstOrDefault(a => a.hanhDong == ViolationReportService.ActionLock);
+}
+
+@Html.AntiForgeryToken()
+
+<div style="margin-bottom: 16px;">
+    <a href="@Url.Action("Index", "ViolationReport", new { area = "Admin", id = "" })" style="text-decoration: none; font-weight: 600;"><i class="bi bi-arrow-left"></i> Quay lại danh sách</a>
+</div>
+
+<!-- THÔNG TIN KHÓA HỌC + THAO TÁC -->
+<div class="card" style="margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
+        <div>
+            <h1 class="h2" style="margin: 0 0 6px 0;">@course.tenKhoaHoc</h1>
+            <div class="caption" style="color: var(--text-secondary);">
+                Mã: <code>@course.maKhoaHoc</code> •
+                Giáo viên: <strong>@(course.NguoiDung != null ? course.NguoiDung.hoTen : "N/A")</strong>
+                (@(course.NguoiDung != null ? course.NguoiDung.email : ""))
+            </div>
+            <div style="margin-top: 10px;">
+                Trạng thái:
+                @if (isLocked)
+                {
+                    <span class="badge badge-warning">Tạm khóa</span>
+                }
+                else if (isBanned)
+                {
+                    <span class="badge badge-danger">Khóa vĩnh viễn</span>
+                }
+                else if (isPublished)
+                {
+                    <span class="badge badge-success">Đang bán</span>
+                }
+                else
+                {
+                    <span class="badge badge-secondary">@status</span>
+                }
+                <span class="badge badge-primary" style="margin-left: 6px;">@pendingCount báo cáo chờ xử lý</span>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            @if (pendingCount > 0)
+            {
+                <button class="btn btn-secondary btn-sm" onclick="dismissReports()">Bác bỏ báo cáo</button>
+            }
+            @if (isPublished)
+            {
+                <button class="btn btn-sm" style="background: #F97316; color: #fff;" onclick="lockCourse()">Tạm khóa khóa học</button>
+            }
+            @if (isLocked)
+            {
+                <button class="btn btn-success btn-sm" onclick="reopenCourse()">Mở lại khóa học</button>
+            }
+            @if (isLocked || isPublished)
+            {
+                <button class="btn btn-danger btn-sm" onclick="permanentLock()">Khóa vĩnh viễn</button>
+            }
+        </div>
+    </div>
+
+    @if (isLocked && lastLock != null)
+    {
+        bool overdue = lastLock.hanPhanHoi.HasValue && lastLock.hanPhanHoi.Value < DateTime.Now;
+        <div style="margin-top: 20px; padding: 16px; border-radius: 12px; background: #FFF7ED; border: 1px solid #FDBA74;">
+            <div><strong>Lý do tạm khóa:</strong> @lastLock.lyDo</div>
+            <div style="margin-top: 6px;">
+                <strong>Hạn phản hồi:</strong> @(lastLock.hanPhanHoi.HasValue ? lastLock.hanPhanHoi.Value.ToString("dd/MM/yyyy HH:mm") : "-")
+                @if (overdue)
+                {
+                    <span class="badge badge-danger" style="margin-left: 6px;">Đã quá hạn</span>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- DANH SÁCH BÁO CÁO -->
+<div class="card" style="padding: 0; overflow: hidden; margin-bottom: 24px;">
+    <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-color);">
+        <h3 class="h3" style="margin: 0;">Báo cáo từ học viên (@reports.Count)</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Người báo cáo</th>
+                    <th>Loại vi phạm</th>
+                    <th>Bài học</th>
+                    <th style="width: 35%;">Mô tả</th>
+                    <th>Ngày gửi</th>
+                    <th>Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (reports.Any())
+                {
+                    foreach (var r in reports)
+                    {
+                        <tr>
+                            <td><strong>@r.tenNguoiBaoCao</strong><div class="caption" style="color: var(--text-muted);">@r.emailNguoiBaoCao</div></td>
+                            <td><span class="badge badge-primary">@r.loaiViPham</span></td>
+                            <td>@(string.IsNullOrEmpty(r.tenBaiHoc) ? (string.IsNullOrEmpty(r.maBaiHoc) ? "Toàn khóa học" : r.maBaiHoc + " (đã xóa)") : r.tenBaiHoc)</td>
+                            <td style="white-space: pre-wrap;">@r.moTa</td>
+                            <td>@r.ngayTao.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                @if (r.trangThai == ViolationReportService.ReportPending)
+                                {
+                                    <span class="badge badge-warning">Chờ xử lý</span>
+                                }
+                                else if (r.trangThai == ViolationReportService.ReportDismissed)
+                                {
+                                    <span class="badge badge-secondary">Đã bác bỏ</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-success">Đã xử lý</span>
+                                }
+                                @if (!string.IsNullOrEmpty(r.ghiChuXuLy))
+                                {
+                                    <div class="caption" style="color: var(--text-secondary); margin-top: 4px;">@r.ghiChuXuLy</div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 24px;">Khóa học chưa có báo cáo nào.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- LỊCH SỬ XỬ LÝ -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-color);">
+        <h3 class="h3" style="margin: 0;">Lịch sử xử lý</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Thời gian</th>
+                    <th>Hành động</th>
+                    <th style="width: 50%;">Lý do / ghi chú</th>
+                    <th>Người xử lý</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (actions.Any())
+                {
+                    foreach (var a in actions)
+                    {
+                        <tr>
+                            <td>@a.ngayXuLy.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <strong>@a.hanhDong</strong>
+                                @if (a.hanPhanHoi.HasValue)
+                                {
+                                    <div class="caption" style="color: var(--text-secondary);">Hạn phản hồi: @a.hanPhanHoi.Value.ToString("dd/MM/yyyy")</div>
+                                }
+                            </td>
+                            <td style="white-space: pre-wrap;">@a.lyDo</td>
+                            <td>@a.tenAdmin</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 24px;">Chưa có lần xử lý nào.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const courseId = '@course.maKhoaHoc';
+        const minDays = @ViewBag.MinDays;
+        const maxDays = @ViewBag.MaxDays;
+
+        const actionUrls = {
+            Dismiss: '@Url.Action("Dismiss", "ViolationReport", new { area = "Admin", id = "" })',
+            Lock: '@Url.Action("Lock", "ViolationReport", new { area = "Admin", id = "" })',
+            Reopen: '@Url.Action("Reopen", "ViolationReport", new { area = "Admin", id = "" })',
+            PermanentLock: '@Url.Action("PermanentLock", "ViolationReport", new { area = "Admin", id = "" })'
+        };
+
+        function postAction(action, data) {
+            data.id = courseId;
+            data.__RequestVerificationToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            return $.ajax({
+                url: actionUrls[action],
+                type: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                data: data
+            }).then(res => {
+                if (res.success) {
+                    return Swal.fire({ icon: 'success', title: 'Thành công', text: res.message, timer: 1600, showConfirmButton: false })
+                        .then(() => window.location.reload());
+                }
+                if (res.requireLogin) { window.location.reload(); return; }
+                Swal.fire({ icon: 'error', title: 'Không thực hiện được', text: res.message });
+            }, () => {
+                Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Lỗi kết nối máy chủ, vui lòng thử lại!' });
+            });
+        }
+
+        function askText(title, label, confirmText, confirmColor, minLength) {
+            return Swal.fire({
+                title: title,
+                input: 'textarea',
+                inputLabel: label,
+                inputAttributes: { maxlength: 2000 },
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                confirmButtonColor: confirmColor,
+                cancelButtonText: 'Hủy',
+                inputValidator: v => (!v || v.trim().length < minLength) ? `Vui lòng nhập tối thiểu ${minLength} ký tự` : undefined
+            });
+        }
+
+        function dismissReports() {
+            askText('Bác bỏ báo cáo?', 'Lý do bác bỏ (lưu lại cho các báo cáo đang chờ)', 'Bác bỏ', '#64748B', 1)
+                .then(r => { if (r.isConfirmed) postAction('Dismiss', { ghiChu: r.value }); });
+        }
+
+        function lockCourse() {
+            Swal.fire({
+                title: 'Tạm khóa khóa học?',
+                html:
+                    '<p style="text-align:left;margin:0 0 6px;">Khóa học sẽ bị ẩn khỏi trang bán và tìm kiếm. Học viên đã mua vẫn học được.</p>' +
+                    '<label style="display:block;text-align:left;font-weight:600;margin-top:10px;">Lý do tạm khóa</label>' +
+                    '<textarea id="swal-lock-reason" class="swal2-textarea" style="margin:6px 0 0;width:100%;" maxlength="2000"></textarea>' +
+                    `<label style="display:block;text-align:left;font-weight:600;margin-top:10px;">Thời hạn phản hồi (ngày, ${minDays}–${maxDays})</label>` +
+                    `<input id="swal-lock-days" type="number" class="swal2-input" style="margin:6px 0 0;width:100%;" min="${minDays}" max="${maxDays}" value="7">`,
+                showCancelButton: true,
+                confirmButtonText: 'Tạm khóa',
+                confirmButtonColor: '#F97316',
+                cancelButtonText: 'Hủy',
+                preConfirm: () => {
+                    const reason = document.getElementById('swal-lock-reason').value.trim();
+                    const days = parseInt(document.getElementById('swal-lock-days').value, 10);
+                    if (reason.length < 10) { Swal.showValidationMessage('Lý do tối thiểu 10 ký tự'); return false; }
+                    if (isNaN(days) || days < minDays || days > maxDays) { Swal.showValidationMessage(`Thời hạn phải từ ${minDays} đến ${maxDays} ngày`); return false; }
+                    return { lyDo: reason, soNgay: days };
+                }
+            }).then(r => { if (r.isConfirmed) postAction('Lock', r.value); });
+        }
+
+        function reopenCourse() {
+            askText('Mở lại khóa học?', 'Ghi chú (ví dụ: giáo viên đã sửa nội dung)', 'Mở lại', '#10B981', 1)
+                .then(r => { if (r.isConfirmed) postAction('Reopen', { ghiChu: r.value }); });
+        }
+
+        function permanentLock() {
+            askText('Khóa vĩnh viễn khóa học?', 'Lý do khóa vĩnh viễn. Khóa học sẽ không bán được và học viên cũng không học được nữa. Dữ liệu không bị xóa.', 'Khóa vĩnh viễn', '#EF4444', 10)
+                .then(r => { if (r.isConfirmed) postAction('PermanentLock', { lyDo: r.value }); });
+        }
+    </script>
+}

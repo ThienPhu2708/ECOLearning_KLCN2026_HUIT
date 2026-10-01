@@ -15,6 +15,19 @@ ViewBag.Title = "Dashboard Quản Trị Viên";
     </div>
 </div>
 
+<!-- BÁO CÁO VI PHẠM CHƯA XỬ LÝ -->
+<a href="@Url.Action("Index", "ViolationReport", new { area = "Admin", filter = "pending" })" class="card"
+   style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 16px 20px; text-decoration: none; color: inherit; @(Model.PendingViolationReports > 0 ? "border-color: #FCA5A5; background: #FEF2F2;" : "")">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <i class="bi bi-flag-fill" style="font-size: 20px; color: @(Model.PendingViolationReports > 0 ? "#DC2626" : "#94A3B8");"></i>
+        <div>
+            <strong>Báo cáo vi phạm chưa xử lý</strong>
+            <div class="caption" style="color: var(--text-secondary);">Báo cáo nội dung không phù hợp / sai sót từ học viên</div>
+        </div>
+    </div>
+    <div style="font-size: 26px; font-weight: 800; color: @(Model.PendingViolationReports > 0 ? "#DC2626" : "var(--text-secondary)");">@Model.PendingViolationReports</div>
+</a>
+
 <!-- 4 OPERATIONAL KPI CARDS COMPLIANT WITH 3.3.1.4 -->
 <div class="grid-12" style="margin-bottom: 32px;">
     <!-- Card 1: Total Revenue -->

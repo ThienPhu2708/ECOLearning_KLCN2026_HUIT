@@ -167,6 +167,11 @@
     <Compile Include="Services\PasswordHasher.cs" />
     <Compile Include="Services\TeacherApplicationService.cs" />
     <Compile Include="Models\TeacherApplication.cs" />
+    <Compile Include="Services\CourseStatus.cs" />
+    <Compile Include="Services\ViolationReportService.cs" />
+    <Compile Include="Models\ViolationReportModels.cs" />
+    <Compile Include="Areas\Admin\Controllers\ViolationReportController.cs" />
+    <Compile Include="Controllers\ViolationReportController.cs" />
     <Compile Include="Controllers\ProfileController.cs" />
     <Compile Include="Controllers\CourseController.cs" />
     <Compile Include="Controllers\CartController.cs" />
@@ -403,6 +408,11 @@
     <Content Include="Areas\Admin\Views\Shared\_LayoutAdmin.cshtml" />
     <Content Include="Areas\Admin\Views\Dashboard\Index.cshtml" />
     <Content Include="Areas\Admin\Views\Category\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\ViolationReport\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\ViolationReport\Detail.cshtml" />
+    <None Include="Database\Migrations\001_KhuyenNghi_ChoPhepGiaoVien.sql" />
+    <None Include="Database\Migrations\002_BaoCaoViPham.sql" />
+    <None Include="Database\Migrations\003_BaoCaoViPham_BaiHoc.sql" />
     <Content Include="Areas\Admin\Views\CourseApproval\Index.cshtml" />
     <Content Include="Areas\Admin\Views\SystemReport\Index.cshtml" />
     <Content Include="Areas\Instructor\Views\_ViewStart.cshtml" />

@@ -10,6 +10,7 @@
     var completedLessonIds = ViewBag.CompletedLessonIds as List<string> ?? new List<string>();
     var activeLessonDocuments = ViewBag.ActiveLessonDocuments as List<ECOLearning.Models.TaiNguyen> ?? new List<ECOLearning.Models.TaiNguyen>();
     bool hasSubmittedReview = ViewBag.HasSubmittedReview == true;
+    bool canReportViolation = ViewBag.CanReportViolation == true;
 
     int totalCount = allLessons.Count;
     int completedCount = completedLessonIds.Count;
@@ -384,6 +385,14 @@
             </div>
         </div>
 
+        @if (canReportViolation)
+        {
+            <button type="button" onclick="openViolationReport()" title="Báo cáo nội dung không phù hợp hoặc sai sót"
+                    style="background: #1F2937; color: #FCA5A5; border: 1px solid #7F1D1D; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="bi bi-flag-fill"></i> Báo cáo vi phạm
+            </button>
+        }
+
         <!-- Rating Button (Chỉ mở khi hoàn thành 100% bài giảng) -->
         @if (hasSubmittedReview)
         {
@@ -646,6 +655,48 @@
 
 </div>
 
+@if (canReportViolation)
+{
+    <!-- MODAL: BÁO CÁO VI PHẠM KHÓA HỌC -->
+    <div class="modal-overlay" id="violation-modal">
+        <div class="modal-container" style="background: #1E293B; color: #fff; border: 1px solid #334155; border-radius: 16px; width: 100%; max-width: 520px; overflow: hidden;">
+            <div class="modal-header" style="border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; padding: 18px 24px;">
+                <h3 class="h3" style="color: #fff; margin: 0; font-size: 18px; font-weight: 700;"><i class="bi bi-flag-fill" style="color: #F87171;"></i> Báo cáo vi phạm khóa học</h3>
+                <button class="btn btn-secondary btn-sm" style="background: #334155; color: #fff; border: none; cursor: pointer; border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;"
+                        data-modal-close><i class="bi bi-x-lg"></i></button>
+            </div>
+            <form id="violation-form" onsubmit="submitViolationReport(event)">
+                @Html.AntiForgeryToken()
+                <div class="modal-body" style="padding: 24px;">
+                    <p style="color: #CBD5E1; font-size: 13.5px; margin-bottom: 16px;">Báo cáo sẽ được gửi tới quản trị viên xem xét. Vui lòng mô tả cụ thể nội dung không phù hợp hoặc sai sót.</p>
+                    @if (activeLesson != null)
+                    {
+                        <p style="color: #CBD5E1; font-size: 13px; margin-bottom: 14px;"><i class="bi bi-play-circle"></i> Bài học được báo cáo: <strong style="color: #fff;">@activeLesson.tenBaiHoc</strong></p>
+                    }
+                    <label style="display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 6px;">Loại vi phạm <span style="color: #F87171;">*</span></label>
+                    <select id="violation-type" required
+                            style="background: #0F172A; border: 1px solid #334155; color: #fff; border-radius: 8px; padding: 9px 12px; width: 100%; margin-bottom: 14px; font-size: 14px;">
+                        <option value="">-- Chọn loại vi phạm --</option>
+                        @foreach (var t in ECOLearning.Services.ViolationReportService.ViolationTypes)
+                        {
+                            <option value="@t">@t</option>
+                        }
+                    </select>
+                    <label style="display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 6px;">Mô tả chi tiết <span style="color: #F87171;">*</span></label>
+                    <textarea id="violation-desc" maxlength="2000" required
+                              style="background: #0F172A; border: 1px solid #334155; color: #fff; border-radius: 8px; padding: 10px 14px; width: 100%; min-height: 110px; resize: vertical; font-family: inherit; font-size: 14px;"
+                              placeholder="Ví dụ: Video bài này có thông tin sai về..., tài liệu không mở được..."></textarea>
+                    <div id="violation-error" style="display: none; color: #F87171; font-size: 13px; margin-top: 8px;"></div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid #334155; display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px;">
+                    <button type="button" class="btn btn-secondary" style="background: #334155; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 14px; cursor: pointer;" data-modal-close>Hủy</button>
+                    <button type="submit" id="violation-submit" style="background: #DC2626; color: #fff; border: none; border-radius: 8px; padding: 8px 20px; font-weight: 600; font-size: 14px; cursor: pointer;">Gửi báo cáo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
 <!-- COURSE REVIEW MODAL (Chỉ hiện khi hoàn thành 100% khóa học và đạt >= 80% video cuối) -->
 <div class="modal-overlay" id="rating-modal">
     <div class="modal-container" style="background: #1E293B; color: #fff; border: 1px solid #334155; border-radius: 16px; width: 100%; max-width: 520px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
@@ -687,6 +738,53 @@
 
 @section scripts {
     <script>
+        // ==================== BÁO CÁO VI PHẠM ====================
+        function openViolationReport() {
+            document.getElementById('violation-error').style.display = 'none';
+            openModal('violation-modal');
+        }
+
+        function submitViolationReport(e) {
+            e.preventDefault();
+            var form = document.getElementById('violation-form');
+            var err = document.getElementById('violation-error');
+            var btn = document.getElementById('violation-submit');
+            var type = document.getElementById('violation-type').value;
+            var desc = document.getElementById('violation-desc').value.trim();
+
+            err.style.display = 'none';
+            if (!type) { err.textContent = 'Vui lòng chọn loại vi phạm!'; err.style.display = 'block'; return; }
+            if (desc.length < 10) { err.textContent = 'Vui lòng mô tả tối thiểu 10 ký tự!'; err.style.display = 'block'; return; }
+
+            btn.disabled = true;
+            $.ajax({
+                url: '@Url.Action("Create", "ViolationReport", new { area = "" })',
+                type: 'POST',
+                data: {
+                    __RequestVerificationToken: form.querySelector('input[name="__RequestVerificationToken"]').value,
+                    courseId: '@(course != null ? course.maKhoaHoc : "")',
+                    maBaiHoc: '@(activeLesson != null ? activeLesson.maBaiHoc : "")',
+                    loaiViPham: type,
+                    moTa: desc
+                },
+                success: function (res) {
+                    if (res.success) {
+                        closeModal('violation-modal');
+                        form.reset();
+                        if (typeof showToast === 'function') showToast(res.message, 'success'); else alert(res.message);
+                    } else {
+                        err.textContent = res.message;
+                        err.style.display = 'block';
+                    }
+                },
+                error: function () {
+                    err.textContent = 'Có lỗi xảy ra, vui lòng thử lại!';
+                    err.style.display = 'block';
+                },
+                complete: function () { btn.disabled = false; }
+            });
+        }
+
         // ==================== BIẾN TOÀN CỤC ====================
         var currentCourseId = '@(course != null ? course.maKhoaHoc : "")';
         var currentLessonId = '@(activeLesson != null ? activeLesson.maBaiHoc : "")';

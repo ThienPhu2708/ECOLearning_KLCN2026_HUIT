@@ -11,20 +11,58 @@ namespace ECOLearning.Areas.Admin.Controllers
     {
         private QL_HETHONG_CUNGCAP_KHOAHOCEntities1 db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1();
 
+        private const int PageSize = 10;
+        // Giới hạn theo schema: tenDanhMuc nvarchar(100), moTa nvarchar(500)
+        private const int MaxTenLength = 100;
+        private const int MaxMoTaLength = 500;
+
         // GET: Admin/Category (UC14: Quản lý danh mục)
-        public ActionResult Index()
+        public ActionResult Index(string search = "", string status = "all", int page = 1)
         {
-            var categories = db.DanhMuc.ToList();
+            var query = db.DanhMuc.AsQueryable();
 
-            var model = categories.Select(c => new CategoryViewModel
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                MaDanhMuc = c.maDanhMuc,
-                TenDanhMuc = c.tenDanhMuc,
-                MoTa = c.moTa,
-                SoKhoaHoc = c.KhoaHoc != null ? c.KhoaHoc.Count : 0,
-                TrangThai = c.trangThai ?? true
-            }).ToList();
+                string s = search.Trim().ToLower();
+                query = query.Where(c => c.tenDanhMuc.ToLower().Contains(s) || c.maDanhMuc.ToLower().Contains(s));
+            }
 
+            status = (status ?? "all").ToLower();
+            if (status == "active")
+            {
+                query = query.Where(c => c.trangThai == null || c.trangThai == true);
+            }
+            else if (status == "inactive")
+            {
+                query = query.Where(c => c.trangThai == false);
+            }
+
+            int totalItems = query.Count();
+            int totalPages = Math.Max(1, (int)Math.Ceiling((double)totalItems / PageSize));
+            page = Math.Min(Math.Max(1, page), totalPages);
+
+            var model = query
+                .OrderBy(c => c.maDanhMuc)
+                .Skip((page - 1) * PageSize)
+                .Take(PageSize)
+                .Select(c => new CategoryViewModel
+                {
+                    MaDanhMuc = c.maDanhMuc,
+                    TenDanhMuc = c.tenDanhMuc,
+                    MoTa = c.moTa,
+                    SoKhoaHoc = c.KhoaHoc.Count(),
+                    TrangThai = c.trangThai ?? true
+                })
+                .ToList();
+
+            ViewBag.Search = search;
+            ViewBag.Status = status;
+            ViewBag.Page = page;
+            ViewBag.TotalPages = totalPages;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.PageSize = PageSize;
+            ViewBag.ActiveCount = db.DanhMuc.Count(c => c.trangThai == null || c.trangThai == true);
+            ViewBag.InactiveCount = db.DanhMuc.Count(c => c.trangThai == false);
             ViewBag.BreadcrumbCurrent = "Quản lý danh mục";
             return View(model);
         }
@@ -34,53 +72,24 @@ namespace ECOLearning.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Create(string tenDanhMuc, string moTa)
         {
-            if (string.IsNullOrWhiteSpace(tenDanhMuc))
+            string error = ValidateInput(null, tenDanhMuc, moTa);
+            if (error != null)
             {
-                if (Request.IsAjaxRequest())
-                    return Json(new { success = false, message = "Tên danh mục không được để trống!" });
-
-                TempData["Error"] = "Tên danh mục không được để trống!";
-                return RedirectToAction("Index");
-            }
-
-            string cleanName = tenDanhMuc.Trim();
-
-            // Nghiệp vụ UC14: Kiểm tra trùng lặp tên danh mục trong CSDL
-            bool exists = db.DanhMuc.Any(c => c.tenDanhMuc.Trim().Equals(cleanName, StringComparison.OrdinalIgnoreCase));
-            if (exists)
-            {
-                if (Request.IsAjaxRequest())
-                    return Json(new { success = false, message = "Tên danh mục đã tồn tại trên hệ thống! Vui lòng đặt tên khác." });
-
-                TempData["Error"] = "Tên danh mục đã tồn tại trên hệ thống! Vui lòng đặt tên khác.";
-                return RedirectToAction("Index");
-            }
-
-            // Tạo mã danh mục tự động
-            int nextId = db.DanhMuc.Count() + 1;
-            string newId = "CAT-" + nextId.ToString("D3");
-            while (db.DanhMuc.Any(c => c.maDanhMuc == newId))
-            {
-                nextId++;
-                newId = "CAT-" + nextId.ToString("D3");
+                return Json(new { success = false, message = error });
             }
 
             var newCat = new DanhMuc
             {
-                maDanhMuc = newId,
-                tenDanhMuc = cleanName,
-                moTa = moTa,
+                maDanhMuc = GenerateCategoryId(),
+                tenDanhMuc = tenDanhMuc.Trim(),
+                moTa = string.IsNullOrWhiteSpace(moTa) ? null : moTa.Trim(),
                 trangThai = true
             };
 
             db.DanhMuc.Add(newCat);
             db.SaveChanges();
 
-            if (Request.IsAjaxRequest())
-                return Json(new { success = true, message = "Thêm danh mục mới thành công!" });
-
-            TempData["Success"] = "Thêm danh mục mới thành công!";
-            return RedirectToAction("Index");
+            return Json(new { success = true, message = "Thêm danh mục mới thành công!" });
         }
 
         // POST: Admin/Category/Edit
@@ -91,38 +100,46 @@ namespace ECOLearning.Areas.Admin.Controllers
             var cat = db.DanhMuc.FirstOrDefault(c => c.maDanhMuc == id);
             if (cat == null)
             {
-                if (Request.IsAjaxRequest())
-                    return Json(new { success = false, message = "Danh mục không tồn tại!" });
-
-                TempData["Error"] = "Danh mục không tồn tại!";
-                return RedirectToAction("Index");
+                return Json(new { success = false, message = "Danh mục không tồn tại!" });
             }
 
-            string cleanName = tenDanhMuc.Trim();
-
-            // Kiểm tra trùng tên danh mục với các bản ghi khác trong CSDL
-            bool duplicate = db.DanhMuc.Any(c => c.maDanhMuc != id && c.tenDanhMuc.Trim().Equals(cleanName, StringComparison.OrdinalIgnoreCase));
-            if (duplicate)
+            string error = ValidateInput(id, tenDanhMuc, moTa);
+            if (error != null)
             {
-                if (Request.IsAjaxRequest())
-                    return Json(new { success = false, message = "Tên danh mục đã tồn tại trên hệ thống!" });
-
-                TempData["Error"] = "Tên danh mục đã tồn tại trên hệ thống!";
-                return RedirectToAction("Index");
+                return Json(new { success = false, message = error });
             }
 
-            cat.tenDanhMuc = cleanName;
-            cat.moTa = moTa;
+            cat.tenDanhMuc = tenDanhMuc.Trim();
+            cat.moTa = string.IsNullOrWhiteSpace(moTa) ? null : moTa.Trim();
             db.SaveChanges();
 
-            if (Request.IsAjaxRequest())
-                return Json(new { success = true, message = "Cập nhật danh mục thành công!" });
+            return Json(new { success = true, message = "Cập nhật danh mục thành công!" });
+        }
 
-            TempData["Success"] = "Cập nhật danh mục thành công!";
-            return RedirectToAction("Index");
+        // POST: Admin/Category/SetStatus (Tạm ngưng / Kích hoạt lại danh mục)
+        // Danh mục tạm ngưng bị ẩn khỏi bộ lọc của học viên và dropdown tạo khóa học của giáo viên;
+        // các khóa học đã thuộc danh mục vẫn hoạt động bình thường.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult SetStatus(string id, bool active)
+        {
+            var cat = db.DanhMuc.FirstOrDefault(c => c.maDanhMuc == id);
+            if (cat == null)
+            {
+                return Json(new { success = false, message = "Danh mục không tồn tại!" });
+            }
+
+            cat.trangThai = active;
+            db.SaveChanges();
+
+            string message = active
+                ? $"Đã kích hoạt lại danh mục \"{cat.tenDanhMuc}\"."
+                : $"Đã tạm ngưng danh mục \"{cat.tenDanhMuc}\". Các khóa học thuộc danh mục vẫn hoạt động bình thường.";
+            return Json(new { success = true, message = message });
         }
 
         // POST: Admin/Category/Delete
+        // Chỉ xóa được danh mục chưa có khóa học; danh mục đã có khóa học thì dùng Tạm ngưng.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult Delete(string id)
@@ -137,10 +154,10 @@ namespace ECOLearning.Areas.Admin.Controllers
             int courseCount = db.KhoaHoc.Count(k => k.maDanhMuc == id);
             if (courseCount > 0)
             {
-                return Json(new { 
-                    success = false, 
+                return Json(new {
+                    success = false,
                     courseCount = courseCount,
-                    message = $"Không thể xóa danh mục đang có {courseCount} khóa học sử dụng!" 
+                    message = $"Không thể xóa danh mục đang có {courseCount} khóa học. Hãy dùng chức năng Tạm ngưng."
                 });
             }
 
@@ -148,6 +165,56 @@ namespace ECOLearning.Areas.Admin.Controllers
             db.SaveChanges();
 
             return Json(new { success = true, message = "Đã xóa danh mục thành công!" });
+        }
+
+        // Trả về thông báo lỗi, hoặc null nếu dữ liệu hợp lệ
+        private string ValidateInput(string currentId, string tenDanhMuc, string moTa)
+        {
+            if (string.IsNullOrWhiteSpace(tenDanhMuc))
+            {
+                return "Tên danh mục không được để trống!";
+            }
+
+            string cleanName = tenDanhMuc.Trim();
+            if (cleanName.Length > MaxTenLength)
+            {
+                return $"Tên danh mục tối đa {MaxTenLength} ký tự!";
+            }
+
+            if (!string.IsNullOrWhiteSpace(moTa) && moTa.Trim().Length > MaxMoTaLength)
+            {
+                return $"Mô tả tối đa {MaxMoTaLength} ký tự!";
+            }
+
+            // Nghiệp vụ UC14: Tên danh mục là duy nhất (không phân biệt hoa thường, bỏ khoảng trắng đầu/cuối)
+            string lowerName = cleanName.ToLower();
+            bool duplicate = db.DanhMuc.Any(c => c.maDanhMuc != currentId && c.tenDanhMuc.Trim().ToLower() == lowerName);
+            if (duplicate)
+            {
+                return "Tên danh mục đã tồn tại trên hệ thống! Vui lòng đặt tên khác.";
+            }
+
+            return null;
+        }
+
+        // Sinh mã theo quy ước dữ liệu hiện có: DM01, DM02, ...
+        private string GenerateCategoryId()
+        {
+            var existingIds = db.DanhMuc.Select(c => c.maDanhMuc).ToList();
+            int maxNumber = existingIds
+                .Where(x => x.StartsWith("DM"))
+                .Select(x => int.TryParse(x.Substring(2), out int n) ? n : 0)
+                .DefaultIfEmpty(0)
+                .Max();
+
+            string newId;
+            do
+            {
+                maxNumber++;
+                newId = "DM" + maxNumber.ToString("D2");
+            } while (existingIds.Contains(newId));
+
+            return newId;
         }
 
         protected override void Dispose(bool disposing)

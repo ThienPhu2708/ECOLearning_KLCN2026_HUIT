@@ -32,6 +32,7 @@ namespace ECOLearning.Areas.Admin.Models
         public int TotalInstructors { get; set; }
         public int ActiveCoursesCount { get; set; }
         public int PendingCoursesCount { get; set; }
+        public int PendingViolationReports { get; set; }
         public List<PendingCourseItem> PendingCourses { get; set; }
         public List<int> MonthlyGrowthData { get; set; }
         public List<string> MonthlyGrowthLabels { get; set; }
@@ -124,8 +125,25 @@ namespace ECOLearning.Areas.Admin.Models
         public string TangTruong { get; set; }
     }
 
+    public class CourseStatusStatItem
+    {
+        public string Label { get; set; }
+        public int Count { get; set; }
+        public double Percent { get; set; }
+        public string Color { get; set; }
+    }
+
     public class SystemReportViewModel
     {
+        // Thống kê giáo viên
+        public int TotalInstructors { get; set; }
+        public int InstructorsWithPublishedCourse { get; set; }
+        public int PendingTeacherApplications { get; set; }
+
+        // Thống kê khóa học theo trạng thái
+        public int TotalCourses { get; set; }
+        public List<CourseStatusStatItem> CourseStatusStats { get; set; } = new List<CourseStatusStatItem>();
+
         public string Period { get; set; }
         public decimal TotalNetRevenue { get; set; }
         public int TotalOrders { get; set; }

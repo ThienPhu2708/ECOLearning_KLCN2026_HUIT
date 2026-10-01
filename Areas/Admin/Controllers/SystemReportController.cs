@@ -5,6 +5,7 @@ using System.Text;
 using System.Web.Mvc;
 using ECOLearning.Models;
 using ECOLearning.Areas.Admin.Models;
+using ECOLearning.Services;
 
 namespace ECOLearning.Areas.Admin.Controllers
 {
@@ -274,6 +275,35 @@ namespace ECOLearning.Areas.Admin.Controllers
                 }
             }
 
+            // 5. Thống kê giáo viên
+            var teacherIds = db.NguoiDung
+                .Where(u => u.vaiTro == "GiaoVien" || u.vaiTro == "Giáo viên" || u.vaiTro == "Instructor")
+                .Select(u => u.maNguoiDung)
+                .ToList();
+            model.TotalInstructors = teacherIds.Count;
+
+            var allCourses = db.KhoaHoc.Select(k => new { k.maGiaoVien, k.trangThai }).ToList();
+            model.InstructorsWithPublishedCourse = allCourses
+                .Where(k => CourseStatus.IsPublished(k.trangThai) && teacherIds.Contains(k.maGiaoVien))
+                .Select(k => k.maGiaoVien)
+                .Distinct()
+                .Count();
+            model.PendingTeacherApplications = TeacherApplicationService.GetAll().Count(a => a.Status == "Pending");
+
+            // 6. Thống kê khóa học theo trạng thái (gom các cách viết khác nhau của cùng một trạng thái)
+            model.TotalCourses = allCourses.Count;
+            model.CourseStatusStats = allCourses
+                .GroupBy(k => CourseStatus.GroupLabel(k.trangThai))
+                .Select(g => new CourseStatusStatItem
+                {
+                    Label = g.Key,
+                    Count = g.Count(),
+                    Percent = model.TotalCourses > 0 ? Math.Round((double)g.Count() / model.TotalCourses * 100, 1) : 0,
+                    Color = CourseStatus.GroupColor(g.Key)
+                })
+                .OrderBy(s => CourseStatus.GroupOrder(s.Label))
+                .ToList();
+
             // Tính % tăng trưởng chung
             if (model.PeriodReports.Count >= 2)
             {
@@ -315,6 +345,21 @@ namespace ECOLearning.Areas.Admin.Controllers
             {
                 sb.AppendLine($"\"{row.GiaiDoan}\",{row.DoanhThu},{row.SoDonHang},{row.GiaTriDonTrungBinh},{row.HocVienMoi},\"{row.TangTruong}\"");
             }
+
+            sb.AppendLine();
+            sb.AppendLine("THONG KE GIAO VIEN");
+            sb.AppendLine($"Tong so giao vien,{model.TotalInstructors}");
+            sb.AppendLine($"Giao vien co khoa hoc dang ban,{model.InstructorsWithPublishedCourse}");
+            sb.AppendLine($"Ho so giao vien cho duyet,{model.PendingTeacherApplications}");
+
+            sb.AppendLine();
+            sb.AppendLine("THONG KE KHOA HOC THEO TRANG THAI");
+            sb.AppendLine("Trang Thai,So Khoa Hoc,Ty Le (%)");
+            foreach (var s in model.CourseStatusStats)
+            {
+                sb.AppendLine($"\"{s.Label}\",{s.Count},{s.Percent}");
+            }
+            sb.AppendLine($"\"Tong cong\",{model.TotalCourses},100");
 
             byte[] preamble = Encoding.UTF8.GetPreamble();
             byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());

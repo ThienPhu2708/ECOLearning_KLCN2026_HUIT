@@ -56,6 +56,76 @@ ViewBag.Title = "Báo Cáo Thống Kê Toàn Hệ Thống";
     </div>
 </div>
 
+<!-- THỐNG KÊ GIÁO VIÊN & KHÓA HỌC THEO TRẠNG THÁI -->
+<div class="grid-12" style="margin-bottom: 32px;">
+    <div class="col-4">
+        <div class="card" style="height: 100%;">
+            <h3 class="h3" style="margin-bottom: 6px;">Thống Kê Giáo Viên</h3>
+            <span class="caption" style="display: block; margin-bottom: 20px;">Số tài khoản có vai trò Giáo viên trên hệ thống</span>
+
+            <div style="font-size: 40px; font-weight: 800; color: var(--primary); line-height: 1;">@Model.TotalInstructors.ToString("#,##0")</div>
+            <div class="caption" style="color: var(--text-secondary); margin: 6px 0 20px;">giáo viên</div>
+
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border-color);">
+                <span>Có khóa học đang bán</span>
+                <strong>@Model.InstructorsWithPublishedCourse.ToString("#,##0")</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border-color);">
+                <span>Chưa có khóa học đang bán</span>
+                <strong>@((Model.TotalInstructors - Model.InstructorsWithPublishedCourse).ToString("#,##0"))</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border-color);">
+                <span>Hồ sơ đăng ký GV chờ duyệt</span>
+                <a href="@Url.Action("Index", "TeacherApproval", new { area = "Admin", statusFilter = "Pending" })" style="font-weight: 700; color: var(--status-warning); text-decoration: none;">@Model.PendingTeacherApplications.ToString("#,##0")</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-8">
+        <div class="card" style="height: 100%;">
+            <h3 class="h3" style="margin-bottom: 6px;">Khóa Học Theo Trạng Thái</h3>
+            <span class="caption" style="display: block; margin-bottom: 20px;">Tổng số <strong>@Model.TotalCourses</strong> khóa học trên hệ thống</span>
+
+            @if (Model.CourseStatusStats.Any())
+            {
+                <table class="table" style="margin: 0;">
+                    <thead>
+                        <tr>
+                            <th>Trạng thái</th>
+                            <th style="width: 110px; text-align: right;">Số khóa học</th>
+                            <th style="width: 45%;">Tỷ lệ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in Model.CourseStatusStats)
+                        {
+                            <tr>
+                                <td>
+                                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: @s.Color; margin-right: 8px;"></span>
+                                    <strong>@s.Label</strong>
+                                </td>
+                                <td style="text-align: right;"><strong>@s.Count</strong></td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="flex: 1; height: 8px; background: #F1F5F9; border-radius: 4px; overflow: hidden;">
+                                            <div style="width: @(s.Percent.ToString(System.Globalization.CultureInfo.InvariantCulture))%; height: 100%; background: @s.Color;"></div>
+                                        </div>
+                                        <span class="caption" style="width: 48px; text-align: right;">@s.Percent.ToString("0.#")%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <p style="color: var(--text-secondary); text-align: center; padding: 24px 0;">Chưa có khóa học nào trên hệ thống.</p>
+            }
+        </div>
+    </div>
+</div>
+
 <!-- BIỂU ĐỒ ĐƯỜNG KÉP & DONUT CHART (UC16) -->
 <div class="grid-12" style="margin-bottom: 32px;">
 

@@ -4,10 +4,30 @@ ViewBag.Title = "Quản Lý Học Viên";
 var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
 }
 
+@* Tiêu đề cột có nút sắp xếp: bấm lần 1 giảm dần, bấm lần 2 tăng dần (giữ lọc khóa học & tìm kiếm) *@
+@helper SortHeader(string label, string key, string descTitle, string ascTitle)
+{
+    string current = ViewBag.Sort as string ?? "date_desc";
+    bool active = current.StartsWith(key + "_");
+    bool desc = current == key + "_desc";
+    string next = active && desc ? key + "_asc" : key + "_desc";
+    string icon = !active ? "bi-arrow-down-up" : (desc ? "bi-arrow-down" : "bi-arrow-up");
+    string title = "Sắp xếp: " + (next.EndsWith("_desc") ? descTitle : ascTitle);
+    <a class="sort-header @(active ? "active" : "")" title="@title"
+       href="@Url.Action("Index", "Student", new { area = "Instructor", courseId = ViewBag.SelectedCourseId as string, search = ViewBag.Search as string, sort = next })">
+        @label <i class="bi @icon sort-icon"></i>
+    </a>
+}
+
 <style>
 .student-filter-fields { display:flex;gap:12px;align-items:center;flex:1;min-width:0;flex-wrap:wrap; }
 .student-filter-fields .teacher-select { flex:1;min-width:200px; }
 .student-result-count { display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:9px;background:#eef0ff;color:var(--primary);font-size:13px;white-space:nowrap; }
+.sort-header { display:inline-flex;align-items:center;gap:6px;color:inherit;text-decoration:none;cursor:pointer;white-space:nowrap; }
+.sort-header:hover { color:var(--primary); }
+.sort-header .sort-icon { font-size:12px;opacity:.45; }
+.sort-header.active { color:var(--primary); }
+.sort-header.active .sort-icon { opacity:1; }
 .student-empty-icon { width:64px;height:64px;border-radius:18px;background:#eef0ff;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;color:var(--primary); }
 </style>
 <!-- FILTER & SEARCH BAR -->
@@ -27,6 +47,7 @@ var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
                 }
             </select>
             <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Tìm kiếm theo họ tên hoặc email..." style="max-width: 320px;">
+            <input type="hidden" name="sort" value="@(ViewBag.Sort as string ?? "date_desc")" />
             <button type="submit" class="btn btn-primary">Lọc</button>
         </div>
         <div>
@@ -38,15 +59,15 @@ var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
 <!-- STUDENTS TABLE (UC11) -->
 <div class="card" style="padding: 0; overflow: hidden;">
     <div class="table-responsive">
-        <table class="table">
+        <table class="table" data-paginate="10">
             <thead>
                 <tr>
                     <th>Học viên</th>
                     <th>Email</th>
                     <th>Khóa học</th>
-                    <th>Ngày tham gia</th>
-                    <th style="width: 200px;">Tiến độ hoàn thành</th>
-                    <th>Đánh giá</th>
+                    <th>@SortHeader("Ngày tham gia", "date", "Mới nhất trước", "Cũ nhất trước")</th>
+                    <th style="width: 200px;">@SortHeader("Tiến độ hoàn thành", "progress", "Cao → thấp", "Thấp → cao")</th>
+                    <th>@SortHeader("Đánh giá", "rating", "Nhiều sao → ít sao", "Ít sao → nhiều sao")</th>
                 </tr>
             </thead>
             <tbody>

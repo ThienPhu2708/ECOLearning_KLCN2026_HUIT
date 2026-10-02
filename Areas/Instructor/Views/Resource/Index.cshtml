@@ -62,7 +62,7 @@
     <input type="file" id="library-upload" hidden accept=".mp4,.webm,.mov,.mkv,.m4v,.ogv,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.txt,.csv">
 </div>
 <div class="card" style="padding:0;overflow:hidden;">
-<div class="table-responsive"><table class="table library-table"><colgroup><col style="width:33%;"><col style="width:12%;"><col style="width:22%;"><col style="width:11%;"><col style="width:22%;"></colgroup><thead><tr><th>Tên tệp</th><th>Loại</th><th>Khóa học sử dụng</th><th>Dung lượng</th><th></th></tr></thead><tbody>
+<div class="table-responsive"><table class="table library-table" data-paginate="10"><colgroup><col style="width:33%;"><col style="width:12%;"><col style="width:22%;"><col style="width:11%;"><col style="width:22%;"></colgroup><thead><tr><th>Tên tệp</th><th>Loại</th><th>Khóa học sử dụng</th><th>Dung lượng</th><th></th></tr></thead><tbody>
 @foreach (var file in Model) {
     <tr data-kind="@file.Kind" data-name="@file.Name.ToLowerInvariant()" data-courses="@Newtonsoft.Json.JsonConvert.SerializeObject(file.Courses)" data-size="@file.Size">
         <td><div class="library-file"><span class="library-file-icon @(file.Kind == "video" ? "" : System.IO.Path.GetExtension(file.Url).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? "archive" : "document")" aria-hidden="true">

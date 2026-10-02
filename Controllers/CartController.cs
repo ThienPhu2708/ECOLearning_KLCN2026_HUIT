@@ -58,6 +58,12 @@ namespace ECOLearning.Controllers
                     return Json(new { success = false, message = "Không tìm thấy khóa học hợp lệ hoặc khóa học chưa được phê duyệt!" });
                 }
 
+                int userId = (Session["UserId"] as int?) ?? 0;
+                if (userId > 0 && course.maGiaoVien == userId)
+                {
+                    return Json(new { success = false, message = "Bạn là giáo viên của khóa học này nên không thể tự mua!", cartCount = cart.Count });
+                }
+
                 cart.Add(new CartItemViewModel
                 {
                     CourseId = course.maKhoaHoc,
@@ -188,6 +194,30 @@ namespace ECOLearning.Controllers
             if (user == null)
             {
                 return Json(new { success = false, requireLogin = true, message = "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại!" });
+            }
+
+            // Giỏ hàng có thể được thêm trước khi đăng nhập, nên kiểm tra lại khóa học do chính người mua tạo
+            var cartCourseIds = cart.Select(i => i.CourseId).ToList();
+            var ownCourseNames = db.KhoaHoc
+                .Where(k => cartCourseIds.Contains(k.maKhoaHoc) && k.maGiaoVien == userId)
+                .Select(k => k.tenKhoaHoc)
+                .ToList();
+            if (ownCourseNames.Any())
+            {
+                return Json(new { success = false, message = "Bạn không thể tự mua khóa học của chính mình: " + string.Join(", ", ownCourseNames) + ". Vui lòng xóa khỏi giỏ hàng!" });
+            }
+
+            // Khóa học có thể bị tạm khóa / ngừng bán sau khi đã thêm vào giỏ
+            var unavailableNames = db.KhoaHoc
+                .Where(k => cartCourseIds.Contains(k.maKhoaHoc))
+                .Select(k => new { k.tenKhoaHoc, k.trangThai })
+                .ToList()
+                .Where(k => !ECOLearning.Services.CourseStatus.IsPublished(k.trangThai))
+                .Select(k => k.tenKhoaHoc)
+                .ToList();
+            if (unavailableNames.Any())
+            {
+                return Json(new { success = false, message = "Các khóa học sau hiện không còn mở bán: " + string.Join(", ", unavailableNames) + ". Vui lòng xóa khỏi giỏ hàng!" });
             }
 
             try

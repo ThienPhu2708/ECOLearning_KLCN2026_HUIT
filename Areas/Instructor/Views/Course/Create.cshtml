@@ -1,6 +1,8 @@
 ﻿@model ECOLearning.Areas.Instructor.Models.CourseCreateOrEditViewModel
 @{
     bool isEditing = !string.IsNullOrEmpty(Model.MaKhoaHoc);
+    // Khóa học bị tạm khóa do vi phạm: nút gửi = lưu rồi sang trang Xử lý vi phạm (không gửi kiểm duyệt)
+    bool isViolationLocked = isEditing && Model.TrangThai == "Tạm khóa";
     ViewBag.ShowCourseBreadcrumb = true;
     ViewBag.Title = isEditing ? "Chỉnh sửa khóa học" : "Tạo Khóa Học Mới";
     ViewBag.BreadcrumbCurrent = isEditing ? "Chỉnh sửa khóa học" : "Tạo khóa học mới";
@@ -326,7 +328,7 @@
             <div style="display:flex; gap:10px;">
                 <button type="submit" name="actionType" value="draft" class="btn btn-outline">@(isEditing ? "Lưu thay đổi" : "Lưu bản nháp")</button>
                 <button type="submit" name="actionType" value="submit" id="btn-submit" class="btn btn-primary"
-                        onclick="return confirmSubmit()">Gửi xét duyệt khóa học</button>
+                        onclick="return confirmSubmit()">@(isViolationLocked ? "Lưu & gửi phản hồi vi phạm" : "Gửi xét duyệt khóa học")</button>
             </div>
         </div>
     </div>
@@ -611,11 +613,11 @@ function confirmSubmit() {
     if (pendingUploads > 0) { showToast('Vui lòng đợi tải tệp hoàn tất.', 'info'); return false; }
     if (!countVideos()) { currentStep = 2; updateStepper(); showToast('Vui lòng tải ít nhất một video trước khi gửi duyệt.', 'error'); return false; }
     if (submitConfirmed) { submitConfirmed = false; return true; }
-    openCurriculumDialog('Gửi khóa học lên kiểm duyệt?', '', '', function() {
+    openCurriculumDialog('@Html.Raw(HttpUtility.JavaScriptStringEncode(isViolationLocked ? "Lưu thay đổi và chuyển sang gửi phản hồi vi phạm?" : "Gửi khóa học lên kiểm duyệt?"))', '', '', function() {
         submitConfirmed = true;
         document.getElementById('course-wizard-form').requestSubmit(document.getElementById('btn-submit'));
         submitConfirmed = false;
-    }, 'Gửi xét duyệt', true);
+    }, '@Html.Raw(HttpUtility.JavaScriptStringEncode(isViolationLocked ? "Lưu & tiếp tục" : "Gửi xét duyệt"))', true);
     return false;
 }
 

@@ -38,6 +38,15 @@
     </div>
 </div>
 
+@if ((ViewBag.ViolationWaitingCount as int? ?? 0) > 0)
+{
+    <!-- Cảnh báo khóa học bị tạm khóa do vi phạm -->
+    <a href="@Url.Action("Index", "Course", new { area = "Instructor" })" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; margin-bottom: 24px; border-radius: 12px; background: #FFF7ED; border: 1px solid #FDBA74; color: #9A3412; text-decoration: none;">
+        <span><i class="bi bi-flag-fill" style="margin-right: 8px;"></i><strong>Bạn có @ViewBag.ViolationWaitingCount khóa học bị tạm khóa do báo cáo vi phạm</strong> — cần chỉnh sửa và gửi phản hồi trước hạn.</span>
+        <span class="btn btn-sm" style="background: #C2410C; color: #fff; white-space: nowrap;">Xử lý ngay</span>
+    </a>
+}
+
 <!-- ============================================================ -->
 <!-- 4 KPI CARDS                                                   -->
 <!-- ============================================================ -->

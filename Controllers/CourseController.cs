@@ -84,7 +84,8 @@ namespace ECOLearning.Controllers
             }
 
             // Pass filter metadata to View
-            ViewBag.Categories = db.DanhMuc.Where(d => d.trangThai == true).ToList();
+            // Danh mục tạm ngưng không hiện trong bộ lọc; khóa học thuộc danh mục đó vẫn hiển thị bình thường
+            ViewBag.Categories = db.DanhMuc.Where(d => d.trangThai == null || d.trangThai == true).ToList();
             ViewBag.SearchTerm = search;
             ViewBag.SelectedCategory = category;
             ViewBag.IsFree = isFree;
@@ -161,6 +162,8 @@ namespace ECOLearning.Controllers
                 isEnrolled = db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == course.maKhoaHoc && d.maHocVien == currentUser.maNguoiDung);
             }
             ViewBag.IsEnrolled = isEnrolled;
+            // Giáo viên xem khóa học của chính mình: không hiển thị nút mua/đăng ký
+            ViewBag.IsOwner = currentUserId > 0 && course.maGiaoVien == currentUserId;
 
             var cartList = Session["Cart"] as List<ECOLearning.ViewModels.CartItemViewModel>;
             bool isInCart = cartList != null && cartList.Any(i => i.CourseId == course.maKhoaHoc);
@@ -214,6 +217,17 @@ namespace ECOLearning.Controllers
             if (course == null)
             {
                 return Json(new { success = false, message = "Không tìm thấy khóa học!" });
+            }
+
+            // Chỉ đăng ký được khóa học đang mở bán (không nhận khóa học tạm khóa / khóa vĩnh viễn / chưa xuất bản)
+            if (!ECOLearning.Services.CourseStatus.IsPublished(course.trangThai))
+            {
+                return Json(new { success = false, message = "Khóa học hiện không mở đăng ký!" });
+            }
+
+            if (course.maGiaoVien == currentUser.maNguoiDung)
+            {
+                return Json(new { success = false, message = "Bạn là giáo viên của khóa học này nên không thể tự đăng ký học!" });
             }
 
             // Kiểm tra giá: chỉ cho phép đăng ký trực tiếp nếu giá = 0 hoặc khuyến mãi = 0

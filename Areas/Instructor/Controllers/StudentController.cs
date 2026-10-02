@@ -10,7 +10,8 @@ namespace ECOLearning.Areas.Instructor.Controllers
     public class StudentController : InstructorBaseController
     {
         // GET: Instructor/Student (UC11: Quản lý học viên)
-        public ActionResult Index(string courseId = "", string search = "")
+        // sort: date_desc (mặc định) | date_asc | progress_desc | progress_asc | rating_desc | rating_asc
+        public ActionResult Index(string courseId = "", string search = "", string sort = "date_desc")
         {
             int teacherId = CurrentTeacherId;
             var teacherCourses = db.KhoaHoc
@@ -98,6 +99,31 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 studentList = studentList.Where(st => st.HoTen.ToLower().Contains(s) || st.Email.ToLower().Contains(s)).ToList();
             }
 
+            // Sắp xếp (học viên chưa đánh giá luôn ở cuối khi sắp theo sao)
+            switch (sort)
+            {
+                case "date_asc":
+                    studentList = studentList.OrderBy(st => st.NgayThamGia).ToList();
+                    break;
+                case "progress_desc":
+                    studentList = studentList.OrderByDescending(st => st.TienDoHoanThanh).ThenByDescending(st => st.NgayThamGia).ToList();
+                    break;
+                case "progress_asc":
+                    studentList = studentList.OrderBy(st => st.TienDoHoanThanh).ThenByDescending(st => st.NgayThamGia).ToList();
+                    break;
+                case "rating_desc":
+                    studentList = studentList.OrderBy(st => st.SoSao.HasValue && st.SoSao > 0 ? 0 : 1).ThenByDescending(st => st.SoSao).ThenByDescending(st => st.NgayThamGia).ToList();
+                    break;
+                case "rating_asc":
+                    studentList = studentList.OrderBy(st => st.SoSao.HasValue && st.SoSao > 0 ? 0 : 1).ThenBy(st => st.SoSao).ThenByDescending(st => st.NgayThamGia).ToList();
+                    break;
+                default:
+                    sort = "date_desc";
+                    studentList = studentList.OrderByDescending(st => st.NgayThamGia).ToList();
+                    break;
+            }
+
+            ViewBag.Sort = sort;
             ViewBag.TeacherCourses = teacherCourses;
             ViewBag.SelectedCourseId = courseId;
             ViewBag.Search = search;

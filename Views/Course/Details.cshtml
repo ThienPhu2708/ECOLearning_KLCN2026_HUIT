@@ -7,6 +7,7 @@
     var unchapteredLessons = ViewBag.UnchapteredLessons as List<ECOLearning.Models.BaiHoc> ?? new List<ECOLearning.Models.BaiHoc>();
     bool isEnrolled = ViewBag.IsEnrolled ?? false;
     bool isInCart = ViewBag.IsInCart ?? false;
+    bool isOwner = ViewBag.IsOwner ?? false;
 
     int totalLessons = chapters.Sum(c => c.BaiHoc != null ? c.BaiHoc.Count : 0) + unchapteredLessons.Count;
     int totalDurationSeconds = chapters.Sum(c => c.BaiHoc != null ? c.BaiHoc.Sum(b => b.thoiLuong ?? 0) : 0) + unchapteredLessons.Sum(b => b.thoiLuong ?? 0);
@@ -894,11 +895,20 @@
                             </div>
 
                             <!-- Action Buttons -->
-                            @if (isEnrolled)
+                            @if (isOwner)
+                            {
+                                <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = Model.maKhoaHoc })" class="btn btn-secondary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold text-decoration-none shadow-sm" style="background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px;">
+                                    <i class="bi bi-pencil-square me-2"></i> Quản lý khóa học của bạn
+                                </a>
+                            }
+                            else if (isEnrolled)
                             {
                                 <a href="@Url.Action("Study", "Learning", new { courseId = Model.maKhoaHoc })" class="btn btn-secondary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold text-decoration-none shadow-sm" style="background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px; transition: all 0.2s;">
                                     <i class="bi bi-play-circle-fill me-2 text-primary"></i> VÀO HỌC NGAY
                                 </a>
+                                <button type="button" class="btn btn-link w-100 mb-2 text-decoration-none" style="color: #DC2626; font-size: 13.5px; font-weight: 600;" data-bs-toggle="modal" data-bs-target="#violationReportModal">
+                                    <i class="bi bi-flag me-1"></i> Báo cáo vi phạm khóa học
+                                </button>
                             }
                             else if (isFree)
                             {
@@ -989,8 +999,93 @@
     </div>
 </div>
 
+@if (isEnrolled && !isOwner)
+{
+    <!-- MODAL: BÁO CÁO VI PHẠM KHÓA HỌC -->
+    <div class="modal fade" id="violationReportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 16px;">
+                <form id="violationReportForm">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold"><i class="bi bi-flag-fill me-2 text-danger"></i>Báo cáo vi phạm khóa học</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="small text-secondary">Báo cáo của bạn sẽ được gửi tới quản trị viên để xem xét. Vui lòng mô tả cụ thể nội dung không phù hợp hoặc sai sót.</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Loại vi phạm <span class="text-danger">*</span></label>
+                            <select id="violationType" class="form-select" required>
+                                <option value="">-- Chọn loại vi phạm --</option>
+                                @foreach (var t in ECOLearning.Services.ViolationReportService.ViolationTypes)
+                                {
+                                    <option value="@t">@t</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold">Mô tả chi tiết <span class="text-danger">*</span></label>
+                            <textarea id="violationDesc" class="form-control" rows="4" minlength="10" maxlength="2000" required
+                                      placeholder="Ví dụ: Bài 3 chương 2 có thông tin sai về..., video bài 5 không xem được..."></textarea>
+                        </div>
+                        <div id="violationError" class="small text-danger" style="display: none;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" id="violationSubmitBtn" class="btn btn-danger">Gửi báo cáo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
 @section scripts {
     <script>
+        (function () {
+            var form = document.getElementById('violationReportForm');
+            if (!form) return;
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var err = document.getElementById('violationError');
+                var btn = document.getElementById('violationSubmitBtn');
+                var type = document.getElementById('violationType').value;
+                var desc = document.getElementById('violationDesc').value.trim();
+
+                err.style.display = 'none';
+                if (!type) { err.textContent = 'Vui lòng chọn loại vi phạm!'; err.style.display = 'block'; return; }
+                if (desc.length < 10) { err.textContent = 'Vui lòng mô tả tối thiểu 10 ký tự!'; err.style.display = 'block'; return; }
+
+                btn.disabled = true;
+                $.ajax({
+                    url: '@Url.Action("Create", "ViolationReport", new { area = "" })',
+                    type: 'POST',
+                    data: {
+                        __RequestVerificationToken: form.querySelector('input[name="__RequestVerificationToken"]').value,
+                        courseId: '@Model.maKhoaHoc',
+                        loaiViPham: type,
+                        moTa: desc
+                    },
+                    success: function (res) {
+                        if (res.success) {
+                            bootstrap.Modal.getInstance(document.getElementById('violationReportModal')).hide();
+                            form.reset();
+                            if (typeof showToast === 'function') showToast(res.message, 'success'); else alert(res.message);
+                        } else {
+                            err.textContent = res.message;
+                            err.style.display = 'block';
+                        }
+                    },
+                    error: function () {
+                        err.textContent = 'Có lỗi xảy ra, vui lòng thử lại!';
+                        err.style.display = 'block';
+                    },
+                    complete: function () { btn.disabled = false; }
+                });
+            });
+        })();
+
         function extractVideoInfo(url) {
             if (!url || typeof url !== 'string' || !url.trim()) return null;
             url = url.trim();

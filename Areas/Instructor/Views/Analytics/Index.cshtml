@@ -94,7 +94,7 @@
 </div>
 <div class="card" style="padding:0;overflow:hidden;">
     <div style="padding:24px;"><h3 class="h3">Hiệu quả từng khóa học</h3><p class="caption">Doanh thu, ghi danh và tiến độ hiện tại của học viên ghi danh trong kỳ</p></div>
-    <div class="table-responsive"><table class="table"><thead><tr><th>Khóa học</th><th>Trạng thái</th><th>Doanh thu</th><th>Ghi danh</th><th>Nhận xét</th><th>Tiến độ học tập TB</th></tr></thead><tbody>
+    <div class="table-responsive"><table class="table" data-paginate="10"><thead><tr><th>Khóa học</th><th>Trạng thái</th><th>Doanh thu</th><th>Ghi danh</th><th>Nhận xét</th><th>Tiến độ học tập TB</th></tr></thead><tbody>
     @foreach (var course in Model.Courses)
     {
         <tr><td><a href="@Url.Action("Details", "Course", new { area = "Instructor", id = course.Id })"><strong>@course.Name</strong></a></td><td>@course.Status</td><td>@course.Revenue.ToString("#,##0 đ")</td><td>@course.Registrations</td><td>@course.Reviews</td><td>@(course.AverageProgress.HasValue ? course.AverageProgress.Value.ToString("0.#") + "%" : "—")</td></tr>

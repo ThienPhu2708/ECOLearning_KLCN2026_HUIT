@@ -165,6 +165,20 @@ namespace ECOLearning.Controllers
                 return HttpNotFound();
             }
 
+            // Khóa học bị khóa vĩnh viễn do vi phạm: học viên không học được nữa (giáo viên chủ khóa học và Admin vẫn xem được).
+            // Khóa học tạm khóa thì học viên đã mua vẫn học bình thường.
+            if (course.trangThai == ECOLearning.Services.CourseStatus.KhoaVinhVien)
+            {
+                int viewerId = (Session["UserId"] as int?) ?? 0;
+                bool isOwnerOrAdmin = string.Equals(Session["Role"]?.ToString(), "Admin", StringComparison.OrdinalIgnoreCase)
+                    || (viewerId > 0 && course.maGiaoVien == viewerId);
+                if (!isOwnerOrAdmin)
+                {
+                    TempData["ErrorMessage"] = "Khóa học \"" + course.tenKhoaHoc + "\" đã bị khóa vĩnh viễn do vi phạm quy định nên không thể tiếp tục học.";
+                    return RedirectToAction("MyCourses");
+                }
+            }
+
             var chapters = db.ChuongHoc
                 .Where(c => c.maKhoaHoc == courseId)
                 .OrderBy(c => c.thuTu)
@@ -228,6 +242,10 @@ namespace ECOLearning.Controllers
             ViewBag.CompletedLessonIds = completedLessonIds;
             ViewBag.UnchapteredLessons = unchapteredLessons;
             ViewBag.HasSubmittedReview = hasSubmittedReview;
+            // Nút báo cáo vi phạm: chỉ cho học viên đã đăng ký và không phải giáo viên của khóa học
+            ViewBag.CanReportViolation = currentUser != null
+                && course.maGiaoVien != currentUser.maNguoiDung
+                && db.DangKyKhoaHoc.Any(d => d.maHocVien == currentUser.maNguoiDung && d.maKhoaHoc == courseId);
             ViewBag.ActiveLessonDocuments = activeLessonDocuments;
 
             return View();
@@ -283,7 +301,10 @@ namespace ECOLearning.Controllers
             }
 
             // Tự động ghi danh vào DangKyKhoaHoc nếu chưa có
-            if (!string.IsNullOrEmpty(courseId) && !db.DangKyKhoaHoc.Any(d => d.maHocVien == studentId && d.maKhoaHoc == courseId))
+            // (không ghi danh giáo viên vào khóa học do chính họ tạo khi họ xem thử)
+            if (!string.IsNullOrEmpty(courseId)
+                && !db.KhoaHoc.Any(k => k.maKhoaHoc == courseId && k.maGiaoVien == studentId)
+                && !db.DangKyKhoaHoc.Any(d => d.maHocVien == studentId && d.maKhoaHoc == courseId))
             {
                 string newMaDK = "DK" + DateTime.Now.ToString("yyMMddHHmmss") + (new Random().Next(1000, 9999)).ToString();
                 db.DangKyKhoaHoc.Add(new DangKyKhoaHoc

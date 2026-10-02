@@ -137,6 +137,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
                     };
                 }).ToList();
 
+            // Số khóa học đang bị tạm khóa do vi phạm và chờ giáo viên xử lý
+            ViewBag.ViolationWaitingCount = new ECOLearning.Services.ViolationReportService(db).CountWaitingForTeacher(teacherId);
+
             ViewBag.BreadcrumbCurrent = "Dashboard tổng quan";
             return View(model);
         }

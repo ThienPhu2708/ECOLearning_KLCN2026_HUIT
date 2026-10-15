@@ -9,6 +9,22 @@ namespace ECOLearning.Areas.Instructor.Controllers
 {
     public class StudentController : InstructorBaseController
     {
+        public ActionResult CourseStudents(string courseId, string search = "", string sort = "date_desc")
+        {
+            int teacherId = CurrentTeacherId;
+            var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == courseId && k.maGiaoVien == teacherId);
+            if (course == null) return HttpNotFound();
+
+            var result = (ViewResult)Index(courseId, search, sort);
+            ViewBag.IsCourseStudentPage = true;
+            ViewBag.ShowCourseBreadcrumb = true;
+            ViewBag.BreadcrumbCourseName = course.tenKhoaHoc;
+            ViewBag.BreadcrumbCourseId = course.maKhoaHoc;
+            ViewBag.BreadcrumbCurrent = "Danh sách học viên";
+            result.ViewName = "Index";
+            return result;
+        }
+
         // GET: Instructor/Student (UC11: Quản lý học viên)
         // sort: date_desc (mặc định) | date_asc | progress_desc | progress_asc | rating_desc | rating_asc
         public ActionResult Index(string courseId = "", string search = "", string sort = "date_desc")
@@ -69,7 +85,8 @@ namespace ECOLearning.Areas.Instructor.Controllers
             if (!studentList.Any())
             {
                 var paidDetails = db.ChiTietDonHang
-                    .Where(ct => courseIds.Contains(ct.maKhoaHoc) && ct.DonHang != null)
+                    .Where(ct => courseIds.Contains(ct.maKhoaHoc) && ct.DonHang != null
+                        && (string.IsNullOrEmpty(courseId) || ct.maKhoaHoc == courseId))
                     .ToList();
 
                 foreach (var ct in paidDetails)

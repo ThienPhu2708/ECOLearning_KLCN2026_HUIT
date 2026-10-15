@@ -9,6 +9,32 @@
 .report-metric { padding:22px;border:1px solid var(--border-color);border-radius:14px;background:#eef0ff; }
 .report-metric:nth-child(2) { background:#edf9f3; } .report-metric:nth-child(3) { background:#eef6ff; } .report-metric:nth-child(4) { background:#fff7e9; }
 .report-metric strong { display:block;font-size:26px;margin-top:8px;color:var(--text-heading); }
+.course-performance { padding:0;overflow:hidden; }
+.course-performance-header { padding:24px;display:flex;align-items:center;justify-content:space-between;gap:16px; }
+.course-performance-header .caption { margin:6px 0 0; }
+.course-performance-count { padding:6px 12px;border-radius:999px;background:#eef0ff;color:#4338ca;font-size:12px;font-weight:600;white-space:nowrap; }
+.course-performance .table-responsive { border:0;border-top:1px solid var(--border-color);border-radius:0; }
+.course-performance-table { min-width:800px;margin:0; }
+.dashboard-main .course-performance-table.table th { padding:14px 20px;vertical-align:middle;text-transform:none;letter-spacing:0; }
+.dashboard-main .course-performance-table.table td { padding:20px; }
+.dashboard-main .course-performance-table.table .course-name { width:28%;min-width:220px;white-space:normal;overflow-wrap:anywhere; }
+.course-name a { color:var(--text-heading);font-weight:600;line-height:1.5; }
+.course-name a:hover { color:#4f46e5; }
+.course-name a:focus-visible { outline:2px solid #4f46e5;outline-offset:4px; }
+.course-performance-table .numeric { text-align:right;font-variant-numeric:tabular-nums; }
+.course-status { display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:12px;font-weight:600; }
+.course-status-published { background:#ecfdf5;color:#047857; }
+.course-status-pending { background:#fffbeb;color:#b45309; }
+.course-progress { display:flex;align-items:center;gap:10px;min-width:150px; }
+.course-progress progress { width:100px;height:6px;border:0;border-radius:999px;overflow:hidden;background:#e2e8f0;accent-color:#4f46e5; }
+.course-progress progress::-webkit-progress-bar { background:#e2e8f0;border-radius:999px; }
+.course-progress progress::-webkit-progress-value { background:#4f46e5;border-radius:999px; }
+.course-progress progress::-moz-progress-bar { background:#4f46e5;border-radius:999px; }
+.course-progress span { font-size:13px;font-variant-numeric:tabular-nums; }
+.course-progress-empty { color:var(--text-secondary);font-size:13px; }
+.course-performance .tp-pager[hidden] { display:none !important; }
+.course-performance .tp-pager { margin:0;border:0;border-top:1px solid var(--border-color);border-radius:0;padding:16px 24px; }
+@@media(max-width:600px) { .course-performance-header { padding:20px;align-items:flex-start;flex-direction:column;gap:12px; } }
 @@media(max-width:800px) { #analytics-registration-chart svg { height:180px !important;width:100%; }
 .report-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @@media(max-width:480px) { #analytics-registration-chart svg { height:180px !important;width:100%; }
@@ -92,12 +118,29 @@
     <p class="caption">Số lượt đăng ký khóa học trong khoảng thời gian đã chọn</p>
     <div id="analytics-registration-chart"></div>
 </div>
-<div class="card" style="padding:0;overflow:hidden;">
-    <div style="padding:24px;"><h3 class="h3">Hiệu quả từng khóa học</h3><p class="caption">Doanh thu, ghi danh và tiến độ hiện tại của học viên ghi danh trong kỳ</p></div>
-    <div class="table-responsive"><table class="table" data-paginate="10"><thead><tr><th>Khóa học</th><th>Trạng thái</th><th>Doanh thu</th><th>Ghi danh</th><th>Nhận xét</th><th>Tiến độ học tập TB</th></tr></thead><tbody>
+<div class="card course-performance">
+    <div class="course-performance-header"><div><h3 class="h3" id="course-performance-title">Hiệu quả từng khóa học</h3><p class="caption">Doanh thu, ghi danh và tiến độ hiện tại của học viên ghi danh trong kỳ</p></div><span class="course-performance-count">@Model.Courses.Count() khóa học</span></div>
+    <div class="table-responsive"><table class="table course-performance-table" data-paginate="10" aria-labelledby="course-performance-title"><thead><tr><th scope="col">Khóa học</th><th scope="col">Trạng thái</th><th scope="col" class="numeric">Doanh thu</th><th scope="col" class="numeric">Ghi danh</th><th scope="col" class="numeric">Nhận xét</th><th scope="col">Tiến độ trung bình</th></tr></thead><tbody>
     @foreach (var course in Model.Courses)
     {
-        <tr><td><a href="@Url.Action("Details", "Course", new { area = "Instructor", id = course.Id })"><strong>@course.Name</strong></a></td><td>@course.Status</td><td>@course.Revenue.ToString("#,##0 đ")</td><td>@course.Registrations</td><td>@course.Reviews</td><td>@(course.AverageProgress.HasValue ? course.AverageProgress.Value.ToString("0.#") + "%" : "—")</td></tr>
+        var statusClass = course.Status == "Đã xuất bản" ? "course-status-published" : course.Status == "Chờ duyệt" ? "course-status-pending" : "";
+        <tr>
+            <td class="course-name"><a href="@Url.Action("Details", "Course", new { area = "Instructor", id = course.Id })">@course.Name</a></td>
+            <td><span class="course-status @statusClass">@course.Status</span></td>
+            <td class="numeric"><strong>@course.Revenue.ToString("#,##0 đ")</strong></td>
+            <td class="numeric">@course.Registrations</td>
+            <td class="numeric">@course.Reviews</td>
+            <td>
+                @if (course.AverageProgress.HasValue)
+                {
+                    <div class="course-progress"><progress max="100" value="@course.AverageProgress.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)" aria-label="Tiến độ trung bình của @course.Name"></progress><span>@course.AverageProgress.Value.ToString("0.#")%</span></div>
+                }
+                else
+                {
+                    <span class="course-progress-empty">Chưa có dữ liệu</span>
+                }
+            </td>
+        </tr>
     }
     @if (!Model.Courses.Any()) { <tr><td colspan="6" style="text-align:center;padding:32px;">Chưa có khóa học để thống kê.</td></tr> }
     </tbody></table></div>

@@ -1,4 +1,4 @@
-﻿@model ECOLearning.Models.KhoaHoc
+@model ECOLearning.Models.KhoaHoc
 
 @{
     ViewBag.Title = "Chi tiết khóa học";
@@ -6,9 +6,39 @@
     ViewBag.ShowCourseBreadcrumb = true;
     ViewBag.BreadcrumbCourseName = Model.tenKhoaHoc;
     ViewBag.BreadcrumbCourseId = Model.maKhoaHoc;
+    bool isPublished = Model.trangThai == "DaDuyet" || Model.trangThai == "Đã xuất bản" || Model.trangThai == "Đã duyệt";
+    bool needsRevision = Model.trangThai == "TuChoi" || Model.trangThai == "Từ chối" || Model.trangThai == "Cần sửa đổi";
+    var outlineChapters = Model.ChuongHoc != null
+        ? Model.ChuongHoc.OrderBy(c => c.thuTu).ToList()
+        : new System.Collections.Generic.List<ECOLearning.Models.ChuongHoc>();
+    var unchapteredLessons = ViewBag.UnchapteredLessons as System.Collections.Generic.List<ECOLearning.Models.BaiHoc>;
+    if (unchapteredLessons != null && unchapteredLessons.Any())
+    {
+        outlineChapters.Add(new ECOLearning.Models.ChuongHoc
+        {
+            tenChuong = "Bài học không theo chương",
+            BaiHoc = unchapteredLessons
+        });
+    }
+    var outlineLessons = outlineChapters.SelectMany(c => c.BaiHoc).ToList();
 }
 
 <style>
+.course-detail-actions { gap:20px;flex-wrap:wrap; }
+.course-detail-actions > div:first-child { flex:1 1 260px !important;min-width:0; }
+.course-detail-actions > div:last-child { flex:0 1 auto;min-width:0; }
+.course-detail-actions .btn { white-space:nowrap; }
+@@media(max-width:900px) {
+    .course-detail-actions { position:static !important;align-items:stretch !important;padding:20px !important;gap:16px; }
+    .course-detail-actions > div:first-child,
+    .course-detail-actions > div:last-child { flex:1 1 100% !important;width:100%; }
+    .course-detail-actions > div:last-child { align-items:center; }
+}
+@@media(max-width:480px) {
+    .course-detail-actions > div:last-child > .btn,
+    .course-detail-actions > div:last-child > form { flex:1 1 100%; }
+    .course-detail-actions > div:last-child > form .btn { width:100%; }
+}
 .outline-resource-toggle { border:0; background:transparent; padding:4px 0; color:var(--primary); font-size:12px; cursor:pointer; }
 
 .course-outline-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 4px; }
@@ -118,7 +148,7 @@
             @{
                 string badgeClass = "badge-secondary";
                 string badgeText = "Bản nháp";
-                if (Model.trangThai == "DaDuyet" || Model.trangThai == "Đã xuất bản" || Model.trangThai == "Đã duyệt")
+                if (isPublished)
                 {
                     badgeClass = "badge-success"; badgeText = "Đã xuất bản";
                 }
@@ -126,7 +156,7 @@
                 {
                     badgeClass = "badge-warning"; badgeText = "Chờ duyệt";
                 }
-                else if (Model.trangThai == "TuChoi" || Model.trangThai == "Từ chối" || Model.trangThai == "Cần sửa đổi")
+                else if (needsRevision)
                 {
                     badgeClass = "badge-danger"; badgeText = "Cần sửa đổi";
                 }
@@ -193,7 +223,7 @@
             <div class="grid-12">
                 <div class="col-3">
                     <div class="detail-stat-pill">
-                        <div class="detail-stat-val" id="stat-lessons">@(Model.ChuongHoc != null ? Model.ChuongHoc.SelectMany(c => c.BaiHoc).Count() : 0)</div>
+                        <div class="detail-stat-val" id="stat-lessons">@outlineLessons.Count</div>
                         <div class="caption">Bài học</div>
                     </div>
                 </div>
@@ -201,7 +231,7 @@
                     <div class="detail-stat-pill">
                         <div class="detail-stat-val" id="stat-duration">
                             @{
-                                                                int totalSecs = Model.ChuongHoc != null ? Model.ChuongHoc.SelectMany(c => c.BaiHoc).Sum(b => b.thoiLuong ?? 0) : 0;
+                                int totalSecs = outlineLessons.Sum(b => b.thoiLuong ?? 0);
                                 string durationStr = totalSecs >= 3600 
                                     ? string.Format("{0}h {1:D2}m", totalSecs / 3600, (totalSecs % 3600) / 60)
                                     : string.Format("{0:D2}m {1:D2}s", totalSecs / 60, totalSecs % 60);
@@ -240,14 +270,14 @@
         <a href="@Url.Action("Index", "Curriculum", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline btn-sm">Xem đề cương</a>
     </div>
 
-    @if (Model.ChuongHoc != null && Model.ChuongHoc.Any())
+    @if (outlineChapters.Any())
     {
         int accIndex = 1;
-        foreach (var chuong in Model.ChuongHoc.OrderBy(c => c.thuTu))
+        foreach (var chuong in outlineChapters)
         {
             <div style="margin-bottom: 14px;">
                 <div class="accordion-header" onclick="toggleAccordion('acc-@accIndex')">
-                    <span>Chương @accIndex: @chuong.tenChuong (@(chuong.BaiHoc?.Count ?? 0) bài học)</span>
+                    <span>@(string.IsNullOrEmpty(chuong.maChuong) ? chuong.tenChuong : "Chương " + accIndex + ": " + chuong.tenChuong) (@(chuong.BaiHoc?.Count ?? 0) bài học)</span>
                     <span id="acc-icon-@accIndex">&#9660;</span>
                 </div>
                 <div class="accordion-body" id="acc-@accIndex">
@@ -314,17 +344,19 @@
 </div>
 
 <!-- SECTION 3: DYNAMIC ACTION BAR -->
-<div class="action-bar-card" style="position: sticky; bottom: 24px; z-index: 30; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-2xl); padding: 18px 24px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12); display: flex; align-items: center; justify-content: space-between;">
-    @if (Model.trangThai == "DaDuyet" || Model.trangThai == "Da xuất bản" || Model.trangThai == "Đã duyệt")
+<div class="action-bar-card course-detail-actions" style="position: sticky; bottom: 24px; z-index: 30; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-2xl); padding: 18px 24px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12); display: flex; align-items: center; justify-content: space-between;">
+    @if (isPublished)
     {
         <div style="flex: 1;">
             <strong style="color: var(--text-heading); font-size: 15px;">Khóa học đang hoạt động công khai</strong>
-            <div class="caption">Học viên có thể ghi danh và tham gia học bài giảng trực tuyến</div>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            @if (Model.DangKyKhoaHoc != null && Model.DangKyKhoaHoc.Any())
+            {
+                <a href="@Url.Action("CourseStudents", "Student", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline"><i class="bi bi-people" aria-hidden="true"></i> Xem học viên</a>
+            }
             <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = Model.maKhoaHoc })" class="btn btn-outline">Chỉnh sửa thông tin</a>
             <a href="@Url.Action("Index", "Analytics", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline">Báo cáo thống kê</a>
-            <a href="@Url.Action("Index", "Student", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-primary">Quản lý học viên (840)</a>
         </div>
     }
     else if (Model.trangThai == "ChoDuyet" || Model.trangThai == "Chờ duyệt")
@@ -336,7 +368,11 @@
                 <div class="caption">Hệ thống tạm khóa tính năng chỉnh sửa nội dung trong thời gian chờ xét duyệt</div>
             </div>
         </div>
-        <div style="display: flex; gap: 10px; align-items: center;">
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            @if (Model.DangKyKhoaHoc != null && Model.DangKyKhoaHoc.Any())
+            {
+                <a href="@Url.Action("CourseStudents", "Student", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline"><i class="bi bi-people" aria-hidden="true"></i> Xem học viên</a>
+            }
             <form action="@Url.Action("CancelApproval", "Course", new { area = "Instructor" })" method="post" style="display:inline;">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="id" value="@Model.maKhoaHoc" />
@@ -356,6 +392,10 @@
             </div>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            @if (Model.DangKyKhoaHoc != null && Model.DangKyKhoaHoc.Any())
+            {
+                <a href="@Url.Action("CourseStudents", "Student", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline"><i class="bi bi-people" aria-hidden="true"></i> Xem học viên</a>
+            }
             @if (isTempLocked)
             {
                 <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = Model.maKhoaHoc })" class="btn btn-outline">Chỉnh sửa nội dung</a>
@@ -366,17 +406,21 @@
     else
     {
         <div style="flex: 1;">
-            <strong style="color: var(--text-heading); font-size: 15px;">Khóa học ở trạng thái Bản nháp</strong>
-            <div class="caption">Vui lòng hoàn thiện video bài giảng trước khi gửi đăng ký duyệt xuất bản</div>
+            <strong style="color: var(--text-heading); font-size: 15px;">@(needsRevision ? "Khóa học cần sửa đổi" : "Khóa học ở trạng thái Bản nháp")</strong>
+            <div class="caption">@(needsRevision ? "Vui lòng chỉnh sửa khóa học theo yêu cầu kiểm duyệt trước khi gửi xét duyệt lại" : "Vui lòng hoàn thiện video bài giảng trước khi gửi đăng ký duyệt xuất bản")</div>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            @if (Model.DangKyKhoaHoc != null && Model.DangKyKhoaHoc.Any())
+            {
+                <a href="@Url.Action("CourseStudents", "Student", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline"><i class="bi bi-people" aria-hidden="true"></i> Xem học viên</a>
+            }
             <button class="btn btn-danger" onclick="instructorNotice('Tính năng xóa đang phát triển!');">Xóa khóa học</button>
             <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = Model.maKhoaHoc })" class="btn btn-outline">Chỉnh sửa thông tin</a>
             
             <form action="@Url.Action("SubmitForApproval", "Course", new { area = "Instructor" })" method="post" style="display:inline;">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="id" value="@Model.maKhoaHoc" />
-                <button type="submit" class="btn btn-primary" onclick="return instructorConfirmSubmit(this, 'Gửi duyệt khóa học này?');">Gửi xét duyệt ngay</button>
+                <button type="submit" class="btn btn-primary" onclick="return instructorConfirmSubmit(this, 'Gửi duyệt khóa học này?');">@(needsRevision ? "Gửi xét duyệt lại" : "Gửi xét duyệt ngay")</button>
             </form>
         </div>
     }

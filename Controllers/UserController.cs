@@ -40,10 +40,62 @@ namespace ECOLearning.Controllers
                 }
             }
 
+            var viewModel = BuildProfile(targetUserId);
+            if (viewModel == null)
+            {
+                return HttpNotFound("Không tìm thấy thông tin giảng viên.");
+            }
+
+            return View(viewModel);
+        }
+
+        // GET: /User/Courses/{id}?sort=... — toàn bộ khóa học của một giáo viên (nút "Xem tất cả" ở trang hồ sơ)
+        public ActionResult Courses(int? id, string sort)
+        {
+            if (!User.Identity.IsAuthenticated && Session["UserId"] == null)
+            {
+                return RedirectToAction("Login", "Account", new { returnUrl = Request.RawUrl });
+            }
+
+            if (!id.HasValue || id.Value <= 0)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            var viewModel = BuildProfile(id.Value);
+            if (viewModel == null)
+            {
+                return HttpNotFound("Không tìm thấy thông tin giảng viên.");
+            }
+
+            switch (sort)
+            {
+                case "danh-gia":
+                    viewModel.DanhSachKhoaHoc = viewModel.DanhSachKhoaHoc
+                        .OrderByDescending(k => k.DiemDanhGia).ThenByDescending(k => k.SoDanhGia).ToList();
+                    break;
+                case "hoc-vien":
+                    viewModel.DanhSachKhoaHoc = viewModel.DanhSachKhoaHoc.OrderByDescending(k => k.SoHocVien).ToList();
+                    break;
+                case "gia-tang":
+                    viewModel.DanhSachKhoaHoc = viewModel.DanhSachKhoaHoc.OrderBy(k => k.GiaHienTai).ToList();
+                    break;
+                default:
+                    sort = "mac-dinh";
+                    break;
+            }
+            ViewBag.Sort = sort;
+
+            return View(viewModel);
+        }
+
+        /// <summary>Thông tin hồ sơ + thống kê + danh sách khóa học của một giáo viên; null nếu không có người dùng.</summary>
+        private InstructorProfileViewModel BuildProfile(int targetUserId)
+        {
             var user = db.NguoiDung.Find(targetUserId);
             if (user == null)
             {
-                return HttpNotFound("Không tìm thấy thông tin giảng viên.");
+                return null;
             }
 
             // Truy vấn thông tin chuyên môn từ bảng DangKyGiaoVien (chỉ lấy các trường trong CSDL)
@@ -85,13 +137,11 @@ namespace ECOLearning.Controllers
                 System.Diagnostics.Debug.WriteLine("Fetch DangKyGiaoVien Error: " + ex.Message);
             }
 
-            // Truy vấn danh sách khóa học của giáo viên
+            // Truy vấn danh sách khóa học của giáo viên. Không Include(DanhGiaKhoaHoc / DangKyKhoaHoc): nạp cùng lúc
+            // 2 danh sách con sinh truy vấn UNION ALL cần nhiều bộ nhớ, SQL Server có thể bắt chờ tới 25 giây.
             var courses = db.KhoaHoc
                 .Include(k => k.DanhMuc)
-                .Include(k => k.NguoiDung)
-                .Include(k => k.DanhGiaKhoaHoc)
-                .Include(k => k.DangKyKhoaHoc)
-                .Where(k => k.maGiaoVien == targetUserId && 
+                .Where(k => k.maGiaoVien == targetUserId &&
                            (k.trangThai == "Đã xuất bản" || k.trangThai == "Đã duyệt" || k.trangThai == "Active"))
                 .OrderByDescending(k => k.maKhoaHoc)
                 .ToList();
@@ -101,6 +151,8 @@ namespace ECOLearning.Controllers
             int totalStudents = 0;
             int totalReviews = 0;
             double avgRating = 0.0;
+            var enrollCounts = new Dictionary<string, int>();
+            var ratingStats = new Dictionary<string, Tuple<int, double>>();
 
             if (courseIds.Any())
             {
@@ -111,23 +163,44 @@ namespace ECOLearning.Controllers
                     .Distinct()
                     .Count();
 
-                // 2. Tổng lượt đánh giá từ học viên
-                var reviews = db.DanhGiaKhoaHoc
-                    .Where(dg => courseIds.Contains(dg.maKhoaHoc))
-                    .ToList();
+                // Số học viên và lượt / điểm đánh giá của từng khóa: GROUP BY
+                enrollCounts = db.DangKyKhoaHoc
+                    .Where(dk => courseIds.Contains(dk.maKhoaHoc))
+                    .GroupBy(dk => dk.maKhoaHoc)
+                    .Select(g => new { MaKhoaHoc = g.Key, SoHocVien = g.Count() })
+                    .ToDictionary(x => x.MaKhoaHoc, x => x.SoHocVien);
 
-                totalReviews = reviews.Count;
+                ratingStats = db.DanhGiaKhoaHoc
+                    .Where(dg => courseIds.Contains(dg.maKhoaHoc))
+                    .GroupBy(dg => dg.maKhoaHoc)
+                    .Select(g => new { MaKhoaHoc = g.Key, SoDanhGia = g.Count(), Diem = g.Average(dg => (double)dg.soSao) })
+                    .ToList()
+                    .ToDictionary(x => x.MaKhoaHoc, x => Tuple.Create(x.SoDanhGia, x.Diem));
+
+                // 2. Tổng lượt đánh giá từ học viên và điểm trung bình trên mọi lượt đánh giá
+                totalReviews = ratingStats.Values.Sum(r => r.Item1);
                 if (totalReviews > 0)
                 {
-                    avgRating = Math.Round(reviews.Average(dg => (double)dg.soSao), 1);
-                }
-                else
-                {
-                    avgRating = 0.0;
+                    avgRating = Math.Round(ratingStats.Values.Sum(r => r.Item1 * r.Item2) / totalReviews, 1);
                 }
             }
 
-            var viewModel = new InstructorProfileViewModel
+            var courseItems = courses.Select(k =>
+            {
+                int soHocVien;
+                enrollCounts.TryGetValue(k.maKhoaHoc, out soHocVien);
+                Tuple<int, double> danhGia;
+                ratingStats.TryGetValue(k.maKhoaHoc, out danhGia);
+                return new KhoaHocCuaGiaoVienItem
+                {
+                    Course = k,
+                    SoHocVien = soHocVien,
+                    SoDanhGia = danhGia != null ? danhGia.Item1 : 0,
+                    DiemDanhGia = danhGia != null ? Math.Round(danhGia.Item2, 1) : 0
+                };
+            }).ToList();
+
+            return new InstructorProfileViewModel
             {
                 MaNguoiDung = user.maNguoiDung,
                 HoTen = user.hoTen,
@@ -155,13 +228,11 @@ namespace ECOLearning.Controllers
                 TongSoHocVien = totalStudents,
                 TongLuotDanhGia = totalReviews,
                 DiemDanhGiaTrungBinh = avgRating,
-                TongSoKhoaHoc = courses != null ? courses.Count() : 0,
+                TongSoKhoaHoc = courses.Count,
 
                 // Danh sách khóa học của giáo viên
-                DanhSachKhoaHoc = courses
+                DanhSachKhoaHoc = courseItems
             };
-
-            return View(viewModel);
         }
 
         // GET: /User/Details/{id} (Alias)

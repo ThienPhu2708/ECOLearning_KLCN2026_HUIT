@@ -173,6 +173,7 @@ do vi phạm: `Tạm khóa`, `Khóa vĩnh viễn`. Khóa học bị khóa ẩn k
 | `Database/Migrations/002_BaoCaoViPham.sql` | Tạo bảng `BaoCaoViPham`, `XuLyViPham`. |
 | `Database/Migrations/003_BaoCaoViPham_BaiHoc.sql` | Thêm cột `BaoCaoViPham.maBaiHoc`. |
 | `Database/Migrations/004_XuLyViPham_TraoDoi.sql` | Thêm `XuLyViPham.trangThaiXuLy`, bảng `PhanHoiViPham`. |
+| `Database/Migrations/005_GoiY_LocCongTac.sql` | Gợi ý khóa học (Item-based CF): bảng `TuongTacKhoaHoc`, `course_similarity`, `GoiY_TrongSo`, view `vw_GoiY_TuongTac` / `vw_GoiY_TinHieu`, `fn_GoiY_KhoaHocDuocGoiY`, `sp_GoiY_KhoaHocTuongTu`, `sp_GoiY_KhoaHocChoNguoiDung`, `sp_GoiY_TinhGoiYChoNguoiDung` (nút "Gợi ý khóa học": tính lại cho một người từ ma trận đã lưu). |
 
 Chưa chạy 002–003 thì trang Báo cáo vi phạm hiện hướng dẫn chạy script; chưa chạy 004 thì phần trao đổi giáo viên ↔ Admin được ẩn, các chức năng khác vẫn chạy.
 
@@ -219,7 +220,8 @@ Chưa chạy 002–003 thì trang Báo cáo vi phạm hiện hướng dẫn ch�
 - **Quản lý người dùng** (khóa/mở tài khoản, phân quyền) của Admin chưa xây dựng.
 - **Dashboard Admin:** chỉ số `+22.8%` vẫn là số cố định; thẻ "Khóa học hoạt động" chưa đếm trạng thái `Đã duyệt`; điều kiện lọc doanh thu khác trang Báo cáo hệ thống (có thêm `Đã duyệt`).
 - Admin không đọc lại CSDL mỗi request nên tài khoản bị khóa giữa phiên vẫn dùng tiếp đến khi hết Session; `Controllers/AdminController.cs` dùng `[Authorize(Roles = "Admin")]` không khớp cơ chế Session.
-- Trigger gợi ý khóa học chỉ nhận trạng thái `Đã xuất bản` trong khi dữ liệu cũ dùng `Đã duyệt`; chức năng gợi ý khóa học chưa có ở phía ứng dụng.
+- Trigger gợi ý khóa học chỉ nhận trạng thái `Đã xuất bản` trong khi dữ liệu cũ dùng `Đã duyệt` (job gợi ý chỉ ghi khóa `Đã xuất bản`).
+- **Gợi ý khóa học (lọc cộng tác):** đã có engine Python + job định kỳ trong `Recommender/` (xem `Recommender/README.md`) và migration 005; đã có giao diện mục "Khóa học dành riêng cho bạn" (trang chủ) và trang **Khóa học gợi ý** `/Recommendation` (nút "Xem gợi ý cá nhân" trên banner); **chưa làm** mục "Khóa học tương tự" ở trang chi tiết đã ghi lượt xem (trang chi tiết), chưa ghi click / thích vào `TuongTacKhoaHoc`. Trang gợi ý chỉ hiện kết quả lọc cộng tác (hằng số `RecommendationService.HienThiKhoaPhoBien`).
 - Trang **Đề cương** (Curriculum) của giáo viên chưa chặn sửa khi khóa học bị khóa vĩnh viễn.
 - Mật khẩu các tài khoản Admin / Marketing / demo đang lưu dạng chữ thường (hệ thống vẫn chấp nhận để tương thích); mật khẩu ứng dụng Gmail nằm trong `Web.config`.
 - "Lượt ghi danh" ở Báo cáo thống kê của giáo viên là **số đăng ký mới trong kỳ đang chọn**, không phải tổng học viên.

@@ -4,11 +4,15 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Models;
+using ECOLearning.Services;
 
 namespace ECOLearning.Controllers
 {
     public class HomeController : Controller
     {
+        // Mục gợi ý trang chủ là slider 5 khóa một lượt
+        private const int SoGoiYTrangChu = 10;
+
         private QL_HETHONG_CUNGCAP_KHOAHOCEntities1 db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1();
 
         // GET: Trang chủ (Hero banner, Khóa học nổi bật, Gợi ý UC7)
@@ -20,12 +24,23 @@ namespace ECOLearning.Controllers
             {
                 if (isLoggedIn)
                 {
+                    // Bỏ khóa người dùng đã đăng ký (khóa 0đ vừa bấm "Đăng ký học" hoặc khóa đã mua):
+                    // đã sở hữu thì vào học ở "Khóa học của tôi", không quảng bá lại ở trang chủ
+                    int userId = (Session["UserId"] as int?) ?? 0;
                     courses = db.KhoaHoc
                         .Include(k => k.NguoiDung)
                         .Include(k => k.DanhMuc)
                         .Include(k => k.DanhGiaKhoaHoc)
                         .Where(k => k.trangThai == "Đã xuất bản" || k.trangThai == "Đã duyệt" || k.trangThai == "Active")
+                        .Where(k => !db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == k.maKhoaHoc && d.maHocVien == userId))
                         .ToList();
+
+                    // Số học viên mỗi khóa: một truy vấn GROUP BY nhẹ. Không Include(DangKyKhoaHoc) vì nạp cùng lúc
+                    // 2 danh sách con sinh truy vấn UNION ALL cần nhiều bộ nhớ, SQL Server có thể bắt chờ tới 25 giây.
+                    ViewBag.EnrollCounts = db.DangKyKhoaHoc
+                        .GroupBy(d => d.maKhoaHoc)
+                        .Select(g => new { MaKhoaHoc = g.Key, SoHocVien = g.Count() })
+                        .ToDictionary(x => x.MaKhoaHoc, x => x.SoHocVien);
 
                     // Lấy danh sách danh mục thực sự có trong CSDL SQL Server
                     ViewBag.Categories = db.DanhMuc
@@ -38,18 +53,52 @@ namespace ECOLearning.Controllers
                 System.Diagnostics.Debug.WriteLine("Fetch home data error: " + ex.Message);
             }
 
+            // UC7: "Khóa học dành riêng cho bạn"
+            //  1. "Vì bạn đã xem X": khóa tương tự nhất với khóa vừa xem, đọc thẳng ma trận course_similarity
+            //     nên đổi ngay sau mỗi lần mở trang chi tiết.
+            //  2. Chưa có khóa mốc dùng được: gợi ý tổng hợp từ toàn bộ lịch sử đã tính sẵn (chỉ đọc).
+            if (isLoggedIn)
+            {
+                try
+                {
+                    var recommendationService = new RecommendationService(db);
+                    if (recommendationService.IsInstalled())
+                    {
+                        int currentUserId = (Session["UserId"] as int?) ?? 0;
+                        var theoKhoaVuaXem = recommendationService.GetBecauseYouViewed(currentUserId, SoGoiYTrangChu);
+                        bool coKhoaMoc = theoKhoaVuaXem != null && theoKhoaVuaXem.Items.Count > 0;
+                        if (coKhoaMoc)
+                        {
+                            ViewBag.RecommendationAnchor = theoKhoaVuaXem;
+                        }
+                        List<ECOLearning.ViewModels.RecommendedCourseViewModel> recommendations = coKhoaMoc
+                            ? theoKhoaVuaXem.Items
+                            : recommendationService.GetSaved(currentUserId, SoGoiYTrangChu);
+                        ViewBag.Recommendations = recommendations;
+                        if (recommendations.Count == 0)
+                        {
+                            ViewBag.RecommendationInteractedCount = recommendationService.CountInteractedCourses(currentUserId);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("Fetch recommendations error: " + ex.Message);
+                }
+            }
+
             return View(courses);
         }
 
         public ActionResult About()
         {
-            ViewBag.Message = "ECO Learning Platform";
+            ViewBag.Message = "E-Learning Platform";
             return View();
         }
 
         public ActionResult Contact()
         {
-            ViewBag.Message = "Contact ECO Learning Support";
+            ViewBag.Message = "Contact E-Learning Support";
             return View();
         }
 

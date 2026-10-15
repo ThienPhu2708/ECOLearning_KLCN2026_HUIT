@@ -1,0 +1,79 @@
+@model List<ECOLearning.ViewModels.ExploreCategoryViewModel>
+@* Menu "Khám phá" 3 tầng: Danh mục → Cấp độ → Khóa học (NavigationController.ExploreMenu). Xử lý hover: assets/js/explore-menu.js *@
+
+<div class="explore-panel">
+    <!-- Tầng 1: Danh mục -->
+    <div class="explore-col">
+        <div class="explore-quick">
+            <a class="explore-row" href="@Url.Action("Index", "Course", new { area = "" })">
+                <i class="bi bi-grid"></i><span class="explore-label">Tất cả khóa học</span>
+            </a>
+        </div>
+        <div class="explore-heading">Khám phá theo danh mục</div>
+        @for (int i = 0; i < Model.Count; i++)
+        {
+            var dm = Model[i];
+            <a class="explore-row" data-explore-cat="c@(i)" href="@Url.Action("Index", "Course", new { area = "", category = dm.MaDanhMuc })">
+                <span class="explore-label">@dm.TenDanhMuc</span>
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        }
+        @if (Model.Count == 0)
+        {
+            <div class="explore-empty">Chưa có danh mục khóa học.</div>
+        }
+    </div>
+
+    <!-- Tầng 2: Cấp độ của danh mục đang chọn -->
+    <div class="explore-col explore-col-2">
+        @for (int i = 0; i < Model.Count; i++)
+        {
+            var dm = Model[i];
+            <div class="explore-sub" data-explore-panel="c@(i)">
+                <div class="explore-heading">@dm.TenDanhMuc</div>
+                @for (int j = 0; j < dm.CapDo.Count; j++)
+                {
+                    var cd = dm.CapDo[j];
+                    <a class="explore-row" data-explore-level="c@(i)-l@(j)" href="@Url.Action("Index", "Course", new { area = "", category = dm.MaDanhMuc, level = cd.CapDo })">
+                        <span class="explore-label">@cd.TenHienThi</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                }
+                @if (dm.CapDo.Count == 0)
+                {
+                    @* Trống khi danh mục chưa có khóa nào, hoặc người dùng đã sở hữu hết khóa trong danh mục *@
+                    <div class="explore-empty">Không có khóa học mới trong danh mục này.</div>
+                }
+                else
+                {
+                    <a class="explore-all" href="@Url.Action("Index", "Course", new { area = "", category = dm.MaDanhMuc })">Xem tất cả khóa học <i class="bi bi-arrow-right"></i></a>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Tầng 3: Khóa học theo danh mục + cấp độ -->
+    <div class="explore-col explore-col-3">
+        @for (int i = 0; i < Model.Count; i++)
+        {
+            for (int j = 0; j < Model[i].CapDo.Count; j++)
+            {
+                var dm = Model[i];
+                var cd = dm.CapDo[j];
+                <div class="explore-sub" data-explore-panel="c@(i)-l@(j)">
+                    <div class="explore-heading">@cd.TenHienThi</div>
+                    @foreach (var kh in cd.KhoaHoc)
+                    {
+                        <a class="explore-row explore-course" href="@Url.Action("Details", "Course", new { area = "", id = kh.MaKhoaHoc })" target="_blank" rel="noopener">
+                            <span class="explore-label" title="@kh.TenKhoaHoc">@kh.TenKhoaHoc</span>
+                        </a>
+                    }
+                    @if (cd.SoKhoaHoc > cd.KhoaHoc.Count)
+                    {
+                        <a class="explore-all" href="@Url.Action("Index", "Course", new { area = "", category = dm.MaDanhMuc, level = cd.CapDo })">Xem tất cả khóa học <i class="bi bi-arrow-right"></i></a>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>

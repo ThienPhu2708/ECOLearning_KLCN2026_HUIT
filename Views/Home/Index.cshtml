@@ -1,9 +1,12 @@
 @model List<ECOLearning.Models.KhoaHoc>
 @{
     bool isLoggedIn = User.Identity.IsAuthenticated || Session["UserId"] != null;
-    ViewBag.Title = isLoggedIn ? "Trang Chủ - Nền tảng Đào tạo Trực tuyến" : "Chào mừng đến với ECOLearning";
+    ViewBag.Title = isLoggedIn ? "Trang Chủ - Nền tảng Đào tạo Trực tuyến" : "Chào mừng đến với E-Learning";
     var courses = Model ?? new List<ECOLearning.Models.KhoaHoc>();
     var categories = ViewBag.Categories as List<ECOLearning.Models.DanhMuc> ?? new List<ECOLearning.Models.DanhMuc>();
+    var enrollCounts = ViewBag.EnrollCounts as Dictionary<string, int> ?? new Dictionary<string, int>();
+    var recommendations = ViewBag.Recommendations as List<ECOLearning.ViewModels.RecommendedCourseViewModel> ?? new List<ECOLearning.ViewModels.RecommendedCourseViewModel>();
+    var recommendationAnchor = ViewBag.RecommendationAnchor as ECOLearning.ViewModels.GoiYTheoKhoaVuaXemViewModel;
 
     var iconStyles = new[] {
         new { Icon = "bi-laptop", Bg = "#EEF2FF", Color = "#434CE8" },
@@ -16,95 +19,8 @@
     };
 }
 
-<!-- Hero Section -->
-<section class="hero-section" style="margin: 0 !important; padding-top: 48px; padding-bottom: 72px; background: #FFFFFF; border-bottom: 1px solid var(--border-color, #E2E8F0); position: relative; overflow: hidden;">
-    <div class="safe-container">
-        <div style="display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 48px; align-items: center;">
-            <div>
-                <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background-color: var(--primary-light, #EEF2FF); color: var(--primary, #434CE8); border: 1px solid #C7D2FE; font-size: 13px; font-weight: 700; border-radius: 9999px; margin-bottom: 20px; letter-spacing: 0.05em;">
-                    @if (isLoggedIn)
-                    {
-                        <text><i class="bi bi-stars"></i> LEARNING, MADE PERSONAL</text>
-                    }
-                    else
-                    {
-                        <text><i class="bi bi-shield-check"></i> NỀN TẢNG ĐÀO TẠO TRỰC TUYẾN CHUẨN MỰC</text>
-                    }
-                </div>
-                <h1 style="font-size: var(--fs-h1, 40px); line-height: 48px; font-weight: 800; color: var(--text-heading, #0F172A); margin-bottom: 20px;">
-                    @if (isLoggedIn)
-                    {
-                        <span>Tìm kiếm khóa học phù hợp cho lộ trình phát triển của bạn</span>
-                    }
-                    else
-                    {
-                        <span>Khởi đầu hành trình chinh phục tri thức cùng ECOLearning</span>
-                    }
-                </h1>
-                <p style="font-size: 17px; line-height: 28px; color: var(--text-secondary, #475569); margin-bottom: 32px; max-width: 520px;">
-                    @if (isLoggedIn)
-                    {
-                        <span>Khám phá hàng trăm khóa học trực tuyến thực chiến từ các chuyên gia hàng đầu. Hệ thống tự động đề xuất dựa trên sở thích và định hướng phát triển sự nghiệp của bạn.</span>
-                    }
-                    else
-                    {
-                        <span>Hệ thống đào tạo trực tuyến chuẩn mực kết hợp lý thuyết và dự án thực tế. Đăng nhập ngay hôm nay để truy cập trang chủ, mở khóa hàng trăm khóa học chất lượng cao và đồng hành cùng chuyên gia.</span>
-                    }
-                </p>
-                <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-                    @if (isLoggedIn)
-                    {
-                        <a href="#categories-section" class="btn btn-primary btn-lg" style="text-decoration: none;">Khám phá khóa học <i class="bi bi-arrow-right"></i></a>
-                        <a href="#recommendations" class="btn btn-outline btn-lg" style="text-decoration: none;">Xem gợi ý cá nhân</a>
-                    }
-                    else
-                    {
-                        <a href="@Url.Action("Login", "Account", new { area = "", mode = "login" })" class="btn btn-primary btn-lg" style="text-decoration: none; padding: 14px 28px; font-weight: 700; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 14px rgba(67, 76, 232, 0.35);">
-                            <i class="bi bi-box-arrow-in-right" style="font-size: 18px;"></i> Đăng nhập hệ thống
-                        </a>
-                        <a href="@Url.Action("Login", "Account", new { area = "", mode = "register" })" class="btn btn-outline btn-lg" style="text-decoration: none; padding: 14px 28px; font-weight: 700; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px;">
-                            <i class="bi bi-person-plus" style="font-size: 18px;"></i> Đăng ký tài khoản mới
-                        </a>
-                    }
-                </div>
-            </div>
-
-            <div style="position: relative; background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%); border-radius: var(--radius-3xl, 24px); padding: 30px; box-shadow: 0 20px 40px -15px rgba(67, 76, 232, 0.15); min-height: 380px; display: flex; align-items: center; justify-content: center;">
-                <img src="@Url.Content("~/assets/images/banners/hero_section.jpg")"
-                alt="E-Learning Illustration"
-                style="width: 100%; max-width: 440px; border-radius: 18px; object-fit: cover; box-shadow: var(--shadow-card);" />
-
-                @if (isLoggedIn)
-                {
-                    <!-- Floating Recommendation Card -->
-                    <div style="position: absolute; bottom: 24px; left: 24px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid var(--border-color); padding: 16px 20px; border-radius: var(--radius-2xl); box-shadow: var(--shadow-modal); display: flex; align-items: center; gap: 14px;">
-                        <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--status-success-bg, #ECFDF5); color: var(--status-success, #10B981); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px;">
-                            98%
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; font-weight: 700; color: var(--primary, #434CE8); letter-spacing: 0.05em; text-transform: uppercase;">GỢI Ý TỐT NHẤT</div>
-                            <div style="font-size: 14px; font-weight: 700; color: var(--text-heading, #0F172A);">Web Development Masterclass</div>
-                            <div style="font-size: 12px; color: var(--text-secondary, #64748B);">Dựa trên lịch sử quan tâm của bạn</div>
-                        </div>
-                    </div>
-                }
-                else
-                {
-                    <!-- Floating Welcome Card -->
-                    <div style="position: absolute; bottom: 24px; left: 24px; background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(10px); border: 1px solid #C7D2FE; padding: 14px 20px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(67, 76, 232, 0.15); display: flex; align-items: center; gap: 14px;">
-                        <div style="width: 42px; height: 42px; border-radius: 12px; background: #EEF2FF; color: #434CE8; display: flex; align-items: center; justify-content: center; font-size: 20px;">
-                            <i class="bi bi-shield-lock-fill"></i>
-                        </div>
-                        <div>
-                            <div style="font-size: 13px; font-weight: 700; color: #0F172A;">Hệ thống bảo mật</div>
-                            <div style="font-size: 12px; color: #64748B;">Đăng nhập để vào trang chủ & xem khóa học</div>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-</section>
+<!-- Hero Section: carousel 4 banner (Views/Home/_HeroCarousel.cshtml) -->
+@Html.Partial("_HeroCarousel")
 
 @if (isLoggedIn)
 {
@@ -228,112 +144,229 @@ cursor: not-allowed;
 </div>
 </section>
 
-<!-- Section UC7: Khóa Học Dành Riêng Cho Bạn (Gợi Ý Cá Nhân Hóa) -->
+    <style>
+        /* Slider khóa học (gợi ý + nổi bật): 5 thẻ một lượt, mỗi lần trượt dời (5 - 1) thẻ để thẻ cuối lượt trước thành thẻ đầu lượt sau */
+        .course-slider {
+            --per-view: 5;
+            --slide-gap: 18px;
+            overflow: hidden;
+            /* chừa chỗ cho hiệu ứng nâng thẻ và bóng đổ khi hover, không bị cắt */
+            padding: 8px 4px 16px;
+            margin: -8px -4px -16px;
+        }
+
+        .recommend-anchor {
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .recommend-anchor a {
+            color: var(--primary, #434CE8);
+            font-weight: 700;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .recommend-anchor a:hover {
+            color: var(--primary-hover, #3730A3);
+        }
+
+        .course-slider-nav[hidden] {
+            display: none !important;
+        }
+
+        .course-slider-track {
+            display: flex;
+            gap: var(--slide-gap);
+            transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .course-slider {
+            --shown: var(--per-view);
+        }
+
+        /* Ít khóa hơn số thẻ một lượt (is-fill, --count = số khóa): thẻ giãn ra lấp đầy hàng */
+        .course-slider.is-fill {
+            --shown: min(var(--per-view), var(--count));
+        }
+
+        .course-slide {
+            flex: 0 0 calc((100% - (var(--shown) - 1) * var(--slide-gap)) / var(--shown));
+            min-width: 0;
+            display: flex;
+        }
+
+        .course-slide .course-card {
+            width: 100%;
+        }
+
+        /* Thẻ thu nhỏ cho vừa 5 khóa một hàng */
+        .course-slider .course-body {
+            padding: 14px;
+        }
+
+        .course-slider .course-category {
+            margin-bottom: 6px;
+        }
+
+        .course-slider .course-category .caption {
+            font-size: 11.5px;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .course-slider .course-title {
+            font-size: 15px;
+            line-height: 21px;
+            min-height: 42px;
+            margin-bottom: 6px;
+        }
+
+        .course-slider .course-instructor {
+            font-size: 12.5px;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+
+        .course-slider .course-card-outcomes {
+            margin: 4px 0 8px 0 !important;
+        }
+
+        .course-slider .course-rating {
+            margin-bottom: 10px;
+            gap: 4px;
+            font-size: 11px;
+        }
+
+        .course-slider .course-thumb .badge {
+            top: 8px !important;
+            left: 8px !important;
+            font-size: 10.5px;
+            padding: 3px 8px;
+        }
+
+        .course-slider .course-footer {
+            padding-top: 10px;
+            gap: 6px;
+        }
+
+        .course-slider .course-pricing {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0;
+            min-width: 0;
+        }
+
+        .course-slider .price-current {
+            font-size: 15px;
+        }
+
+        .course-slider .price-original {
+            font-size: 11.5px;
+        }
+
+        .course-slider .course-footer .btn {
+            height: 30px;
+            padding: 0 10px;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        /* Thẻ giãn rộng: ảnh bìa không cao quá (cắt bớt theo object-fit: cover) */
+        .course-slider.is-fill .course-thumb {
+            max-height: 240px;
+        }
+
+        /* Từ 3 khóa trở xuống: thẻ đủ rộng nên trả chữ / nút về cỡ thường của thẻ khóa học */
+        .course-slider.is-roomy .course-body { padding: 20px; }
+        .course-slider.is-roomy .course-category { margin-bottom: 10px; }
+        .course-slider.is-roomy .course-category .caption { font-size: 12px; }
+        .course-slider.is-roomy .course-title { font-size: var(--fs-h3); line-height: 24px; min-height: 48px; margin-bottom: 8px; }
+        .course-slider.is-roomy .course-instructor { font-size: var(--fs-body2); margin-bottom: 12px; }
+        .course-slider.is-roomy .course-rating { margin-bottom: 16px; font-size: inherit; }
+        .course-slider.is-roomy .course-thumb .badge { top: 12px !important; left: 12px !important; font-size: 12px; padding: 4px 10px; }
+        .course-slider.is-roomy .course-footer { padding-top: 14px; }
+        .course-slider.is-roomy .course-pricing { flex-direction: row; align-items: baseline; gap: 8px; }
+        .course-slider.is-roomy .price-current { font-size: 18px; }
+        .course-slider.is-roomy .price-original { font-size: 13px; }
+        .course-slider.is-roomy .course-footer .btn { height: 36px; padding: 0 16px; font-size: var(--fs-caption); }
+
+        /* Chỉ 1 khóa: thẻ nằm ngang (ảnh trái, nội dung phải) thay vì một ảnh bìa rộng cả hàng */
+        .course-slider.is-single .course-card { flex-direction: row; }
+        .course-slider.is-single .course-thumb { width: 42%; flex-shrink: 0; aspect-ratio: auto; max-height: none; min-height: 240px; }
+
+        @@media (max-width: 1200px) {
+            .course-slider { --per-view: 3; }
+        }
+
+        @@media (max-width: 768px) {
+            .course-slider { --per-view: 2; --slide-gap: 14px; }
+        }
+
+        @@media (max-width: 480px) {
+            .course-slider { --per-view: 1; }
+            .course-slider.is-single .course-card { flex-direction: column; }
+            .course-slider.is-single .course-thumb { width: 100%; aspect-ratio: 16 / 9; min-height: 0; }
+        }
+    </style>
+
+<!-- Section UC7: Khóa Học Dành Riêng Cho Bạn (Gợi Ý Cá Nhân Hóa bằng lọc cộng tác, xem RecommendationService) -->
 <section id="recommendations" style="padding: 60px 0; background: var(--bg-surface); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
     <div class="safe-container">
         <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px;">
             <div>
                 <h2 class="h2" style="margin-top: 8px;">Khóa học dành riêng cho bạn</h2>
-                <p class="body-2" style="color: var(--text-secondary);">Gợi ý cá nhân hóa dựa trên lịch sử xem, tìm kiếm và kỹ năng cần trang bị</p>
-            </div>
-            <a href="#courses-section" class="btn btn-outline btn-sm" style="text-decoration: none;">Xem tất cả khóa học</a>
-        </div>
-
-        @if (courses != null && courses.Count > 0)
-        {
-            <div class="grid-12">
-                @foreach (var course in courses.Take(3))
+                @if (recommendationAnchor != null)
                 {
-                    string thumbUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
-                    string teacherName = course.NguoiDung != null ? course.NguoiDung.hoTen : "ThS. Nguyễn Văn An";
-                    string categoryName = course.DanhMuc != null ? course.DanhMuc.tenDanhMuc : "Lập trình Web & CNTT";
-                    decimal actualPrice = course.giaKhuyenMai.HasValue ? course.giaKhuyenMai.Value : course.giaBan;
-                    decimal oldPrice = course.giaBan;
-                    bool hasRatings = course.DanhGiaKhoaHoc != null && course.DanhGiaKhoaHoc.Count > 0;
-                    int enrollCount = course.DangKyKhoaHoc != null ? course.DangKyKhoaHoc.Count : 0;
-                    double avgStars = hasRatings ? course.DanhGiaKhoaHoc.Average(d => d.soSao) : 0;
-                    bool isTopTrending = enrollCount >= 3;
-                    bool isHighRated = hasRatings && avgStars >= 4.5;
-
-
-                    <div class="col-4">
-                        <div class="course-card" onclick="window.location.href='@Url.Action("Details", "Course", new { id = course.maKhoaHoc })'" style="cursor: pointer;">
-                            <div class="course-thumb">
-                                <img src="@thumbUrl" alt="@course.tenKhoaHoc" />
-                                @if (isTopTrending)
-                                {
-                                    <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;"><i class="bi bi-fire me-1"></i> Top Trending</span>
-                                }
-                                else if (isHighRated)
-                                {
-                                    <span class="badge badge-success" style="position: absolute; top: 12px; left: 12px; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;"><i class="bi bi-star-fill me-1"></i> Đánh giá cao</span>
-                                }
-                            </div>
-                            <div class="course-body">
-                                <div class="course-category">
-                                    <span class="caption" style="color: var(--primary); font-weight: 700;">@categoryName</span>
-                                </div>
-                                <h3 class="course-title" title="@course.tenKhoaHoc">@course.tenKhoaHoc</h3>
-                                <div class="course-instructor">
-                                    <i class="bi bi-person me-1"></i>
-                                    @teacherName
-                                </div>
-
-                                @if (!string.IsNullOrWhiteSpace(course.mucTieuDauRa))
-                                {
-                                    var cardOutcomes = course.mucTieuDauRa
-                                        .Split(new[] { "\r\n", "\r", "\n", ";", "," }, StringSplitOptions.RemoveEmptyEntries)
-                                        .Select(s => s.Trim().TrimStart('-', '•', '*').Trim())
-                                        .Where(s => !string.IsNullOrEmpty(s))
-                                        .Take(2)
-                                        .ToList();
-
-                                    if (cardOutcomes.Any())
-                                    {
-                                        <div class="course-card-outcomes" style="margin: 8px 0 10px 0; display: flex; flex-direction: column; gap: 4px; border-top: 1px dashed var(--border-color, #E2E8F0); padding-top: 8px;">
-                                            @foreach (var oc in cardOutcomes)
-                                            {
-                                                <div style="font-size: 12px; color: var(--text-secondary, #64748B); display: flex; align-items: flex-start; gap: 6px; line-height: 1.4;">
-                                                    <i class="bi bi-check2 text-primary" style="font-size: 14px; flex-shrink: 0; margin-top: 1px;"></i>
-                                                    <span style="display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;" title="@oc">@oc</span>
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                }
-
-                                <div class="course-rating">
-                                    @if (hasRatings)
-                                    {
-                                        double avgRating = course.DanhGiaKhoaHoc.Average(d => d.soSao);
-                                        int ratingCount = course.DanhGiaKhoaHoc.Count;
-                                        <span class="rating-score">@avgRating.ToString("0.00")</span>
-                                        <div class="stars" style="color: #F59E0B;"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
-                                        <span class="rating-count">(@ratingCount)</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="rating-score" style="color: var(--text-muted, #94A3B8); font-size: 13px; font-weight: 500;">Chưa có đánh giá</span>
-                                        <div class="stars" style="color: #CBD5E1; opacity: 0.7;"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
-                                    }
-                                </div>
-
-                                <div class="course-footer">
-                                    <div class="course-pricing">
-                                        <span class="price-current">@actualPrice.ToString("N0") đ</span>
-                                        @if (actualPrice < oldPrice)
-                                        {
-                                            <span class="price-original">@oldPrice.ToString("N0") đ</span>
-                                        }
-                                    </div>
-                                    <a href="@Url.Action("Details", "Course", new { id = course.maKhoaHoc })" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: var(--radius-xl, 10px); font-weight: 600; text-decoration: none;">
-                                        Chi tiết
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
+                    <p class="body-2 recommend-anchor">
+                        Vì bạn đã xem “<a href="@Url.Action("Details", "Course", new { id = recommendationAnchor.MaKhoaHocMoc })" target="_blank" rel="noopener" title="Xem lại khóa học này">@recommendationAnchor.TenKhoaHocMoc</a>”
+                    </p>
+                }
+                else
+                {
+                    <p class="body-2" style="color: var(--text-secondary);">Gợi ý cá nhân hóa dựa trên các khóa học bạn đã học, xem và đánh giá</p>
+                }
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center; flex-shrink: 0;">
+                @if (recommendations.Count > 1)
+                {
+                    <div class="course-slider-nav" data-slider-nav="recommend-slider" style="display: flex; gap: 10px; align-items: center;" hidden>
+                        <button type="button" class="cat-nav-btn js-slider-prev" title="Khóa học trước" aria-label="Khóa học trước" disabled><i class="bi bi-chevron-left"></i></button>
+                        <button type="button" class="cat-nav-btn js-slider-next" title="Khóa học tiếp theo" aria-label="Khóa học tiếp theo"><i class="bi bi-chevron-right"></i></button>
                     </div>
                 }
+                <a href="@Url.Action("Index", "Recommendation")" class="btn btn-outline btn-sm" style="text-decoration: none;">Xem tất cả khóa học</a>
+            </div>
+        </div>
+
+        @if (recommendations.Count > 0)
+        {
+            // Ít hơn 5 khóa: thẻ giãn ra lấp đầy hàng (is-fill); <= 3 khóa: chữ cỡ thường (is-roomy); 1 khóa: thẻ nằm ngang
+            int soGoiY = recommendations.Count;
+            string kieuHienThi = soGoiY >= 5 ? "" : " is-fill" + (soGoiY <= 3 ? " is-roomy" : "") + (soGoiY == 1 ? " is-single" : "");
+            <div class="course-slider@(kieuHienThi)" id="recommend-slider" style="--count: @soGoiY;">
+                <div class="course-slider-track">
+                    @foreach (var item in recommendations)
+                    {
+                        <div class="course-slide">
+                            @Html.Partial("_RecommendedCourseCard", item)
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            bool daCoTuongTac = (ViewBag.RecommendationInteractedCount as int? ?? 0) > 0;
+            <div style="text-align: center; color: var(--text-secondary); padding: 24px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--border-color, #E2E8F0);">
+                <i class="bi @(daCoTuongTac ? "bi-diagram-3" : "bi-eye") me-1" style="color: var(--primary, #434CE8);"></i>
+                @(daCoTuongTac ? "Các khóa học bạn đã xem chưa có khóa học tương tự để gợi ý." : "Bạn cần xem một số khóa học để hiển thị gợi ý.")
+                <a href="@Url.Action("Index", "Course")" style="font-weight: 600; margin-left: 6px;">Khám phá khóa học</a>
             </div>
         }
     </div>
@@ -347,11 +380,21 @@ cursor: not-allowed;
                 <span class="badge badge-warning" style="margin-bottom: 8px;">Top Bán Chạy & Xu Hướng</span>
                 <h2 class="h2">Khóa học nổi bật nhất tuần</h2>
             </div>
+            @if (courses != null && courses.Count > 1)
+            {
+                @* Mũi tên chỉ hiện khi số khóa nhiều hơn số thẻ hiển thị một lượt (JS bật/tắt theo bề rộng màn hình) *@
+                <div class="course-slider-nav" data-slider-nav="featured-slider" style="display: flex; gap: 10px; align-items: center;" hidden>
+                    <button type="button" class="cat-nav-btn js-slider-prev" title="Khóa học trước" aria-label="Khóa học trước" disabled><i class="bi bi-chevron-left"></i></button>
+                    <button type="button" class="cat-nav-btn js-slider-next" title="Khóa học tiếp theo" aria-label="Khóa học tiếp theo"><i class="bi bi-chevron-right"></i></button>
+                </div>
+            }
         </div>
 
         @if (courses != null && courses.Count > 0)
         {
-            <div class="grid-12">
+
+            <div class="course-slider" id="featured-slider">
+                <div class="course-slider-track">
                 @foreach (var course in courses)
                 {
                     string thumbUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
@@ -360,15 +403,17 @@ cursor: not-allowed;
                     decimal actualPrice = course.giaKhuyenMai.HasValue ? course.giaKhuyenMai.Value : course.giaBan;
                     decimal oldPrice = course.giaBan;
                     bool hasRatings = course.DanhGiaKhoaHoc != null && course.DanhGiaKhoaHoc.Count > 0;
-                    int enrollCount = course.DangKyKhoaHoc != null ? course.DangKyKhoaHoc.Count : 0;
+                    int enrollCount;
+                    enrollCounts.TryGetValue(course.maKhoaHoc, out enrollCount);
                     double avgStars = hasRatings ? course.DanhGiaKhoaHoc.Average(d => d.soSao) : 0;
                     bool isTopTrending = enrollCount >= 3;
                     bool isHighRated = hasRatings && avgStars >= 4.5;
 
-                    <div class="col-4">
-                        <div class="course-card" onclick="window.location.href='@Url.Action("Details", "Course", new { id = course.maKhoaHoc })'" style="cursor: pointer;">
+                    <div class="course-slide">
+                        <div class="course-card" onclick="window.open('@Url.Action("Details", "Course", new { id = course.maKhoaHoc })', '_blank', 'noopener')" style="cursor: pointer;">
                             <div class="course-thumb">
-                                <img src="@thumbUrl" alt="@course.tenKhoaHoc" />
+                                <img src="@thumbUrl" alt="@course.tenKhoaHoc" loading="lazy" decoding="async" />
+                                @Html.Partial("_FavoriteButton", new ECOLearning.ViewModels.FavoriteButtonModel { CourseId = course.maKhoaHoc, TeacherId = course.maGiaoVien })
                                 @if (isTopTrending)
                                 {
                                     <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;"><i class="bi bi-fire me-1"></i> Top Trending</span>
@@ -435,7 +480,7 @@ cursor: not-allowed;
                                             <span class="price-original">@oldPrice.ToString("N0") đ</span>
                                         }
                                     </div>
-                                    <a href="@Url.Action("Details", "Course", new { id = course.maKhoaHoc })" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: var(--radius-xl, 10px); font-weight: 600; text-decoration: none;">
+                                    <a href="@Url.Action("Details", "Course", new { id = course.maKhoaHoc })" target="_blank" rel="noopener" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: var(--radius-xl, 10px); font-weight: 600; text-decoration: none;">
                                         Chi tiết
                                     </a>
                                 </div>
@@ -443,6 +488,15 @@ cursor: not-allowed;
                         </div>
                     </div>
                 }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div style="text-align: center; color: var(--text-secondary); padding: 24px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--border-color, #E2E8F0);">
+                <i class="bi bi-check2-circle me-1" style="color: var(--primary, #434CE8);"></i>
+                Bạn đã đăng ký tất cả khóa học hiện có.
+                <a href="@Url.Action("MyCourses", "Learning")" style="font-weight: 600; margin-left: 6px;">Vào Khóa học của tôi</a>
             </div>
         }
     </div>
@@ -452,6 +506,240 @@ else
 {
     <!-- TRANG CHÀO MỪNG KHI CHƯA ĐĂNG NHẬP: TUYỆT ĐỐI KHÔNG HIỂN THỊ KHÓA HỌC -->
 
+    <style>
+        /* ===== Hiệu ứng xuất hiện khi cuộn tới (chỉ ẩn trước khi JS chạy được, tránh mất nội dung nếu JS lỗi) ===== */
+        .js-reveal .reveal-group:not(.is-visible) .value-card,
+        .js-reveal .reveal-group:not(.is-visible) .step-card {
+            opacity: 0;
+        }
+
+        /* --- Section "Giá trị cốt lõi": thẻ trồi lên từ dưới, icon bật nảy --- */
+        .value-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+        }
+
+        .value-card {
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 32px 24px;
+            border-radius: 18px;
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.04);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease, border-color 0.35s ease;
+        }
+
+        /* Thanh màu trên đầu thẻ, dài ra khi hover */
+        .value-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 4px;
+            width: 40%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            border-radius: 0 0 4px 0;
+            transition: width 0.4s ease;
+        }
+
+        .value-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: var(--soft);
+            color: var(--accent);
+            border: 1px solid #E2E8F0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            margin-bottom: 22px;
+            transition: background 0.35s ease, color 0.35s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .value-card h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0F172A;
+            margin-bottom: 12px;
+            transition: color 0.3s ease;
+        }
+
+        .value-card p {
+            font-size: 14px;
+            color: #64748B;
+            line-height: 1.6;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .value-card:hover {
+            transform: translateY(-8px);
+            border-color: #CBD5E1;
+            box-shadow: 0 18px 36px -16px rgba(15, 23, 42, 0.16);
+        }
+
+        .value-card:hover::before {
+            width: 100%;
+        }
+
+        .value-card:hover .value-icon {
+            background: var(--accent);
+            color: #FFFFFF;
+            border-color: transparent;
+            transform: rotate(-8deg) scale(1.1);
+        }
+
+        .value-card:hover h3 {
+            color: var(--accent);
+        }
+
+        .reveal-group.is-visible .value-card {
+            animation: value-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+            animation-delay: calc(var(--i) * 130ms);
+        }
+
+        .reveal-group.is-visible .value-icon {
+            animation: value-icon-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+            animation-delay: calc(var(--i) * 130ms + 300ms);
+        }
+
+        @@keyframes value-rise {
+            from { opacity: 0; transform: translateY(48px); }
+            to { opacity: 1; transform: none; }
+        }
+
+        @@keyframes value-icon-pop {
+            from { opacity: 0; transform: scale(0.3) rotate(-30deg); }
+            to { opacity: 1; transform: none; }
+        }
+
+        /* --- Section "4 bước": thẻ lật 3D lần lượt từ trái sang phải như các bước nối tiếp --- */
+        .step-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            perspective: 1200px;
+        }
+
+        .step-card {
+            position: relative;
+            overflow: hidden;
+            padding: 28px 22px;
+            border-radius: 18px;
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-left: 3px solid var(--accent);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease, background 0.35s ease;
+        }
+
+        .step-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .step-number {
+            font-size: 34px;
+            font-weight: 900;
+            line-height: 1;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            transition: transform 0.35s ease;
+            transform-origin: left center;
+        }
+
+        .step-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--soft);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 19px;
+            border: 1px solid #E2E8F0;
+            transition: transform 0.35s ease, background 0.35s ease, color 0.35s ease;
+        }
+
+        .step-card h4 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0F172A;
+            margin-bottom: 8px;
+        }
+
+        .step-card p {
+            font-size: 13.5px;
+            color: #475569;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .step-card:hover {
+            transform: translateY(-6px);
+            background: #FFFFFF;
+            box-shadow: 0 16px 32px -16px rgba(15, 23, 42, 0.16);
+        }
+
+        .step-card:hover .step-number {
+            transform: scale(1.15);
+        }
+
+        .step-card:hover .step-icon {
+            background: var(--accent);
+            color: #FFFFFF;
+            transform: rotate(12deg) scale(1.1);
+        }
+
+        .reveal-group.is-visible .step-card {
+            animation: step-flip 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+            animation-delay: calc(var(--i) * 200ms);
+            transform-origin: left center;
+        }
+
+        @@keyframes step-flip {
+            from { opacity: 0; transform: rotateY(-80deg) translateX(-24px); }
+            to { opacity: 1; transform: none; }
+        }
+
+        @@media (max-width: 991px) {
+            .value-grid,
+            .step-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @@media (max-width: 575px) {
+            .value-grid,
+            .step-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @@media (prefers-reduced-motion: reduce) {
+            .js-reveal .reveal-group:not(.is-visible) .value-card,
+            .js-reveal .reveal-group:not(.is-visible) .step-card {
+                opacity: 1;
+            }
+
+            .reveal-group.is-visible .value-card,
+            .reveal-group.is-visible .value-icon,
+            .reveal-group.is-visible .step-card {
+                animation: none;
+            }
+        }
+    </style>
+    <script>document.documentElement.classList.add('js-reveal');</script>
+
     <!-- Section 1: Ưu điểm & Giá trị vượt trội của nền tảng -->
     <section style="padding: 72px 0; background: var(--bg-canvas, #F8FAFC); border-bottom: 1px solid var(--border-color, #E2E8F0);">
         <div class="safe-container">
@@ -460,79 +748,63 @@ else
                     <i class="bi bi-patch-check-fill"></i> Giá trị cốt lõi
                 </div>
                 <h2 style="font-size: 32px; font-weight: 800; color: #0F172A; margin-bottom: 16px; line-height: 1.3;">
-                    Tại sao ECOLearning là điểm khởi đầu lý tưởng cho sự nghiệp của bạn?
+                    Tại sao E-Learning là điểm khởi đầu lý tưởng cho sự nghiệp của bạn?
                 </h2>
                 <p style="font-size: 16px; color: #64748B; line-height: 1.6; margin: 0;">
                     Chương trình đào tạo được xây dựng theo tiêu chuẩn quốc tế, trang bị trọn vẹn kỹ năng thực chiến và lộ trình thăng tiến rõ ràng cho người học.
                 </p>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;">
+            <div class="value-grid reveal-group">
                 <!-- Feature 1 -->
-                <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 18px; padding: 32px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column;">
-                    <div style="width: 56px; height: 56px; border-radius: 16px; background: #EEF2FF; color: #434CE8; display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 22px;">
-                        <i class="bi bi-code-square"></i>
-                    </div>
-                    <h3 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 12px;">100% Thực chiến dự án</h3>
-                    <p style="font-size: 14px; color: #64748B; line-height: 1.6; margin: 0; flex-grow: 1;">
-                        Không chỉ học lý thuyết, học viên được trực tiếp tham gia xây dựng các dự án thực tế sát với yêu cầu tuyển dụng thực tế của doanh nghiệp.
-                    </p>
+                <div class="value-card" style="--i: 0; --accent: #434CE8; --accent-2: #6366F1; --soft: #EEF2FF;">
+                    <div class="value-icon"><i class="bi bi-code-square"></i></div>
+                    <h3>100% Thực chiến dự án</h3>
+                    <p>Không chỉ học lý thuyết, học viên được trực tiếp tham gia xây dựng các dự án thực tế sát với yêu cầu tuyển dụng thực tế của doanh nghiệp.</p>
                 </div>
 
                 <!-- Feature 2 -->
-                <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 18px; padding: 32px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column;">
-                    <div style="width: 56px; height: 56px; border-radius: 16px; background: #ECFDF5; color: #10B981; display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 22px;">
-                        <i class="bi bi-person-badge"></i>
-                    </div>
-                    <h3 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 12px;">Giảng viên chuyên gia</h3>
-                    <p style="font-size: 14px; color: #64748B; line-height: 1.6; margin: 0; flex-grow: 1;">
-                        Đội ngũ giảng viên, Tech Lead nhiều năm kinh nghiệm tại các tập đoàn lớn, luôn tận tình giải đáp và định hướng học tập 24/7.
-                    </p>
+                <div class="value-card" style="--i: 1; --accent: #2563EB; --accent-2: #60A5FA; --soft: #EFF6FF;">
+                    <div class="value-icon"><i class="bi bi-person-badge"></i></div>
+                    <h3>Giảng viên chuyên gia</h3>
+                    <p>Đội ngũ giảng viên, Tech Lead nhiều năm kinh nghiệm tại các tập đoàn lớn, luôn tận tình giải đáp và định hướng học tập 24/7.</p>
                 </div>
 
                 <!-- Feature 3 -->
-                <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 18px; padding: 32px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column;">
-                    <div style="width: 56px; height: 56px; border-radius: 16px; background: #FFF7ED; color: #EA580C; display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 22px;">
-                        <i class="bi bi-phone"></i>
-                    </div>
-                    <h3 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 12px;">Linh hoạt mọi thiết bị</h3>
-                    <p style="font-size: 14px; color: #64748B; line-height: 1.6; margin: 0; flex-grow: 1;">
-                        Truy cập bài giảng mọi lúc trên máy tính, điện thoại, máy tính bảng với chuẩn video Full HD mượt mà và lưu tiến trình tự động.
-                    </p>
+                <div class="value-card" style="--i: 2; --accent: #0369A1; --accent-2: #38BDF8; --soft: #F0F9FF;">
+                    <div class="value-icon"><i class="bi bi-phone"></i></div>
+                    <h3>Linh hoạt mọi thiết bị</h3>
+                    <p>Truy cập bài giảng mọi lúc trên máy tính, điện thoại, máy tính bảng với chuẩn video Full HD mượt mà và lưu tiến trình tự động.</p>
                 </div>
 
                 <!-- Feature 4 -->
-                <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 18px; padding: 32px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column;">
-                    <div style="width: 56px; height: 56px; border-radius: 16px; background: #F3E8FF; color: #9333EA; display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 22px;">
-                        <i class="bi bi-award"></i>
-                    </div>
-                    <h3 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 12px;">Chứng chỉ uy tín</h3>
-                    <p style="font-size: 14px; color: #64748B; line-height: 1.6; margin: 0; flex-grow: 1;">
-                        Được cấp chứng chỉ số định danh sau khi hoàn thành khóa học, xác thực năng lực chuyên môn để tự tin nộp hồ sơ xin việc.
-                    </p>
+                <div class="value-card" style="--i: 3; --accent: #0EA5E9; --accent-2: #7DD3FC; --soft: #F0F9FF;">
+                    <div class="value-icon"><i class="bi bi-award"></i></div>
+                    <h3>Chứng chỉ uy tín</h3>
+                    <p>Được cấp chứng chỉ số định danh sau khi hoàn thành khóa học, xác thực năng lực chuyên môn để tự tin nộp hồ sơ xin việc.</p>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Section 2: Thống kê ấn tượng (Platform Stats) -->
-    <section style="padding: 60px 0; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); color: #FFFFFF; position: relative; overflow: hidden;">
+    <section id="platform-stats-section" style="padding: 60px 0; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); color: #FFFFFF; position: relative; overflow: hidden;">
         <div class="safe-container">
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; text-align: center;">
                 <div style="padding: 10px;">
-                    <div style="font-size: 42px; font-weight: 800; color: #38BDF8; margin-bottom: 6px; letter-spacing: -0.02em;">15,000+</div>
+                    <div class="stat-number-counter" data-target="15000" data-suffix="+" data-type="comma" style="font-size: 42px; font-weight: 800; color: #38BDF8; margin-bottom: 6px; letter-spacing: -0.02em;">15,000+</div>
                     <div style="font-size: 15px; color: #CBD5E1; font-weight: 500;">Học viên tin tưởng lựa chọn</div>
                 </div>
                 <div style="padding: 10px;">
-                    <div style="font-size: 42px; font-weight: 800; color: #A78BFA; margin-bottom: 6px; letter-spacing: -0.02em;">500+</div>
+                    <div class="stat-number-counter" data-target="500" data-suffix="+" data-type="integer" style="font-size: 42px; font-weight: 800; color: #A78BFA; margin-bottom: 6px; letter-spacing: -0.02em;">500+</div>
                     <div style="font-size: 15px; color: #CBD5E1; font-weight: 500;">Bài giảng video chuyên sâu</div>
                 </div>
                 <div style="padding: 10px;">
-                    <div style="font-size: 42px; font-weight: 800; color: #34D399; margin-bottom: 6px; letter-spacing: -0.02em;">98%</div>
+                    <div class="stat-number-counter" data-target="98" data-suffix="%" data-type="integer" style="font-size: 42px; font-weight: 800; color: #34D399; margin-bottom: 6px; letter-spacing: -0.02em;">98%</div>
                     <div style="font-size: 15px; color: #CBD5E1; font-weight: 500;">Đánh giá hài lòng & có việc</div>
                 </div>
                 <div style="padding: 10px;">
-                    <div style="font-size: 42px; font-weight: 800; color: #FBBF24; margin-bottom: 6px; letter-spacing: -0.02em;">24/7</div>
+                    <div class="stat-number-counter" data-target-num1="24" data-target-num2="7" data-type="fraction" style="font-size: 42px; font-weight: 800; color: #FBBF24; margin-bottom: 6px; letter-spacing: -0.02em;">24/7</div>
                     <div style="font-size: 15px; color: #CBD5E1; font-weight: 500;">Đồng hành hỗ trợ học viên</div>
                 </div>
             </div>
@@ -554,41 +826,45 @@ else
                 </p>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;">
+            <div class="step-grid reveal-group">
                 <!-- Step 1 -->
-                <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 18px; padding: 28px 22px;">
-                    <div style="font-size: 32px; font-weight: 900; color: #CBD5E1; line-height: 1; margin-bottom: 16px;">01</div>
-                    <h4 style="font-size: 16px; font-weight: 700; color: #0F172A; margin-bottom: 8px;">Đăng ký / Đăng nhập</h4>
-                    <p style="font-size: 13.5px; color: #64748B; line-height: 1.5; margin: 0;">
-                        Tạo tài khoản cá nhân nhanh chóng trong 30 giây để bắt đầu kích hoạt quyền truy cập hệ thống.
-                    </p>
+                <div class="step-card" style="--i: 0; --accent: #434CE8; --accent-2: #6366F1; --soft: #EEF2FF;">
+                    <div class="step-head">
+                        <span class="step-number">01</span>
+                        <span class="step-icon"><i class="bi bi-person-plus"></i></span>
+                    </div>
+                    <h4>Đăng ký / Đăng nhập</h4>
+                    <p>Tạo tài khoản cá nhân nhanh chóng trong 30 giây để bắt đầu kích hoạt quyền truy cập hệ thống.</p>
                 </div>
 
                 <!-- Step 2 -->
-                <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 18px; padding: 28px 22px;">
-                    <div style="font-size: 32px; font-weight: 900; color: #CBD5E1; line-height: 1; margin-bottom: 16px;">02</div>
-                    <h4 style="font-size: 16px; font-weight: 700; color: #0F172A; margin-bottom: 8px;">Vào Trang Chủ & Chọn khóa</h4>
-                    <p style="font-size: 13.5px; color: #64748B; line-height: 1.5; margin: 0;">
-                        Khám phá kho khóa học đa ngành nghề với các gợi ý học tập cá nhân hóa chuẩn xác.
-                    </p>
+                <div class="step-card" style="--i: 1; --accent: #2563EB; --accent-2: #60A5FA; --soft: #EFF6FF;">
+                    <div class="step-head">
+                        <span class="step-number">02</span>
+                        <span class="step-icon"><i class="bi bi-search"></i></span>
+                    </div>
+                    <h4>Vào Trang Chủ & Chọn khóa</h4>
+                    <p>Khám phá kho khóa học đa ngành nghề với các gợi ý học tập cá nhân hóa chuẩn xác.</p>
                 </div>
 
                 <!-- Step 3 -->
-                <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 18px; padding: 28px 22px;">
-                    <div style="font-size: 32px; font-weight: 900; color: #CBD5E1; line-height: 1; margin-bottom: 16px;">03</div>
-                    <h4 style="font-size: 16px; font-weight: 700; color: #0F172A; margin-bottom: 8px;">Học tương tác & Thực hành</h4>
-                    <p style="font-size: 13.5px; color: #64748B; line-height: 1.5; margin: 0;">
-                        Theo dõi video chất lượng cao, ghi chú trực tiếp và hoàn thành bài kiểm tra cuối bài học.
-                    </p>
+                <div class="step-card" style="--i: 2; --accent: #0369A1; --accent-2: #38BDF8; --soft: #F0F9FF;">
+                    <div class="step-head">
+                        <span class="step-number">03</span>
+                        <span class="step-icon"><i class="bi bi-play-circle"></i></span>
+                    </div>
+                    <h4>Học tương tác & Thực hành</h4>
+                    <p>Theo dõi video chất lượng cao, ghi chú trực tiếp và hoàn thành bài kiểm tra cuối bài học.</p>
                 </div>
 
                 <!-- Step 4 -->
-                <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 18px; padding: 28px 22px;">
-                    <div style="font-size: 32px; font-weight: 900; color: #CBD5E1; line-height: 1; margin-bottom: 16px;">04</div>
-                    <h4 style="font-size: 16px; font-weight: 700; color: #0F172A; margin-bottom: 8px;">Nhận chứng chỉ tốt nghiệp</h4>
-                    <p style="font-size: 13.5px; color: #64748B; line-height: 1.5; margin: 0;">
-                        Hoàn thành lộ trình từ 80% trở lên để nhận chứng nhận hoàn thành và đánh giá sao chất lượng.
-                    </p>
+                <div class="step-card" style="--i: 3; --accent: #0EA5E9; --accent-2: #7DD3FC; --soft: #F0F9FF;">
+                    <div class="step-head">
+                        <span class="step-number">04</span>
+                        <span class="step-icon"><i class="bi bi-trophy"></i></span>
+                    </div>
+                    <h4>Nhận chứng chỉ tốt nghiệp</h4>
+                    <p>Hoàn thành lộ trình từ 80% trở lên để nhận chứng nhận hoàn thành và đánh giá sao chất lượng.</p>
                 </div>
             </div>
         </div>
@@ -625,6 +901,67 @@ else
     if (prevBtn) prevBtn.disabled = (currentCatIndex === 0);
     if (nextBtn) nextBtn.disabled = (currentCatIndex >= maxIndex);
 }
+
+/* ==========================================================================
+   SLIDER KHÓA HỌC ("Khóa học dành riêng cho bạn", "Khóa học nổi bật nhất tuần"):
+   5 khóa một lượt, mỗi lần bấm dời 4 khóa (khóa cuối của lượt trước là khóa đầu của lượt sau)
+   ========================================================================== */
+document.querySelectorAll('.course-slider').forEach(function initCourseSlider(slider) {
+    const track = slider.querySelector('.course-slider-track');
+    const nav = document.querySelector('[data-slider-nav="' + slider.id + '"]');
+    if (!track) return;
+
+    const slides = track.querySelectorAll('.course-slide');
+    const prevBtn = nav ? nav.querySelector('.js-slider-prev') : null;
+    const nextBtn = nav ? nav.querySelector('.js-slider-next') : null;
+    let index = 0; // vị trí thẻ đầu tiên đang hiển thị
+
+    // Số thẻ một lượt lấy từ CSS (5 trên máy tính, ít hơn trên màn hình nhỏ)
+    function perView() {
+        return parseInt(getComputedStyle(slider).getPropertyValue('--per-view'), 10) || 5;
+    }
+
+    function maxIndex() {
+        return Math.max(0, slides.length - perView());
+    }
+
+    function render() {
+        index = Math.min(Math.max(index, 0), maxIndex());
+        const offset = slides.length ? slides[index].offsetLeft - slides[0].offsetLeft : 0;
+        track.style.transform = 'translateX(-' + offset + 'px)';
+
+        if (nav) nav.hidden = slides.length <= perView();
+        if (prevBtn) prevBtn.disabled = index === 0;
+        if (nextBtn) nextBtn.disabled = index >= maxIndex();
+    }
+
+    function slide(direction) {
+        const step = Math.max(1, perView() - 1);
+        index += direction * step;
+        render();
+    }
+
+    if (prevBtn) prevBtn.addEventListener('click', function () { slide(-1); });
+    if (nextBtn) nextBtn.addEventListener('click', function () { slide(1); });
+
+    // Vuốt trái / phải trên màn hình cảm ứng
+    let startX = null;
+    slider.addEventListener('touchstart', function (e) { startX = e.touches[0].clientX; }, { passive: true });
+    slider.addEventListener('touchend', function (e) {
+        if (startX === null) return;
+        const dx = e.changedTouches[0].clientX - startX;
+        startX = null;
+        if (Math.abs(dx) > 50) slide(dx < 0 ? 1 : -1);
+    });
+
+    let resizeTimer;
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(render, 150);
+    });
+
+    render();
+});
 
 function addToCartAjax(courseId, btnElement) {
 if (!courseId) return;
@@ -683,5 +1020,175 @@ else
 }
 });
 }
+
+/* ==========================================================================
+   TASK 2: STATS COUNTER ANIMATION (CHẠY TRONG 3S, LƯU SESSIONSTORAGE)
+   ========================================================================== */
+(function initStatsCounter() {
+    const STATS_SESSION_KEY = 'ecolearning_stats_counter_animated';
+    const STATS_SESSION_DURATION = 20 * 60 * 1000; // 20 phút (chu kỳ session chuẩn)
+
+    function isStatsSessionActive() {
+        try {
+            const raw = sessionStorage.getItem(STATS_SESSION_KEY);
+            if (!raw) return false;
+            const data = JSON.parse(raw);
+            if (!data || !data.timestamp) return false;
+            // Kiểm tra xem session đã hết hạn hay chưa
+            if (Date.now() - data.timestamp > STATS_SESSION_DURATION) {
+                sessionStorage.removeItem(STATS_SESSION_KEY);
+                return false;
+            }
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function saveStatsSession() {
+        try {
+            sessionStorage.setItem(STATS_SESSION_KEY, JSON.stringify({
+                timestamp: Date.now(),
+                animated: true
+            }));
+        } catch (e) {}
+    }
+
+    const statsSection = document.getElementById('platform-stats-section');
+    if (!statsSection) return;
+
+    const counters = statsSection.querySelectorAll('.stat-number-counter');
+    if (!counters.length) return;
+
+    // Nếu người dùng F5 lại (session vẫn còn lưu): KHÔNG CHẠY LẠI animation, giữ nguyên số cuối
+    if (isStatsSessionActive()) {
+        return;
+    }
+
+    // Nếu là phiên mới hoặc sau khi session hết hạn: Thiết lập về 0 để chuẩn bị chạy animation khi cuộn tới
+    counters.forEach(counter => {
+        const type = counter.getAttribute('data-type');
+        const suffix = counter.getAttribute('data-suffix') || '';
+        if (type === 'fraction') {
+            counter.textContent = '0/0';
+        } else {
+            counter.textContent = '0' + suffix;
+        }
+    });
+
+    let hasStarted = false;
+
+    function startCountingAnimation() {
+        if (hasStarted) return;
+        hasStarted = true;
+        saveStatsSession(); // Lưu session ngay khi bắt đầu chạy để F5 không bị lặp lại
+
+        const duration = 3000; // Đúng 3 giây (3000ms) theo yêu cầu
+        const startTime = performance.now();
+
+        // Hàm gia tốc chuyển động mượt mà (Cubic Ease-Out)
+        function easeOutCubic(t) {
+            return 1 - Math.pow(1 - t, 3);
+        }
+
+        function frame(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easedProgress = easeOutCubic(progress);
+
+            counters.forEach(counter => {
+                const type = counter.getAttribute('data-type');
+                const suffix = counter.getAttribute('data-suffix') || '';
+
+                if (type === 'fraction') {
+                    const target1 = parseInt(counter.getAttribute('data-target-num1'), 10) || 24;
+                    const target2 = parseInt(counter.getAttribute('data-target-num2'), 10) || 7;
+                    const val1 = Math.floor(easedProgress * target1);
+                    const val2 = Math.floor(easedProgress * target2);
+                    counter.textContent = val1 + '/' + val2;
+                } else if (type === 'comma') {
+                    const target = parseInt(counter.getAttribute('data-target'), 10) || 15000;
+                    const currentVal = Math.floor(easedProgress * target);
+                    counter.textContent = currentVal.toLocaleString('en-US') + suffix;
+                } else {
+                    const target = parseInt(counter.getAttribute('data-target'), 10) || 500;
+                    const currentVal = Math.floor(easedProgress * target);
+                    counter.textContent = currentVal + suffix;
+                }
+            });
+
+            if (progress < 1) {
+                requestAnimationFrame(frame);
+            } else {
+                // Đảm bảo kết thúc ở chính xác con số mục tiêu 100%
+                counters.forEach(counter => {
+                    const type = counter.getAttribute('data-type');
+                    const suffix = counter.getAttribute('data-suffix') || '';
+                    if (type === 'fraction') {
+                        counter.textContent = '24/7';
+                    } else if (type === 'comma') {
+                        const target = parseInt(counter.getAttribute('data-target'), 10) || 15000;
+                        counter.textContent = target.toLocaleString('en-US') + suffix;
+                    } else {
+                        const target = parseInt(counter.getAttribute('data-target'), 10);
+                        counter.textContent = target + suffix;
+                    }
+                });
+            }
+        }
+
+        requestAnimationFrame(frame);
+    }
+
+    // Lắng nghe sự kiện cuộn xuống phần thống kê (IntersectionObserver)
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    startCountingAnimation();
+                    observer.unobserve(statsSection);
+                }
+            });
+        }, {
+            threshold: 0.25
+        });
+        observer.observe(statsSection);
+    } else {
+        // Fallback cuộn trang cho trình duyệt cũ
+        function scrollHandler() {
+            const rect = statsSection.getBoundingClientRect();
+            if (rect.top <= window.innerHeight * 0.85 && rect.bottom >= 0) {
+                startCountingAnimation();
+                window.removeEventListener('scroll', scrollHandler);
+            }
+        }
+        window.addEventListener('scroll', scrollHandler);
+        scrollHandler();
+    }
+})();
+
+/* ==========================================================================
+   HIỆU ỨNG XUẤT HIỆN KHI CUỘN TỚI: "Giá trị cốt lõi" (trồi lên) và "4 bước" (lật 3D)
+   ========================================================================== */
+(function initRevealOnScroll() {
+    const groups = document.querySelectorAll('.reveal-group');
+    if (!groups.length) return;
+
+    if (!('IntersectionObserver' in window)) {
+        groups.forEach(g => g.classList.add('is-visible'));
+        return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                observer.unobserve(entry.target); // chỉ chạy một lần
+            }
+        });
+    }, { threshold: 0.2 });
+
+    groups.forEach(g => observer.observe(g));
+})();
 </script>
 }

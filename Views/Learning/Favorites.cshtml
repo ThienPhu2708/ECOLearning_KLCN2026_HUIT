@@ -1,0 +1,119 @@
+@model ECOLearning.ViewModels.FavoritesPageViewModel
+@{
+    ViewBag.Title = "Khóa học đã tim - E-Learning";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    bool coKhoaHoc = Model.Items.Count > 0;
+}
+
+<style>
+    .favorite-col {
+        transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .favorite-col.is-removing {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+</style>
+
+<main style="padding: 40px 0 80px; background: var(--bg-canvas, #F8FAFC); min-height: 80vh;">
+    <div class="safe-container">
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 28px;">
+            <div>
+                <span class="caption" style="text-transform: uppercase; color: var(--primary, #434CE8); font-weight: 700; letter-spacing: 0.05em;">QUẢN LÝ YÊU THÍCH</span>
+                <h1 class="h2" style="margin-top: 4px; font-weight: 800; color: var(--text-heading, #0F172A); font-size: 28px;">Khóa học đã tim</h1>
+                <p class="body-2" style="color: var(--text-secondary, #64748B); font-size: 15px; margin-top: 4px;">
+                    Những khóa học bạn đang quan tâm. Bấm vào trái tim để bỏ khỏi danh sách; khóa bạn đăng ký sẽ tự chuyển sang Khóa học đã đăng ký.
+                </p>
+            </div>
+            @if (Model.DaKhoiTao)
+            {
+                <div style="font-size: 15px; color: var(--text-secondary, #64748B); white-space: nowrap;">
+                    <strong style="color: var(--text-heading, #0F172A); font-size: 20px;" data-favorite-count>@Model.Items.Count</strong> khóa học
+                </div>
+            }
+        </div>
+
+        @if (!Model.DaKhoiTao)
+        {
+            <div style="text-align: center; padding: 40px 20px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--border-color, #E2E8F0); color: var(--text-secondary);">
+                Chức năng thả tim chưa sẵn sàng: cần chạy <code>Database/Migrations/005_GoiY_LocCongTac.sql</code>.
+            </div>
+        }
+        else
+        {
+            <div class="grid-12" id="favorites-grid" style="@(coKhoaHoc ? "" : "display: none;")">
+                @foreach (var item in Model.Items)
+                {
+                    var course = item.Course;
+                    string thumbUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
+                    string detailUrl = Url.Action("Details", "Course", new { id = course.maKhoaHoc });
+                    decimal actualPrice = course.giaKhuyenMai.HasValue ? course.giaKhuyenMai.Value : course.giaBan;
+                    decimal oldPrice = course.giaBan;
+
+                    <div class="col-4 favorite-col" data-favorite-item="@course.maKhoaHoc">
+                        <div class="course-card" onclick="window.open('@detailUrl', '_blank', 'noopener')" style="cursor: pointer; height: 100%;">
+                            <div class="course-thumb">
+                                <img src="@thumbUrl" alt="@course.tenKhoaHoc" loading="lazy" decoding="async" />
+                                @Html.Partial("_FavoriteButton", new ECOLearning.ViewModels.FavoriteButtonModel { CourseId = course.maKhoaHoc, TeacherId = course.maGiaoVien })
+                            </div>
+                            <div class="course-body">
+                                <div class="course-category">
+                                    <span class="caption" style="color: var(--primary); font-weight: 700;">@(course.DanhMuc != null ? course.DanhMuc.tenDanhMuc : "")</span>
+                                </div>
+                                <h3 class="course-title" title="@course.tenKhoaHoc">@course.tenKhoaHoc</h3>
+                                <div class="course-instructor">
+                                    <i class="bi bi-person me-1"></i>
+                                    @(course.NguoiDung != null ? course.NguoiDung.hoTen : "")
+                                </div>
+                                <div class="course-rating">
+                                    @if (item.SoDanhGia > 0)
+                                    {
+                                        <span class="rating-score">@item.DiemDanhGia.ToString("0.00")</span>
+                                        <div class="stars" style="color: #F59E0B;"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
+                                        <span class="rating-count">(@item.SoDanhGia)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="rating-score" style="color: var(--text-muted, #94A3B8); font-size: 13px; font-weight: 500;">Chưa có đánh giá</span>
+                                    }
+                                </div>
+                                <div class="course-footer">
+                                    <div class="course-pricing">
+                                        @if (actualPrice <= 0)
+                                        {
+                                            <span class="price-current" style="color: #10B981;">Miễn phí</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="price-current">@actualPrice.ToString("N0") đ</span>
+                                            if (actualPrice < oldPrice)
+                                            {
+                                                <span class="price-original">@oldPrice.ToString("N0") đ</span>
+                                            }
+                                        }
+                                    </div>
+                                    <a href="@detailUrl" target="_blank" rel="noopener" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: var(--radius-xl, 10px); font-weight: 600; text-decoration: none;">
+                                        Chi tiết
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div id="favorites-empty" style="@(coKhoaHoc ? "display: none;" : "") text-align: center; padding: 64px 24px; background: #FFFFFF; border-radius: var(--radius-2xl, 16px); border: 1px dashed var(--border-color, #E2E8F0);">
+                <i class="bi bi-heart" style="font-size: 44px; color: #FDA4AF; display: block; margin-bottom: 12px;"></i>
+                <h3 class="h3" style="margin-bottom: 8px; font-weight: 700; color: #0F172A;">Bạn chưa thả tim khóa học nào</h3>
+                <p class="body-2" style="color: var(--text-secondary, #64748B); max-width: 480px; margin: 0 auto 24px; line-height: 1.6;">
+                    Bấm biểu tượng trái tim trên thẻ khóa học hoặc ở trang chi tiết để lưu lại những khóa bạn quan tâm.
+                </p>
+                <a href="@Url.Action("Index", "Course")" class="btn btn-primary" style="font-weight: 600; text-decoration: none; padding: 12px 24px; border-radius: 12px;">
+                    <i class="bi bi-compass me-2"></i> Khám phá khóa học
+                </a>
+            </div>
+        }
+    </div>
+</main>

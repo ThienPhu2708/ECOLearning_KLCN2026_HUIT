@@ -102,6 +102,273 @@
   font-weight: 600;
 }
 
+/* Menu "Khám phá" 3 tầng: Danh mục → Cấp độ → Khóa học (Views/Shared/_ExploreMenu.cshtml) */
+.explore-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  /* Kéo vùng hover xuống sát mép dưới header để di chuột vào menu không bị đóng */
+  padding: 26px 0;
+  margin: -26px 0;
+}
+
+.explore-trigger i {
+  font-size: 11px;
+  transition: transform var(--transition-fast);
+}
+
+.explore-menu:hover .explore-trigger,
+.explore-menu:focus-within .explore-trigger {
+  color: var(--primary);
+}
+
+.explore-menu:hover .explore-trigger i,
+.explore-menu:focus-within .explore-trigger i {
+  transform: rotate(180deg);
+}
+
+.explore-panel {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: -18px;
+  z-index: 60;
+  background: #FFFFFF;
+  border: 1px solid var(--border-color, #E2E8F0);
+  border-radius: var(--radius-2xl, 16px);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.14);
+  overflow: hidden;
+}
+
+.explore-menu:hover .explore-panel,
+.explore-menu:focus-within .explore-panel {
+  display: flex;
+}
+
+.explore-col {
+  width: 280px;
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.explore-col + .explore-col {
+  border-left: 1px solid var(--border-color, #E2E8F0);
+}
+
+.explore-col-2,
+.explore-col-3,
+.explore-sub {
+  display: none;
+}
+
+.explore-col.is-open,
+.explore-sub.is-active {
+  display: block;
+}
+
+/* Menu "Khóa học của tôi": các nhóm ở tầng 2 xếp chồng cùng một ô lưới, chỉ hiện nhóm đang chọn.
+   Tầng 2 luôn cao bằng nhóm nhiều nội dung nhất nên khung menu không co giãn khi đổi nhóm. */
+.explore-panel.is-stacked .explore-col-2.is-open {
+  display: grid;
+}
+
+.explore-panel.is-stacked .explore-col-2 .explore-sub {
+  display: block;
+  grid-area: 1 / 1;
+  visibility: hidden;
+}
+
+.explore-panel.is-stacked .explore-col-2 .explore-sub.is-active {
+  visibility: visible;
+}
+
+.explore-heading {
+  padding: 12px 18px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted, #94A3B8);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.explore-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  font-size: 14px;
+  color: var(--text-body, #334155);
+  text-decoration: none;
+  outline: none;
+}
+
+.explore-row:hover,
+.explore-row:focus,
+.explore-row.is-active {
+  background: var(--primary-light, #EEF2FF);
+  color: var(--primary, #434CE8);
+}
+
+.explore-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explore-course .explore-label {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.4;
+}
+
+.explore-row .bi-chevron-right {
+  font-size: 12px;
+  color: var(--text-muted, #94A3B8);
+}
+
+.explore-quick {
+  padding-bottom: 8px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--border-color, #E2E8F0);
+}
+
+.explore-quick .explore-row {
+  font-weight: 600;
+}
+
+.explore-quick .explore-row i {
+  color: var(--primary, #434CE8);
+  font-size: 15px;
+}
+
+.explore-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary, #434CE8);
+  text-decoration: none;
+}
+
+.explore-all:hover {
+  text-decoration: underline;
+}
+
+.explore-empty {
+  padding: 10px 18px;
+  font-size: 13px;
+  color: var(--text-muted, #94A3B8);
+}
+
+/* Nút thả tim khóa học (Views/Shared/_FavoriteButton.cshtml, assets/js/favorite.js) */
+.fav-btn .fav-on,
+.fav-btn.is-liked .fav-off {
+  display: none;
+}
+
+.fav-btn.is-liked .fav-on {
+  display: inline;
+}
+
+/* Tim tròn ở góc phải ảnh bìa thẻ khóa học */
+.fav-btn-icon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.95);
+  color: #475569;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  cursor: pointer;
+  transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.fav-btn-icon:hover,
+.fav-btn-icon:focus-visible {
+  transform: scale(1.12);
+  color: #E11D48;
+  outline: none;
+}
+
+.fav-btn-icon.is-liked {
+  color: #E11D48;
+}
+
+/* Trang chi tiết: nút chính (giỏ hàng / đăng ký) + nút thả tim vuông cùng một hàng */
+.course-cta-row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+/* Nút chính co giãn chiếm phần còn lại; bỏ margin của nút (kể cả nút do addToCartAjax thay vào).
+   .btn.btn để thắng ".details-page-main .mb-3 { margin-bottom: 12px !important }" trong Course/Details;
+   hết margin thì nút tim (align-items: stretch) cao đúng bằng nút chính. */
+.course-cta-row > .btn.btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-bottom: 0 !important;
+}
+
+.fav-btn-square {
+  flex: 0 0 auto;
+  width: 58px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color, #E2E8F0);
+  background: #FFFFFF;
+  color: #334155;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.fav-btn-square:hover,
+.fav-btn-square:focus-visible {
+  border-color: #FDA4AF;
+  color: #E11D48;
+  outline: none;
+}
+
+.fav-btn-square.is-liked {
+  background: #FFF1F2;
+  border-color: #FDA4AF;
+  color: #E11D48;
+}
+
+.fav-btn.is-popping i {
+  animation: fav-pop 0.35s ease;
+}
+
+@keyframes fav-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fav-btn.is-popping i { animation: none; }
+}
+
 /* Header Search Bar (Co giãn linh hoạt, không chèn các thành phần khác) */
 .header-search {
   position: relative;
@@ -370,6 +637,85 @@
   transform: scale(1.04);
 }
 
+/* ===== Skeleton Screen cho thẻ khóa học (script khởi tạo trong <head> của _Layout) =====
+   html.js-skeleton : đang trong 2,5 giây đầu, thẻ chưa có ảnh bìa thì hiện khung xương
+   .course-card.is-ready : ảnh bìa đã tải xong (hoặc lỗi) -> hiện nội dung thật
+   Khung xương dùng chính các phần tử của thẻ (chữ trong suốt + nền xám) nên giữ nguyên bố cục, không giật trang. */
+html.js-course-img .course-thumb img {
+  opacity: 0;
+  transition: opacity 0.35s ease, transform 0.4s ease;
+}
+
+html.js-course-img .course-thumb img.is-loaded {
+  opacity: 1;
+}
+
+html.js-skeleton .course-card:has(> .course-thumb):not(.is-ready) {
+  position: relative;
+  pointer-events: none;
+}
+
+html.js-skeleton .course-card:has(> .course-thumb):not(.is-ready) .course-thumb > * {
+  visibility: hidden;
+}
+
+html.js-skeleton .course-card:has(> .course-thumb):not(.is-ready) :is(
+  .course-category .caption, .course-title, .course-instructor, .recommend-reason,
+  .course-card-outcomes, .course-rating, .price-current, .price-original, .course-footer .btn) {
+  color: transparent !important;
+  background: #E2E8F0 !important;
+  border-color: transparent !important;
+  border-radius: 6px;
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+
+html.js-skeleton .course-card:has(> .course-thumb):not(.is-ready) :is(
+  .course-instructor, .recommend-reason, .course-card-outcomes, .course-rating, .course-footer .btn) * {
+  visibility: hidden;
+}
+
+html.js-skeleton .course-card:has(> .course-thumb):not(.is-ready) :is(.course-instructor, .course-rating) {
+  width: fit-content;
+  min-width: 45%;
+}
+
+/* Vệt sáng chạy ngang thẻ */
+html.js-skeleton .course-card:has(> .course-thumb):not(.is-ready)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0) 100%);
+  animation: course-skeleton-shimmer 1.3s ease-in-out infinite;
+}
+
+@keyframes course-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+html.js-course-img .course-card.is-ready .course-body {
+  animation: course-skeleton-fade-in 0.3s ease both;
+}
+
+@keyframes course-skeleton-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.js-skeleton .course-card:has(> .course-thumb):not(.is-ready)::after,
+  html.js-course-img .course-card.is-ready .course-body {
+    animation: none;
+  }
+}
+
 .course-body {
   padding: 20px;
   display: flex;
@@ -402,6 +748,47 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Lý do gợi ý trên thẻ khóa học gợi ý ("Vì bạn đã học ...") */
+.recommend-reason {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: -4px 0 12px 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-lg, 8px);
+  background: var(--primary-light, #EEF2FF);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.recommend-reason i {
+  color: var(--primary, #434CE8);
+  font-size: 13px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.recommend-reason span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.recommend-reason.is-popular {
+  background: var(--bg-canvas, #F8FAFC);
+}
+
+.recommend-reason.is-popular i {
+  color: #EA580C;
+}
+
+.recommend-reason strong {
+  color: var(--text-heading, #0F172A);
+  font-weight: 600;
 }
 
 .course-rating {

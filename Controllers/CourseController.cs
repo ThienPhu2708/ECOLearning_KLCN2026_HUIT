@@ -4,6 +4,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Models;
+using ECOLearning.Services;
 
 namespace ECOLearning.Controllers
 {
@@ -19,11 +20,15 @@ namespace ECOLearning.Controllers
                 return RedirectToAction("Login", "Account", new { returnUrl = Request.RawUrl });
             }
 
+            // Bỏ khóa người dùng đã sở hữu (đã mua qua giỏ hàng hoặc đăng ký khóa 0đ, cả hai đều ghi DangKyKhoaHoc):
+            // khóa đã sở hữu chỉ hiện ở "Khóa học của tôi"
+            int userId = (Session["UserId"] as int?) ?? 0;
             var query = db.KhoaHoc
                 .Include(k => k.NguoiDung)
                 .Include(k => k.DanhMuc)
                 .Include(k => k.DanhGiaKhoaHoc)
                 .Where(k => k.trangThai == "Đã xuất bản" || k.trangThai == "Đã duyệt" || k.trangThai == "Active")
+                .Where(k => !db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == k.maKhoaHoc && d.maHocVien == userId))
                 .AsQueryable();
 
             // 1. Tìm kiếm thông minh theo từ khóa (Tên khóa học, Tên giảng viên, Mô tả, Danh mục)
@@ -93,6 +98,13 @@ namespace ECOLearning.Controllers
             ViewBag.SelectedLevel = level;
             ViewBag.MinRating = minRating;
             ViewBag.Sort = sort;
+            ViewBag.SoKhoaDaSoHuu = userId > 0 ? db.DangKyKhoaHoc.Count(d => d.maHocVien == userId) : 0;
+
+            // Số học viên mỗi khóa: một truy vấn GROUP BY nhẹ (xem ghi chú ở HomeController.Index)
+            ViewBag.EnrollCounts = db.DangKyKhoaHoc
+                .GroupBy(d => d.maKhoaHoc)
+                .Select(g => new { MaKhoaHoc = g.Key, SoHocVien = g.Count() })
+                .ToDictionary(x => x.MaKhoaHoc, x => x.SoHocVien);
 
             return View(courseList);
         }
@@ -164,6 +176,12 @@ namespace ECOLearning.Controllers
             ViewBag.IsEnrolled = isEnrolled;
             // Giáo viên xem khóa học của chính mình: không hiển thị nút mua/đăng ký
             ViewBag.IsOwner = currentUserId > 0 && course.maGiaoVien == currentUserId;
+
+            // Gợi ý khóa học: ghi nhận lượt xem của người học (bỏ qua khóa của chính mình và Admin)
+            if (course.maGiaoVien != currentUserId && (sessionRole == "HocVien" || sessionRole == "GiaoVien"))
+            {
+                new RecommendationService(db).RecordView(Session, currentUserId, course.maKhoaHoc);
+            }
 
             var cartList = Session["Cart"] as List<ECOLearning.ViewModels.CartItemViewModel>;
             bool isInCart = cartList != null && cartList.Any(i => i.CourseId == course.maKhoaHoc);

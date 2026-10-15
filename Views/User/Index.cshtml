@@ -103,6 +103,163 @@
         border-color: #C7D2FE;
         color: #434CE8;
     }
+
+    /* Mục thông tin giáo viên: bấm tiêu đề để mở, bấm lại để thu gọn */
+    .info-toggle {
+        padding: 0;
+        margin-bottom: 16px;
+    }
+
+    .info-toggle-btn {
+        width: 100%;
+        margin: 0;
+        padding: 22px 28px;
+        border: none;
+        border-radius: 16px;
+        background: none;
+        text-align: left;
+        cursor: pointer;
+        font: inherit;
+    }
+
+    .info-toggle-btn:hover h3,
+    .info-toggle-btn:focus-visible h3 {
+        color: var(--primary, #434CE8);
+    }
+
+    .info-toggle-btn:focus-visible {
+        outline: 2px solid var(--primary, #434CE8);
+        outline-offset: -2px;
+    }
+
+    .info-toggle-icon {
+        margin-left: auto;
+        font-size: 16px;
+        color: #64748B;
+        transition: transform 0.3s ease;
+    }
+
+    .info-toggle.is-open .info-toggle-icon {
+        transform: rotate(180deg);
+    }
+
+    /* Chiều cao chuyển từ 0 sang vừa nội dung: grid 0fr -> 1fr */
+    .info-toggle-panel {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 0.3s ease;
+    }
+
+    .info-toggle.is-open .info-toggle-panel {
+        grid-template-rows: 1fr;
+    }
+
+    .info-toggle-inner {
+        overflow: hidden;
+        min-height: 0;
+    }
+
+    .info-toggle-body {
+        margin: 0 28px 28px;
+        padding-top: 18px;
+        border-top: 1px solid var(--border-color, #E2E8F0);
+    }
+
+    /* Hơn 5 khóa học: hiện 5 khóa dạng dòng rút gọn + nút "Xem tất cả" */
+    .teacher-course-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .teacher-course-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 10px;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        background: #FFFFFF;
+        text-decoration: none;
+        color: inherit;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .teacher-course-row:hover {
+        border-color: #C7D2FE;
+        box-shadow: 0 8px 18px -10px rgba(67, 76, 232, 0.35);
+        transform: translateY(-1px);
+    }
+
+    .teacher-course-row img {
+        width: 104px;
+        height: 60px;
+        border-radius: 8px;
+        object-fit: cover;
+        flex-shrink: 0;
+        background: #E2E8F0;
+    }
+
+    .teacher-course-row-title {
+        font-size: 14.5px;
+        font-weight: 700;
+        color: #0F172A;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .teacher-course-row:hover .teacher-course-row-title {
+        color: var(--primary, #434CE8);
+    }
+
+    .teacher-course-row-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 4px;
+        font-size: 12.5px;
+        color: #64748B;
+    }
+
+    .teacher-course-row-price {
+        margin-left: auto;
+        padding-left: 8px;
+        font-size: 15px;
+        font-weight: 800;
+        color: #0F172A;
+        white-space: nowrap;
+    }
+
+    .teacher-course-more {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 14px;
+        padding: 12px;
+        border: 1px dashed #C7D2FE;
+        border-radius: 12px;
+        background: #F8FAFF;
+        color: var(--primary, #434CE8);
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: background 0.2s ease;
+    }
+
+    .teacher-course-more:hover {
+        background: #EEF2FF;
+        color: var(--primary, #434CE8);
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .info-toggle-panel,
+        .info-toggle-icon {
+            transition: none;
+        }
+    }
 </style>
 }
 <!-- Header Thông Tin Giáo Viên -->
@@ -249,67 +406,81 @@
             </div>
         </div>
 
-        <!-- Layout 2 cột: Cột trái (Nội dung chi tiết), Cột phải (Thông tin hồ sơ CSDL) -->
+        <!-- Layout 2 cột: Cột trái (Nội dung chi tiết), Cột phải (Cam kết đào tạo) -->
         <div style="display: grid; grid-template-columns: 1fr 340px; gap: 32px; align-items: start;">
             
             <!-- CỘT TRÁI -->
             <div>
+                <!-- Khối 1-3: thông tin giáo viên, mặc định thu gọn; bấm tiêu đề để mở, bấm lại để thu gọn -->
                 <!-- Khối 1: Tiểu sử & Kinh nghiệm giảng dạy (kinhNghiem từ DangKyGiaoVien) -->
-                <div class="info-card-custom">
-                    <div class="info-card-header">
+                <div class="info-card-custom info-toggle">
+                    <button type="button" class="info-card-header info-toggle-btn" aria-expanded="false" aria-controls="panel-kinh-nghiem">
                         <i class="bi bi-person-lines-fill text-primary" style="font-size: 20px;"></i>
                         <h3>Giới thiệu & Kinh nghiệm làm việc</h3>
-                    </div>
-                    <div style="font-size: 15px; line-height: 1.75; color: #334155; white-space: pre-line;">
-                        @Model.KinhNghiem
+                        <i class="bi bi-chevron-down info-toggle-icon"></i>
+                    </button>
+                    <div class="info-toggle-panel" id="panel-kinh-nghiem">
+                        <div class="info-toggle-inner">
+                            <div class="info-toggle-body" style="font-size: 15px; line-height: 1.75; color: #334155; white-space: pre-line;">@Model.KinhNghiem</div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Khối 2: Chuyên môn & Lĩnh vực đào tạo (chuyenMon từ DangKyGiaoVien) -->
-                <div class="info-card-custom">
-                    <div class="info-card-header">
+                <div class="info-card-custom info-toggle">
+                    <button type="button" class="info-card-header info-toggle-btn" aria-expanded="false" aria-controls="panel-chuyen-mon">
                         <i class="bi bi-award text-primary" style="font-size: 20px;"></i>
                         <h3>Lĩnh vực chuyên môn</h3>
-                    </div>
-                    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                        @{
-                            var specializations = (Model.ChuyenMon ?? "")
-                                .Split(new[] { ",", ";", "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
-                                .Select(s => s.Trim())
-                                .Where(s => !string.IsNullOrEmpty(s))
-                                .ToList();
-                        }
-                        @if (specializations.Any())
-                        {
-                            foreach (var spec in specializations)
-                            {
-                                <span style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 9999px; font-size: 13.5px; font-weight: 600;">
-                                    <i class="bi bi-check-circle-fill" style="font-size: 12px;"></i> @spec
-                                </span>
-                            }
-                        }
-                        else
-                        {
-                            <span style="color: #64748B; font-size: 14px;">@Model.ChuyenMon</span>
-                        }
+                        <i class="bi bi-chevron-down info-toggle-icon"></i>
+                    </button>
+                    <div class="info-toggle-panel" id="panel-chuyen-mon">
+                        <div class="info-toggle-inner">
+                            <div class="info-toggle-body" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                @{
+                                    var specializations = (Model.ChuyenMon ?? "")
+                                        .Split(new[] { ",", ";", "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+                                        .Select(s => s.Trim())
+                                        .Where(s => !string.IsNullOrEmpty(s))
+                                        .ToList();
+                                }
+                                @if (specializations.Any())
+                                {
+                                    foreach (var spec in specializations)
+                                    {
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 9999px; font-size: 13.5px; font-weight: 600;">
+                                            <i class="bi bi-check-circle-fill" style="font-size: 12px;"></i> @spec
+                                        </span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span style="color: #64748B; font-size: 14px;">@Model.ChuyenMon</span>
+                                }
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Khối 3: Hồ sơ chứng chỉ chuyên môn (nếu có từ DangKyGiaoVien) -->
                 @if (!string.IsNullOrEmpty(Model.TenTepChungChi) || !string.IsNullOrEmpty(Model.TepChungChi))
                 {
-                    <div class="info-card-custom">
-                        <div class="info-card-header">
+                    <div class="info-card-custom info-toggle">
+                        <button type="button" class="info-card-header info-toggle-btn" aria-expanded="false" aria-controls="panel-chung-chi">
                             <i class="bi bi-shield-check text-primary" style="font-size: 20px;"></i>
                             <h3>Hồ sơ & Chứng chỉ chuyên môn đã xác thực</h3>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
-                            <div class="certificate-pill">
-                                <i class="bi bi-file-earmark-pdf-fill" style="font-size: 24px; color: #EF4444;"></i>
-                                <div>
-                                    <div style="font-weight: 700; font-size: 14px;">@(string.IsNullOrEmpty(Model.TenTepChungChi) ? "Chứng chỉ chuyên môn" : Model.TenTepChungChi)</div>
-                                    <div style="font-size: 12px; color: #10B981; font-weight: 600;">
-                                        <i class="bi bi-check-all"></i> Đã được kiểm duyệt và công nhận bởi hệ thống
+                            <i class="bi bi-chevron-down info-toggle-icon"></i>
+                        </button>
+                        <div class="info-toggle-panel" id="panel-chung-chi">
+                            <div class="info-toggle-inner">
+                                <div class="info-toggle-body" style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                                    <div class="certificate-pill">
+                                        <i class="bi bi-file-earmark-pdf-fill" style="font-size: 24px; color: #EF4444;"></i>
+                                        <div>
+                                            <div style="font-weight: 700; font-size: 14px;">@(string.IsNullOrEmpty(Model.TenTepChungChi) ? "Chứng chỉ chuyên môn" : Model.TenTepChungChi)</div>
+                                            <div style="font-size: 12px; color: #10B981; font-weight: 600;">
+                                                <i class="bi bi-check-all"></i> Đã được kiểm duyệt và công nhận bởi hệ thống
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -318,86 +489,24 @@
                 }
 
                 <!-- Khối 4: Danh sách các khóa học do giáo viên phụ trách -->
-                <div class="info-card-custom" style="padding-bottom: 12px;">
+                @{
+                    int soKhoaHoc = Model.DanhSachKhoaHoc.Count;
+                    bool rutGon = soKhoaHoc > ECOLearning.ViewModels.InstructorProfileViewModel.SoKhoaHocTrenTrangHoSo;
+                    string xemTatCaUrl = Url.Action("Courses", "User", new { id = Model.MaNguoiDung });
+                }
+                <div class="info-card-custom" style="padding-bottom: @(rutGon ? "24px" : "12px");">
                     <div class="info-card-header" style="justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <i class="bi bi-collection-play text-primary" style="font-size: 20px;"></i>
-                            <h3>Các khóa học của giáo viên (@Model.DanhSachKhoaHoc.Count)</h3>
+                            <h3>Các khóa học của giáo viên (@soKhoaHoc)</h3>
                         </div>
+                        @if (rutGon)
+                        {
+                            <a href="@xemTatCaUrl" class="btn btn-outline btn-sm" style="text-decoration: none; border-radius: 8px;">Xem tất cả</a>
+                        }
                     </div>
 
-                    @if (Model.DanhSachKhoaHoc != null && Model.DanhSachKhoaHoc.Count > 0)
-                    {
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 10px;">
-                            @foreach (var course in Model.DanhSachKhoaHoc)
-                            {
-                                string thumb = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
-                                string catName = course.DanhMuc != null ? course.DanhMuc.tenDanhMuc : "Công nghệ & Kỹ năng";
-                                decimal curPrice = course.giaKhuyenMai.HasValue ? course.giaKhuyenMai.Value : course.giaBan;
-                                decimal rawPrice = course.giaBan;
-                                int cEnrollCount = course.DangKyKhoaHoc != null ? course.DangKyKhoaHoc.Count : 0;
-                                bool hasRev = course.DanhGiaKhoaHoc != null && course.DanhGiaKhoaHoc.Count > 0;
-                                double cStars = hasRev ? Math.Round(course.DanhGiaKhoaHoc.Average(d => (double)d.soSao), 1) : 0;
-
-                                <div class="course-card" onclick="window.location.href='@Url.Action("Details", "Course", new { id = course.maKhoaHoc })'" style="cursor: pointer; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column;">
-                                    <div style="position: relative; width: 100%; height: 160px; overflow: hidden; background: #000;">
-                                        <img src="@thumb" alt="@course.tenKhoaHoc" style="width: 100%; height: 100%; object-fit: cover;" />
-                                        <span class="badge" style="position: absolute; top: 10px; left: 10px; background: rgba(15, 23, 42, 0.75); color: #fff; backdrop-filter: blur(4px); font-size: 11px;">
-                                            @catName
-                                        </span>
-                                    </div>
-                                    <div style="padding: 16px; flex-grow: 1; display: flex; flex-direction: column;">
-                                        <h4 style="font-size: 15px; font-weight: 700; color: #0F172A; margin: 0 0 10px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="@course.tenKhoaHoc">
-                                            @course.tenKhoaHoc
-                                        </h4>
-
-                                        <div style="display: flex; align-items: center; gap: 12px; font-size: 12.5px; color: #64748B; margin-bottom: 12px;">
-                                            @if (hasRev)
-                                            {
-                                                <div style="display: flex; align-items: center; gap: 4px; color: #F59E0B; font-weight: 700;">
-                                                    <i class="bi bi-star-fill"></i>
-                                                    <span>@cStars.ToString("0.0")</span>
-                                                    <span style="color: #64748B; font-weight: 500; font-size: 11.5px;">(@course.DanhGiaKhoaHoc.Count)</span>
-                                                </div>
-                                            }
-                                            else
-                                            {
-                                                <div style="display: flex; align-items: center; gap: 4px; color: #94A3B8;">
-                                                    <i class="bi bi-star"></i>
-                                                    <span>Chưa có đánh giá</span>
-                                                </div>
-                                            }
-                                            <span>•</span>
-                                            <div>
-                                                <i class="bi bi-people me-1"></i>@cEnrollCount học viên
-                                            </div>
-                                        </div>
-
-                                        <div style="margin-top: auto; padding-top: 12px; border-top: 1px solid #F1F5F9; display: flex; align-items: center; justify-content: space-between;">
-                                            <div>
-                                                @if (curPrice <= 0)
-                                                {
-                                                    <span style="font-size: 16px; font-weight: 800; color: #10B981;">Miễn phí</span>
-                                                }
-                                                else
-                                                {
-                                                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">@curPrice.ToString("N0") đ</span>
-                                                    if (curPrice < rawPrice)
-                                                    {
-                                                        <span style="font-size: 12px; color: #94A3B8; text-decoration: line-through; margin-left: 4px;">@rawPrice.ToString("N0") đ</span>
-                                                    }
-                                                }
-                                            </div>
-                                            <a href="@Url.Action("Details", "Course", new { id = course.maKhoaHoc })" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none;">
-                                                Xem khóa học
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-                    else
+                    @if (soKhoaHoc == 0)
                     {
                         <div style="text-align: center; padding: 36px 20px; color: #64748B;">
                             <i class="bi bi-inbox" style="font-size: 32px; color: #94A3B8; display: block; margin-bottom: 10px;"></i>
@@ -405,69 +514,60 @@
                             <div style="font-size: 13px; margin-top: 4px;">Giáo viên đang chuẩn bị các bài giảng mới nhất cho học viên.</div>
                         </div>
                     }
+                    else if (!rutGon)
+                    {
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 10px;">
+                            @foreach (var item in Model.DanhSachKhoaHoc)
+                            {
+                                @Html.Partial("_TeacherCourseCard", item)
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="teacher-course-list">
+                            @foreach (var item in Model.DanhSachKhoaHoc.Take(ECOLearning.ViewModels.InstructorProfileViewModel.SoKhoaHocTrenTrangHoSo))
+                            {
+                                var course = item.Course;
+                                string thumb = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
+                                <a class="teacher-course-row" href="@Url.Action("Details", "Course", new { id = course.maKhoaHoc })" target="_blank" rel="noopener" title="@course.tenKhoaHoc">
+                                    <img src="@thumb" alt="" loading="lazy" decoding="async" />
+                                    <div style="min-width: 0;">
+                                        <div class="teacher-course-row-title">@course.tenKhoaHoc</div>
+                                        <div class="teacher-course-row-meta">
+                                            @if (item.SoDanhGia > 0)
+                                            {
+                                                <span style="color: #F59E0B; font-weight: 700;"><i class="bi bi-star-fill"></i> @item.DiemDanhGia.ToString("0.0")</span>
+                                            }
+                                            else
+                                            {
+                                                <span><i class="bi bi-star"></i> Chưa có đánh giá</span>
+                                            }
+                                            <span><i class="bi bi-people me-1"></i>@item.SoHocVien học viên</span>
+                                        </div>
+                                    </div>
+                                    <div class="teacher-course-row-price" style="@(item.GiaHienTai <= 0 ? "color: #10B981;" : "")">
+                                        @(item.GiaHienTai <= 0 ? "Miễn phí" : item.GiaHienTai.ToString("N0") + " đ")
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                        <a href="@xemTatCaUrl" class="teacher-course-more">
+                            Xem tất cả @soKhoaHoc khóa học <i class="bi bi-arrow-right"></i>
+                        </a>
+                    }
                 </div>
             </div>
 
-            <!-- CỘT PHẢI (SIDEBAR THÔNG TIN HỒ SƠ) -->
+            <!-- CỘT PHẢI (SIDEBAR) -->
             <div>
-                <!-- Thẻ Tóm Tắt Hồ Sơ CSDL -->
-                <div class="info-card-custom" style="padding: 24px;">
-                    <div class="info-card-header" style="margin-bottom: 16px;">
-                        <i class="bi bi-file-earmark-person text-primary" style="font-size: 20px;"></i>
-                        <h3>Thông tin hồ sơ</h3>
-                    </div>
-
-                    <div style="display: flex; flex-direction: column; gap: 14px; font-size: 14px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #E2E8F0; padding-bottom: 10px;">
-                            <span style="color: #64748B;">Mã giáo viên:</span>
-                            <span style="font-weight: 700; color: #0F172A;">#GV-@Model.MaNguoiDung.ToString("D4")</span>
-                        </div>
-
-                        @if (!string.IsNullOrEmpty(Model.MaDon))
-                        {
-                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #E2E8F0; padding-bottom: 10px;">
-                                <span style="color: #64748B;">Mã đơn đăng ký:</span>
-                                <span style="font-weight: 600; color: #434CE8; font-family: monospace;">@Model.MaDon</span>
-                            </div>
-                        }
-
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #E2E8F0; padding-bottom: 10px;">
-                            <span style="color: #64748B;">Trạng thái:</span>
-                            <span style="display: inline-flex; align-items: center; gap: 4px; color: #059669; background: #ECFDF5; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 700;">
-                                <i class="bi bi-check-circle-fill"></i> @(string.Equals(Model.TrangThaiGiaoVien, "Approved", StringComparison.OrdinalIgnoreCase) ? "Đã phê duyệt" : Model.TrangThaiGiaoVien)
-                            </span>
-                        </div>
-
-                        @if (Model.NgayGui.HasValue)
-                        {
-                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #E2E8F0; padding-bottom: 10px;">
-                                <span style="color: #64748B;">Ngày gửi hồ sơ:</span>
-                                <span style="font-weight: 600; color: #0F172A;">@Model.NgayGui.Value.ToString("dd/MM/yyyy")</span>
-                            </div>
-                        }
-
-                        @if (Model.NgayDuyet.HasValue)
-                        {
-                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #E2E8F0; padding-bottom: 10px;">
-                                <span style="color: #64748B;">Ngày phê duyệt:</span>
-                                <span style="font-weight: 600; color: #0F172A;">@Model.NgayDuyet.Value.ToString("dd/MM/yyyy")</span>
-                            </div>
-                        }
-
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #64748B;">Email liên hệ:</span>
-                            <span style="font-weight: 600; color: #0F172A; text-align: right; max-width: 170px; word-break: break-all;">@Model.Email</span>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Thẻ Cam Kết Đào Tạo -->
                 <div style="background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%); border: 1px solid #C7D2FE; border-radius: 16px; padding: 24px;">
                     <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #434CE8; margin-bottom: 12px; font-size: 15px;">
                         <i class="bi bi-shield-lock-fill"></i> Cam kết chất lượng đào tạo
                     </div>
                     <p style="font-size: 13px; line-height: 1.6; color: #334155; margin-bottom: 14px;">
-                        Toàn bộ thông tin hồ sơ, chuyên môn và kinh nghiệm của giáo viên đều được kiểm duyệt xác thực theo quy chuẩn của ECOLearning.
+                        Toàn bộ thông tin hồ sơ, chuyên môn và kinh nghiệm của giáo viên đều được kiểm duyệt xác thực theo quy chuẩn của E-Learning.
                     </p>
                     <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; color: #475569;">
                         <div style="display: flex; align-items: center; gap: 6px;">
@@ -487,3 +587,16 @@
 
     </div>
 </div>
+
+@section scripts {
+<script>
+    // Mục thông tin giáo viên: bấm tiêu đề để mở, bấm lại để thu gọn
+    document.querySelectorAll('.info-toggle-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var card = btn.closest('.info-toggle');
+            var open = card.classList.toggle('is-open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+    });
+</script>
+}

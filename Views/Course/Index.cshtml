@@ -4,6 +4,7 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 
     var categories = ViewBag.Categories as List<ECOLearning.Models.DanhMuc> ?? new List<ECOLearning.Models.DanhMuc>();
+    var enrollCounts = ViewBag.EnrollCounts as Dictionary<string, int> ?? new Dictionary<string, int>();
     string searchTerm = ViewBag.SearchTerm as string;
     string selectedCat = ViewBag.SelectedCategory as string;
     bool isFree = ViewBag.IsFree ?? false;
@@ -214,8 +215,17 @@
                 <div class="col-8">
                     <!-- Results header bar & Sort dropdown -->
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #FFFFFF; border: 1px solid #E2E8F0; padding: 14px 20px; border-radius: 16px;">
-                        <div style="font-weight: 700; color: #0F172A; font-size: 15px;">
-                            Đang hiển thị <span style="color: #434CE8;">@Model.Count</span> khóa học
+                        <div>
+                            <div style="font-weight: 700; color: #0F172A; font-size: 15px;">
+                                Đang hiển thị <span style="color: #434CE8;">@Model.Count</span> khóa học
+                            </div>
+                            @if ((ViewBag.SoKhoaDaSoHuu as int? ?? 0) > 0)
+                            {
+                                <div style="font-size: 12.5px; color: #64748B; margin-top: 2px;">
+                                    @ViewBag.SoKhoaDaSoHuu khóa bạn đã sở hữu nằm ở
+                                    <a href="@Url.Action("MyCourses", "Learning")" style="font-weight: 600;">Khóa học của tôi</a>
+                                </div>
+                            }
                         </div>
 
                         <div style="display: flex; align-items: center; gap: 10px;">
@@ -254,15 +264,17 @@
                                 decimal actualPrice = course.giaKhuyenMai.HasValue ? course.giaKhuyenMai.Value : course.giaBan;
                                 decimal oldPrice = course.giaBan;
                                 bool hasRatings = course.DanhGiaKhoaHoc != null && course.DanhGiaKhoaHoc.Count > 0;
-                                int enrollCount = course.DangKyKhoaHoc != null ? course.DangKyKhoaHoc.Count : 0;
+                                int enrollCount;
+                                enrollCounts.TryGetValue(course.maKhoaHoc, out enrollCount);
                                 double avgStars = hasRatings ? course.DanhGiaKhoaHoc.Average(d => d.soSao) : 0;
                                 bool isTopTrending = enrollCount >= 3;
                                 bool isHighRated = hasRatings && avgStars >= 4.5;
 
                                 <div class="col-6" style="margin-bottom: 24px;">
-                                    <div class="course-card" onclick="window.location.href='@Url.Action("Details", "Course", new { id = course.maKhoaHoc })'" style="cursor: pointer; height: 100%;">
+                                    <div class="course-card" onclick="window.open('@Url.Action("Details", "Course", new { id = course.maKhoaHoc })', '_blank', 'noopener')" style="cursor: pointer; height: 100%;">
                                         <div class="course-thumb">
-                                            <img src="@thumbUrl" alt="@course.tenKhoaHoc" />
+                                            <img src="@thumbUrl" alt="@course.tenKhoaHoc" loading="lazy" decoding="async" />
+                                            @Html.Partial("_FavoriteButton", new ECOLearning.ViewModels.FavoriteButtonModel { CourseId = course.maKhoaHoc, TeacherId = course.maGiaoVien })
                                             @if (isTopTrending)
                                             {
                                                 <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;"><i class="bi bi-fire me-1"></i> Top Trending</span>
@@ -330,7 +342,7 @@
                                                         <span class="price-original">@oldPrice.ToString("N0") đ</span>
                                                     }
                                                 </div>
-                                                <a href="@Url.Action("Details", "Course", new { id = course.maKhoaHoc })" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: var(--radius-xl, 10px); font-weight: 600; text-decoration: none;">
+                                                <a href="@Url.Action("Details", "Course", new { id = course.maKhoaHoc })" target="_blank" rel="noopener" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: var(--radius-xl, 10px); font-weight: 600; text-decoration: none;">
                                                     Chi tiết
                                                 </a>
                                             </div>

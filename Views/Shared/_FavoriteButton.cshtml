@@ -1,0 +1,26 @@
+@model ECOLearning.ViewModels.FavoriteButtonModel
+@*
+    Nút thả tim khóa học. Chỉ hiện khi đã đăng nhập và không phải khóa của chính mình
+    (khóa đã sở hữu không còn hiện ở các trang có nút này). Xử lý bấm ở assets/js/favorite.js.
+*@
+@{
+    int userId = (Session["UserId"] as int?) ?? 0;
+    bool hienNut = userId > 0 && Model.TeacherId != userId && !string.IsNullOrEmpty(Model.CourseId);
+    bool liked = hienNut && ECOLearning.Services.FavoriteService.GetLikedIdsCached(Context).Contains(Model.CourseId);
+    string nhan = liked ? "Bỏ tim khóa học" : "Thả tim khóa học";
+}
+@if (hienNut)
+{
+    if (Model.Variant == "square")
+    {
+        <button type="button" class="fav-btn fav-btn-square@(liked ? " is-liked" : "")" data-favorite-course="@Model.CourseId" aria-pressed="@(liked ? "true" : "false")" aria-label="@nhan" title="@nhan">
+            <i class="bi bi-heart fav-off"></i><i class="bi bi-heart-fill fav-on"></i>
+        </button>
+    }
+    else
+    {
+        <button type="button" class="fav-btn fav-btn-icon@(liked ? " is-liked" : "")" data-favorite-course="@Model.CourseId" aria-pressed="@(liked ? "true" : "false")" aria-label="@nhan" title="@nhan">
+            <i class="bi bi-heart fav-off"></i><i class="bi bi-heart-fill fav-on"></i>
+        </button>
+    }
+}

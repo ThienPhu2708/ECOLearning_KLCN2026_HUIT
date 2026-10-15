@@ -1,0 +1,4 @@
+pandas>=2.0
+numpy>=1.24
+# Chỉ cần khi đọc/ghi SQL Server (--source sql); máy cần có "ODBC Driver 17 for SQL Server"
+pyodbc>=5.0

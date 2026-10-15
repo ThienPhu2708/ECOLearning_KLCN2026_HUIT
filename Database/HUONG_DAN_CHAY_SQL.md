@@ -8,7 +8,7 @@ Các file chỉ **thêm** bảng / cột / trigger, **không xóa dữ liệu** 
 
 ---
 
-## Bước 1 — Bắt buộc: chạy 4 file migration theo đúng thứ tự
+## Bước 1 — Bắt buộc: chạy 5 file migration theo đúng thứ tự
 
 Thư mục: `Database/Migrations/`
 
@@ -18,12 +18,14 @@ Thư mục: `Database/Migrations/`
 | 2 | `002_BaoCaoViPham.sql` | Tạo bảng `BaoCaoViPham` (học viên báo cáo) và `XuLyViPham` (Admin xử lý). |
 | 3 | `003_BaoCaoViPham_BaiHoc.sql` | Thêm cột `maBaiHoc` để biết bài học nào bị báo cáo. |
 | 4 | `004_XuLyViPham_TraoDoi.sql` | Thêm bước xử lý và bảng `PhanHoiViPham` (giáo viên ↔ Admin trao đổi khi khóa học bị tạm khóa). |
+| 5 | `005_GoiY_LocCongTac.sql` | Gợi ý khóa học (lọc cộng tác): bảng `TuongTacKhoaHoc`, `course_similarity`, `GoiY_TrongSo`, view, hàm và 3 stored procedure (khóa tương tự, gợi ý cho bạn, nút "Gợi ý khóa học"). Sau khi chạy, xem `Recommender/README.md` để chạy job tính gợi ý. |
+| 6 | `006_GoiY_GoiYLaiKhoaChiXem.sql` | Sửa quy tắc gợi ý: chỉ không gợi ý lại khóa **đã đăng ký / đã học / đã đánh giá**; khóa chỉ mới xem qua vẫn được gợi ý. Thiếu file này thì người xem nhiều khóa (chưa mua) sẽ thấy trang "Khóa học gợi ý" trống. |
 
 ### Cách chạy trong SQL Server Management Studio (SSMS)
 1. Mở SSMS, kết nối vào SQL Server trên máy bạn.
 2. **File → Open → File...** → chọn file `001_...sql`.
 3. Bấm **Execute** (hoặc phím **F5**). Thấy *"Commands completed successfully"* là xong.
-4. Lặp lại với `002`, `003`, `004` **theo đúng thứ tự**.
+4. Lặp lại với `002`, `003`, `004`, `005`, `006` **theo đúng thứ tự**.
 
 > Mỗi file đã có sẵn dòng `USE QL_HETHONG_CUNGCAP_KHOAHOC;` nên không cần chọn database trước.
 > Nếu database của bạn đặt **tên khác**, sửa dòng `USE ...` ở đầu file cho đúng tên.
@@ -36,10 +38,12 @@ USE QL_HETHONG_CUNGCAP_KHOAHOC;
 SELECT
   CASE WHEN OBJECT_ID('dbo.BaoCaoViPham')  IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 002' END AS [002],
   CASE WHEN COL_LENGTH('dbo.BaoCaoViPham','maBaiHoc') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 003' END AS [003],
-  CASE WHEN OBJECT_ID('dbo.PhanHoiViPham') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 004' END AS [004];
+  CASE WHEN OBJECT_ID('dbo.PhanHoiViPham') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 004' END AS [004],
+  CASE WHEN OBJECT_ID('dbo.course_similarity') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 005' END AS [005],
+  CASE WHEN OBJECT_DEFINITION(OBJECT_ID('dbo.fn_GoiY_KhoaHocDuocGoiY')) LIKE N'%DangKyKhoaHoc%' THEN N'OK' ELSE N'THIẾU - chạy 006' END AS [006];
 ```
 
-Cả 3 cột đều ra **OK** là được.
+Cả 5 cột đều ra **OK** là được.
 
 ---
 

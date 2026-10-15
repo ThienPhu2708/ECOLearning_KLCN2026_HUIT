@@ -6,6 +6,9 @@ namespace ECOLearning.ViewModels
 {
     public class InstructorProfileViewModel
     {
+        /// <summary>Trang hồ sơ chỉ hiện tối đa bấy nhiêu khóa; nhiều hơn thì thu gọn và có nút "Xem tất cả".</summary>
+        public const int SoKhoaHocTrenTrangHoSo = 5;
+
         // Thông tin cá nhân từ bảng NguoiDung
         public int MaNguoiDung { get; set; }
         public string HoTen { get; set; }
@@ -35,12 +38,26 @@ namespace ECOLearning.ViewModels
         public double DiemDanhGiaTrungBinh { get; set; }
         public int TongSoKhoaHoc { get; set; }
 
-        // Danh sách khóa học của giáo viên
-        public List<KhoaHoc> DanhSachKhoaHoc { get; set; }
+        // Danh sách khóa học của giáo viên (kèm số học viên / đánh giá đã đếm sẵn)
+        public List<KhoaHocCuaGiaoVienItem> DanhSachKhoaHoc { get; set; }
 
         public InstructorProfileViewModel()
         {
-            DanhSachKhoaHoc = new List<KhoaHoc>();
+            DanhSachKhoaHoc = new List<KhoaHocCuaGiaoVienItem>();
         }
+    }
+
+    /// <summary>
+    /// Một khóa học trên trang giáo viên. Số học viên / lượt đánh giá đếm bằng GROUP BY, không nạp cả
+    /// danh sách DangKyKhoaHoc / DanhGiaKhoaHoc (truy vấn đó cần nhiều bộ nhớ, máy thiếu RAM phải chờ lâu).
+    /// </summary>
+    public class KhoaHocCuaGiaoVienItem
+    {
+        public KhoaHoc Course { get; set; }
+        public int SoHocVien { get; set; }
+        public int SoDanhGia { get; set; }
+        public double DiemDanhGia { get; set; }
+
+        public decimal GiaHienTai => Course.giaKhuyenMai.HasValue ? Course.giaKhuyenMai.Value : Course.giaBan;
     }
 }

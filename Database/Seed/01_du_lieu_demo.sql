@@ -14,8 +14,7 @@
 --               linh.ho@, nam.ngo@, phuong.duong@ (hồ sơ GV chờ duyệt), tam.ly@ (hồ sơ GV bị từ chối),
 --               vy.mai@ (tài khoản BỊ KHÓA) — tất cả @demo.ecolearning.vn
 -- =============================================================================
-USE QL_HETHONG_CUNGCAP_KHOAHOC;
-GO
+
 
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
@@ -82,7 +81,7 @@ JOIN NguoiDung nd ON nd.email = v.u + '@demo.ecolearning.vn';
 INSERT INTO DanhMuc (maDanhMuc, tenDanhMuc, moTa, trangThai)
 SELECT v.ma, v.ten, v.moTa, v.tt
 FROM (VALUES ('DM04', N'Marketing & Kinh doanh', N'Digital marketing, bán hàng online, kỹ năng văn phòng', 1),
-             ('DM05', N'Ngoại ngữ',              N'Tiếng Anh giao tiếp, tiếng Anh chuyên ngành',          1),
+             ('CAT-005', N'Ngoại ngữ',              N'Tiếng Anh giao tiếp, tiếng Anh chuyên ngành',          1),
              ('DM06', N'Nhiếp ảnh & Video',      N'Chụp ảnh, quay dựng video cơ bản',                     0)) v(ma, ten, moTa, tt)
 WHERE NOT EXISTS (SELECT 1 FROM DanhMuc d WHERE d.maDanhMuc = v.ma OR d.tenDanhMuc = v.ten);
 
@@ -97,7 +96,7 @@ INSERT INTO KhoaHoc (maKhoaHoc, tenKhoaHoc, moTaNgan, moTa, mucTieuDauRa, giaBan
  ('DMKH05', N'Python cho Khoa học dữ liệu', N'Phân tích dữ liệu với Pandas, NumPy và trực quan hóa bằng Matplotlib.', N'Làm sạch dữ liệu, phân tích khám phá và trực quan hóa trên bộ dữ liệu thực tế.', N'Tự phân tích một bộ dữ liệu thực tế và trình bày kết quả.', 1490000, 990000, N'Trung cấp', N'Đã xuất bản', 'DM03', @T3, 'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=800&auto=format&fit=crop&q=80'),
  ('DMKH06', N'Machine Learning ứng dụng', N'Các thuật toán học máy cơ bản và ứng dụng với scikit-learn.', N'Hồi quy, phân loại, phân cụm và đánh giá mô hình.', N'Xây dựng và đánh giá mô hình học máy cho bài toán thực tế.', 1990000, NULL, N'Nâng cao', N'Chờ duyệt', 'DM03', @T3, 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=800&auto=format&fit=crop&q=80'),
  ('DMKH07', N'Digital Marketing 2026', N'Chạy quảng cáo Facebook, Google và tối ưu chuyển đổi.', N'Lập kế hoạch, chạy và đo lường chiến dịch quảng cáo đa kênh.', N'Tự lên kế hoạch và triển khai chiến dịch quảng cáo.', 790000, 590000, N'Cơ bản', N'Cần sửa đổi', 'DM04', @T2, 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80'),
- ('DMKH08', N'Tiếng Anh giao tiếp cho dân IT', N'Tự tin họp, viết email và phỏng vấn bằng tiếng Anh.', N'Từ vựng chuyên ngành, mẫu câu họp daily, viết email và luyện phỏng vấn.', N'Giao tiếp tự tin trong môi trường IT quốc tế.', 590000, NULL, N'Cơ bản', N'Bản nháp', 'DM05', @T2, 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&auto=format&fit=crop&q=80'),
+ ('DMKH08', N'Tiếng Anh giao tiếp cho dân IT', N'Tự tin họp, viết email và phỏng vấn bằng tiếng Anh.', N'Từ vựng chuyên ngành, mẫu câu họp daily, viết email và luyện phỏng vấn.', N'Giao tiếp tự tin trong môi trường IT quốc tế.', 590000, NULL, N'Cơ bản', N'Bản nháp', 'CAT-005', @T2, 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&auto=format&fit=crop&q=80'),
  ('DMKH09', N'Excel nâng cao cho văn phòng', N'Hàm nâng cao, Pivot Table, Power Query và dashboard.', N'Thành thạo các hàm tra cứu, PivotTable và tự động hóa báo cáo.', N'Tự làm dashboard báo cáo bằng Excel.', 490000, 390000, N'Trung cấp', N'Tạm khóa', 'DM04', @T3, 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80'),
  ('DMKH10', N'Chụp ảnh sản phẩm bằng điện thoại', N'Chụp ảnh bán hàng đẹp chỉ với điện thoại và ánh sáng tự nhiên.', N'Bố cục, ánh sáng, hậu kỳ bằng Lightroom mobile.', N'Tự chụp bộ ảnh sản phẩm bán hàng chuyên nghiệp.', 390000, NULL, N'Cơ bản', N'Đã xuất bản', 'DM06', @T2, 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=800&auto=format&fit=crop&q=80'),
  ('DMKH11', N'Kiếm tiền online cấp tốc', N'Làm giàu nhanh chóng với các mẹo kiếm tiền online.', N'Khóa học bị khóa vĩnh viễn do nội dung không đúng mô tả.', N'(Khóa học vi phạm)', 299000, NULL, N'Cơ bản', N'Khóa vĩnh viễn', 'DM04', @T3, 'https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=800&auto=format&fit=crop&q=80'),
@@ -390,3 +389,11 @@ UNION ALL SELECT N'Lượt đăng ký khóa học demo', COUNT(*) FROM DangKyKho
 UNION ALL SELECT N'Đánh giá demo', COUNT(*) FROM DanhGiaKhoaHoc WHERE maKhoaHoc LIKE 'DMKH%'
 UNION ALL SELECT N'Báo cáo vi phạm demo', COUNT(*) FROM BaoCaoViPham WHERE maBaoCao LIKE 'DMBC%';
 GO
+
+
+SELECT maDanhMuc, tenDanhMuc, trangThai FROM DanhMuc ORDER BY maDanhMuc;
+
+
+INSERT INTO DanhMuc (maDanhMuc, tenDanhMuc, moTa, trangThai) VALUES
+ ('DM02', N'Thiết kế UI/UX & Đồ họa', N'Thiết kế giao diện, đồ họa', 1),
+ ('DM03', N'Khoa học dữ liệu & AI',   N'Phân tích dữ liệu, học máy', 1);

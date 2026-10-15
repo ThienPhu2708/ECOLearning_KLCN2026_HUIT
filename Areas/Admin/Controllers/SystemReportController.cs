@@ -264,7 +264,7 @@ namespace ECOLearning.Areas.Admin.Controllers
             var model = BuildSystemReportModel(period, category, teacher);
 
             var sb = new StringBuilder();
-            sb.AppendLine("BÁO CÁO DOANH THU VÀ VẬN HÀNH HỆ THỐNG ECOLearning");
+            sb.AppendLine("BÁO CÁO DOANH THU VÀ VẬN HÀNH HỆ THỐNG E-Learning");
             sb.AppendLine($"Kỳ báo cáo: {model.Period.ToUpper()} | Phạm vi: {model.FilterLabel} | Ngày trích xuất: {DateTime.Now:dd/MM/yyyy HH:mm}");
             sb.AppendLine();
             sb.AppendLine("Giai Doan,Doanh Thu Thuan (VND),So Don Hang,Gia Tri Don TB (VND),Hoc Vien Moi,Tang Truong");
@@ -301,7 +301,7 @@ namespace ECOLearning.Areas.Admin.Controllers
             byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
             byte[] fileBytes = preamble.Concat(bytes).ToArray();
 
-            return File(fileBytes, "text/csv", $"BaoCaoHeThong_ECOLearning_{DateTime.Now:yyyyMMdd}.csv");
+            return File(fileBytes, "text/csv", $"BaoCaoHeThong_E-Learning_{DateTime.Now:yyyyMMdd}.csv");
         }
 
         // GET: Admin/SystemReport/ExportPdf (xuất file PDF thật, cùng kỳ báo cáo và bộ lọc với màn hình)
@@ -311,7 +311,7 @@ namespace ECOLearning.Areas.Admin.Controllers
             try
             {
                 byte[] pdf = SystemReportPdfService.Build(model);
-                return File(pdf, "application/pdf", $"BaoCaoHeThong_ECOLearning_{model.Period}_{DateTime.Now:yyyyMMdd}.pdf");
+                return File(pdf, "application/pdf", $"BaoCaoHeThong_E-Learning_{model.Period}_{DateTime.Now:yyyyMMdd}.pdf");
             }
             catch (Exception ex)
             {

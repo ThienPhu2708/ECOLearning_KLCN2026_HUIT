@@ -25,8 +25,8 @@ namespace ECOLearning.Services
         public static byte[] Build(SystemReportViewModel model)
         {
             var doc = new Document();
-            doc.Info.Title = "Báo cáo hệ thống ECOLearning";
-            doc.Info.Author = "ECOLearning Admin";
+            doc.Info.Title = "Báo cáo hệ thống E-Learning";
+            doc.Info.Author = "E-Learning Admin";
 
             var normal = doc.Styles["Normal"];
             normal.Font.Name = FontName;
@@ -43,7 +43,7 @@ namespace ECOLearning.Services
             footer.Format.Alignment = ParagraphAlignment.Center;
             footer.Format.Font.Size = 8;
             footer.Format.Font.Color = Muted;
-            footer.AddText("ECOLearning — Báo cáo hệ thống • Trang ");
+            footer.AddText("E-Learning — Báo cáo hệ thống • Trang ");
             footer.AddPageField();
             footer.AddText(" / ");
             footer.AddNumPagesField();

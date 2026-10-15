@@ -175,16 +175,24 @@
     <Compile Include="ViewModels\CartItemViewModel.cs" />
     <Compile Include="ViewModels\CartViewModel.cs" />
     <Compile Include="ViewModels\MyCoursesViewModel.cs" />
+    <Compile Include="ViewModels\RecommendationViewModels.cs" />
+    <Compile Include="ViewModels\FavoriteViewModels.cs" />
+    <Compile Include="ViewModels\ExploreMenuViewModels.cs" />
     <Compile Include="Services\EmailService.cs" />
     <Compile Include="Services\PasswordHasher.cs" />
     <Compile Include="Services\TeacherApplicationService.cs" />
     <Compile Include="Models\TeacherApplication.cs" />
     <Compile Include="Services\CourseStatus.cs" />
     <Compile Include="Services\ViolationReportService.cs" />
+    <Compile Include="Services\RecommendationService.cs" />
+    <Compile Include="Services\FavoriteService.cs" />
     <Compile Include="Services\SystemReportPdfService.cs" />
     <Compile Include="Models\ViolationReportModels.cs" />
     <Compile Include="Areas\Admin\Controllers\ViolationReportController.cs" />
     <Compile Include="Controllers\ViolationReportController.cs" />
+    <Compile Include="Controllers\RecommendationController.cs" />
+    <Compile Include="Controllers\NavigationController.cs" />
+    <Compile Include="Controllers\FavoriteController.cs" />
     <Compile Include="Areas\Instructor\Controllers\ViolationController.cs" />
     <Compile Include="Controllers\ProfileController.cs" />
     <Compile Include="Controllers\CourseController.cs" />
@@ -418,6 +426,14 @@
     <Content Include="Views\Cart\Index.cshtml" />
     <Content Include="Views\Learning\MyCourses.cshtml" />
     <Content Include="Views\Learning\Certificate.cshtml" />
+    <Content Include="Views\Recommendation\Index.cshtml" />
+    <Content Include="Views\Shared\_RecommendedCourseCard.cshtml" />
+    <Content Include="Views\Shared\_ExploreMenu.cshtml" />
+    <Content Include="Views\Home\_HeroCarousel.cshtml" />
+    <Content Include="assets\images\banners\hero_section.jpg" />
+    <Content Include="assets\images\banners\banner_goi_y.jpg" />
+    <Content Include="assets\images\banners\banner_hoc_linh_hoat.jpg" />
+    <Content Include="assets\images\banners\banner_giang_vien.jpg" />
     <Content Include="Areas\Admin\Views\_ViewStart.cshtml" />
     <Content Include="Areas\Admin\Views\Shared\_LayoutAdmin.cshtml" />
     <Content Include="Areas\Admin\Views\Dashboard\Index.cshtml" />
@@ -428,6 +444,8 @@
     <None Include="Database\Migrations\002_BaoCaoViPham.sql" />
     <None Include="Database\Migrations\003_BaoCaoViPham_BaiHoc.sql" />
     <None Include="Database\Migrations\004_XuLyViPham_TraoDoi.sql" />
+    <None Include="Database\Migrations\005_GoiY_LocCongTac.sql" />
+    <None Include="Database\Migrations\006_GoiY_GoiYLaiKhoaChiXem.sql" />
     <Content Include="Areas\Instructor\Views\Violation\Index.cshtml" />
     <Content Include="assets\css\dashboard-tables.css" />
     <Content Include="assets\js\table-pagination.js" />
@@ -451,6 +469,13 @@
     <Content Include="Areas\Marketing\Views\Promotion\Index.cshtml" />
     <Content Include="Areas\Marketing\Views\CampaignReport\Index.cshtml" />
     <Content Include="Views\User\Index.cshtml" />
+    <Content Include="Views\User\Courses.cshtml" />
+    <Content Include="Views\Learning\Favorites.cshtml" />
+    <Content Include="Views\Shared\_FavoriteButton.cshtml" />
+    <Content Include="Views\Shared\_MyCoursesMenu.cshtml" />
+    <Content Include="assets\js\favorite.js" />
+    <Content Include="assets\js\explore-menu.js" />
+    <Content Include="Views\User\_TeacherCourseCard.cshtml" />
 
 
   </ItemGroup>

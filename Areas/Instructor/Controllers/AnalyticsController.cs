@@ -97,7 +97,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
         {
             var model = BuildAnalyticsModel(period);
             var sb = new StringBuilder();
-            sb.AppendLine("BÁO CÁO THỐNG KÊ DOANH THU GIẢNG VIÊN - ECOLearning");
+            sb.AppendLine("BÁO CÁO THỐNG KÊ DOANH THU GIẢNG VIÊN - E-Learning");
             sb.AppendLine(string.Format("Kỳ báo cáo: {0} | Ngày trích xuất: {1:dd/MM/yyyy HH:mm}", model.Period.ToUpper(), DateTime.Now));
             sb.AppendLine();
             sb.AppendLine("Thoi Gian,Doanh Thu (Trieu VND),Luot ghi danh");

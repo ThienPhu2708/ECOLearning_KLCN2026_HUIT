@@ -514,7 +514,7 @@
                         Giáo viên: 
                         @if (Model.NguoiDung != null)
                         {
-                            <a href="@Url.Action("Index", "User", new { id = Model.NguoiDung.maNguoiDung })" title="Xem thông tin chi tiết giáo viên @Model.NguoiDung.hoTen" style="color: #FFFFFF; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; transition: color 0.2s;" onmouseover="this.style.color='#A5B4FC'" onmouseout="this.style.color='#FFFFFF'">
+                            <a href="@Url.Action("Index", "User", new { id = Model.NguoiDung.maNguoiDung })" target="_blank" rel="noopener" title="Xem thông tin chi tiết giáo viên @Model.NguoiDung.hoTen" style="color: #FFFFFF; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; transition: color 0.2s;" onmouseover="this.style.color='#A5B4FC'" onmouseout="this.style.color='#FFFFFF'">
                                 @Model.NguoiDung.hoTen
                             </a>
                         }
@@ -906,33 +906,38 @@
                                 <a href="@Url.Action("Study", "Learning", new { courseId = Model.maKhoaHoc })" class="btn btn-secondary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold text-decoration-none shadow-sm" style="background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px; transition: all 0.2s;">
                                     <i class="bi bi-play-circle-fill me-2 text-primary"></i> VÀO HỌC NGAY
                                 </a>
-                                <button type="button" class="btn btn-link w-100 mb-2 text-decoration-none" style="color: #DC2626; font-size: 13.5px; font-weight: 600;" data-bs-toggle="modal" data-bs-target="#violationReportModal">
-                                    <i class="bi bi-flag me-1"></i> Báo cáo vi phạm khóa học
-                                </button>
                             }
                             else if (isFree)
                             {
-                                <button type="button" onclick="enrollFreeAjax('@Model.maKhoaHoc', this)" class="btn btn-cta-primary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold shadow-sm" style="background: #10B981 !important; border: none !important; border-radius: 12px !important; font-size: 16px;">
-                                    <i class="bi bi-mortarboard-fill me-2"></i> Đăng ký học
-                                </button>
+                                <!-- Nút chính + nút thả tim vuông cùng một hàng -->
+                                <div class="course-cta-row">
+                                    <button type="button" onclick="enrollFreeAjax('@Model.maKhoaHoc', this)" class="btn btn-cta-primary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold shadow-sm" style="background: #10B981 !important; border: none !important; border-radius: 12px !important; font-size: 16px;">
+                                        <i class="bi bi-mortarboard-fill me-2"></i> Đăng ký học
+                                    </button>
+                                    @Html.Partial("_FavoriteButton", new ECOLearning.ViewModels.FavoriteButtonModel { CourseId = Model.maKhoaHoc, TeacherId = Model.maGiaoVien, Variant = "square" })
+                                </div>
                             }
                             else
                             {
                                 <button type="button" onclick="buyNowAjax('@Model.maKhoaHoc', this)" class="btn btn-cta-primary btn-lg w-100 py-3 mb-2 text-center d-block fw-bold shadow-sm" style="border-radius: 12px !important; font-size: 16px;">
                                     Mua ngay
                                 </button>
-                                if (isInCart)
-                                {
-                                    <a href="@Url.Action("Index", "Cart")" id="btnAddToCartMain" class="btn w-100 py-3 fw-bold mb-3 text-center d-block text-decoration-none" style="background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px; transition: all 0.2s;">
-                                        <i class="bi me-1"></i> Chuyển đến giỏ hàng
-                                    </a>
-                                }
-                                else
-                                {
-                                    <button type="button" id="btnAddToCartMain" onclick="addToCartAjax('@Model.maKhoaHoc', this)" class="btn w-100 py-3 fw-bold mb-3" style="background: #F1F5F9; color: #0F172A; border: none; border-radius: 12px !important; font-size: 15px; transition: background 0.2s;">
-                                        Thêm vào giỏ hàng
-                                    </button>
-                                }
+                                <!-- Nút giỏ hàng + nút thả tim vuông cùng một hàng (addToCartAjax thay nút giỏ hàng tại chỗ) -->
+                                <div class="course-cta-row">
+                                    @if (isInCart)
+                                    {
+                                        <a href="@Url.Action("Index", "Cart")" id="btnAddToCartMain" class="btn w-100 py-3 fw-bold mb-3 text-center d-block text-decoration-none" style="background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px; transition: all 0.2s;">
+                                            <i class="bi me-1"></i> Chuyển đến giỏ hàng
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" id="btnAddToCartMain" onclick="addToCartAjax('@Model.maKhoaHoc', this)" class="btn w-100 py-3 fw-bold mb-3" style="background: #F1F5F9; color: #0F172A; border: none; border-radius: 12px !important; font-size: 15px; transition: background 0.2s;">
+                                            Thêm vào giỏ hàng
+                                        </button>
+                                    }
+                                    @Html.Partial("_FavoriteButton", new ECOLearning.ViewModels.FavoriteButtonModel { CourseId = Model.maKhoaHoc, TeacherId = Model.maGiaoVien, Variant = "square" })
+                                </div>
                             }
 
                             <!-- Course Inclusions Grid Layout (Matching Mockup 100%) -->
@@ -999,93 +1004,8 @@
     </div>
 </div>
 
-@if (isEnrolled && !isOwner)
-{
-    <!-- MODAL: BÁO CÁO VI PHẠM KHÓA HỌC -->
-    <div class="modal fade" id="violationReportModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content" style="border-radius: 16px;">
-                <form id="violationReportForm">
-                    @Html.AntiForgeryToken()
-                    <div class="modal-header">
-                        <h5 class="modal-title fw-bold"><i class="bi bi-flag-fill me-2 text-danger"></i>Báo cáo vi phạm khóa học</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="small text-secondary">Báo cáo của bạn sẽ được gửi tới quản trị viên để xem xét. Vui lòng mô tả cụ thể nội dung không phù hợp hoặc sai sót.</p>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Loại vi phạm <span class="text-danger">*</span></label>
-                            <select id="violationType" class="form-select" required>
-                                <option value="">-- Chọn loại vi phạm --</option>
-                                @foreach (var t in ECOLearning.Services.ViolationReportService.ViolationTypes)
-                                {
-                                    <option value="@t">@t</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label fw-semibold">Mô tả chi tiết <span class="text-danger">*</span></label>
-                            <textarea id="violationDesc" class="form-control" rows="4" minlength="10" maxlength="2000" required
-                                      placeholder="Ví dụ: Bài 3 chương 2 có thông tin sai về..., video bài 5 không xem được..."></textarea>
-                        </div>
-                        <div id="violationError" class="small text-danger" style="display: none;"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" id="violationSubmitBtn" class="btn btn-danger">Gửi báo cáo</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-}
-
 @section scripts {
     <script>
-        (function () {
-            var form = document.getElementById('violationReportForm');
-            if (!form) return;
-
-            form.addEventListener('submit', function (e) {
-                e.preventDefault();
-                var err = document.getElementById('violationError');
-                var btn = document.getElementById('violationSubmitBtn');
-                var type = document.getElementById('violationType').value;
-                var desc = document.getElementById('violationDesc').value.trim();
-
-                err.style.display = 'none';
-                if (!type) { err.textContent = 'Vui lòng chọn loại vi phạm!'; err.style.display = 'block'; return; }
-                if (desc.length < 10) { err.textContent = 'Vui lòng mô tả tối thiểu 10 ký tự!'; err.style.display = 'block'; return; }
-
-                btn.disabled = true;
-                $.ajax({
-                    url: '@Url.Action("Create", "ViolationReport", new { area = "" })',
-                    type: 'POST',
-                    data: {
-                        __RequestVerificationToken: form.querySelector('input[name="__RequestVerificationToken"]').value,
-                        courseId: '@Model.maKhoaHoc',
-                        loaiViPham: type,
-                        moTa: desc
-                    },
-                    success: function (res) {
-                        if (res.success) {
-                            bootstrap.Modal.getInstance(document.getElementById('violationReportModal')).hide();
-                            form.reset();
-                            if (typeof showToast === 'function') showToast(res.message, 'success'); else alert(res.message);
-                        } else {
-                            err.textContent = res.message;
-                            err.style.display = 'block';
-                        }
-                    },
-                    error: function () {
-                        err.textContent = 'Có lỗi xảy ra, vui lòng thử lại!';
-                        err.style.display = 'block';
-                    },
-                    complete: function () { btn.disabled = false; }
-                });
-            });
-        })();
-
         function extractVideoInfo(url) {
             if (!url || typeof url !== 'string' || !url.trim()) return null;
             url = url.trim();

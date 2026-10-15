@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Models;
+using ECOLearning.Services;
 using ECOLearning.ViewModels;
 
 namespace ECOLearning.Controllers
@@ -36,8 +37,9 @@ namespace ECOLearning.Controllers
                 .Include(d => d.KhoaHoc)
                 .Include(d => d.KhoaHoc.DanhMuc)
                 .Include(d => d.KhoaHoc.NguoiDung)
-                .Include(d => d.KhoaHoc.ChuongHoc)
-                .Include("KhoaHoc.ChuongHoc.BaiHoc")
+                // Không Include ChuongHoc / ChuongHoc.BaiHoc: nạp lồng nhiều danh sách con sinh truy vấn cần nhiều
+                // bộ nhớ, máy thiếu RAM thì SQL Server bắt chờ tới 25 giây. Chương / bài học được nạp khi dùng tới
+                // bằng các truy vấn nhỏ trong vòng lặp bên dưới.
                 .OrderByDescending(d => d.ngayDangKy)
                 .ToList();
 
@@ -109,6 +111,30 @@ namespace ECOLearning.Controllers
             }
 
             return View(viewModel);
+        }
+
+        // GET: Learning/Favorites — trang quản lý "Khóa học đã tim" (trang riêng, tách khỏi Khóa học đã đăng ký)
+        public ActionResult Favorites()
+        {
+            int userId = (Session["UserId"] as int?) ?? 0;
+            if (userId <= 0)
+            {
+                return RedirectToAction("Login", "Account", new { returnUrl = Url.Action("Favorites", "Learning") });
+            }
+
+            var model = new FavoritesPageViewModel();
+            try
+            {
+                model.Items = new FavoriteService(db).GetFavorites(userId);
+            }
+            catch (Exception ex)
+            {
+                // Chưa chạy migration 005 (chưa có bảng TuongTacKhoaHoc)
+                System.Diagnostics.Debug.WriteLine("Load favorites page error: " + ex.Message);
+                model.DaKhoiTao = false;
+            }
+
+            return View(model);
         }
 
         private NguoiDung GetCurrentStudent(string courseId = null)

@@ -19,6 +19,7 @@
     style.id = 'tp-style';
     style.textContent =
       'tr.' + HIDE_CLASS + '{display:none !important;}' +
+      '.tp-pager[hidden]{display:none !important;}' +
       '.tp-pager{margin-top:16px;gap:12px;flex-wrap:wrap;}' +
       '.tp-pager .page-link{cursor:pointer;min-width:36px;}' +
       '.tp-pager .page-item.disabled .page-link{cursor:default;}' +

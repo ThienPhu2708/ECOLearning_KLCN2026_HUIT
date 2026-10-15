@@ -355,6 +355,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
             if (course == null) return HttpNotFound();
 
             ViewBag.BreadcrumbCurrent = "Chi tiết khóa học";
+            ViewBag.UnchapteredLessons = db.BaiHoc
+                .Where(b => b.maChuong == null && b.maBaiHoc.StartsWith(course.maKhoaHoc + "_"))
+                .OrderBy(b => b.thuTu).ToList();
             return View(course);
         }
 

@@ -1,4 +1,4 @@
-﻿@model ECOLearning.Areas.Instructor.Models.CourseCreateOrEditViewModel
+@model ECOLearning.Areas.Instructor.Models.CourseCreateOrEditViewModel
 @{
     bool isEditing = !string.IsNullOrEmpty(Model.MaKhoaHoc);
     // Khóa học bị tạm khóa do vi phạm: nút gửi = lưu rồi sang trang Xử lý vi phạm (không gửi kiểm duyệt)
@@ -162,7 +162,7 @@
 
                 <!-- Giá bán -->
                 <div class="card">
-                    <h3 class="h3" style="margin-bottom: 16px;">Học phí & Giá bán</h3>
+                    <h3 class="h3" style="margin-bottom: 16px;">Giá bán</h3>
 
                     <div class="form-group">
                         <label class="form-label">Giá bán (VNĐ) <span class="required">*</span></label>
@@ -171,11 +171,7 @@
                         <div id="err-price" class="form-feedback-error" style="display:none;">Vui lòng nhập giá bán hợp lệ!</div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Giá khuyến mãi (VNĐ - tùy chọn)</label>
-                        <input type="text" id="gia-km-display" class="form-control" placeholder="Ví dụ: 599,000" autocomplete="off" />
-                        @Html.HiddenFor(m => m.GiaKhuyenMai, new { id = "GiaKhuyenMai-hidden" })
-                    </div>
+                    @Html.HiddenFor(m => m.GiaKhuyenMai)
 
                     <div class="caption" style="background: var(--bg-canvas); padding: 10px 12px; border-radius: 10px; color: var(--text-secondary); line-height: 1.5;">
                         💡 Giá = 0 sẽ tự động gắn nhãn "Miễn phí".
@@ -424,6 +420,47 @@
 </dialog>
 <style>#wizard-library::backdrop { background:rgba(15,23,42,.45); }</style>
 
+<style>
+#lesson-content-dialog { position:fixed; inset:0; margin:auto; box-sizing:border-box; width:580px; max-width:calc(100vw - 32px); max-height:calc(100dvh - 32px); overflow:auto; border:1px solid var(--border-color); border-radius:20px; padding:28px; background:var(--bg-surface, #fff); box-shadow:0 24px 80px rgba(15,23,42,.24); }
+#lesson-content-dialog::backdrop { background:rgba(15,23,42,.5); backdrop-filter:blur(4px); }
+#lesson-content-dialog .h3 { margin:0 0 8px; }
+.lesson-upload-description { font-size:13px; color:var(--text-secondary); line-height:1.6; margin:0 0 24px; }
+.lesson-upload-zone { position:relative; display:flex; align-items:center; gap:14px; padding:22px 18px; border:1.5px dashed #C7C9F5; border-radius:14px; background:#F8F8FF; cursor:pointer; }
+.lesson-upload-zone:hover, .lesson-upload-zone:focus-within { background:#F0EFFF; border-color:var(--primary); }
+.lesson-upload-zone:focus-within { outline:3px solid rgba(67,76,232,.18); outline-offset:3px; }
+.lesson-upload-zone input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+.lesson-upload-icon { display:flex; align-items:center; justify-content:center; width:44px; height:44px; flex-shrink:0; background:#EAE9FF; color:var(--primary); border-radius:12px; }
+.lesson-upload-zone strong { display:block; font-size:14px; }
+.lesson-upload-zone small { display:block; margin-top:5px; font-size:12px; color:var(--text-secondary); line-height:1.5; }
+.lesson-upload-selection { display:grid; gap:6px; margin-top:10px; }
+.lesson-upload-selection div { padding:9px 12px; border:1px solid var(--border-color); border-radius:9px; background:var(--bg-canvas); font-size:12px; overflow-wrap:anywhere; }
+#lesson-content-status:empty { display:none; }
+@@media (max-width:576px) { #lesson-content-dialog { padding:20px; } .lesson-upload-zone { padding:18px 12px; } }
+</style>
+<dialog id="lesson-content-dialog" aria-labelledby="lesson-content-title">
+<h3 class="h3" id="lesson-content-title">Tạo nội dung bài học</h3>
+<p class="lesson-upload-description">Thêm video bài giảng và tài liệu để học viên theo dõi bài học.</p>
+<div class="form-group">
+    <div class="form-label" id="lesson-video-label">Video bài giảng</div>
+    <label class="lesson-upload-zone" for="lesson-content-video">
+        <input id="lesson-content-video" type="file" accept=".mp4,.webm,.mov,.mkv,.m4v,.ogv" aria-labelledby="lesson-video-label">
+        <span class="lesson-upload-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="m10 8 6 4-6 4z"/></svg></span>
+        <span><strong>Chọn video từ máy tính</strong><small>MP4, WebM, MOV, MKV, M4V hoặc OGV · Chọn 1 video</small></span>
+    </label>
+    <div id="lesson-content-video-selection" class="lesson-upload-selection" aria-live="polite"></div>
+</div>
+<div class="form-group">
+    <div class="form-label" id="lesson-documents-label">Tài liệu đính kèm</div>
+    <label class="lesson-upload-zone" for="lesson-content-documents">
+        <input id="lesson-content-documents" type="file" multiple aria-labelledby="lesson-documents-label">
+        <span class="lesson-upload-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span>
+        <span><strong>Chọn tài liệu từ máy tính</strong><small>Có thể chọn nhiều tài liệu cùng lúc</small></span>
+    </label>
+    <div id="lesson-content-documents-selection" class="lesson-upload-selection" aria-live="polite"></div>
+</div>
+<p id="lesson-content-status" role="status" class="caption"></p>
+<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;"><button id="content-cancel" type="button" class="btn btn-outline" onclick="document.getElementById('lesson-content-dialog').close()">Hủy</button><button id="content-confirm" type="button" class="btn btn-primary" onclick="confirmLessonContent()">Xác nhận</button></div>
+</dialog>
 @section Scripts {
 <script>
 var curriculumDialogCallback = null;
@@ -473,8 +510,6 @@ function setupPrice(dispId, hidId) {
 setupPrice('gia-ban-display', 'GiaBan-hidden');
     // Init display values
     if (document.getElementById('GiaBan-hidden').value) { document.getElementById('gia-ban-display').value = formatVND(document.getElementById('GiaBan-hidden').value); }
-    if (document.getElementById('GiaKhuyenMai-hidden').value) { document.getElementById('gia-km-display').value = formatVND(document.getElementById('GiaKhuyenMai-hidden').value); }
-setupPrice('gia-km-display',  'GiaKhuyenMai-hidden');
 
 // ── Thumb URL preview ────────────────────────────────────────────
 document.getElementById('inp-thumb').addEventListener('blur', function() {
@@ -715,11 +750,9 @@ function addLesson(containerId, initialTitle) {
         '<div class="lesson-header">' +
             '<strong class="lesson-title"><span class="lesson-number"></span><span class="lesson-name">' + escapeText(title) + '</span></strong>' +
             '<div class="lesson-actions">' +
-                '<button type="button" class="btn btn-outline btn-sm" onclick="openLibraryPicker(\'' + lid + '\')">Chọn từ thư viện</button>' +
                 '<button type="button" class="btn btn-outline btn-sm" onclick="editLessonTitle(\'' + lid + '\')">Sửa tên</button>' +
                 '<label class="lesson-preview"><input type="checkbox"> Xem thử</label>' +
-                '<button type="button" class="btn btn-secondary btn-sm" onclick="showAttachModal(\'' + lid + '\')">Thêm tài liệu</button>' +
-                '<button type="button" class="btn btn-primary btn-sm" onclick="simulateUpload(\'' + lid + '\')">Tải video</button>' +
+                '<button type="button" class="btn btn-primary btn-sm" onclick="openLessonContent(\'' + lid + '\')">Tạo nội dung</button>' +
                 '<button type="button" class="lesson-delete" aria-label="Xóa bài học" title="Xóa bài học" onclick="document.getElementById(\'' + lid + '\').remove()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg></button>' +
             '</div>' +
         '</div>' +
@@ -833,6 +866,51 @@ function renderVideo(lesson, uploaded, duration) {
     var badge = document.createElement('span'); badge.textContent = '✓ Có video'; badge.className = 'lesson-video-badge'; status.appendChild(badge);
     lesson.querySelectorAll('button').forEach(function(btn) { if (btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf('simulateUpload') >= 0) btn.textContent = 'Thay video'; });
     countVideos();
+}
+var contentLessonId = null;
+function renderLessonFileSelection(input) {
+    var list = document.getElementById(input.id + '-selection');
+    list.replaceChildren();
+    Array.from(input.files).forEach(function(file) {
+        var row = document.createElement('div');
+        var size = file.size >= 1048576 ? (file.size / 1048576).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' MB' : Math.ceil(file.size / 1024) + ' KB';
+        row.textContent = file.name + ' · ' + size;
+        list.appendChild(row);
+    });
+}
+['lesson-content-video', 'lesson-content-documents'].forEach(function(id) {
+    document.getElementById(id).addEventListener('change', function() { renderLessonFileSelection(this); });
+});
+function openLessonContent(id) {
+contentLessonId = id;
+document.getElementById('lesson-content-video').value = '';
+document.getElementById('lesson-content-documents').value = '';
+renderLessonFileSelection(document.getElementById('lesson-content-video'));
+renderLessonFileSelection(document.getElementById('lesson-content-documents'));
+document.getElementById('lesson-content-status').textContent = '';
+document.getElementById('lesson-content-dialog').showModal();
+}
+async function confirmLessonContent() {
+var lesson = document.getElementById(contentLessonId), video = document.getElementById('lesson-content-video').files[0];
+var documents = Array.from(document.getElementById('lesson-content-documents').files), status = document.getElementById('lesson-content-status');
+if (!lesson || (!video && !documents.length)) { status.textContent = 'Vui lòng chọn video hoặc tài liệu.'; return; }
+var confirm = document.getElementById('content-confirm'), cancel = document.getElementById('content-cancel'), dialog = document.getElementById('lesson-content-dialog');
+confirm.disabled = cancel.disabled = true;
+function preventClose(event) { event.preventDefault(); }
+dialog.addEventListener('cancel', preventClose);
+try {
+var videoResult = null, duration = 0, attachments = [];
+if (video) {
+videoResult = await uploadLessonFile(video, 'video', function(percent) { status.textContent = 'Đang tải video: ' + percent + '%'; });
+duration = await videoDuration(video);
+}
+for (var file of documents) { status.textContent = 'Đang tải tài liệu: ' + file.name; attachments.push(await uploadLessonFile(file, 'document')); }
+if (!lesson.isConnected) return;
+if (videoResult) { renderVideo(lesson, videoResult, duration); document.getElementById('warn-no-video').style.display = 'none'; }
+lesson.attachments = (lesson.attachments || []).concat(attachments);
+renderAttachments(lesson); dialog.close(); showToast('Đã thêm nội dung bài học.', 'success');
+} catch (error) { status.textContent = error.message; }
+finally { confirm.disabled = cancel.disabled = false; dialog.removeEventListener('cancel', preventClose); }
 }
 function simulateUpload(lesId) {
     var lesson = document.getElementById(lesId), input = document.createElement('input');

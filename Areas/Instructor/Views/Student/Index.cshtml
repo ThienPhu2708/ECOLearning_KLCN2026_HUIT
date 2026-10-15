@@ -1,6 +1,6 @@
 ﻿@model List<ECOLearning.Areas.Instructor.Models.InstructorStudentItem>
 @{
-ViewBag.Title = "Quản Lý Học Viên";
+ViewBag.Title = ViewBag.IsCourseStudentPage == true ? "Danh sách học viên" : "Quản Lý Học Viên";
 var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
 }
 
@@ -14,7 +14,7 @@ var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
     string icon = !active ? "bi-arrow-down-up" : (desc ? "bi-arrow-down" : "bi-arrow-up");
     string title = "Sắp xếp: " + (next.EndsWith("_desc") ? descTitle : ascTitle);
     <a class="sort-header @(active ? "active" : "")" title="@title"
-       href="@Url.Action("Index", "Student", new { area = "Instructor", courseId = ViewBag.SelectedCourseId as string, search = ViewBag.Search as string, sort = next })">
+       href="@Url.Action(ViewBag.IsCourseStudentPage == true ? "CourseStudents" : "Index", "Student", new { area = "Instructor", courseId = ViewBag.SelectedCourseId as string, search = ViewBag.Search as string, sort = next })">
         @label <i class="bi @icon sort-icon"></i>
     </a>
 }
@@ -31,10 +31,23 @@ var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
 .student-empty-icon { width:64px;height:64px;border-radius:18px;background:#eef0ff;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;color:var(--primary); }
 </style>
 <!-- FILTER & SEARCH BAR -->
+@if (ViewBag.IsCourseStudentPage == true)
+{
+    <div style="margin-bottom:24px;">
+        <h2 class="h3">Danh sách học viên — @ViewBag.BreadcrumbCourseName</h2>
+        <p class="caption" style="margin-top:6px;">Học viên đã ghi danh và tiến độ học tập trong khóa học này</p>
+    </div>
+}
 <div class="card" style="margin-bottom: 24px; padding: 16px 20px;">
-    <form method="get" action="@Url.Action("Index", "Student", new { area = "Instructor" })" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <form method="get" action="@Url.Action(ViewBag.IsCourseStudentPage == true ? "CourseStudents" : "Index", "Student", new { area = "Instructor" })" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
         <div class="student-filter-fields">
-            <select name="courseId" class="form-control" style="max-width: 300px;">
+            @if (ViewBag.IsCourseStudentPage == true)
+            {
+                <input type="hidden" name="courseId" value="@ViewBag.SelectedCourseId" />
+            }
+            else
+            {
+            <select name="courseId" class="form-control" style="max-width: 300px;" onchange="this.form.requestSubmit()">
                 <option value="">Tất cả khóa học của bạn</option>
                 @if (teacherCourses != null)
                 {
@@ -46,9 +59,10 @@ var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
                     }
                 }
             </select>
+            }
             <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Tìm kiếm theo họ tên hoặc email..." style="max-width: 320px;">
             <input type="hidden" name="sort" value="@(ViewBag.Sort as string ?? "date_desc")" />
-            <button type="submit" class="btn btn-primary">Lọc</button>
+            <button type="submit" class="btn btn-primary">Tìm kiếm</button>
         </div>
         <div>
             <span class="student-result-count"><strong>@(Model != null ? Model.Count : 0)</strong> kết quả</span>

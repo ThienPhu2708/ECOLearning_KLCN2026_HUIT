@@ -1,0 +1,86 @@
+@model List<ECOLearning.ViewModels.ChuongTrinhKhuyenMai>
+@{
+    ViewBag.Title = "Ưu đãi học viên thân thiết";
+    string currentStatus = ViewBag.CurrentStatus as string ?? "all";
+    string currentSearch = ViewBag.CurrentSearch as string ?? "";
+    var now = DateTime.Now;
+}
+
+<div class="mk-page-head">
+    <div>
+        <h1 class="h2">Ưu đãi học viên thân thiết</h1>
+        <p>Coupon riêng cho học viên đạt tiêu chí (số khóa đã đăng ký, tổng chi tiêu). Học viên chưa đạt tiêu chí nhập mã sẽ bị từ chối.</p>
+    </div>
+    <a href="@Url.Action("Create", "Promotion", new { doiTuong = "ThanThiet" })" class="btn mk-btn-accent"><i class="bi bi-plus-lg me-1"></i> Tạo ưu đãi thân thiết</a>
+</div>
+
+@Html.Partial("_Flash")
+
+<form method="get" action="@Url.Action("Index", "Loyalty")" class="card mk-filter">
+    <div class="mk-field" style="flex: 1; min-width: 220px;">
+        <label for="search">Tên hoặc mã coupon</label>
+        <input type="text" id="search" name="search" class="form-control" value="@currentSearch" />
+    </div>
+    <div class="mk-field">
+        <label for="status">Trạng thái</label>
+        <select id="status" name="status" class="form-control">
+            @foreach (var s in new[] { "all", "Đang chạy", "Chưa bắt đầu", "Tạm ngưng", "Đã kết thúc" })
+            {
+                <option value="@(s == "all" ? "" : s)" @(currentStatus == s ? "selected" : "")>@(s == "all" ? "Tất cả" : s)</option>
+            }
+        </select>
+    </div>
+    <button type="submit" class="btn btn-secondary btn-sm" style="height: 38px;">Lọc</button>
+</form>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Chương trình</th>
+                    <th>Mã coupon</th>
+                    <th>Ưu đãi</th>
+                    <th>Tiêu chí thân thiết</th>
+                    <th>Thời gian</th>
+                    <th>Lượt dùng</th>
+                    <th>Trạng thái</th>
+                    <th style="width: 220px;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    string tt = p.TrangThaiHienThi(now);
+                    <tr>
+                        <td><a href="@Url.Action("Details", "Promotion", new { id = p.MaKhuyenMai })" style="font-weight: 700; color: var(--text-heading); text-decoration: none;">@p.TenKhuyenMai</a></td>
+                        <td><span class="mk-code">@p.MaCode</span></td>
+                        <td><strong style="color: #E11D48;">@p.MoTaUuDai</strong></td>
+                        <td>
+                            @if (p.SoKhoaToiThieu.HasValue) { <div>Từ <strong>@p.SoKhoaToiThieu</strong> khóa đã đăng ký</div> }
+                            @if (p.ChiTieuToiThieu.HasValue) { <div>Chi tiêu từ <strong>@p.ChiTieuToiThieu.Value.ToString("N0") đ</strong></div> }
+                        </td>
+                        <td style="white-space: nowrap;">@p.NgayBatDau.ToString("dd/MM/yyyy") – @p.NgayKetThuc.ToString("dd/MM/yyyy")</td>
+                        <td><strong>@p.SoLuotDaDung</strong>@(p.GioiHanLuotDung.HasValue ? " / " + p.GioiHanLuotDung.Value : "")</td>
+                        <td>
+                            @if (tt == "Đang chạy") { <span class="badge badge-success">Đang chạy</span> }
+                            else if (tt == "Tạm ngưng") { <span class="badge badge-warning">Tạm ngưng</span> }
+                            else if (tt == "Chưa bắt đầu") { <span class="badge badge-info">Chưa bắt đầu</span> }
+                            else { <span class="badge badge-secondary">Đã kết thúc</span> }
+                        </td>
+                        <td>
+                            <div class="mk-actions">
+                                <a href="@Url.Action("Eligible", "Loyalty", new { id = p.MaKhuyenMai })" class="btn btn-outline btn-sm">Học viên đủ điều kiện</a>
+                                <a href="@Url.Action("Details", "Promotion", new { id = p.MaKhuyenMai })" class="btn btn-outline btn-sm">Chi tiết</a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="8" class="mk-empty"><i class="bi bi-award"></i>Chưa có ưu đãi thân thiết nào.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -187,6 +187,25 @@ namespace ECOLearning.Controllers
             bool isInCart = cartList != null && cartList.Any(i => i.CourseId == course.maKhoaHoc);
             ViewBag.IsInCart = isInCart;
 
+            // Mã giảm giá công khai áp dụng cho khóa này, tính thử như khi giỏ chỉ có khóa này
+            // (chỉ để hiển thị; số tiền giảm thật tính lại ở server khi áp mã trong giỏ hàng)
+            var maGiamGia = new List<ECOLearning.ViewModels.MaGiamGiaHienThi>();
+            decimal giaHienTai = PromotionService.GiaBanHienTai(course);
+            if (!isEnrolled && course.maGiaoVien != currentUserId && giaHienTai > 0)
+            {
+                var promotions = new PromotionService(db);
+                if (promotions.IsInstalled())
+                {
+                    var dong = new List<ECOLearning.ViewModels.DongGioHang>
+                    {
+                        new ECOLearning.ViewModels.DongGioHang { MaKhoaHoc = course.maKhoaHoc, DonGia = giaHienTai }
+                    };
+                    maGiamGia = promotions.LayMaChoHocVien(currentUserId, dong, course.maKhoaHoc);
+                }
+            }
+            ViewBag.MaGiamGia = maGiamGia;
+            ViewBag.GiaHienTai = giaHienTai;
+
             // 3. Dữ liệu chương và bài học
             var chapters = db.ChuongHoc
                 .Where(c => c.maKhoaHoc == course.maKhoaHoc)

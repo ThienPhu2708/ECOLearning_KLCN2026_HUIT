@@ -1,0 +1,60 @@
+@model ECOLearning.ViewModels.CartViewModel
+@{
+    // Mã đang dùng luôn đứng đầu để không bị ẩn trong "Xem thêm"
+    var ds = (Model.AvailableCoupons ?? new List<ECOLearning.ViewModels.MaGiamGiaHienThi>())
+        .OrderByDescending(m => string.Equals(m.MaCode, Model.AppliedCouponCode, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+    bool gioTrong = Model.Items == null || Model.Items.Count == 0;
+    // Khung tóm tắt đơn hàng dính theo màn hình: hiện ít mã để nút thanh toán không bị đẩy khỏi màn hình
+    const int soHienNgay = 2;
+}
+@if (ds.Count > 0)
+{
+    <div class="cp-list-head">
+        <span><i class="bi bi-ticket-perforated me-1"></i> Mã giảm giá dành cho bạn</span>
+        <span class="cp-count">@ds.Count mã</span>
+    </div>
+    <div class="cp-list">
+        @for (int i = 0; i < ds.Count; i++)
+        {
+            var m = ds[i];
+            bool dangDung = string.Equals(m.MaCode, Model.AppliedCouponCode, StringComparison.OrdinalIgnoreCase);
+            <div class="cp-item @(dangDung ? "is-applied" : "") @(!m.CoTheApDung ? "is-disabled" : "")" @(i >= soHienNgay ? "hidden" : "") data-extra="@(i >= soHienNgay ? "1" : "0")">
+                <div class="cp-top">
+                    <span class="cp-code">@m.MaCode</span>
+                    <span class="cp-value">@m.MoTaUuDai</span>
+                </div>
+                <div class="cp-name">@m.TenKhuyenMai</div>
+                <div class="cp-bottom">
+                    <span class="cp-cond">
+                        @string.Join(" · ", m.DieuKien) · HSD @m.NgayKetThuc.ToString("dd/MM/yyyy")@(m.ConLai.HasValue && m.ConLai.Value <= 20 ? " · còn " + m.ConLai.Value + " lượt" : "")
+                    </span>
+                    @if (dangDung)
+                    {
+                        <span class="cp-btn cp-btn-applied"><i class="bi bi-check2"></i> Đang dùng</span>
+                    }
+                    else if (!gioTrong && m.CoTheApDung)
+                    {
+                        <button type="button" class="cp-btn" data-code="@m.MaCode" onclick="useCoupon(this.getAttribute('data-code'))">Dùng mã</button>
+                    }
+                </div>
+                @if (!gioTrong && m.CoTheApDung && m.TienGiam > 0 && !dangDung)
+                {
+                    <div class="cp-save">Giảm @m.TienGiam.ToString("N0") đ cho giỏ hàng hiện tại</div>
+                }
+                else if (!m.CoTheApDung && !string.IsNullOrEmpty(m.LyDo))
+                {
+                    <div class="cp-reason"><i class="bi bi-info-circle me-1"></i>@m.LyDo</div>
+                }
+            </div>
+        }
+    </div>
+    if (ds.Count > soHienNgay)
+    {
+        <button type="button" class="cp-more" onclick="toggleMoreCoupons(this)" data-more="Xem thêm @(ds.Count - soHienNgay) mã" data-less="Thu gọn">Xem thêm @(ds.Count - soHienNgay) mã</button>
+    }
+    if (gioTrong)
+    {
+        <div class="cp-note">Thêm khóa học vào giỏ để dùng mã.</div>
+    }
+}

@@ -77,6 +77,10 @@
                     </svg>
                     Báo cáo hệ thống
                 </a>
+                <a href="@Url.Action("Index", "RevenueReport", new { area = "Admin" })" class="sidebar-item @(currentController == "RevenueReport" ? "active" : "")">
+                    <i class="bi bi-calendar-range" style="font-size: 17px; width: 18px; text-align: center;"></i>
+                    Doanh thu theo ngày
+                </a>
             </nav>
 
             <div class="sidebar-footer">

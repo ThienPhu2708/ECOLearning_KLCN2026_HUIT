@@ -13,6 +13,14 @@ namespace ECOLearning
         {
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
 
+            // Trang danh mục: một trang cho mọi danh mục, slug sinh từ tên danh mục (Services/SlugHelper)
+            routes.MapRoute(
+                name: "DanhMuc",
+                url: "danh-muc/{slug}",
+                defaults: new { controller = "Category", action = "Index" },
+                namespaces: new[] { "ECOLearning.Controllers" }
+            );
+
             routes.MapRoute(
                 name: "Default",
                 url: "{controller}/{action}/{id}",

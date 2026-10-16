@@ -38,6 +38,40 @@ namespace ECOLearning.ViewModels
         public List<RecommendedCourseViewModel> Items { get; set; } = new List<RecommendedCourseViewModel>();
     }
 
+    /// <summary>Nguồn của mục "Khóa học dành riêng cho bạn", theo lượng dữ liệu đã biết về học viên.</summary>
+    public enum CheDoGoiY
+    {
+        /// <summary>"Vì bạn đã xem X": khóa tương tự khóa vừa xem.</summary>
+        TheoKhoaVuaXem,
+        /// <summary>Gợi ý tổng hợp từ toàn bộ lịch sử, đã tính sẵn.</summary>
+        TongHop,
+        /// <summary>"Vì bạn quan tâm …": khóa tương tự các khóa mồi của lĩnh vực đã chọn.</summary>
+        TheoSoThich,
+        /// <summary>Chưa đủ dữ liệu cho lọc cộng tác: khóa được nhiều học viên quan tâm nhất.</summary>
+        PhoBien,
+        /// <summary>Không còn khóa nào để gợi ý (đã sở hữu hết).</summary>
+        Trong
+    }
+
+    /// <summary>Mục "Khóa học dành riêng cho bạn" ở trang chủ.</summary>
+    public class GoiYTrangChuViewModel
+    {
+        public CheDoGoiY CheDo { get; set; } = CheDoGoiY.Trong;
+        public List<RecommendedCourseViewModel> Items { get; set; } = new List<RecommendedCourseViewModel>();
+
+        /// <summary>Khóa mốc của chế độ TheoKhoaVuaXem.</summary>
+        public string MaKhoaHocMoc { get; set; }
+        public string TenKhoaHocMoc { get; set; }
+
+        /// <summary>Lĩnh vực đã chọn (chế độ TheoSoThich).</summary>
+        public List<LinhVucQuanTamItem> LinhVucQuanTam { get; set; } = new List<LinhVucQuanTamItem>();
+
+        /// <summary>Học viên đã có tương tác nào chưa (để chọn câu mô tả ở chế độ PhoBien).</summary>
+        public bool DaCoTuongTac { get; set; }
+
+        public int SoGoiYLocCongTac => Items.Count(i => i.LaLocCongTac);
+    }
+
     /// <summary>Trang "Khóa học gợi ý".</summary>
     public class RecommendationPageViewModel
     {
@@ -55,6 +89,9 @@ namespace ECOLearning.ViewModels
         public DateTime? MaTranCapNhatLuc { get; set; }
 
         public DateTime TinhLuc { get; set; } = DateTime.Now;
+
+        /// <summary>Lĩnh vực đã chọn, khi gợi ý được tạo từ khóa mồi của các lĩnh vực này (chưa có lịch sử).</summary>
+        public List<LinhVucQuanTamItem> LinhVucQuanTam { get; set; } = new List<LinhVucQuanTamItem>();
 
         public int SoGoiYLocCongTac => Items.Count(i => i.LaLocCongTac);
     }

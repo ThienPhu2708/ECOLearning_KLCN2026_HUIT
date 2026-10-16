@@ -13,7 +13,7 @@
         @for (int i = 0; i < Model.Count; i++)
         {
             var dm = Model[i];
-            <a class="explore-row" data-explore-cat="c@(i)" href="@Url.Action("Index", "Course", new { area = "", category = dm.MaDanhMuc })">
+            <a class="explore-row" data-explore-cat="c@(i)" href="@Url.Action("Index", "Category", new { area = "", slug = ECOLearning.Services.SlugHelper.ToSlug(dm.TenDanhMuc) })">
                 <span class="explore-label">@dm.TenDanhMuc</span>
                 <i class="bi bi-chevron-right"></i>
             </a>
@@ -34,7 +34,7 @@
                 @for (int j = 0; j < dm.CapDo.Count; j++)
                 {
                     var cd = dm.CapDo[j];
-                    <a class="explore-row" data-explore-level="c@(i)-l@(j)" href="@Url.Action("Index", "Course", new { area = "", category = dm.MaDanhMuc, level = cd.CapDo })">
+                    <a class="explore-row" data-explore-level="c@(i)-l@(j)" href="@Url.Action("Index", "Category", new { area = "", slug = ECOLearning.Services.SlugHelper.ToSlug(dm.TenDanhMuc), level = cd.CapDo })">
                         <span class="explore-label">@cd.TenHienThi</span>
                         <i class="bi bi-chevron-right"></i>
                     </a>
@@ -46,7 +46,7 @@
                 }
                 else
                 {
-                    <a class="explore-all" href="@Url.Action("Index", "Course", new { area = "", category = dm.MaDanhMuc })">Xem tất cả khóa học <i class="bi bi-arrow-right"></i></a>
+                    <a class="explore-all" href="@Url.Action("Index", "Category", new { area = "", slug = ECOLearning.Services.SlugHelper.ToSlug(dm.TenDanhMuc) })">Xem tất cả khóa học <i class="bi bi-arrow-right"></i></a>
                 }
             </div>
         }
@@ -70,7 +70,7 @@
                     }
                     @if (cd.SoKhoaHoc > cd.KhoaHoc.Count)
                     {
-                        <a class="explore-all" href="@Url.Action("Index", "Course", new { area = "", category = dm.MaDanhMuc, level = cd.CapDo })">Xem tất cả khóa học <i class="bi bi-arrow-right"></i></a>
+                        <a class="explore-all" href="@Url.Action("Index", "Category", new { area = "", slug = ECOLearning.Services.SlugHelper.ToSlug(dm.TenDanhMuc), level = cd.CapDo })">Xem tất cả khóa học <i class="bi bi-arrow-right"></i></a>
                     }
                 </div>
             }

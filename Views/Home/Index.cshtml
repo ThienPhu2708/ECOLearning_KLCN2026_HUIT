@@ -5,8 +5,9 @@
     var courses = Model ?? new List<ECOLearning.Models.KhoaHoc>();
     var categories = ViewBag.Categories as List<ECOLearning.Models.DanhMuc> ?? new List<ECOLearning.Models.DanhMuc>();
     var enrollCounts = ViewBag.EnrollCounts as Dictionary<string, int> ?? new Dictionary<string, int>();
-    var recommendations = ViewBag.Recommendations as List<ECOLearning.ViewModels.RecommendedCourseViewModel> ?? new List<ECOLearning.ViewModels.RecommendedCourseViewModel>();
-    var recommendationAnchor = ViewBag.RecommendationAnchor as ECOLearning.ViewModels.GoiYTheoKhoaVuaXemViewModel;
+    var homeRecommendation = ViewBag.HomeRecommendation as ECOLearning.ViewModels.GoiYTrangChuViewModel ?? new ECOLearning.ViewModels.GoiYTrangChuViewModel();
+    var recommendations = homeRecommendation.Items;
+    var interestPicker = ViewBag.InterestPicker as ECOLearning.ViewModels.InterestPickerViewModel;
 
     var iconStyles = new[] {
         new { Icon = "bi-laptop", Bg = "#EEF2FF", Color = "#434CE8" },
@@ -31,6 +32,10 @@
             overflow: hidden;
             width: 100%;
             position: relative;
+            /* Chừa chỗ cho hiệu ứng nâng thẻ (-3px) và bóng đổ khi hover, không bị cắt mất viền trên */
+            padding: 8px 4px 16px;
+            margin: -8px -4px -16px;
+            box-sizing: content-box;
         }
 
         .category-slider-track {
@@ -122,7 +127,7 @@ cursor: not-allowed;
                     var cat = categories[i];
                     var style = iconStyles[i % iconStyles.Length];
                     <div class="category-item-col">
-                        <a href="@Url.Action("Index", "Course", new { category = cat.maDanhMuc })" class="category-card" title="Xem danh mục @cat.tenDanhMuc">
+                        <a href="@Url.Action("Index", "Category", new { area = "", slug = ECOLearning.Services.SlugHelper.ToSlug(cat.tenDanhMuc) })" class="category-card" title="Xem danh mục @cat.tenDanhMuc">
                             <div class="category-icon-bg" style="width: 48px; height: 48px; border-radius: 12px; background: @style.Bg; color: @style.Color; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; transition: transform 0.25s ease;">
                                 <i class="bi @style.Icon"></i>
                             </div>
@@ -169,6 +174,25 @@ cursor: not-allowed;
 
         .recommend-anchor a:hover {
             color: var(--primary-hover, #3730A3);
+        }
+
+        .recommend-anchor strong {
+            color: var(--text-heading, #0F172A);
+        }
+
+        /* Link mở hộp thoại chọn lĩnh vực quan tâm (Views/Shared/_InterestPicker.cshtml) */
+        .recommend-anchor a.recommend-interest-link,
+        a.recommend-interest-link {
+            margin-left: 8px;
+            color: var(--primary, #434CE8);
+            font-weight: 600;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        a.recommend-interest-link:hover {
+            text-decoration: underline;
+            text-underline-offset: 3px;
         }
 
         .course-slider-nav[hidden] {
@@ -320,16 +344,39 @@ cursor: not-allowed;
     <div class="safe-container">
         <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px;">
             <div>
-                <h2 class="h2" style="margin-top: 8px;">Khóa học dành riêng cho bạn</h2>
-                @if (recommendationAnchor != null)
+                @* Tiêu đề và mô tả đổi theo nguồn gợi ý (RecommendationService.GetForHome) *@
+                <h2 class="h2" style="margin-top: 8px;">@(homeRecommendation.CheDo == ECOLearning.ViewModels.CheDoGoiY.PhoBien ? "Khóa học phổ biến" : "Khóa học dành riêng cho bạn")</h2>
+                @switch (homeRecommendation.CheDo)
                 {
-                    <p class="body-2 recommend-anchor">
-                        Vì bạn đã xem “<a href="@Url.Action("Details", "Course", new { id = recommendationAnchor.MaKhoaHocMoc })" target="_blank" rel="noopener" title="Xem lại khóa học này">@recommendationAnchor.TenKhoaHocMoc</a>”
-                    </p>
-                }
-                else
-                {
-                    <p class="body-2" style="color: var(--text-secondary);">Gợi ý cá nhân hóa dựa trên các khóa học bạn đã học, xem và đánh giá</p>
+                    case ECOLearning.ViewModels.CheDoGoiY.TheoKhoaVuaXem:
+                        <p class="body-2 recommend-anchor">
+                            Vì bạn đã xem “<a href="@Url.Action("Details", "Course", new { id = homeRecommendation.MaKhoaHocMoc })" target="_blank" rel="noopener" title="Xem lại khóa học này">@homeRecommendation.TenKhoaHocMoc</a>”
+                        </p>
+                        break;
+                    case ECOLearning.ViewModels.CheDoGoiY.TheoSoThich:
+                        <p class="body-2 recommend-anchor">
+                            Vì bạn quan tâm <strong>@string.Join(", ", homeRecommendation.LinhVucQuanTam.Select(l => l.TenDanhMuc))</strong>
+                            @if (interestPicker != null)
+                            {
+                                <a href="#" class="recommend-interest-link" data-open-interest>Đổi lĩnh vực</a>
+                            }
+                        </p>
+                        break;
+                    case ECOLearning.ViewModels.CheDoGoiY.TongHop:
+                        <p class="body-2" style="color: var(--text-secondary);">Gợi ý dựa trên các khóa học bạn đã học, xem và đánh giá</p>
+                        break;
+                    case ECOLearning.ViewModels.CheDoGoiY.PhoBien:
+                        <p class="body-2" style="color: var(--text-secondary);">
+                            @(homeRecommendation.DaCoTuongTac ? "Được nhiều học viên quan tâm trong lĩnh vực bạn đã xem" : "Phổ biến với học viên mới")
+                            @if (interestPicker != null)
+                            {
+                                <a href="#" class="recommend-interest-link" data-open-interest>Chọn lĩnh vực quan tâm để nhận gợi ý phù hợp hơn</a>
+                            }
+                        </p>
+                        break;
+                    default:
+                        <p class="body-2" style="color: var(--text-secondary);">Gợi ý dựa trên các khóa học bạn đã học, xem và đánh giá</p>
+                        break;
                 }
             </div>
             <div style="display: flex; gap: 10px; align-items: center; flex-shrink: 0;">
@@ -362,15 +409,31 @@ cursor: not-allowed;
         }
         else
         {
-            bool daCoTuongTac = (ViewBag.RecommendationInteractedCount as int? ?? 0) > 0;
+            @* Chỉ còn trống khi học viên đã sở hữu mọi khóa đang mở bán, hoặc chưa chạy migration 005 *@
+            bool chuaKhoiTao = ViewBag.HomeRecommendation == null;
             <div style="text-align: center; color: var(--text-secondary); padding: 24px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--border-color, #E2E8F0);">
-                <i class="bi @(daCoTuongTac ? "bi-diagram-3" : "bi-eye") me-1" style="color: var(--primary, #434CE8);"></i>
-                @(daCoTuongTac ? "Các khóa học bạn đã xem chưa có khóa học tương tự để gợi ý." : "Bạn cần xem một số khóa học để hiển thị gợi ý.")
-                <a href="@Url.Action("Index", "Course")" style="font-weight: 600; margin-left: 6px;">Khám phá khóa học</a>
+                @if (chuaKhoiTao)
+                {
+                    <i class="bi bi-hourglass-split me-1" style="color: var(--primary, #434CE8);"></i>
+                    @:Chức năng gợi ý khóa học chưa sẵn sàng.
+                    <a href="@Url.Action("Index", "Course")" style="font-weight: 600; margin-left: 6px;">Khám phá khóa học</a>
+                }
+                else
+                {
+                    <i class="bi bi-check2-circle me-1" style="color: var(--primary, #434CE8);"></i>
+                    @:Bạn đã đăng ký tất cả khóa học hiện có.
+                    <a href="@Url.Action("MyCourses", "Learning")" style="font-weight: 600; margin-left: 6px;">Vào Khóa học của tôi</a>
+                }
             </div>
         }
     </div>
 </section>
+
+@* Đang ở trong khối @if (isLoggedIn) nên viết "if" không có "@" *@
+if (interestPicker != null)
+{
+    @Html.Partial("_InterestPicker", interestPicker)
+}
 
 <!-- Section: Danh Sách Khóa Học Nổi Bật / Bán Chạy -->
 <section id="courses-section" style="padding: 60px 0; background: var(--bg-canvas, #F8FAFC);">

@@ -1,0 +1,225 @@
+@model ECOLearning.ViewModels.PromotionFormViewModel
+@{
+    bool laSua = Model.LaChinhSua;
+    ViewBag.Title = laSua ? "Sửa chương trình khuyến mãi" : "Tạo chương trình khuyến mãi";
+    var chon = new HashSet<string>(Model.KhoaHocApDung ?? new List<string>());
+    Func<string, MvcHtmlString> loi = key =>
+        ViewData.ModelState.ContainsKey(key) && ViewData.ModelState[key].Errors.Count > 0
+            ? new MvcHtmlString("<div class=\"mk-error\">" + System.Web.HttpUtility.HtmlEncode(ViewData.ModelState[key].Errors[0].ErrorMessage) + "</div>")
+            : MvcHtmlString.Empty;
+    string giaTri = Model.GiaTriUuDai.HasValue ? Model.GiaTriUuDai.Value.ToString("0", System.Globalization.CultureInfo.InvariantCulture) : "";
+    Func<decimal?, string> soNguyen = v => v.HasValue ? v.Value.ToString("0", System.Globalization.CultureInfo.InvariantCulture) : "";
+}
+
+<div class="mk-page-head">
+    <div>
+        <a href="@(laSua ? Url.Action("Details", "Promotion", new { id = Model.MaKhuyenMai }) : Url.Action("Index", "Promotion"))" class="mk-muted" style="text-decoration: none;"><i class="bi bi-arrow-left"></i> Quay lại</a>
+        <h1 class="h2">@(laSua ? "Sửa chương trình khuyến mãi" : (Model.DoiTuong == "ThanThiet" ? "Tạo ưu đãi học viên thân thiết" : "Tạo chương trình khuyến mãi"))</h1>
+        <p>Các trường có dấu <span style="color: #DC2626;">*</span> là bắt buộc.</p>
+    </div>
+</div>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="mk-flash mk-flash-error" role="alert">
+        <span><i class="bi bi-exclamation-triangle-fill me-1"></i> Dữ liệu chưa hợp lệ, vui lòng kiểm tra các trường được đánh dấu.
+            @if (ViewData.ModelState.ContainsKey("") && ViewData.ModelState[""].Errors.Count > 0) { @ViewData.ModelState[""].Errors[0].ErrorMessage }</span>
+    </div>
+}
+@if (laSua && Model.SoLuotDaDung > 0)
+{
+    <div class="mk-flash" style="background: #FFFBEB; border-left: 4px solid #F59E0B; color: #92400E;">
+        <span><i class="bi bi-info-circle-fill me-1"></i> Mã đã được dùng <strong>@Model.SoLuotDaDung</strong> lượt: không đổi được mã coupon. Thay đổi mức ưu đãi chỉ áp dụng cho đơn hàng mới, đơn đã hoàn tất giữ nguyên số tiền.</span>
+    </div>
+}
+
+@using (Html.BeginForm(laSua ? "Edit" : "Create", "Promotion", laSua ? new { id = Model.MaKhuyenMai } : null, FormMethod.Post, new { id = "promo-form", novalidate = "novalidate" }))
+{
+    @Html.AntiForgeryToken()
+    <div class="mk-form">
+        <div>
+            <div class="card mk-section">
+                <h2>Thông tin chương trình</h2>
+                <div class="form-group">
+                    <label class="form-label" for="TenKhuyenMai">Tên chương trình <span style="color: #DC2626;">*</span></label>
+                    <input type="text" id="TenKhuyenMai" name="TenKhuyenMai" class="form-control" maxlength="150" value="@Model.TenKhuyenMai" placeholder="VD: Ưu đãi chào năm học mới" />
+                    @loi("TenKhuyenMai")
+                </div>
+                <div class="mk-grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="MaCode">Mã coupon <span style="color: #DC2626;">*</span></label>
+                        <input type="text" id="MaCode" name="MaCode" class="form-control" maxlength="30" value="@Model.MaCode" placeholder="VD: NAMHOC2026"
+                               style="text-transform: uppercase; font-weight: 700;" @(laSua && Model.SoLuotDaDung > 0 ? "readonly" : "") />
+                        <div class="mk-hint">3–30 ký tự: chữ in hoa, số, "-" hoặc "_". Không được trùng.</div>
+                        @loi("MaCode")
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="MaChienDich">Thuộc chiến dịch</label>
+                        <select id="MaChienDich" name="MaChienDich" class="form-control">
+                            <option value="">Không thuộc chiến dịch nào</option>
+                            @foreach (var c in Model.ChienDichLuaChon)
+                            {
+                                <option value="@c.MaChienDich" @(c.MaChienDich == Model.MaChienDich ? "selected" : "")>@c.TenChienDich</option>
+                            }
+                        </select>
+                        @loi("MaChienDich")
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="DieuKienApDung">Ghi chú điều kiện (hiển thị nội bộ)</label>
+                    <input type="text" id="DieuKienApDung" name="DieuKienApDung" class="form-control" maxlength="255" value="@Model.DieuKienApDung" placeholder="VD: Dành cho học viên đăng ký trong tháng 10" />
+                </div>
+            </div>
+
+            <div class="card mk-section">
+                <h2>Mức ưu đãi</h2>
+                <div class="form-group">
+                    <div class="mk-choice" role="radiogroup" aria-label="Loại ưu đãi">
+                        <label><input type="radio" name="LoaiUuDai" value="PhanTram" @(Model.LoaiUuDai != "SoTien" ? "checked" : "") /> <span>Giảm theo %</span></label>
+                        <label><input type="radio" name="LoaiUuDai" value="SoTien" @(Model.LoaiUuDai == "SoTien" ? "checked" : "") /> <span>Giảm số tiền cố định</span></label>
+                    </div>
+                </div>
+                <div class="mk-grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="GiaTriUuDai"><span id="lbl-gia-tri">@(Model.LoaiUuDai == "SoTien" ? "Số tiền giảm (đ)" : "Phần trăm giảm (%)")</span> <span style="color: #DC2626;">*</span></label>
+                        <input type="number" id="GiaTriUuDai" name="GiaTriUuDai" class="form-control" step="1" min="1" value="@giaTri" />
+                        @loi("GiaTriUuDai")
+                    </div>
+                    <div class="form-group" id="grp-giam-toi-da" @(Model.LoaiUuDai == "SoTien" ? "hidden" : "")>
+                        <label class="form-label" for="GiamToiDa">Giảm tối đa (đ)</label>
+                        <input type="number" id="GiamToiDa" name="GiamToiDa" class="form-control" step="1" min="1" value="@soNguyen(Model.GiamToiDa)" placeholder="Không giới hạn" />
+                        @loi("GiamToiDa")
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="DonHangToiThieu">Giá trị đơn tối thiểu (đ)</label>
+                        <input type="number" id="DonHangToiThieu" name="DonHangToiThieu" class="form-control" step="1" min="0" value="@soNguyen(Model.DonHangToiThieu)" placeholder="Không yêu cầu" />
+                        <div class="mk-hint">Tính trên tổng giá các khóa được áp dụng trong giỏ.</div>
+                        @loi("DonHangToiThieu")
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mk-section">
+                <h2>Phạm vi khóa học</h2>
+                <div class="form-group">
+                    <div class="mk-choice" role="radiogroup" aria-label="Phạm vi">
+                        <label><input type="radio" name="PhamVi" value="TatCa" @(Model.PhamVi != "KhoaHoc" ? "checked" : "") /> <span>Toàn bộ khóa học</span></label>
+                        <label><input type="radio" name="PhamVi" value="KhoaHoc" @(Model.PhamVi == "KhoaHoc" ? "checked" : "") /> <span>Chỉ các khóa được chọn</span></label>
+                    </div>
+                </div>
+                <div id="grp-khoa-hoc" @(Model.PhamVi == "KhoaHoc" ? "" : "hidden")>
+                    <div class="mk-course-list">
+                        @foreach (var k in Model.KhoaHocLuaChon)
+                        {
+                            <label class="mk-course-item">
+                                <input type="checkbox" name="KhoaHocApDung" value="@k.MaKhoaHoc" @(chon.Contains(k.MaKhoaHoc) ? "checked" : "") />
+                                <span>@k.TenKhoaHoc<small>@k.TenDanhMuc · @k.GiaBan.ToString("N0") đ</small></span>
+                            </label>
+                        }
+                        @if (!Model.KhoaHocLuaChon.Any())
+                        {
+                            <div class="mk-muted" style="padding: 10px;">Chưa có khóa học nào đã xuất bản và có giá bán.</div>
+                        }
+                    </div>
+                    @loi("KhoaHocApDung")
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="card mk-section">
+                <h2>Thời gian áp dụng</h2>
+                <div class="form-group">
+                    <label class="form-label" for="NgayBatDau">Ngày bắt đầu <span style="color: #DC2626;">*</span></label>
+                    <input type="date" id="NgayBatDau" name="NgayBatDau" class="form-control" value="@(Model.NgayBatDau?.ToString("yyyy-MM-dd"))" />
+                    @loi("NgayBatDau")
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="NgayKetThuc">Ngày kết thúc <span style="color: #DC2626;">*</span></label>
+                    <input type="date" id="NgayKetThuc" name="NgayKetThuc" class="form-control" value="@(Model.NgayKetThuc?.ToString("yyyy-MM-dd"))" />
+                    <div class="mk-hint">Mã dùng được đến hết ngày kết thúc.</div>
+                    @loi("NgayKetThuc")
+                </div>
+            </div>
+
+            <div class="card mk-section">
+                <h2>Giới hạn sử dụng</h2>
+                <div class="form-group">
+                    <label class="form-label" for="GioiHanLuotDung">Tổng số lượt dùng</label>
+                    <input type="number" id="GioiHanLuotDung" name="GioiHanLuotDung" class="form-control" step="1" min="1" value="@Model.GioiHanLuotDung" placeholder="Không giới hạn" />
+                    @loi("GioiHanLuotDung")
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="GioiHanMoiHocVien">Số lượt mỗi học viên <span style="color: #DC2626;">*</span></label>
+                    <input type="number" id="GioiHanMoiHocVien" name="GioiHanMoiHocVien" class="form-control" step="1" min="1" value="@Model.GioiHanMoiHocVien" />
+                    @loi("GioiHanMoiHocVien")
+                </div>
+                <div class="mk-hint">Mỗi đơn hàng chỉ áp dụng một mã, không cộng dồn nhiều ưu đãi.</div>
+            </div>
+
+            <div class="card mk-section">
+                <h2>Đối tượng học viên</h2>
+                <div class="form-group">
+                    <div class="mk-choice" role="radiogroup" aria-label="Đối tượng">
+                        <label><input type="radio" name="DoiTuong" value="TatCa" @(Model.DoiTuong != "ThanThiet" ? "checked" : "") /> <span>Mọi học viên</span></label>
+                        <label><input type="radio" name="DoiTuong" value="ThanThiet" @(Model.DoiTuong == "ThanThiet" ? "checked" : "") /> <span>Học viên thân thiết</span></label>
+                    </div>
+                </div>
+                <div id="grp-than-thiet" @(Model.DoiTuong == "ThanThiet" ? "" : "hidden")>
+                    <div class="form-group">
+                        <label class="form-label" for="SoKhoaToiThieu">Đã đăng ký tối thiểu (khóa)</label>
+                        <input type="number" id="SoKhoaToiThieu" name="SoKhoaToiThieu" class="form-control" step="1" min="1" value="@Model.SoKhoaToiThieu" />
+                        @loi("SoKhoaToiThieu")
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="ChiTieuToiThieu">Tổng chi tiêu tối thiểu (đ)</label>
+                        <input type="number" id="ChiTieuToiThieu" name="ChiTieuToiThieu" class="form-control" step="1" min="1" value="@soNguyen(Model.ChiTieuToiThieu)" />
+                        @loi("ChiTieuToiThieu")
+                    </div>
+                    <div class="mk-hint">Cần ít nhất một tiêu chí. Có cả hai thì học viên phải đạt cả hai. Chỉ tính đăng ký thành công và đơn đã thanh toán.</div>
+                </div>
+            </div>
+
+            <div class="card mk-section">
+                <h2>Hiển thị cho học viên</h2>
+                <label style="display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 14px;">
+                    <input type="checkbox" name="CongKhai" value="true" @(Model.CongKhai ? "checked" : "") style="margin-top: 3px;" />
+                    <input type="hidden" name="CongKhai" value="false" />
+                    <span>
+                        <strong>Công khai mã</strong>
+                        <span class="mk-hint" style="display: block; margin-top: 2px;">Học viên thấy mã trong giỏ hàng và trang chi tiết khóa học được áp dụng. Mã thân thiết chỉ hiện với học viên đã đạt tiêu chí. Bỏ chọn nếu muốn gửi mã riêng (email, mạng xã hội); học viên vẫn nhập tay được.</span>
+                    </span>
+                </label>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <a href="@(laSua ? Url.Action("Details", "Promotion", new { id = Model.MaKhuyenMai }) : Url.Action("Index", "Promotion"))" class="btn btn-outline">Hủy</a>
+                <button type="submit" class="btn mk-btn-accent">@(laSua ? "Lưu thay đổi" : "Tạo chương trình")</button>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            var form = document.getElementById('promo-form');
+            function value(name) {
+                var el = form.querySelector('input[name="' + name + '"]:checked');
+                return el ? el.value : '';
+            }
+            function sync() {
+                var soTien = value('LoaiUuDai') === 'SoTien';
+                document.getElementById('lbl-gia-tri').textContent = soTien ? 'Số tiền giảm (đ)' : 'Phần trăm giảm (%)';
+                document.getElementById('GiaTriUuDai').max = soTien ? '' : '100';
+                document.getElementById('grp-giam-toi-da').hidden = soTien;
+                document.getElementById('grp-khoa-hoc').hidden = value('PhamVi') !== 'KhoaHoc';
+                document.getElementById('grp-than-thiet').hidden = value('DoiTuong') !== 'ThanThiet';
+            }
+            form.addEventListener('change', sync);
+            sync();
+            var code = document.getElementById('MaCode');
+            code.addEventListener('input', function () { code.value = code.value.toUpperCase(); });
+        })();
+    </script>
+}

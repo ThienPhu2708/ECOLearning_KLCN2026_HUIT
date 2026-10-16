@@ -441,6 +441,20 @@
             justify-content: center;
             min-height: 320px;
         }
+
+        /* Mã giảm giá áp dụng cho khóa học */
+        .cd-coupons { margin: -4px 0 16px; display: flex; flex-direction: column; gap: 8px; }
+        .cd-coupon { border: 1px dashed #C7D2FE; border-radius: 12px; padding: 10px 12px; background: #FFFFFF; }
+        .cd-coupon-top { display: flex; align-items: center; gap: 8px; }
+        .cd-coupon-code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12.5px; font-weight: 700; letter-spacing: .5px; color: #434CE8; background: #EEF2FF; border: 1px dashed #A5B4FC; border-radius: 6px; padding: 2px 8px; }
+        .cd-coupon-value { font-size: 13px; font-weight: 800; color: #0F172A; flex: 1; min-width: 0; }
+        .cd-coupon-copy { border: 1px solid #CBD5E1; background: #FFFFFF; color: #475569; font-size: 12px; font-weight: 700; border-radius: 8px; padding: 3px 10px; cursor: pointer; white-space: nowrap; }
+        .cd-coupon-copy:hover { border-color: #434CE8; color: #434CE8; }
+        .cd-coupon-copy:focus-visible { outline: 2px solid #A5B4FC; outline-offset: 2px; }
+        .cd-coupon-copy.is-copied { border-color: #434CE8; background: #EEF2FF; color: #434CE8; }
+        .cd-coupon-price { font-size: 12.5px; font-weight: 600; color: #434CE8; margin-top: 6px; }
+        .cd-coupon-meta { font-size: 11.5px; color: #64748B; margin-top: 3px; line-height: 1.45; }
+        .cd-coupon-more { font-size: 12px; color: #64748B; }
     </style>
 }
 
@@ -894,6 +908,38 @@
                                 }
                             </div>
 
+                            <!-- Mã giảm giá công khai áp dụng cho khóa học (Marketing tạo) -->
+                            @{
+                                var maGiamGia = ViewBag.MaGiamGia as List<ECOLearning.ViewModels.MaGiamGiaHienThi> ?? new List<ECOLearning.ViewModels.MaGiamGiaHienThi>();
+                                decimal giaHienTai = ViewBag.GiaHienTai ?? effectivePrice;
+                            }
+                            @if (!isOwner && !isEnrolled && !isFree && maGiamGia.Count > 0)
+                            {
+                                <div class="cd-coupons" aria-label="Mã giảm giá áp dụng cho khóa học">
+                                    @foreach (var m in maGiamGia.Take(2))
+                                    {
+                                        <div class="cd-coupon">
+                                            <div class="cd-coupon-top">
+                                                <span class="cd-coupon-code">@m.MaCode</span>
+                                                <span class="cd-coupon-value">@m.MoTaUuDai</span>
+                                                <button type="button" class="cd-coupon-copy" data-code="@m.MaCode" onclick="copyCouponCode(this)">Sao chép</button>
+                                            </div>
+                                            @if (m.CoTheApDung && m.TienGiam > 0)
+                                            {
+                                                <div class="cd-coupon-price">Còn @((giaHienTai - m.TienGiam).ToString("N0")) đ khi dùng mã ở giỏ hàng</div>
+                                            }
+                                            <div class="cd-coupon-meta">
+                                                @(m.CoTheApDung ? string.Join(" · ", m.DieuKien) : m.LyDo) · HSD @m.NgayKetThuc.ToString("dd/MM/yyyy")
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (maGiamGia.Count > 2)
+                                    {
+                                        <div class="cd-coupon-more">Và @(maGiamGia.Count - 2) mã khác, xem trong giỏ hàng.</div>
+                                    }
+                                </div>
+                            }
+
                             <!-- Action Buttons -->
                             @if (isOwner)
                             {
@@ -1006,6 +1052,21 @@
 
 @section scripts {
     <script>
+        // Sao chép mã giảm giá để dán vào giỏ hàng (phản hồi ngay trên nút, không bật toast)
+        function copyCouponCode(btn) {
+            const code = btn.getAttribute('data-code');
+            const done = function () {
+                btn.innerText = 'Đã chép';
+                btn.classList.add('is-copied');
+                setTimeout(function () { btn.innerText = 'Sao chép'; btn.classList.remove('is-copied'); }, 1500);
+            };
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(code).then(done, function () { window.prompt('Mã giảm giá:', code); });
+            } else {
+                window.prompt('Mã giảm giá:', code);
+            }
+        }
+
         function extractVideoInfo(url) {
             if (!url || typeof url !== 'string' || !url.trim()) return null;
             url = url.trim();

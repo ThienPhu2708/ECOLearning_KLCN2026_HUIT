@@ -1,0 +1,15 @@
+@* Thông báo sau thao tác (TempData["Success"] / TempData["Error"]) dùng chung cho phân hệ Marketing *@
+@if (TempData["Success"] != null)
+{
+    <div class="mk-flash mk-flash-success" role="status">
+        <span><i class="bi bi-check-circle-fill me-1"></i> @TempData["Success"]</span>
+        <button type="button" onclick="this.parentElement.remove()" aria-label="Đóng"><i class="bi bi-x-lg"></i></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="mk-flash mk-flash-error" role="alert">
+        <span><i class="bi bi-exclamation-triangle-fill me-1"></i> @TempData["Error"]</span>
+        <button type="button" onclick="this.parentElement.remove()" aria-label="Đóng"><i class="bi bi-x-lg"></i></button>
+    </div>
+}

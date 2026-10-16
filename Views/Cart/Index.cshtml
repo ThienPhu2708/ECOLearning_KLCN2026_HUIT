@@ -76,6 +76,32 @@
                 grid-column: span 12;
             }
         }
+
+        /* Mã giảm giá dành cho học viên */
+        .cp-list-head { margin-top: 16px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; color: #0F172A; margin-bottom: 8px; }
+        .cp-list-head .bi { color: #434CE8; }
+        .cp-count { font-size: 12px; font-weight: 600; color: #64748B; }
+        .cp-list { display: flex; flex-direction: column; gap: 8px; }
+        .cp-item { border: 1px dashed #C7D2FE; border-radius: 12px; padding: 10px 12px; background: #FFFFFF; transition: border-color .15s, background .15s; }
+        .cp-item:hover { border-color: #434CE8; }
+        .cp-item.is-applied { border: 1px solid #434CE8; background: #F5F7FF; }
+        .cp-item.is-disabled { background: #F8FAFC; border-color: #E2E8F0; }
+        .cp-item.is-disabled .cp-code, .cp-item.is-disabled .cp-value { color: #94A3B8; }
+        .cp-item.is-disabled .cp-code { background: #F1F5F9; border-color: #E2E8F0; }
+        .cp-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        .cp-code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12.5px; font-weight: 700; letter-spacing: .5px; color: #434CE8; background: #EEF2FF; border: 1px dashed #A5B4FC; border-radius: 6px; padding: 2px 8px; }
+        .cp-value { font-size: 13px; font-weight: 800; color: #0F172A; text-align: right; }
+        .cp-name { font-size: 12.5px; font-weight: 600; color: #334155; margin-top: 6px; }
+        .cp-cond { font-size: 11.5px; color: #64748B; line-height: 1.45; flex: 1; min-width: 0; }
+        .cp-bottom { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin-top: 2px; }
+        .cp-btn { border: 1px solid #434CE8; background: #FFFFFF; color: #434CE8; font-size: 12px; font-weight: 700; border-radius: 8px; padding: 4px 12px; cursor: pointer; white-space: nowrap; }
+        .cp-btn:hover { background: #434CE8; color: #FFFFFF; }
+        .cp-btn:focus-visible { outline: 2px solid #A5B4FC; outline-offset: 2px; }
+        .cp-btn-applied, .cp-btn-applied:hover { border-color: transparent; background: transparent; color: #434CE8; cursor: default; padding-right: 0; }
+        .cp-save { font-size: 11.5px; font-weight: 600; color: #434CE8; margin-top: 6px; }
+        .cp-reason { font-size: 11.5px; color: #64748B; margin-top: 6px; line-height: 1.45; }
+        .cp-more { margin-top: 8px; background: none; border: none; padding: 0; font-size: 12.5px; font-weight: 700; color: #434CE8; cursor: pointer; }
+        .cp-note { font-size: 12px; color: #64748B; margin-top: 8px; }
     </style>
 }
 
@@ -192,8 +218,17 @@
                             <i class="bi bi-x-circle-fill me-1"></i> Mã khuyến mãi không hợp lệ hoặc đã hết hạn!
                         </div>
                         <div id="coupon-success" style="color: #10B981; font-size: 12px; font-weight: 600; margin-top: 8px; display: @(string.IsNullOrEmpty(Model.AppliedCouponCode) ? "none" : "block");">
-                            <i class="bi bi-check-circle-fill me-1"></i> Đã áp dụng mã ưu đãi @Model.AppliedCouponCode!
+                            <i class="bi bi-check-circle-fill me-1"></i> @(ViewBag.CouponMessage ?? "Đã áp dụng mã ưu đãi " + Model.AppliedCouponCode + "!")
                         </div>
+                        @if (ViewBag.CouponWarning != null)
+                        {
+                            <div id="coupon-warning" style="color: #B45309; font-size: 12px; font-weight: 600; margin-top: 8px;">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i> @ViewBag.CouponWarning
+                            </div>
+                        }
+
+                        <!-- Mã giảm giá công khai dành cho học viên -->
+                        <div id="coupon-list-wrap">@Html.Partial("_CouponList", Model)</div>
                     </div>
 
                     <!-- Price Breakdown -->
@@ -236,7 +271,7 @@
         </div>
         <h3 class="h2" style="font-size: 22px; font-weight: 800; color: #0F172A; margin-bottom: 10px;">Thanh toán Thành công!</h3>
         <p class="body-1" style="color: #64748B; font-size: 14px; margin-bottom: 24px; line-height: 1.6;">
-            Hệ thống đã gửi hóa đơn điện tử về email của bạn. Khóa học đã được tự động thêm vào hồ sơ học tập của bạn.
+            Đơn hàng đã được ghi nhận. Khóa học đã được tự động thêm vào hồ sơ học tập của bạn.
         </p>
         <div style="display: flex; gap: 12px; justify-content: center; flex-direction: column;">
             <a href="@Url.Action("Index", "Home")" class="btn btn-primary" style="height: 48px; background: #434CE8; color: #FFFFFF; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">Bắt đầu học ngay <i class="bi bi-arrow-right ms-1"></i></a>
@@ -275,6 +310,15 @@
                         }
 
                         showToast(res.message, 'info');
+
+                        // Bỏ khóa có thể làm mã không còn đủ điều kiện (phạm vi khóa học, đơn tối thiểu)
+                        if (res.couponRemoved) {
+                            document.getElementById('coupon-success').style.display = 'none';
+                            const errEl = document.getElementById('coupon-error');
+                            errEl.innerText = res.couponMessage;
+                            errEl.style.display = 'block';
+                        }
+                        refreshCouponList();
 
                         if (res.cartCount === 0) {
                             document.getElementById('cart-items-container').innerHTML = `
@@ -320,6 +364,7 @@
                         document.getElementById('total-val').innerText = res.total;
 
                         showToast(res.message, 'success');
+                        refreshCouponList();
                     } else {
                         succEl.style.display = 'none';
                         errEl.innerText = res.message;
@@ -332,6 +377,26 @@
                     showToast('Lỗi kết nối khi kiểm tra mã khuyến mãi!', 'error');
                 }
             });
+        }
+
+        // Bấm "Dùng mã" trong danh sách: điền mã rồi áp dụng như nhập tay (server kiểm tra lại toàn bộ)
+        function useCoupon(code) {
+            document.getElementById('coupon-input').value = code;
+            applyCoupon();
+        }
+
+        // Tải lại danh sách mã sau khi áp mã / xóa khóa học (đổi trạng thái "Đang dùng", số tiền giảm, lý do)
+        function refreshCouponList() {
+            $.get('@Url.Action("AvailableCoupons", "Cart")', function (html) {
+                document.getElementById('coupon-list-wrap').innerHTML = html.trim();
+            });
+        }
+
+        function toggleMoreCoupons(btn) {
+            const extra = document.querySelectorAll('#coupon-list-wrap .cp-item[data-extra="1"]');
+            const dangAn = extra.length > 0 && extra[0].hidden;
+            extra.forEach(function (el) { el.hidden = !dangAn; });
+            btn.innerText = dangAn ? btn.getAttribute('data-less') : btn.getAttribute('data-more');
         }
 
         // Xác nhận Thanh toán
@@ -368,6 +433,12 @@
                             window.location.href = '@Url.Action("Login", "Account")?returnUrl=' + encodeURIComponent(window.location.pathname);
                         }, 600);
                     } else {
+                        if (res.couponInvalid) {
+                            document.getElementById('coupon-success').style.display = 'none';
+                            const errEl = document.getElementById('coupon-error');
+                            errEl.innerText = res.message;
+                            errEl.style.display = 'block';
+                        }
                         showToast(res.message, 'error');
                     }
                 },

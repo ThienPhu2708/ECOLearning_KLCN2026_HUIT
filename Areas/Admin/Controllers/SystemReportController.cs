@@ -88,6 +88,15 @@ namespace ECOLearning.Areas.Admin.Controllers
                 })
                 .ToList();
 
+            // Doanh thu thực thu: đơn có coupon thì phân bổ tiền giảm (SuDungUuDai) về từng khóa theo tỷ lệ đơn giá,
+            // để tổng doanh thu khớp DonHang.tongTien và báo cáo doanh thu theo khoảng ngày (RevenueService)
+            var tyLeThucThu = new RevenueService(db).TyLeThucThuTheoDon();
+            foreach (var l in lines)
+            {
+                decimal tyLe;
+                if (tyLeThucThu.TryGetValue(l.OrderId, out tyLe)) l.Amount = Math.Round(l.Amount * tyLe, 0);
+            }
+
             model.TotalNetRevenue = lines.Sum(l => l.Amount);
             model.TotalOrders = lines.Select(l => l.OrderId).Distinct().Count();
             model.AvgOrderValue = model.TotalOrders > 0 ? Math.Round(model.TotalNetRevenue / model.TotalOrders, 0) : 0;

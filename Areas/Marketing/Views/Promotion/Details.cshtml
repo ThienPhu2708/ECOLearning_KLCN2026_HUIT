@@ -1,0 +1,159 @@
+@model ECOLearning.ViewModels.ChuongTrinhKhuyenMai
+@{
+    ViewBag.Title = "Chi tiết chương trình khuyến mãi";
+    var khoaHoc = ViewBag.KhoaHoc as List<ECOLearning.ViewModels.LuaChonKhoaHoc> ?? new List<ECOLearning.ViewModels.LuaChonKhoaHoc>();
+    var luot = ViewBag.LuotSuDung as List<ECOLearning.ViewModels.LuotSuDungUuDai> ?? new List<ECOLearning.ViewModels.LuotSuDungUuDai>();
+    string tt = Model.TrangThaiHienThi(DateTime.Now);
+}
+
+<div class="mk-page-head">
+    <div>
+        <a href="@Url.Action("Index", "Promotion")" class="mk-muted" style="text-decoration: none;"><i class="bi bi-arrow-left"></i> Danh sách chương trình</a>
+        <h1 class="h2">@Model.TenKhuyenMai</h1>
+        <p>
+            <span class="mk-code">@Model.MaCode</span>
+            @if (tt == "Đang chạy") { <span class="badge badge-success">Đang chạy</span> }
+            else if (tt == "Tạm ngưng") { <span class="badge badge-warning">Tạm ngưng</span> }
+            else if (tt == "Chưa bắt đầu") { <span class="badge badge-info">Chưa bắt đầu</span> }
+            else { <span class="badge badge-secondary">Đã kết thúc</span> }
+            @if (Model.LaThanThiet) { <span class="badge badge-warning"><i class="bi bi-award"></i> Học viên thân thiết</span> }
+        </p>
+    </div>
+    @if (tt != "Đã kết thúc")
+    {
+        <div class="mk-actions">
+            <a href="@Url.Action("Edit", "Promotion", new { id = Model.MaKhuyenMai })" class="btn btn-outline"><i class="bi bi-pencil me-1"></i> Sửa</a>
+            @using (Html.BeginForm("ChangeStatus", "Promotion", new { id = Model.MaKhuyenMai }, FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+                if (Model.TrangThaiLuu == "TamNgung")
+                {
+                    <button type="submit" name="hanhDong" value="resume" class="btn btn-secondary">Kích hoạt lại</button>
+                }
+                else
+                {
+                    <button type="submit" name="hanhDong" value="pause" class="btn btn-secondary">Tạm ngừng</button>
+                }
+            }
+            @using (Html.BeginForm("ChangeStatus", "Promotion", new { id = Model.MaKhuyenMai }, FormMethod.Post, new { onsubmit = "return confirm('Kết thúc chương trình? Mã sẽ không dùng được nữa, lịch sử sử dụng được giữ nguyên.');" }))
+            {
+                @Html.AntiForgeryToken()
+                <button type="submit" name="hanhDong" value="end" class="btn btn-danger">Kết thúc</button>
+            }
+        </div>
+    }
+</div>
+
+@Html.Partial("_Flash")
+
+<div class="mk-stats">
+    <div class="card mk-stat">
+        <div class="mk-stat-label">Lượt sử dụng</div>
+        <div class="mk-stat-value">@Model.SoLuotDaDung@(Model.GioiHanLuotDung.HasValue ? " / " + Model.GioiHanLuotDung.Value : "")</div>
+        <div class="mk-stat-note">@(Model.GioiHanLuotDung.HasValue ? "Giới hạn tổng lượt" : "Không giới hạn tổng lượt")</div>
+    </div>
+    <div class="card mk-stat">
+        <div class="mk-stat-label">Tổng tiền đã giảm</div>
+        <div class="mk-stat-value">@Model.TongTienGiam.ToString("N0") đ</div>
+    </div>
+    <div class="card mk-stat">
+        <div class="mk-stat-label">Doanh thu sau giảm</div>
+        <div class="mk-stat-value">@Model.DoanhThuSauGiam.ToString("N0") đ</div>
+        <div class="mk-stat-note">Tổng tiền các đơn đã thanh toán có dùng mã</div>
+    </div>
+</div>
+
+<div class="mk-form">
+    <div>
+        <div class="card mk-section">
+            <h2>Cấu hình</h2>
+            <dl class="mk-dl">
+                <dt>Ưu đãi</dt>
+                <dd><strong style="color: #E11D48;">@Model.MoTaUuDai</strong></dd>
+                <dt>Đơn tối thiểu</dt>
+                <dd>@(Model.DonHangToiThieu.HasValue ? Model.DonHangToiThieu.Value.ToString("N0") + " đ" : "Không yêu cầu")</dd>
+                <dt>Thời gian</dt>
+                <dd>@Model.NgayBatDau.ToString("dd/MM/yyyy") – @Model.NgayKetThuc.ToString("dd/MM/yyyy")</dd>
+                <dt>Mỗi học viên</dt>
+                <dd>Tối đa @Model.GioiHanMoiHocVien lượt</dd>
+                <dt>Đối tượng</dt>
+                <dd>@Model.MoTaDoiTuong
+                    @if (Model.LaThanThiet)
+                    {
+                        <div><a href="@Url.Action("Eligible", "Loyalty", new { id = Model.MaKhuyenMai })">Xem học viên đủ điều kiện</a></div>
+                    }
+                </dd>
+                <dt>Phạm vi</dt>
+                <dd>@Model.MoTaPhamVi</dd>
+                <dt>Hiển thị</dt>
+                <dd>@(Model.CongKhai ? "Công khai: học viên thấy mã ở giỏ hàng và trang khóa học" : "Mã kín: chỉ ai được gửi mã mới dùng được")</dd>
+                <dt>Chiến dịch</dt>
+                <dd>
+                    @if (string.IsNullOrEmpty(Model.MaChienDich)) { <span class="mk-muted">Không thuộc chiến dịch nào</span> }
+                    else { <a href="@Url.Action("Details", "Campaign", new { id = Model.MaChienDich })">@Model.TenChienDich</a> }
+                </dd>
+                @if (!string.IsNullOrEmpty(Model.DieuKienApDung))
+                {
+                    <dt>Ghi chú</dt>
+                    <dd>@Model.DieuKienApDung</dd>
+                }
+                <dt>Ngày tạo</dt>
+                <dd>@Model.NgayTao.ToString("dd/MM/yyyy HH:mm")</dd>
+            </dl>
+        </div>
+
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div style="padding: 18px 22px 6px;"><h2 style="font-size: 15px; font-weight: 800; margin: 0;">Lịch sử sử dụng (@luot.Count)</h2></div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Học viên</th>
+                            <th>Đơn hàng</th>
+                            <th style="text-align: right;">Giá trị áp dụng</th>
+                            <th style="text-align: right;">Đã giảm</th>
+                            <th style="text-align: right;">Tổng đơn</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in luot)
+                        {
+                            <tr>
+                                <td>@l.NgaySuDung.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@l.HoTen<div class="mk-muted">@l.Email</div></td>
+                                <td><span class="mk-code">@l.MaDonHang</span></td>
+                                <td style="text-align: right;">@l.TienTruocGiam.ToString("N0") đ</td>
+                                <td style="text-align: right; color: #E11D48;">- @l.TienGiam.ToString("N0") đ</td>
+                                <td style="text-align: right; font-weight: 700;">@l.TongDonHang.ToString("N0") đ</td>
+                            </tr>
+                        }
+                        @if (!luot.Any())
+                        {
+                            <tr><td colspan="6" class="mk-empty"><i class="bi bi-receipt"></i>Chưa có đơn hàng nào dùng mã này.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <div class="card mk-section">
+            <h2>Khóa học áp dụng</h2>
+            @if (Model.PhamVi != "KhoaHoc")
+            {
+                <p class="mk-muted" style="margin: 0;">Áp dụng cho toàn bộ khóa học.</p>
+            }
+            else
+            {
+                <ul style="margin: 0; padding-left: 18px; font-size: 14px;">
+                    @foreach (var k in khoaHoc)
+                    {
+                        <li style="margin-bottom: 6px;">@k.TenKhoaHoc <span class="mk-muted">· @k.GiaBan.ToString("N0") đ</span></li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+</div>

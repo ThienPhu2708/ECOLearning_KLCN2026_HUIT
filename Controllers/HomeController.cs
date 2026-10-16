@@ -53,32 +53,29 @@ namespace ECOLearning.Controllers
                 System.Diagnostics.Debug.WriteLine("Fetch home data error: " + ex.Message);
             }
 
-            // UC7: "Khóa học dành riêng cho bạn"
-            //  1. "Vì bạn đã xem X": khóa tương tự nhất với khóa vừa xem, đọc thẳng ma trận course_similarity
-            //     nên đổi ngay sau mỗi lần mở trang chi tiết.
-            //  2. Chưa có khóa mốc dùng được: gợi ý tổng hợp từ toàn bộ lịch sử đã tính sẵn (chỉ đọc).
+            // UC7: "Khóa học dành riêng cho bạn" (RecommendationService.GetForHome):
+            //  "Vì bạn đã xem X" → gợi ý tổng hợp đã tính sẵn → "Vì bạn quan tâm …" (lĩnh vực đã chọn) → khóa phổ biến.
+            // Học viên mới chưa trả lời lần nào thì hộp thoại chọn lĩnh vực quan tâm tự mở (Views/Shared/_InterestPicker).
             if (isLoggedIn)
             {
+                int currentUserId = (Session["UserId"] as int?) ?? 0;
+                ECOLearning.ViewModels.InterestPickerViewModel picker = null;
+                try
+                {
+                    picker = new InterestService(db).BuildPicker(currentUserId, Session["Role"] as string);
+                    ViewBag.InterestPicker = picker;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("Fetch interests error: " + ex.Message);
+                }
+
                 try
                 {
                     var recommendationService = new RecommendationService(db);
                     if (recommendationService.IsInstalled())
                     {
-                        int currentUserId = (Session["UserId"] as int?) ?? 0;
-                        var theoKhoaVuaXem = recommendationService.GetBecauseYouViewed(currentUserId, SoGoiYTrangChu);
-                        bool coKhoaMoc = theoKhoaVuaXem != null && theoKhoaVuaXem.Items.Count > 0;
-                        if (coKhoaMoc)
-                        {
-                            ViewBag.RecommendationAnchor = theoKhoaVuaXem;
-                        }
-                        List<ECOLearning.ViewModels.RecommendedCourseViewModel> recommendations = coKhoaMoc
-                            ? theoKhoaVuaXem.Items
-                            : recommendationService.GetSaved(currentUserId, SoGoiYTrangChu);
-                        ViewBag.Recommendations = recommendations;
-                        if (recommendations.Count == 0)
-                        {
-                            ViewBag.RecommendationInteractedCount = recommendationService.CountInteractedCourses(currentUserId);
-                        }
+                        ViewBag.HomeRecommendation = recommendationService.GetForHome(currentUserId, SoGoiYTrangChu, picker != null);
                     }
                 }
                 catch (Exception ex)

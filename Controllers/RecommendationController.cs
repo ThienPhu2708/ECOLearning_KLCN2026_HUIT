@@ -22,10 +22,21 @@ namespace ECOLearning.Controllers
             }
 
             int currentUserId = (Session["UserId"] as int?) ?? 0;
+            InterestPickerViewModel picker = null;
+            try
+            {
+                picker = new InterestService(db).BuildPicker(currentUserId, Session["Role"] as string);
+                ViewBag.InterestPicker = picker;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Fetch interests error: " + ex.Message);
+            }
+
             RecommendationPageViewModel model;
             try
             {
-                model = new RecommendationService(db).Compute(currentUserId, SoGoiYTrenTrang);
+                model = new RecommendationService(db).Compute(currentUserId, SoGoiYTrenTrang, picker != null);
             }
             catch (Exception ex)
             {

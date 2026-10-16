@@ -19,10 +19,14 @@ namespace ECOLearning.Services
         public const string NguonPhoBien = "PhoBien";
 
         /// <summary>
-        /// Có hiển thị khóa phổ biến (bù cho đủ K / người dùng mới) hay không. Tắt: chỉ hiển thị kết quả lọc cộng tác thuần.
-        /// Logic khóa phổ biến vẫn nằm trong stored procedure, chỉ lọc ở bước hiển thị; bật lại bằng cách đổi thành true.
+        /// Có hiển thị khóa phổ biến hay không. Bật: khi lọc cộng tác chưa đủ dữ liệu (học viên mới, khóa đã xem
+        /// chưa có khóa tương tự) thì bù khóa phổ biến, thẻ gắn nhãn "Phổ biến" để phân biệt với kết quả lọc cộng tác.
+        /// Tắt: chỉ hiển thị kết quả lọc cộng tác thuần (mục gợi ý có thể trống).
         /// </summary>
-        public static readonly bool HienThiKhoaPhoBien = false;
+        public static readonly bool HienThiKhoaPhoBien = true;
+
+        /// <summary>Lọc cộng tác trả về ít hơn số này thì bù khóa phổ biến cho đủ một hàng thẻ.</summary>
+        public const int SoGoiYToiThieu = 5;
 
         private const string SessionKhoaDaXem = "GoiY_KhoaDaXem";
 
@@ -50,73 +54,77 @@ namespace ECOLearning.Services
         }
 
         /// <summary>
-        /// Gợi ý đã tính sẵn (job hằng đêm hoặc lần mở trang "Khóa học gợi ý" gần nhất), chỉ đọc.
-        /// Dùng cho mục "Khóa học dành riêng cho bạn" ở trang chủ.
+        /// Mục "Khóa học dành riêng cho bạn" ở trang chủ. Chọn nguồn theo lượng dữ liệu đã biết về học viên:
+        ///  1. "Vì bạn đã xem X": khóa tương tự khóa xem gần nhất (đọc thẳng ma trận course_similarity, đổi ngay sau mỗi lần xem).
+        ///  2. Gợi ý tổng hợp từ toàn bộ lịch sử, đã tính sẵn (job hằng đêm / lần mở trang "Khóa học gợi ý").
+        ///  3. "Vì bạn quan tâm …": khóa tương tự các khóa mồi của lĩnh vực học viên đã chọn (cold-start).
+        ///  4. Khóa phổ biến (chưa đủ dữ liệu cho lọc cộng tác).
+        /// Ở 1–3, lọc cộng tác trả về ít hơn SoGoiYToiThieu khóa thì bù khóa phổ biến cùng lĩnh vực, rồi toàn hệ thống.
         /// </summary>
-        public List<RecommendedCourseViewModel> GetSaved(int userId, int topK)
+        public GoiYTrangChuViewModel GetForHome(int userId, int topK, bool dungSoThich)
         {
-            var rows = db.Database.SqlQuery<GoiYRow>(
-                "EXEC dbo.sp_GoiY_KhoaHocChoNguoiDung @maHocVien, @topK",
-                new SqlParameter("@maHocVien", userId),
-                new SqlParameter("@topK", topK)).ToList();
-            return LocHienThi(AttachCourses(rows));
-        }
+            var model = new GoiYTrangChuViewModel();
+            int toiThieu = Math.Min(SoGoiYToiThieu, topK);
 
-        /// <summary>
-        /// "Vì bạn đã xem X": lấy khóa người dùng mở trang chi tiết gần nhất làm mốc, trả về top-K khóa
-        /// có độ tương đồng cao nhất với khóa mốc trong ma trận course_similarity đã tính sẵn (Item-based,
-        /// hồ sơ người dùng thu lại còn một khóa). Lọc bằng fn_GoiY_KhoaHocDuocGoiY như các stored procedure:
-        /// bỏ khóa đã sở hữu / đã học / không còn mở bán; khóa chỉ mới xem qua vẫn được gợi ý (migration 006).
-        /// Khóa xem gần nhất chưa có khóa tương tự (chưa đủ người học chung) thì lùi sang khóa xem trước đó.
-        /// Trả về null khi không có khóa mốc nào dùng được.
-        /// </summary>
-        public GoiYTheoKhoaVuaXemViewModel GetBecauseYouViewed(int userId, int topK)
-        {
-            var moc = db.Database.SqlQuery<KhoaMocRow>(@"
-                SELECT TOP (1) t.maKhoaHoc, kh.tenKhoaHoc
-                FROM dbo.TuongTacKhoaHoc t
-                INNER JOIN dbo.KhoaHoc kh ON kh.maKhoaHoc = t.maKhoaHoc
-                WHERE t.maHocVien = @maHocVien
-                  AND t.luotXem > 0
-                  AND EXISTS (SELECT 1
-                              FROM dbo.course_similarity s
-                              INNER JOIN dbo.fn_GoiY_KhoaHocDuocGoiY(@maHocVien) f ON f.maKhoaHoc = s.course_id_b
-                              WHERE s.course_id_a = t.maKhoaHoc)
-                ORDER BY t.lanCapNhat DESC",
-                new SqlParameter("@maHocVien", userId)).FirstOrDefault();
-            if (moc == null)
+            // 1. Vì bạn đã xem X
+            var moc = LayKhoaMoc(userId);
+            if (moc != null)
             {
-                return null;
+                var rows = LayKhoaTuongTu(userId, new[] { moc.maKhoaHoc }, topK);
+                BuPhoBien(userId, rows, toiThieu, new[] { moc.maDanhMuc });
+                model.CheDo = CheDoGoiY.TheoKhoaVuaXem;
+                model.MaKhoaHocMoc = moc.maKhoaHoc;
+                model.TenKhoaHocMoc = moc.tenKhoaHoc;
+                model.Items = LocHienThi(AttachCourses(rows));
+                model.DaCoTuongTac = true;
+                return model;
             }
 
-            var rows = db.Database.SqlQuery<GoiYRow>(@"
-                SELECT TOP (@topK)
-                    CAST(ROW_NUMBER() OVER (ORDER BY s.similarity DESC, s.course_id_b) AS INT) AS thuTu,
-                    s.course_id_b AS maKhoaHoc,
-                    s.similarity  AS diemDuDoan,
-                    @nguon        AS nguon
-                FROM dbo.course_similarity s
-                INNER JOIN dbo.fn_GoiY_KhoaHocDuocGoiY(@maHocVien) f ON f.maKhoaHoc = s.course_id_b
-                WHERE s.course_id_a = @maKhoaHocMoc
-                ORDER BY s.similarity DESC, s.course_id_b",
-                new SqlParameter("@topK", topK),
-                new SqlParameter("@nguon", NguonLocCongTac),
-                new SqlParameter("@maHocVien", userId),
-                new SqlParameter("@maKhoaHocMoc", moc.maKhoaHoc)).ToList();
-
-            return new GoiYTheoKhoaVuaXemViewModel
+            // 2. Gợi ý tổng hợp đã tính sẵn (chỉ phần lọc cộng tác; phần bù do BuPhoBien quyết định)
+            var saved = LayGoiYDaLuu(userId, topK);
+            if (saved.Count > 0)
             {
-                MaKhoaHocMoc = moc.maKhoaHoc,
-                TenKhoaHocMoc = moc.tenKhoaHoc,
-                Items = AttachCourses(rows)
-            };
+                BuPhoBien(userId, saved, toiThieu, LayDanhMucDaTuongTac(userId));
+                model.CheDo = CheDoGoiY.TongHop;
+                model.Items = LocHienThi(AttachCourses(saved));
+                model.DaCoTuongTac = true;
+                return model;
+            }
+
+            // 3. Lĩnh vực quan tâm đã chọn (migration 007)
+            if (dungSoThich)
+            {
+                var linhVuc = new InterestService(db).GetSelected(userId);
+                if (linhVuc.Count > 0)
+                {
+                    var maDanhMuc = linhVuc.Select(l => l.MaDanhMuc).ToList();
+                    var rows = LayTheoSoThich(userId, maDanhMuc, topK);
+                    BuPhoBien(userId, rows, toiThieu, maDanhMuc);
+                    if (rows.Count > 0)
+                    {
+                        model.CheDo = CheDoGoiY.TheoSoThich;
+                        model.LinhVucQuanTam = linhVuc;
+                        model.Items = LocHienThi(AttachCourses(rows));
+                        return model;
+                    }
+                }
+            }
+
+            // 4. Khóa phổ biến: ưu tiên lĩnh vực học viên đã tương tác (nếu có)
+            var daTuongTac = LayDanhMucDaTuongTac(userId);
+            model.DaCoTuongTac = daTuongTac.Count > 0 || CountInteractedCourses(userId) > 0;
+            var phoBien = new List<GoiYRow>();
+            BuPhoBien(userId, phoBien, topK, daTuongTac);
+            model.Items = LocHienThi(AttachCourses(phoBien));
+            model.CheDo = model.Items.Count > 0 ? CheDoGoiY.PhoBien : CheDoGoiY.Trong;
+            return model;
         }
 
         /// <summary>
         /// Tính lại gợi ý cho một người từ ma trận đã lưu (không tính lại cosine) và lưu kết quả.
-        /// Dùng cho trang "Khóa học gợi ý".
+        /// Dùng cho trang "Khóa học gợi ý". Chưa có lịch sử nhưng đã chọn lĩnh vực quan tâm thì gợi ý theo khóa mồi.
         /// </summary>
-        public RecommendationPageViewModel Compute(int userId, int topK)
+        public RecommendationPageViewModel Compute(int userId, int topK, bool dungSoThich)
         {
             var model = new RecommendationPageViewModel { DaKhoiTao = IsInstalled() };
             if (!model.DaKhoiTao)
@@ -128,6 +136,25 @@ namespace ECOLearning.Services
                 "EXEC dbo.sp_GoiY_TinhGoiYChoNguoiDung @maHocVien, @topK",
                 new SqlParameter("@maHocVien", userId),
                 new SqlParameter("@topK", topK)).ToList();
+
+            if (dungSoThich && !rows.Any(r => r.nguon == NguonLocCongTac))
+            {
+                var linhVuc = new InterestService(db).GetSelected(userId);
+                if (linhVuc.Count > 0)
+                {
+                    var maDanhMuc = linhVuc.Select(l => l.MaDanhMuc).ToList();
+                    var theoSoThich = LayTheoSoThich(userId, maDanhMuc, topK);
+                    BuPhoBien(userId, theoSoThich, topK, maDanhMuc);
+                    if (theoSoThich.Count > 0)
+                    {
+                        model.LinhVucQuanTam = linhVuc;
+                        model.Items = LocHienThi(AttachCourses(theoSoThich));
+                        model.MaTranCapNhatLuc = rows.Select(r => r.maTranCapNhatLuc).FirstOrDefault(d => d.HasValue);
+                        model.SoKhoaDaTuongTac = CountInteractedCourses(userId);
+                        return model;
+                    }
+                }
+            }
 
             model.Items = LocHienThi(AttachCourses(rows));
             foreach (var item in model.Items)
@@ -200,6 +227,179 @@ namespace ECOLearning.Services
             }
         }
 
+        // ------------------------------------------------------------------ các bước lấy dữ liệu
+
+        /// <summary>
+        /// Khóa mốc của "Vì bạn đã xem X": khóa xem gần nhất (lanCapNhat) còn ít nhất một khóa tương tự được phép gợi ý.
+        /// Khóa xem gần nhất chưa có khóa tương tự (chưa đủ người học chung) thì lùi sang khóa xem trước đó.
+        /// </summary>
+        private KhoaMocRow LayKhoaMoc(int userId)
+        {
+            return db.Database.SqlQuery<KhoaMocRow>(@"
+                SELECT TOP (1) t.maKhoaHoc, kh.tenKhoaHoc, kh.maDanhMuc
+                FROM dbo.TuongTacKhoaHoc t
+                INNER JOIN dbo.KhoaHoc kh ON kh.maKhoaHoc = t.maKhoaHoc
+                WHERE t.maHocVien = @maHocVien
+                  AND t.luotXem > 0
+                  AND EXISTS (SELECT 1
+                              FROM dbo.course_similarity s
+                              INNER JOIN dbo.fn_GoiY_KhoaHocDuocGoiY(@maHocVien) f ON f.maKhoaHoc = s.course_id_b
+                              WHERE s.course_id_a = t.maKhoaHoc)
+                ORDER BY t.lanCapNhat DESC",
+                new SqlParameter("@maHocVien", userId)).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Khóa tương tự một hoặc nhiều khóa mốc trong ma trận course_similarity đã tính sẵn:
+        /// điểm = Σ sim(mốc, j) (công thức dự đoán của Item-based CF với điểm tương tác của mỗi khóa mốc = 1).
+        /// Lọc bằng fn_GoiY_KhoaHocDuocGoiY: bỏ khóa đã sở hữu / đã học / không còn mở bán.
+        /// </summary>
+        private List<GoiYRow> LayKhoaTuongTu(int userId, IList<string> khoaMoc, int topK)
+        {
+            if (khoaMoc.Count == 0)
+            {
+                return new List<GoiYRow>();
+            }
+            var thamSo = new List<SqlParameter>
+            {
+                new SqlParameter("@topK", topK),
+                new SqlParameter("@maHocVien", userId)
+            };
+            string danhSachMoc = ThamSoDanhSach("@moc", khoaMoc, thamSo);
+
+            return db.Database.SqlQuery<DiemRow>(@"
+                SELECT TOP (@topK) s.course_id_b AS maKhoaHoc, SUM(s.similarity) AS diem
+                FROM dbo.course_similarity s
+                INNER JOIN dbo.fn_GoiY_KhoaHocDuocGoiY(@maHocVien) f ON f.maKhoaHoc = s.course_id_b
+                WHERE s.course_id_a IN (" + danhSachMoc + @")
+                GROUP BY s.course_id_b
+                ORDER BY SUM(s.similarity) DESC, s.course_id_b",
+                thamSo.ToArray()).ToList()
+                .Select((r, i) => new GoiYRow { thuTu = i + 1, maKhoaHoc = r.maKhoaHoc, diemDuDoan = r.diem, nguon = NguonLocCongTac })
+                .ToList();
+        }
+
+        /// <summary>
+        /// Cold-start theo lĩnh vực quan tâm: mỗi lĩnh vực lấy khóa nổi bật nhất (nhiều học viên quan tâm nhất,
+        /// hòa thì đánh giá cao hơn) có mặt trong ma trận làm khóa mồi, rồi lấy khóa tương tự các khóa mồi.
+        /// </summary>
+        private List<GoiYRow> LayTheoSoThich(int userId, IList<string> maDanhMuc, int topK)
+        {
+            if (maDanhMuc.Count == 0)
+            {
+                return new List<GoiYRow>();
+            }
+            var thamSo = new List<SqlParameter> { new SqlParameter("@maHocVien", userId) };
+            string danhSachDanhMuc = ThamSoDanhSach("@dm", maDanhMuc, thamSo);
+
+            var khoaMoi = db.Database.SqlQuery<string>(@"
+                SELECT x.maKhoaHoc
+                FROM dbo.DanhMuc dm
+                CROSS APPLY (
+                    SELECT TOP (1) f.maKhoaHoc
+                    FROM dbo.fn_GoiY_KhoaHocDuocGoiY(@maHocVien) f
+                    INNER JOIN dbo.KhoaHoc kh ON kh.maKhoaHoc = f.maKhoaHoc
+                    WHERE kh.maDanhMuc = dm.maDanhMuc
+                      AND EXISTS (SELECT 1 FROM dbo.course_similarity s WHERE s.course_id_a = f.maKhoaHoc)
+                    ORDER BY f.soNguoi DESC, f.ratingTB DESC, f.maKhoaHoc
+                ) x
+                WHERE dm.maDanhMuc IN (" + danhSachDanhMuc + ")",
+                thamSo.ToArray()).ToList();
+
+            return LayKhoaTuongTu(userId, khoaMoi, topK);
+        }
+
+        /// <summary>Phần lọc cộng tác của gợi ý đã lưu trong KhoaHocKhuyenNghi (không lấy phần bù phổ biến của SP).</summary>
+        private List<GoiYRow> LayGoiYDaLuu(int userId, int topK)
+        {
+            return db.Database.SqlQuery<GoiYRow>(
+                "EXEC dbo.sp_GoiY_KhoaHocChoNguoiDung @maHocVien, @topK",
+                new SqlParameter("@maHocVien", userId),
+                new SqlParameter("@topK", topK)).ToList()
+                .Where(r => r.nguon == NguonLocCongTac)
+                .OrderBy(r => r.thuTu)
+                .ToList();
+        }
+
+        /// <summary>Danh mục của các khóa học viên đã tương tác (xem, học, đánh giá...), nhiều tương tác trước.</summary>
+        private List<string> LayDanhMucDaTuongTac(int userId)
+        {
+            return db.Database.SqlQuery<string>(@"
+                SELECT kh.maDanhMuc
+                FROM dbo.vw_GoiY_TuongTac v
+                INNER JOIN dbo.KhoaHoc kh ON kh.maKhoaHoc = v.course_id
+                WHERE v.user_id = @maHocVien AND kh.maDanhMuc IS NOT NULL
+                GROUP BY kh.maDanhMuc
+                ORDER BY COUNT(*) DESC, kh.maDanhMuc",
+                new SqlParameter("@maHocVien", userId)).ToList();
+        }
+
+        /// <summary>
+        /// Bù khóa phổ biến vào danh sách cho đủ <paramref name="soLuong"/> khóa: trước hết trong các danh mục
+        /// ưu tiên, sau đó toàn hệ thống. Khóa phổ biến = nhiều học viên tương tác nhất, hòa thì đánh giá trung bình
+        /// cao hơn (cùng thứ tự với phần bù của stored procedure). Không lấy lại khóa đã có trong danh sách.
+        /// </summary>
+        private void BuPhoBien(int userId, List<GoiYRow> rows, int soLuong, IEnumerable<string> danhMucUuTien)
+        {
+            if (!HienThiKhoaPhoBien || rows.Count >= soLuong)
+            {
+                return;
+            }
+            var danhMuc = (danhMucUuTien ?? Enumerable.Empty<string>()).Where(d => !string.IsNullOrEmpty(d)).Distinct().ToList();
+            if (danhMuc.Count > 0)
+            {
+                ThemPhoBien(userId, rows, soLuong - rows.Count, danhMuc);
+            }
+            if (rows.Count < soLuong)
+            {
+                ThemPhoBien(userId, rows, soLuong - rows.Count, null);
+            }
+        }
+
+        private void ThemPhoBien(int userId, List<GoiYRow> rows, int soLuong, IList<string> danhMuc)
+        {
+            var thamSo = new List<SqlParameter>
+            {
+                new SqlParameter("@soLuong", soLuong),
+                new SqlParameter("@maHocVien", userId)
+            };
+            string dieuKien = "";
+            if (danhMuc != null && danhMuc.Count > 0)
+            {
+                dieuKien += " AND kh.maDanhMuc IN (" + ThamSoDanhSach("@dm", danhMuc, thamSo) + ")";
+            }
+            if (rows.Count > 0)
+            {
+                dieuKien += " AND f.maKhoaHoc NOT IN (" + ThamSoDanhSach("@co", rows.Select(r => r.maKhoaHoc).ToList(), thamSo) + ")";
+            }
+
+            var them = db.Database.SqlQuery<DiemRow>(@"
+                SELECT TOP (@soLuong) f.maKhoaHoc, CAST(f.soNguoi AS FLOAT) AS diem
+                FROM dbo.fn_GoiY_KhoaHocDuocGoiY(@maHocVien) f
+                INNER JOIN dbo.KhoaHoc kh ON kh.maKhoaHoc = f.maKhoaHoc
+                WHERE 1 = 1" + dieuKien + @"
+                ORDER BY f.soNguoi DESC, f.ratingTB DESC, f.maKhoaHoc",
+                thamSo.ToArray()).ToList();
+
+            foreach (var r in them)
+            {
+                rows.Add(new GoiYRow { thuTu = rows.Count + 1, maKhoaHoc = r.maKhoaHoc, diemDuDoan = r.diem, nguon = NguonPhoBien });
+            }
+        }
+
+        /// <summary>Sinh "@p0, @p1, ..." cho mệnh đề IN và thêm tham số tương ứng.</summary>
+        private static string ThamSoDanhSach(string tienTo, IList<string> giaTri, List<SqlParameter> thamSo)
+        {
+            var ten = new List<string>();
+            for (int i = 0; i < giaTri.Count; i++)
+            {
+                string name = tienTo + i;
+                ten.Add(name);
+                thamSo.Add(new SqlParameter(name, giaTri[i]));
+            }
+            return string.Join(", ", ten);
+        }
+
         /// <summary>Bỏ khóa phổ biến khỏi danh sách hiển thị khi HienThiKhoaPhoBien = false.</summary>
         private static List<RecommendedCourseViewModel> LocHienThi(List<RecommendedCourseViewModel> items)
         {
@@ -253,6 +453,7 @@ namespace ECOLearning.Services
         {
             public string maKhoaHoc { get; set; }
             public string tenKhoaHoc { get; set; }
+            public string maDanhMuc { get; set; }
         }
 
         public class GoiYTinhLaiRow : GoiYRow
@@ -260,6 +461,12 @@ namespace ECOLearning.Services
             public string maKhoaHocLyDo { get; set; }
             public string tenKhoaHocLyDo { get; set; }
             public DateTime? maTranCapNhatLuc { get; set; }
+        }
+
+        public class DiemRow
+        {
+            public string maKhoaHoc { get; set; }
+            public double diem { get; set; }
         }
     }
 }

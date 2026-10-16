@@ -35,6 +35,24 @@ namespace ECOLearning.Areas.Marketing.Controllers
             base.OnActionExecuting(filterContext);
         }
 
+        /// <summary>Mã người dùng đang đăng nhập (đã được OnActionExecuting bảo đảm có).</summary>
+        protected int MaNguoiDungHienTai
+        {
+            get
+            {
+                int id;
+                return Session["UserId"] != null && int.TryParse(Session["UserId"].ToString(), out id) ? id : 0;
+            }
+        }
+
+        /// <summary>Ngày từ chuỗi yyyy-MM-dd của ô input type="date" (null nếu trống / sai định dạng).</summary>
+        protected static DateTime? DocNgay(string value)
+        {
+            DateTime d;
+            return DateTime.TryParseExact(value, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out d) ? d : (DateTime?)null;
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && db != null)

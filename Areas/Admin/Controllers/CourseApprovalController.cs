@@ -300,6 +300,18 @@ namespace ECOLearning.Areas.Admin.Controllers
                     return Json(new { success = false, message = "Không tìm thấy khóa học mã " + id });
                 }
 
+                // Kiểm tra lại nội dung trước khi xuất bản: tài nguyên có thể bị xóa sau khi giáo viên gửi duyệt
+                var thieu = new ECOLearning.Services.CourseContentService(db, Server.MapPath).KiemTraKhoaHoc(k.maKhoaHoc);
+                if (thieu.Any())
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        message = "Chưa thể xuất bản: " + ECOLearning.Services.CourseContentService.TomTat(thieu)
+                            + " Hãy từ chối kèm lý do để giáo viên bổ sung."
+                    });
+                }
+
                 // Cập nhật trạng thái khóa học thành "Đã xuất bản"
                 k.trangThai = "Đã xuất bản";
 

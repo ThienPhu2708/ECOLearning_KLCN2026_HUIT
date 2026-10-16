@@ -3,10 +3,13 @@
     ViewBag.Title = "Khóa học gợi ý cho bạn";
     Layout = "~/Views/Shared/_Layout.cshtml";
     bool hopLe = Model.DaKhoiTao && string.IsNullOrEmpty(Model.ThongBaoLoi);
-    // Người dùng mới (cold-start): chưa có tương tác nào, lọc cộng tác không có dữ liệu để tính
-    bool chuaCoTuongTac = hopLe && Model.SoKhoaDaTuongTac == 0;
-    // Đã có tương tác nhưng các khóa đó chưa có khóa tương tự trong ma trận (độ tương đồng = 0 với mọi khóa)
-    bool chuaCoKhoaTuongTu = hopLe && Model.SoKhoaDaTuongTac > 0 && Model.Items.Count == 0;
+    var interestPicker = ViewBag.InterestPicker as ECOLearning.ViewModels.InterestPickerViewModel;
+    // Gợi ý từ khóa mồi của lĩnh vực quan tâm (chưa có lịch sử học)
+    bool theoSoThich = hopLe && Model.LinhVucQuanTam.Count > 0;
+    // Lọc cộng tác chưa có dữ liệu (học viên mới / khóa đã xem chưa có khóa tương tự): chỉ có khóa phổ biến
+    bool chiPhoBien = hopLe && !theoSoThich && Model.Items.Count > 0 && Model.SoGoiYLocCongTac == 0;
+    // Không còn khóa nào để gợi ý: đã sở hữu mọi khóa đang mở bán
+    bool khongConKhoa = hopLe && Model.Items.Count == 0;
 }
 
 @section styles {
@@ -168,9 +171,36 @@
                 <div>@Model.ThongBaoLoi</div>
             </div>
         }
+        else if (theoSoThich)
+        {
+            <div class="recommend-notice info">
+                <i class="bi bi-info-circle"></i>
+                <div>Gợi ý dựa trên lĩnh vực bạn quan tâm: <strong>@string.Join(", ", Model.LinhVucQuanTam.Select(l => l.TenDanhMuc))</strong>.
+                    Khi bạn xem hoặc học thêm khóa học, gợi ý sẽ dựa trên lịch sử học của bạn.
+                    @if (interestPicker != null)
+                    {
+                        <a href="#" data-open-interest style="font-weight: 600; margin-left: 4px;">Đổi lĩnh vực</a>
+                    }
+                </div>
+            </div>
+        }
+        else if (chiPhoBien)
+        {
+            <div class="recommend-notice info">
+                <i class="bi bi-info-circle"></i>
+                <div>
+                    @(Model.SoKhoaDaTuongTac == 0
+                        ? "Bạn chưa có lịch sử học tập, hệ thống đang hiển thị các khóa học được nhiều học viên quan tâm."
+                        : "Các khóa học bạn đã xem chưa có khóa học tương tự, hệ thống đang hiển thị các khóa học được nhiều học viên quan tâm.")
+                    @if (interestPicker != null)
+                    {
+                        <a href="#" data-open-interest style="font-weight: 600; margin-left: 4px;">Chọn lĩnh vực quan tâm</a>
+                    }
+                </div>
+            </div>
+        }
         else if (Model.Items.Count > 0 && Model.SoGoiYLocCongTac < Model.Items.Count)
         {
-            @* Chỉ xuất hiện khi bật RecommendationService.HienThiKhoaPhoBien *@
             <div class="recommend-notice info">
                 <i class="bi bi-info-circle"></i>
                 <div>Hiện có <strong>@Model.SoGoiYLocCongTac</strong> khóa học phù hợp với lịch sử học của bạn; các khóa còn lại
@@ -189,26 +219,22 @@
                 }
             </div>
         }
-        else if (chuaCoTuongTac)
+        else if (khongConKhoa)
         {
             <div class="recommend-empty">
-                <i class="bi bi-eye" style="font-size: 36px; color: #A5B4FC;"></i>
-                <p style="margin: 12px 0 6px; font-size: 16px; font-weight: 700; color: var(--text-heading, #0F172A);">Bạn cần xem một số khóa học để hiển thị gợi ý.</p>
-                <p style="margin: 0 auto 18px; max-width: 520px; font-size: 14px;">Gợi ý được tính từ các khóa học bạn đã xem, học hoặc đánh giá.</p>
-                <a href="@Url.Action("Index", "Course")" class="btn btn-primary btn-sm" style="text-decoration: none;"><i class="bi bi-compass me-1"></i> Khám phá khóa học</a>
-            </div>
-        }
-        else if (chuaCoKhoaTuongTu)
-        {
-            <div class="recommend-empty">
-                <i class="bi bi-diagram-3" style="font-size: 36px; color: #A5B4FC;"></i>
-                <p style="margin: 12px 0 6px; font-size: 16px; font-weight: 700; color: var(--text-heading, #0F172A);">Các khóa học bạn đã xem chưa có khóa học tương tự để gợi ý.</p>
-                <p style="margin: 0 auto 18px; max-width: 520px; font-size: 14px;">Hãy xem thêm một số khóa học khác, gợi ý sẽ xuất hiện tại đây.</p>
-                <a href="@Url.Action("Index", "Course")" class="btn btn-primary btn-sm" style="text-decoration: none;"><i class="bi bi-compass me-1"></i> Khám phá khóa học</a>
+                <i class="bi bi-check2-circle" style="font-size: 36px; color: #A5B4FC;"></i>
+                <p style="margin: 12px 0 6px; font-size: 16px; font-weight: 700; color: var(--text-heading, #0F172A);">Bạn đã đăng ký tất cả khóa học hiện có.</p>
+                <p style="margin: 0 auto 18px; max-width: 520px; font-size: 14px;">Khi có khóa học mới, gợi ý sẽ xuất hiện tại đây.</p>
+                <a href="@Url.Action("MyCourses", "Learning")" class="btn btn-primary btn-sm" style="text-decoration: none;"><i class="bi bi-journal-bookmark me-1"></i> Vào Khóa học của tôi</a>
             </div>
         }
     </div>
 </section>
+
+@if (interestPicker != null)
+{
+    @Html.Partial("_InterestPicker", interestPicker)
+}
 
 @section scripts {
     <script>

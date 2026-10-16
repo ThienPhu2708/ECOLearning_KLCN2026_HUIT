@@ -1,0 +1,67 @@
+@model ECOLearning.ViewModels.ChuongTrinhKhuyenMai
+@{
+    ViewBag.Title = "Học viên đủ điều kiện";
+    var hocVien = ViewBag.HocVien as List<ECOLearning.ViewModels.HocVienThanThietItem> ?? new List<ECOLearning.ViewModels.HocVienThanThietItem>();
+    bool chiDat = ViewBag.ChiDat ?? true;
+}
+
+<div class="mk-page-head">
+    <div>
+        <a href="@Url.Action("Index", "Loyalty")" class="mk-muted" style="text-decoration: none;"><i class="bi bi-arrow-left"></i> Ưu đãi học viên thân thiết</a>
+        <h1 class="h2">Học viên đủ điều kiện: @Model.TenKhuyenMai</h1>
+        <p>Tiêu chí: @Model.MoTaDoiTuong. Mã <span class="mk-code">@Model.MaCode</span>, mỗi học viên tối đa @Model.GioiHanMoiHocVien lượt.</p>
+    </div>
+</div>
+
+<div class="mk-stats">
+    <div class="card mk-stat">
+        <div class="mk-stat-label">Đạt tiêu chí</div>
+        <div class="mk-stat-value">@ViewBag.SoDat</div>
+        <div class="mk-stat-note">trên @ViewBag.TongHocVien học viên đang hoạt động</div>
+    </div>
+    <div class="card mk-stat">
+        <div class="mk-stat-label">Đã dùng mã</div>
+        <div class="mk-stat-value">@Model.SoLuotDaDung lượt</div>
+    </div>
+</div>
+
+<div class="mk-tabs" style="margin-bottom: 14px;">
+    <a class="mk-tab @(chiDat ? "is-active" : "")" href="@Url.Action("Eligible", "Loyalty", new { id = Model.MaKhuyenMai, chiDat = true })">Chỉ học viên đạt tiêu chí</a>
+    <a class="mk-tab @(!chiDat ? "is-active" : "")" href="@Url.Action("Eligible", "Loyalty", new { id = Model.MaKhuyenMai, chiDat = false })">Tất cả học viên</a>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Học viên</th>
+                    <th style="text-align: right;">Số khóa đã đăng ký</th>
+                    <th style="text-align: right;">Tổng chi tiêu</th>
+                    <th>Kết quả</th>
+                    <th style="text-align: right;">Đã dùng mã</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var h in hocVien)
+                {
+                    bool dat = ECOLearning.Services.PromotionService.DatTieuChi(Model, h);
+                    <tr>
+                        <td><strong>@h.HoTen</strong><div class="mk-muted">@h.Email</div></td>
+                        <td style="text-align: right;">@h.SoKhoa</td>
+                        <td style="text-align: right;">@h.ChiTieu.ToString("N0") đ</td>
+                        <td>@if (dat) { <span class="badge badge-success">Đạt</span> } else { <span class="badge badge-secondary">Chưa đạt</span> }</td>
+                        <td style="text-align: right;">@h.SoLuotDaDung / @Model.GioiHanMoiHocVien</td>
+                    </tr>
+                }
+                @if (!hocVien.Any())
+                {
+                    <tr><td colspan="5" class="mk-empty"><i class="bi bi-people"></i>Chưa có học viên nào đạt tiêu chí theo dữ liệu hiện tại.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div style="padding: 14px 22px; border-top: 1px solid var(--border-color);" class="mk-muted">
+        Số khóa tính theo đăng ký thành công (gồm khóa miễn phí); chi tiêu chỉ tính đơn hàng đã thanh toán, không tính đơn chờ hoặc thất bại.
+    </div>
+</div>

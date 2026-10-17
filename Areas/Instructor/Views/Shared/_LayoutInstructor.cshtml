@@ -30,6 +30,8 @@
 
                 @{
                 string currentCtrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Dashboard";
+                string currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "Index";
+                bool quizResults = currentCtrl == "Quiz" && (currentAction == "Results" || currentAction == "History" || currentAction == "Review");
             }
 
             <nav class="sidebar-menu">
@@ -57,7 +59,8 @@
                     </svg>
                     Thư viện tài nguyên
                 </a>
-                <a href="@Url.Action("Index", "Student", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Student" ? "active" : "")">
+                <a href="@Url.Action("Index", "Quiz", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Quiz" && !quizResults ? "active" : "")"><i class="bi bi-question-circle" aria-hidden="true"></i> Ngân hàng câu hỏi &amp; Quiz</a>
+                <a href="@Url.Action("Index", "Student", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Student" || quizResults ? "active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                         <circle cx="9" cy="7" r="4"></circle>
@@ -105,6 +108,16 @@
                     {
                         <span class="separator">/</span>
                         <a href="@Url.Action("Details", "Course", new { area = "Instructor", id = (string)ViewBag.BreadcrumbCourseId })">@ViewBag.BreadcrumbCourseName</a>
+                    }
+                    @if (ViewBag.ShowQuestionBankBreadcrumb == true)
+                    {
+                        <span class="separator">/</span>
+                        <a href="@Url.Action("Index", "Quiz", new { area = "Instructor", courseId = ViewBag.QuestionBankCourseId })">Ngân hàng câu hỏi</a>
+                    }
+                    @if (ViewBag.ShowStudentBreadcrumb == true)
+                    {
+                        <span class="separator">/</span>
+                        <a href="@Url.Action("Index", "Student", new { area = "Instructor", courseId = ViewBag.CourseId })">Quản lý học viên</a>
                     }
                     @if (ViewBag.BreadcrumbCurrent != null)
                     {

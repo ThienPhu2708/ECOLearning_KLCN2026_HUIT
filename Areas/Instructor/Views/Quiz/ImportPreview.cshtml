@@ -1,0 +1,40 @@
+@model List<ECOLearning.ViewModels.QuizQuestion>
+@{
+    ViewBag.Title = "Kiểm tra file câu hỏi";
+    ViewBag.BreadcrumbCurrent = ViewBag.Title;
+    ViewBag.ShowQuestionBankBreadcrumb = true;
+    ViewBag.QuestionBankCourseId = ViewBag.CourseId;
+    var errors = ViewBag.Errors as List<string> ?? new List<string>();
+    var importUrl = Url.Action("Import", new { courseId = ViewBag.CourseId });
+}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=10" />
+<div class="question-import-preview">
+    <div style="display:flex;justify-content:flex-start;margin-bottom:24px;"><span class="qe-course"><i class="bi bi-journal-bookmark" aria-hidden="true"></i> @ViewBag.CourseName</span></div>
+    @if (errors.Any())
+    {
+        <section class="qip-errors" role="alert"><div><i class="bi bi-exclamation-circle" aria-hidden="true"></i><strong>File có @errors.Count lỗi cần sửa</strong></div><p>Chưa lưu câu hỏi. Sửa các lỗi bên dưới rồi chọn lại file.</p><ul>@foreach (var error in errors) {<li>@error</li>}</ul></section>
+    }
+    <section class="card qip-panel">
+        <div class="qh-panel-heading"><div class="qe-section-heading"><i class="bi bi-file-earmark-check" aria-hidden="true"></i><div><h2>Xem trước câu hỏi</h2><p>Kiểm tra nội dung và đáp án trước khi xác nhận nhập.</p></div></div><span class="qip-count">@Model.Count câu đọc được</span></div>
+        @if (Model.Any())
+        {
+            <div class="table-responsive"><table class="table qip-table"><thead><tr><th scope="col">Câu hỏi</th><th scope="col">Chủ đề</th><th scope="col">Mức độ</th><th scope="col">Đáp án đúng</th></tr></thead><tbody>
+            @for (int i = 0; i < Model.Count; i++)
+            {
+                var q = Model[i];
+                <tr><td><div class="qip-question"><span class="qh-lesson-number">@((i + 1).ToString("00"))</span><span>@q.Text</span></div></td><td><span class="qip-topic">@q.Topic</span></td><td><span class="qb-difficulty level-@q.Difficulty">@q.Level</span></td><td><div class="qip-answer"><span class="qip-answer-letter">@((char)('A' + q.CorrectOption))</span><span>@q.Options[q.CorrectOption]</span></div></td></tr>
+            }
+            </tbody></table></div>
+        }
+        else {<div class="qh-empty"><h3>Chưa có câu hỏi để xem trước</h3><p>Kiểm tra cấu trúc và nội dung file theo mẫu rồi tải lại.</p></div>}
+    </section>
+    <footer class="qe-footer"><span><i class="bi bi-info-circle" aria-hidden="true"></i> Câu hỏi chỉ được lưu sau khi xác nhận.</span><div><a class="btn btn-outline" href="@importUrl"><i class="bi bi-upload" aria-hidden="true"></i> Chọn file khác</a>
+    @if (!errors.Any() && Model.Any())
+    {
+        using (Html.BeginForm("ConfirmImport", "Quiz"))
+        {
+            @Html.AntiForgeryToken()<input type="hidden" name="courseId" value="@ViewBag.CourseId" /><input type="hidden" name="token" value="@ViewBag.Token" /><button type="submit" class="btn btn-primary"><i class="bi bi-check2" aria-hidden="true"></i> Xác nhận nhập @Model.Count câu hỏi</button>
+        }
+    }
+    </div></footer>
+</div>

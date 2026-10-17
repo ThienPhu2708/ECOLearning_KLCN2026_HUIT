@@ -1,4 +1,4 @@
-@model ECOLearning.ViewModels.MyCoursesViewModel
+﻿@model ECOLearning.ViewModels.MyCoursesViewModel
 @{
     ViewBag.Title = "Khóa học của tôi - E-Learning";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -103,6 +103,19 @@
         border-radius: 6px;
         border: 1px solid #A7F3D0;
     }
+
+    .completed-course-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:4px 0 22px;font-size:12px;color:#8290a3;line-height:1.7}
+    .completed-course-meta>span{display:inline-flex;align-items:center;gap:7px}
+    .completed-quiz-badge{padding:5px 9px;border-radius:7px;background:#f0eeff;color:#7560b7;font-size:11px;font-weight:500}
+    .completed-quiz-badge.is-passed{background:#ebf7ef;color:#3e8864}
+    .completed-course-actions{display:flex;align-items:stretch;gap:10px;padding-top:18px;border-top:1px solid #edf0f5}
+    .completed-course-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:600;line-height:1.5;text-decoration:none;white-space:nowrap}
+    .completed-quiz-action{flex:1;box-shadow:0 3px 8px #434ce81a}
+    .completed-quiz-action>i:last-child{margin-left:auto;font-size:15px}
+    .completed-review-action{color:#68758a;background:#fff;border-color:#e2e7ef}
+    .completed-review-action:hover{background:#f6f8fb}
+    .completed-course-card .course-title{min-height:48px;margin-bottom:14px!important}
+    @@media(max-width:480px){.completed-course-actions{flex-wrap:wrap}.completed-quiz-action{flex-basis:100%}.completed-review-action{width:100%}.completed-course-meta{align-items:flex-start;flex-direction:column}}
 </style>
 
 <main style="padding: 40px 0 80px; background: var(--bg-canvas, #F8FAFC); min-height: 80vh;">
@@ -141,7 +154,7 @@
                     Đang học (@ongoingCount)
                 </button>
                 <button type="button" class="tab-btn" data-tab="tab-completed">
-                    Đã hoàn thành (@completedCount)
+                    Đã học đủ bài (@completedCount)
                 </button>
             </div>
 
@@ -152,7 +165,7 @@
                     <div style="text-align: center; padding: 48px 20px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--border-color, #E2E8F0);">
                         <i class="bi bi-check2-all text-success" style="font-size: 36px; display: block; margin-bottom: 8px;"></i>
                         <h4 style="font-weight: 700; color: #0F172A; font-size: 18px; margin-bottom: 6px;">Không có khóa học nào đang dang dở</h4>
-                        <p style="color: var(--text-secondary, #64748B); font-size: 14px; margin-bottom: 16px;">Tất cả khóa học đã đăng ký đều đã được bạn hoàn thành xuất sắc!</p>
+                        <p style="color: var(--text-secondary, #64748B); font-size: 14px; margin-bottom: 16px;">Bạn đã học đủ bài trong các khóa đã đăng ký. Kiểm tra quiz cuối khóa và điều kiện chứng chỉ ở tab bên cạnh.</p>
                         <a href="@Url.Action("Index", "Course")" class="btn btn-outline btn-sm" style="text-decoration: none;">Đăng ký khóa học mới</a>
                     </div>
                 }
@@ -217,7 +230,7 @@
                     <div style="text-align: center; padding: 48px 20px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--border-color, #E2E8F0);">
                         <i class="bi bi-trophy text-warning" style="font-size: 36px; display: block; margin-bottom: 8px;"></i>
                         <h4 style="font-weight: 700; color: #0F172A; font-size: 18px; margin-bottom: 6px;">Bạn chưa hoàn thành khóa học nào</h4>
-                        <p style="color: var(--text-secondary, #64748B); font-size: 14px; margin-bottom: 16px;">Hãy tiếp tục học tập và đạt 100% tiến độ để nhận chứng chỉ tốt nghiệp chính thức!</p>
+                        <p style="color: var(--text-secondary, #64748B); font-size: 14px; margin-bottom: 16px;">Học đủ bài, đạt quiz cuối khóa rồi bấm Nhận chứng chỉ để được cấp tự động.</p>
                     </div>
                 }
                 else
@@ -225,16 +238,20 @@
                     <div class="grid-12">
                         @foreach (var item in Model.CompletedCourses)
                         {
+                            var quizStates = ViewBag.CompletedQuizStates as Dictionary<string, ECOLearning.ViewModels.QuizStudentRow>;
+                            ECOLearning.ViewModels.QuizStudentRow quizState = null;
+                            if (quizStates != null) { quizStates.TryGetValue(item.MaKhoaHoc, out quizState); }
+                            string quizLabel = quizState == null ? "Chưa có kết quả quiz" : quizState.IssuedAt.HasValue ? "Đã cấp chứng chỉ" : quizState.Passed ? "Đã đạt quiz · Có thể nhận chứng chỉ" : quizState.HasOpenAttempt ? "Đang làm quiz" : quizState.Attempts > 0 ? "Quiz chưa đạt" : "Chưa làm quiz";
                             string studyUrl = Url.Action("Study", "Learning", new { courseId = item.MaKhoaHoc });
-                            string certUrl = Url.Action("Certificate", "Learning", new { courseId = item.MaKhoaHoc });
+                            string certUrl = Url.Action("Index", "Quiz", new { courseId = item.MaKhoaHoc });
                             string completeDate = item.NgayHoanThanh.HasValue ? item.NgayHoanThanh.Value.ToString("dd/MM/yyyy") : DateTime.Now.ToString("dd/MM/yyyy");
 
                             <div class="col-6">
-                                <div class="learning-course-card">
+                                <div class="learning-course-card completed-course-card">
                                     <div style="position: relative; aspect-ratio: 16/9; overflow: hidden; background: #0F172A;">
                                         <img src="@item.AnhBia" alt="@item.TenKhoaHoc" style="width: 100%; height: 100%; object-fit: cover;" />
                                         <span class="badge-done" style="position: absolute; top: 14px; left: 14px; background: #ECFDF5; color: #059669; font-weight: 700;">
-                                            <i class="bi bi-patch-check-fill me-1"></i> Đã hoàn thành 100%
+                                            <i class="bi bi-patch-check-fill me-1"></i> Đã hoàn thành bài học
                                         </span>
                                     </div>
 
@@ -247,9 +264,7 @@
                                             @item.TenKhoaHoc
                                         </h3>
 
-                                        <div class="caption" style="margin-bottom: 16px; color: var(--text-secondary, #64748B); font-size: 13px; line-height: 1.5;">
-                                            Hoàn thành ngày: <strong style="color: #1E293B;">@completeDate</strong> • Xếp loại: <strong style="color: #059669;">Xuất sắc</strong>
-                                        </div>
+                                        <div class="completed-course-meta"><span><i class="bi bi-calendar-check" aria-hidden="true"></i> Học xong @completeDate</span><span class="completed-quiz-badge @(quizState != null && quizState.Passed ? "is-passed" : "")"><i class="bi @(quizState != null && quizState.Passed ? "bi-check-circle" : "bi-clipboard")" aria-hidden="true"></i> @quizLabel</span></div>
 
                                         <!-- Progress Bar 100% -->
                                         <div style="margin-top: auto; margin-bottom: 20px;">
@@ -262,14 +277,9 @@
                                             </div>
                                         </div>
 
-                                        <!-- 2 Action Buttons: Certificate and Review -->
-                                        <div style="display: flex; gap: 10px; align-items: center;">
-                                            <a href="@certUrl" class="btn btn-outline" style="flex: 1; border-color: #10B981; color: #059669; font-weight: 700; text-decoration: none; padding: 11px 16px; border-radius: 12px; text-align: center; font-size: 14.5px; transition: all 0.2s;">
-                                                🎓 Xem chứng chỉ (PDF)
-                                            </a>
-                                            <a href="@studyUrl" class="btn btn-secondary btn-sm" style="padding: 11px 20px; font-weight: 600; text-decoration: none; border-radius: 12px; font-size: 14px; background: #F1F5F9; color: #334155; border: 1px solid #CBD5E1;">
-                                                Xem lại
-                                            </a>
+                                        <div class="completed-course-actions">
+                                            <a href="@certUrl" class="btn btn-primary completed-quiz-action"><i class="bi bi-pencil-square" aria-hidden="true"></i> Làm Quizz ngay <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                                            <a href="@studyUrl" class="btn btn-outline completed-review-action"><i class="bi bi-play-circle" aria-hidden="true"></i> Xem lại</a>
                                         </div>
                                     </div>
                                 </div>

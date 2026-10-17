@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Models;
@@ -8,7 +8,7 @@ namespace ECOLearning.Controllers
     public class ReviewController : Controller
     {
         // POST: Review/SubmitReview (UC6: Đánh giá sao & nhận xét khóa học khi hoàn thành)
-        [HttpPost]
+        [HttpPost, ValidateAntiForgeryToken]
         public ActionResult SubmitReview(string courseId, int rating, string comment)
         {
             int currentUserId = (Session["UserId"] as int?) ?? 0;
@@ -31,6 +31,10 @@ namespace ECOLearning.Controllers
             {
                 using (var db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1())
                 {
+                    var quiz = new ECOLearning.Services.QuizService(db);
+                    var state = quiz.Installed() ? quiz.Student(courseId, currentUserId) : null;
+                    if (state == null || !state.LessonsDone || !state.Passed)
+                        return Json(new { success = false, message = "Bạn cần hoàn thành tất cả bài học và đạt quiz cuối khóa trước khi đánh giá." });
                     var existing = db.DanhGiaKhoaHoc.FirstOrDefault(d => d.maHocVien == currentUserId && d.maKhoaHoc == courseId);
                     if (existing != null)
                     {

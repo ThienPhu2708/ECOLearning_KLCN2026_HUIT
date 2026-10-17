@@ -1,4 +1,4 @@
-@{
+﻿@{
     ViewBag.Title = "Không Gian Học Tập";
     Layout = "~/Views/Shared/_Layout.cshtml";
 
@@ -9,12 +9,13 @@
     var activeLesson = ViewBag.ActiveLesson as ECOLearning.Models.BaiHoc;
     var completedLessonIds = ViewBag.CompletedLessonIds as List<string> ?? new List<string>();
     var activeLessonDocuments = ViewBag.ActiveLessonDocuments as List<ECOLearning.Models.TaiNguyen> ?? new List<ECOLearning.Models.TaiNguyen>();
-    bool hasSubmittedReview = ViewBag.HasSubmittedReview == true;
+    bool canReview = ViewBag.CanReview == true;
+    bool hasSubmittedReview = canReview && ViewBag.HasSubmittedReview == true;
     bool canReportViolation = ViewBag.CanReportViolation == true;
 
     int totalCount = allLessons.Count;
     int completedCount = completedLessonIds.Count;
-    int percentCompleted = totalCount > 0 ? (int)Math.Round((double)completedCount / totalCount * 100) : 0;
+    int percentCompleted = totalCount > 0 ? (int)Math.Floor((double)completedCount / totalCount * 100) : 0;
     if (percentCompleted > 100) { percentCompleted = 100; }
 
     int activeIndex = allLessons.FindIndex(b => b.maBaiHoc == (activeLesson != null ? activeLesson.maBaiHoc : ""));
@@ -23,7 +24,7 @@
     bool isLastLesson = (activeIndex == totalCount - 1 && totalCount > 0);
     bool isCurrentCompleted = activeLesson != null && completedLessonIds.Contains(activeLesson.maBaiHoc);
     // Bài đầu tiên luôn mở; các bài sau cần bài trước hoàn thành
-    bool isLessonUnlocked = (activeIndex == 0) || isCurrentCompleted ||
+    bool isLessonUnlocked = ViewBag.IsPreview == true || (activeIndex == 0) || isCurrentCompleted ||
         (activeIndex > 0 && completedLessonIds.Contains(allLessons[activeIndex - 1].maBaiHoc));
 
     // Duration formatting
@@ -361,6 +362,7 @@
 
 <!-- Header -->
 <header class="learning-header">
+    <div id="learning-antiforgery" hidden>@Html.AntiForgeryToken()</div>
     <div style="display: flex; align-items: center; gap: 16px;">
         <a href="@Url.Action("MyCourses", "Learning")" class="btn btn-secondary btn-sm"
            style="background: #1F2937; color: #fff; border: 1px solid #374151; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
@@ -372,6 +374,15 @@
     </div>
 
     <div style="display: flex; align-items: center; gap: 20px;">
+    @if (course != null && ViewBag.IsPreview != true)
+    {
+        <a class="btn btn-primary btn-sm" href="@Url.Action("Index", "Quiz", new { courseId = course.maKhoaHoc })">Quiz &amp; Chứng chỉ</a>
+    }
+    else if (ViewBag.IsPreview == true)
+    {
+        <span style="color:#FBBF24;font-size:12px;">Xem trước · Không ghi nhận tiến độ</span>
+    }
+
         <!-- Overall Progress -->
         <div style="display: flex; align-items: center; gap: 12px; width: 220px;">
             <div style="flex: 1;">
@@ -400,6 +411,10 @@
                     style="background: #1F2937; color: #fff; border: 1px solid #374151; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 600; opacity: 0.8; cursor: pointer; display:inline-flex; align-items:center; gap:5px;">
                 <i class="bi bi-check-circle-fill" style="color:#10B981;"></i> Đã đánh giá
             </button>
+        }
+        else if (!canReview)
+        {
+            <button class="btn btn-secondary btn-sm" disabled title="Hoàn thành bài học và đạt quiz để đánh giá" style="opacity:.6;font-size:13px;"><i class="bi bi-lock" aria-hidden="true"></i> Chưa thể đánh giá</button>
         }
         else
         {
@@ -444,8 +459,8 @@
             }
             else if (activeLesson != null && !string.IsNullOrEmpty(activeLesson.duongDanVideo))
             {
-                <video id="studyPlayer" class="w-100 h-100" style="object-fit:contain; background:#000;" poster="@(course != null ? course.anhBia : "")">
-                    <source src="@activeVideoSrc" type="video/mp4" />
+                <video id="studyPlayer" preload="none" class="w-100 h-100" style="object-fit:contain; background:#000;" poster="@(course != null ? course.anhBia : "")">
+                    <source data-src="@activeVideoSrc" type="video/mp4" />
                     Trình duyệt không hỗ trợ xem video.
                 </video>
             }
@@ -527,7 +542,7 @@
                     }
                     @if (nextLesson != null)
                     {
-                        bool nextUnlocked2 = isCurrentCompleted || completedLessonIds.Contains(nextLesson.maBaiHoc);
+                        bool nextUnlocked2 = ViewBag.IsPreview == true || isCurrentCompleted || completedLessonIds.Contains(nextLesson.maBaiHoc);
                         <a href="@(nextUnlocked2 ? Url.Action("Study", "Learning", new { courseId = course.maKhoaHoc, lessonId = nextLesson.maBaiHoc }) : "#")"
                            onclick="@(!nextUnlocked2 ? "showLockedToast('Hoàn thành bài hiện tại trước để mở bài tiếp theo!'); return false;" : "")"
                            class="btn btn-primary btn-sm" style="background:@(nextUnlocked2 ? "#434CE8" : "#374151"); color:#fff; border:none; text-decoration:none; border-radius:8px; padding:6px 16px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
@@ -597,7 +612,7 @@
                         int m2 = (les.thoiLuong ?? 0) / 60, s2 = (les.thoiLuong ?? 0) % 60;
                         string dStr2 = string.Format("{0:D2}:{1:D2}", m2, s2);
                         bool isLast2 = (allLessons.Count > 0 && les.maBaiHoc == allLessons.Last().maBaiHoc);
-                        bool lesOpen  = gIdx == 0 || isDone2 || (gIdx > 0 && completedLessonIds.Contains(allLessons[gIdx - 1].maBaiHoc));
+                        bool lesOpen  = ViewBag.IsPreview == true || gIdx == 0 || isDone2 || (gIdx > 0 && completedLessonIds.Contains(allLessons[gIdx - 1].maBaiHoc));
                         gIdx++;
                         <div class="lesson-item @(isCur2 ? "active" : "") @(!lesOpen ? "locked" : "")"
                              id="lesson-item-@les.maBaiHoc"
@@ -629,7 +644,7 @@
                             int m2 = (les.thoiLuong ?? 0) / 60, s2 = (les.thoiLuong ?? 0) % 60;
                             string dStr2 = string.Format("{0:D2}:{1:D2}", m2, s2);
                             bool isLast2 = (allLessons.Count > 0 && les.maBaiHoc == allLessons.Last().maBaiHoc);
-                            bool lesOpen  = gIdx == 0 || isDone2 || (gIdx > 0 && completedLessonIds.Contains(allLessons[gIdx - 1].maBaiHoc));
+                            bool lesOpen  = ViewBag.IsPreview == true || gIdx == 0 || isDone2 || (gIdx > 0 && completedLessonIds.Contains(allLessons[gIdx - 1].maBaiHoc));
                             gIdx++;
                             <div class="lesson-item @(isCur2 ? "active" : "") @(!lesOpen ? "locked" : "")"
                                  id="lesson-item-@les.maBaiHoc"
@@ -797,6 +812,7 @@
         var selectedRating  = 5;
         var isPlaying       = true;
         var hasPromptedRating  = false;
+        var canReview = @(canReview ? "true" : "false");
         var hasSubmittedReview = @(hasSubmittedReview ? "true" : "false");
         var hasSavedProgress   = @(isCurrentCompleted ? "true" : "false");
 
@@ -831,11 +847,23 @@
             if (player) {
                 initVolumeControl(player);
 
-                player.play().catch(function (e) {
-                    console.log('Autoplay prevented:', e);
-                    isPlaying = false;
-                    updatePlayIcon(false);
-                });
+                // Start media after the document load has finished so buffering a
+                // long lesson does not keep the browser tab loading indicator active.
+                function startLessonVideo() {
+                    var source = player.querySelector('source[data-src]');
+                    if (source) {
+                        source.src = source.getAttribute('data-src');
+                        source.removeAttribute('data-src');
+                        player.load();
+                    }
+                    player.play().catch(function (e) {
+                        console.log('Autoplay prevented:', e);
+                        isPlaying = false;
+                        updatePlayIcon(false);
+                    });
+                }
+                if (document.readyState === 'complete') setTimeout(startLessonVideo, 0);
+                else window.addEventListener('load', function () {setTimeout(startLessonVideo, 0);}, {once: true});
 
                 player.addEventListener('play',  function () { isPlaying = true;  updatePlayIcon(true); });
                 player.addEventListener('pause', function () { isPlaying = false; updatePlayIcon(false); });
@@ -1035,7 +1063,7 @@
 
         function updateCourseProgressUI() {
             var total = courseLessons.length, completed = getCompletedCount();
-            var percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+            var percent = total > 0 ? Math.floor((completed / total) * 100) : 0;
             if (percent > 100) percent = 100;
             var textEl = document.getElementById('header-progress-text');
             var barEl  = document.getElementById('header-progress-bar');
@@ -1199,7 +1227,7 @@
                     return;
                 } else if (isCurrentLastLesson) {
                     showToast('Chúc mừng hoàn thành bài học cuối cùng!', 'success');
-                    if (allLessonsCompleted() && !hasSubmittedReview) {
+                    if (canReview && allLessonsCompleted() && !hasSubmittedReview) {
                         setTimeout(function () { openModal('rating-modal'); }, 1000);
                     }
                     return;
@@ -1209,7 +1237,7 @@
             }
 
             if (isCurrentLastLesson && allLessonsCompleted()) {
-                if (!hasPromptedRating && !hasSubmittedReview) {
+                if (canReview && !hasPromptedRating && !hasSubmittedReview) {
                     hasPromptedRating = true;
                     setTimeout(function () {
                         openModal('rating-modal');
@@ -1223,16 +1251,18 @@
         }
 
         function sendProgressToDatabase(watched, total) {
+            if (@(ViewBag.IsPreview == true ? "true" : "false")) return;
             if (!currentLessonId || !currentCourseId) return;
             $.ajax({
                 url: '@Url.Action("UpdateProgress", "Learning")', type: 'POST',
-                data: { courseId: currentCourseId, lessonId: currentLessonId, durationWatched: Math.round(watched), totalDuration: Math.round(total) },
+                data: { __RequestVerificationToken: document.querySelector('#learning-antiforgery input').value, courseId: currentCourseId, lessonId: currentLessonId, durationWatched: Math.round(watched), totalDuration: Math.round(total) },
                 success: function (res) { console.log('UpdateProgress:', res); },
                 error: function (err)   { console.error('UpdateProgress error:', err); }
             });
         }
 
         function handleRatingButtonClick() {
+            if (!canReview) { showToast('Hoàn thành tất cả bài học và đạt quiz cuối khóa để đánh giá.', 'warning'); return; }
             if (hasSubmittedReview) { showToast('Bạn đã gửi đánh giá rồi. Cảm ơn bạn!', 'info'); return; }
             if (!allLessonsCompleted()) {
                 var c = getCompletedCount(), t = courseLessons.length;
@@ -1246,7 +1276,7 @@
             if (!confirm('Bạn có muốn đặt lại toàn bộ tiến độ khóa học để kiểm thử lại từ đầu?')) return;
             $.ajax({
                 url: '@Url.Action("ResetProgress", "Learning")', type: 'POST',
-                data: { courseId: currentCourseId },
+                data: { __RequestVerificationToken: document.querySelector('#learning-antiforgery input').value, courseId: currentCourseId },
                 success: function () { window.location.reload(); },
                 error:   function () { window.location.reload(); }
             });
@@ -1261,7 +1291,7 @@
             var comment = document.getElementById('review-comment') ? document.getElementById('review-comment').value : '';
             $.ajax({
                 url: '/Review/SubmitReview', type: 'POST',
-                data: { courseId: currentCourseId, rating: selectedRating, comment: comment },
+                data: { __RequestVerificationToken: document.querySelector('#learning-antiforgery input').value, courseId: currentCourseId, rating: selectedRating, comment: comment },
                 success: function (res) {
                     if (res && res.success) {
                         hasSubmittedReview = true;

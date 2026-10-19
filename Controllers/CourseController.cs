@@ -5,6 +5,7 @@ using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Models;
 using ECOLearning.Services;
+using ECOLearning.ViewModels;
 
 namespace ECOLearning.Controllers
 {
@@ -13,7 +14,7 @@ namespace ECOLearning.Controllers
         private QL_HETHONG_CUNGCAP_KHOAHOCEntities1 db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1();
 
         // GET: Course (UC4: Tìm kiếm & Lọc nâng cao đa tiêu chí)
-        public ActionResult Index(string search, string category, bool? isFree, bool? isPaid, string level, double? minRating, string sort)
+        public ActionResult Index(string search, string category, bool? isFree, bool? isPaid, string level, double? minRating, string sort, int trang = 1)
         {
             if (!User.Identity.IsAuthenticated && Session["UserId"] == null)
             {
@@ -66,27 +67,31 @@ namespace ECOLearning.Controllers
                 query = query.Where(k => k.capDo == level);
             }
 
-            // 5. Sắp xếp
+            // 5. Lọc theo Đánh giá tối thiểu (Rating >= minRating): làm trong SQL để đếm và phân trang đúng
+            if (minRating.HasValue && minRating.Value > 0)
+            {
+                double diemToiThieu = minRating.Value;
+                query = query.Where(k => k.DanhGiaKhoaHoc.Any() && k.DanhGiaKhoaHoc.Average(d => (double)d.soSao) >= diemToiThieu);
+            }
+
+            // 6. Sắp xếp; thêm mã khóa làm khóa phụ để thứ tự ổn định giữa các trang (giá bằng nhau không bị nhảy)
+            IOrderedQueryable<KhoaHoc> sorted;
             if (sort == "price-asc")
             {
-                query = query.OrderBy(k => k.giaKhuyenMai.HasValue ? k.giaKhuyenMai.Value : k.giaBan);
+                sorted = query.OrderBy(k => k.giaKhuyenMai.HasValue ? k.giaKhuyenMai.Value : k.giaBan).ThenByDescending(k => k.maKhoaHoc);
             }
             else if (sort == "price-desc")
             {
-                query = query.OrderByDescending(k => k.giaKhuyenMai.HasValue ? k.giaKhuyenMai.Value : k.giaBan);
+                sorted = query.OrderByDescending(k => k.giaKhuyenMai.HasValue ? k.giaKhuyenMai.Value : k.giaBan).ThenByDescending(k => k.maKhoaHoc);
             }
             else
             {
-                query = query.OrderByDescending(k => k.maKhoaHoc);
+                sorted = query.OrderByDescending(k => k.maKhoaHoc);
             }
 
-            var courseList = query.ToList();
-
-            // 6. Lọc theo Đánh giá tối thiểu (Rating >= minRating)
-            if (minRating.HasValue && minRating.Value > 0)
-            {
-                courseList = courseList.Where(k => k.DanhGiaKhoaHoc != null && k.DanhGiaKhoaHoc.Count > 0 && k.DanhGiaKhoaHoc.Average(d => (double)d.soSao) >= minRating.Value).ToList();
-            }
+            // 7. Phân trang 12 khóa / trang: đếm rồi chỉ lấy khóa của trang đang xem (OFFSET/FETCH trong SQL)
+            var phanTrang = new PhanTrangViewModel(trang, query.Count()) { Neo = "ds-khoa-hoc" };
+            var courseList = sorted.Skip(phanTrang.BoQua).Take(phanTrang.KichThuoc).ToList();
 
             // Pass filter metadata to View
             // Danh mục tạm ngưng không hiện trong bộ lọc; khóa học thuộc danh mục đó vẫn hiển thị bình thường
@@ -98,10 +103,14 @@ namespace ECOLearning.Controllers
             ViewBag.SelectedLevel = level;
             ViewBag.MinRating = minRating;
             ViewBag.Sort = sort;
+            ViewBag.PhanTrang = phanTrang;
             ViewBag.SoKhoaDaSoHuu = userId > 0 ? db.DangKyKhoaHoc.Count(d => d.maHocVien == userId) : 0;
 
             // Số học viên mỗi khóa: một truy vấn GROUP BY nhẹ (xem ghi chú ở HomeController.Index)
+            // (chỉ đếm cho các khóa của trang đang xem)
+            var maKhoaTrangNay = courseList.Select(k => k.maKhoaHoc).ToList();
             ViewBag.EnrollCounts = db.DangKyKhoaHoc
+                .Where(d => maKhoaTrangNay.Contains(d.maKhoaHoc))
                 .GroupBy(d => d.maKhoaHoc)
                 .Select(g => new { MaKhoaHoc = g.Key, SoHocVien = g.Count() })
                 .ToDictionary(x => x.MaKhoaHoc, x => x.SoHocVien);
@@ -112,10 +121,7 @@ namespace ECOLearning.Controllers
         // GET: Course/Details/5 (Chi tiết khóa học & Video Preview)
         public ActionResult Details(string id)
         {
-            if (!User.Identity.IsAuthenticated && Session["UserId"] == null)
-            {
-                return RedirectToAction("Login", "Account", new { returnUrl = Request.RawUrl });
-            }
+            // Mở cho khách (tìm kiếm công khai): chỉ Mua / Thêm giỏ / Thả tim / Vào học mới yêu cầu đăng nhập
 
             if (string.IsNullOrEmpty(id))
             {
@@ -187,24 +193,41 @@ namespace ECOLearning.Controllers
             bool isInCart = cartList != null && cartList.Any(i => i.CourseId == course.maKhoaHoc);
             ViewBag.IsInCart = isInCart;
 
-            // Mã giảm giá công khai áp dụng cho khóa này, tính thử như khi giỏ chỉ có khóa này
-            // (chỉ để hiển thị; số tiền giảm thật tính lại ở server khi áp mã trong giỏ hàng)
-            var maGiamGia = new List<ECOLearning.ViewModels.MaGiamGiaHienThi>();
-            decimal giaHienTai = PromotionService.GiaBanHienTai(course);
-            if (!isEnrolled && course.maGiaoVien != currentUserId && giaHienTai > 0)
+            // Cuối trang: "Thường xuyên được mua cùng nhau" + "Học viên khác cũng mua" (Item-based trên dữ liệu mua)
+            try
             {
-                var promotions = new PromotionService(db);
-                if (promotions.IsInstalled())
+                var lienQuan = new RelatedCourseService(db).LayChoKhoaHoc(course.maKhoaHoc, currentUserId);
+                lienQuan.LaKhach = currentUserId <= 0 && !User.Identity.IsAuthenticated;
+                if (cartList != null) lienQuan.TrongGio = new HashSet<string>(cartList.Select(i => i.CourseId));
+                ViewBag.KhoaHocLienQuan = lienQuan;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Related courses error: " + ex.Message);
+            }
+
+            // Giảng viên (cùng cách tính với trang hồ sơ /User) + các khóa đang bán khác của giảng viên
+            try
+            {
+                var hoSo = new InstructorProfileService(db).LayHoSo(course.maGiaoVien);
+                if (hoSo != null)
                 {
-                    var dong = new List<ECOLearning.ViewModels.DongGioHang>
+                    ViewBag.GiangVien = new ECOLearning.ViewModels.GiangVienKhoaHocViewModel
                     {
-                        new ECOLearning.ViewModels.DongGioHang { MaKhoaHoc = course.maKhoaHoc, DonGia = giaHienTai }
+                        HoSo = hoSo,
+                        MaKhoaHocDangXem = course.maKhoaHoc,
+                        KhoaKhac = hoSo.DanhSachKhoaHoc.Where(k => k.Course.maKhoaHoc != course.maKhoaHoc).ToList()
                     };
-                    maGiamGia = promotions.LayMaChoHocVien(currentUserId, dong, course.maKhoaHoc);
                 }
             }
-            ViewBag.MaGiamGia = maGiamGia;
-            ViewBag.GiaHienTai = giaHienTai;
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Instructor info error: " + ex.Message);
+            }
+
+            // Đánh giá: 5 đánh giá mới nhất, "Bạn thấy hữu ích?", phản hồi của giáo viên; nhiều hơn 5 thì có nút "Xem tất cả"
+            ViewBag.DanhGia = new CourseReviewService(db).LayDanhSach(course, currentUserId, null, null, "moinhat", 1,
+                ECOLearning.ViewModels.DanhSachDanhGiaViewModel.SoHienThiTrenTrangChiTiet);
 
             // 3. Dữ liệu chương và bài học
             var chapters = db.ChuongHoc
@@ -221,6 +244,27 @@ namespace ECOLearning.Controllers
             ViewBag.UnchapteredLessons = unchapteredLessons;
 
             return View(course);
+        }
+
+        // GET: Course/Reviews/{id}?sao=&q=&sapXep=&trang= — trang "Tất cả đánh giá" (mở cho cả khách)
+        // ValidateInput(false): ô tìm kiếm có thể chứa ký tự như "<"; mọi chỗ xuất ra đều được Razor encode.
+        [ValidateInput(false)]
+        public ActionResult Reviews(string id, int? sao, string q, string sapXep, int trang = 1)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return HttpNotFound();
+            var course = db.KhoaHoc.Include(k => k.NguoiDung).FirstOrDefault(k => k.maKhoaHoc == id);
+            if (course == null) return HttpNotFound();
+
+            int currentUserId = (Session["UserId"] as int?) ?? 0;
+            bool laChuHoacAdmin = Session["Role"]?.ToString() == "Admin" || (currentUserId > 0 && course.maGiaoVien == currentUserId);
+            if (!laChuHoacAdmin && course.trangThai != "Đã xuất bản" && course.trangThai != "Đã duyệt" && course.trangThai != "Active")
+            {
+                return HttpNotFound();
+            }
+
+            var vm = new CourseReviewService(db).LayDanhSach(course, currentUserId, sao, q, sapXep, trang,
+                ECOLearning.ViewModels.DanhSachDanhGiaViewModel.SoMoiTrang);
+            return View(vm);
         }
 
         // POST: Course/EnrollFree

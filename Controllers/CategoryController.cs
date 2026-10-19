@@ -24,16 +24,13 @@ namespace ECOLearning.Controllers
 
         private QL_HETHONG_CUNGCAP_KHOAHOCEntities1 db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1();
 
-        // GET: /danh-muc/{slug}?level=...&sort=...
-        public ActionResult Index(string slug, string level, string sort)
+        // GET: /danh-muc/{slug}?level=...&sort=...&trang=...
+        public ActionResult Index(string slug, string level, string sort, int trang = 1)
         {
-            if (!User.Identity.IsAuthenticated && Session["UserId"] == null)
-            {
-                return RedirectToAction("Login", "Account", new { returnUrl = Request.RawUrl });
-            }
+            // Mở cho khách: khách chưa đăng nhập vẫn xem được danh mục (userId = 0 thì không lọc khóa đã sở hữu)
             if (string.IsNullOrWhiteSpace(slug))
             {
-                return RedirectToAction("Index", "Course");
+                return RedirectToAction("All");
             }
 
             // Danh mục đang hoạt động (danh mục tạm ngưng không có trang, giống bộ lọc ở trang Course)
@@ -55,7 +52,7 @@ namespace ECOLearning.Controllers
             // danh mục thì slug đổi theo, trình duyệt nhớ 301 sẽ dẫn sai.
             if (current.Slug != key && !string.IsNullOrEmpty(current.Slug))
             {
-                return RedirectToAction("Index", new { slug = current.Slug, level, sort });
+                return RedirectToAction("Index", new { slug = current.Slug, level, sort, trang = trang > 1 ? (int?)trang : null });
             }
 
             // Khóa đang bán trong danh mục, bỏ khóa người dùng đã sở hữu (như trang chủ và trang Course)
@@ -136,7 +133,10 @@ namespace ECOLearning.Controllers
                     break;
             }
             model.SapXep = sort;
-            model.Items = items;
+
+            // Phân trang 12 khóa / trang (sau lọc cấp độ và sắp xếp để thứ tự giữa các trang không đổi)
+            model.PhanTrang = new PhanTrangViewModel(trang, items.Count) { Neo = "ds-khoa-hoc" };
+            model.Items = model.PhanTrang.CatTrang(items);
 
             // Danh mục khác: đếm khóa đang bán (bỏ khóa đã sở hữu) để người dùng chuyển nhanh
             var soKhoaTheoDanhMuc = db.KhoaHoc
@@ -156,6 +156,68 @@ namespace ECOLearning.Controllers
                 .OrderByDescending(d => d.SoKhoaHoc)
                 .ThenBy(d => d.Ten)
                 .ToList();
+
+            return View(model);
+        }
+
+        // GET: /danh-muc (route "TatCaDanhMuc") — nút "Tất cả các lĩnh vực" ở mục "Khám phá theo lĩnh vực" trang chủ
+        public ActionResult All()
+        {
+            int userId = (Session["UserId"] as int?) ?? 0;
+
+            // Cùng điều kiện và thứ tự với trang chủ (danh mục đang hoạt động, sắp theo mã) để biểu tượng khớp nhau
+            var danhMuc = db.DanhMuc
+                .Where(d => d.trangThai == null || d.trangThai == true)
+                .OrderBy(d => d.maDanhMuc)
+                .Select(d => new { d.maDanhMuc, d.tenDanhMuc, d.moTa })
+                .ToList();
+
+            // Một truy vấn GROUP BY cho cả trang: số khóa đang bán (bỏ khóa đã sở hữu, như trang danh mục),
+            // số giảng viên, số học viên khác nhau theo từng danh mục
+            var dangBan = db.KhoaHoc.Where(k => TrangThaiDangBan.Contains(k.trangThai));
+            var soKhoa = dangBan
+                .Where(k => !db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == k.maKhoaHoc && d.maHocVien == userId))
+                .GroupBy(k => k.maDanhMuc)
+                .Select(g => new { MaDanhMuc = g.Key, SoKhoa = g.Count(), SoGiangVien = g.Select(k => k.maGiaoVien).Distinct().Count() })
+                .ToList()
+                .Where(x => x.MaDanhMuc != null)
+                .ToDictionary(x => x.MaDanhMuc);
+            var soHocVien = db.DangKyKhoaHoc
+                .Where(d => TrangThaiDangBan.Contains(d.KhoaHoc.trangThai) && d.KhoaHoc.maDanhMuc != null)
+                .GroupBy(d => d.KhoaHoc.maDanhMuc)
+                .Select(g => new { MaDanhMuc = g.Key, SoHocVien = g.Select(d => d.maHocVien).Distinct().Count() })
+                .ToDictionary(x => x.MaDanhMuc, x => x.SoHocVien);
+
+            var model = new TatCaLinhVucViewModel();
+            for (int i = 0; i < danhMuc.Count; i++)
+            {
+                var d = danhMuc[i];
+                string slug = SlugHelper.ToSlug(d.tenDanhMuc);
+                if (string.IsNullOrEmpty(slug)) continue;
+
+                var thongKe = soKhoa.ContainsKey(d.maDanhMuc) ? soKhoa[d.maDanhMuc] : null;
+                int hocVien;
+                soHocVien.TryGetValue(d.maDanhMuc, out hocVien);
+                model.Items.Add(new LinhVucItem
+                {
+                    MaDanhMuc = d.maDanhMuc,
+                    Ten = d.tenDanhMuc,
+                    MoTa = d.moTa,
+                    Slug = slug,
+                    Icon = IconDanhMuc.TheoViTri(i),
+                    SoKhoaHoc = thongKe != null ? thongKe.SoKhoa : 0,
+                    SoGiangVien = thongKe != null ? thongKe.SoGiangVien : 0,
+                    SoHocVien = hocVien
+                });
+            }
+            // Lĩnh vực có nhiều khóa lên trước; biểu tượng đã gán theo thứ tự trang chủ ở trên nên không đổi
+            model.Items = model.Items
+                .Select((x, viTri) => new { x, viTri })
+                .OrderByDescending(t => t.x.SoKhoaHoc)
+                .ThenBy(t => t.viTri)
+                .Select(t => t.x)
+                .ToList();
+            model.TongSoKhoaHoc = model.Items.Sum(x => x.SoKhoaHoc);
 
             return View(model);
         }

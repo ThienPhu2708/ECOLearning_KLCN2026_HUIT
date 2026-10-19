@@ -8,6 +8,7 @@
     bool isEnrolled = ViewBag.IsEnrolled ?? false;
     bool isInCart = ViewBag.IsInCart ?? false;
     bool isOwner = ViewBag.IsOwner ?? false;
+    bool isGuest = !User.Identity.IsAuthenticated && Session["UserId"] == null;
 
     int totalLessons = chapters.Sum(c => c.BaiHoc != null ? c.BaiHoc.Count : 0) + unchapteredLessons.Count;
     int totalDurationSeconds = chapters.Sum(c => c.BaiHoc != null ? c.BaiHoc.Sum(b => b.thoiLuong ?? 0) : 0) + unchapteredLessons.Sum(b => b.thoiLuong ?? 0);
@@ -37,6 +38,7 @@
 }
 
 @section styles {
+    <link rel="stylesheet" href="@Url.Content("~/assets/css/course-reviews.css?v=1.1")" />
     <style>
         .details-page-main {
             background-color: #F8FAFC;
@@ -122,6 +124,8 @@
         .details-right-sidebar {
             width: 360px;
             flex-shrink: 0;
+            /* Cao bằng cột trái (lưới dùng align-items: flex-start) để .sticky-course-card dính suốt khi cuộn tới cuối trang */
+            align-self: stretch;
         }
 
         @@media (max-width: 991px) {
@@ -130,6 +134,10 @@
             }
             .details-right-sidebar {
                 width: 100%;
+            }
+            /* Màn hình hẹp: thẻ mua nằm trên nội dung, không dính (đặt trước rule gốc nên cần selector mạnh hơn) */
+            .details-right-sidebar .sticky-course-card {
+                position: static;
             }
         }
 
@@ -433,6 +441,78 @@
             color: #FFFFFF;
         }
 
+        /* Khóa học liên quan cuối cột trái (Views/Course/_RelatedCourses.cshtml): mỗi khóa một dòng */
+        .rel-wrap { margin-top: 8px; overflow-anchor: none; }
+        .rel-section { margin-top: 36px; }
+        .rel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+        .rel-head h2 { font-size: 22px; font-weight: 800; color: #0F172A; margin: 0 0 4px; }
+        .rel-head p { font-size: 13.5px; color: #64748B; margin: 0; }
+        .rel-toggle { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px solid #E2E8F0; border-radius: 9px; background: #FFFFFF; color: #475569; font-size: 13px; font-weight: 700; cursor: pointer; }
+        .rel-toggle:hover { border-color: #434CE8; color: #434CE8; }
+        .rel-toggle:focus-visible { outline: 2px solid #A5B4FC; outline-offset: 2px; }
+        .rel-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+        .rel-list[hidden] { display: none; }
+
+        /* Combo "Thường xuyên được mua cùng nhau" */
+        .fbt-list { list-style: none; margin: 0; padding: 0; }
+        .fbt-item { position: relative; }
+        .fbt-card { display: flex; gap: 20px; padding: 18px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; }
+        .fbt-card.is-current { border-color: #C7D2FE; background: #FAFBFF; }
+        .fbt-thumb { flex: 0 0 230px; height: 130px; border-radius: 12px; overflow: hidden; background: #E2E8F0; }
+        .fbt-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .fbt-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+        .fbt-top { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+        .fbt-current { font-size: 11.5px; font-weight: 700; color: #434CE8; background: #EEF2FF; border-radius: 9999px; padding: 2px 10px; }
+        .fbt-title { font-size: 17px; font-weight: 800; color: #0F172A; line-height: 1.35; text-decoration: none; }
+        .fbt-title:hover { color: #434CE8; text-decoration: underline; }
+        .fbt-desc { margin: 0; font-size: 14px; color: #334155; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .fbt-teacher { font-size: 12.5px; color: #64748B; }
+        .rel-chip.rel-chip-hot { background: #E0F2FE; color: #0369A1; }
+        .rel-chip.rel-chip-top { background: #EEF2FF; color: #434CE8; }
+        .fbt-foot { margin-top: auto; padding-top: 8px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .fbt-price { display: flex; align-items: baseline; gap: 10px; }
+        .fbt-price strong { font-size: 17px; font-weight: 800; color: #0F172A; }
+        .fbt-price s { font-size: 14px; color: #94A3B8; }
+        .fbt-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 18px; border: 1px solid #434CE8; border-radius: 10px; background: #FFFFFF; color: #434CE8; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; white-space: nowrap; }
+        .fbt-btn:hover { background: #EEF2FF; color: #434CE8; }
+        .fbt-btn:disabled { opacity: .6; cursor: progress; }
+        .fbt-btn.is-in-cart { border-color: #C7D2FE; background: #F5F7FF; }
+        .fbt-plus { position: relative; z-index: 1; width: 40px; height: 40px; margin: -10px auto -10px 230px; border-radius: 50%; background: #FFFFFF; border: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: center; color: #475569; font-size: 18px; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06); }
+        .fbt-total { display: flex; justify-content: flex-end; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 18px; padding: 16px 18px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; }
+        .fbt-total-price { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+        .fbt-total-price span { font-size: 15px; color: #334155; }
+        .fbt-total-price strong { font-size: 20px; font-weight: 800; color: #0F172A; }
+        .fbt-total-price s { font-size: 14px; color: #94A3B8; }
+        .fbt-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 46px; padding: 0 22px; border: none; border-radius: 12px; background: #434CE8; color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none; cursor: pointer; white-space: nowrap; }
+        .fbt-btn-primary:hover { background: #3730C9; color: #FFFFFF; }
+        .fbt-btn-primary:disabled { opacity: .7; cursor: progress; }
+        .fbt-btn:focus-visible, .fbt-btn-primary:focus-visible, .fbt-title:focus-visible { outline: 2px solid #A5B4FC; outline-offset: 2px; }
+        .rel-row { display: flex; align-items: center; gap: 18px; padding: 18px 20px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; color: inherit; text-decoration: none; transition: border-color .2s, box-shadow .2s; }
+        .rel-row:hover { border-color: #C7D2FE; box-shadow: 0 8px 20px -12px rgba(67, 76, 232, 0.35); color: inherit; }
+        .rel-row:focus-visible { outline: 2px solid #A5B4FC; outline-offset: 2px; }
+        .rel-thumb { width: 64px; height: 64px; flex-shrink: 0; border-radius: 10px; object-fit: cover; background: #E2E8F0; align-self: flex-start; }
+        .rel-main { flex: 1; min-width: 0; }
+        .rel-title { font-size: 16.5px; font-weight: 700; color: #0F172A; line-height: 1.35; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .rel-row:hover .rel-title { color: #434CE8; }
+        .rel-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+        .rel-chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border-radius: 6px; background: #F1F5F9; color: #334155; font-size: 13px; font-weight: 700; white-space: nowrap; }
+        .rel-chip-rating .bi { color: #F59E0B; font-size: 12px; }
+        .rel-chip-outline { background: #FFFFFF; border: 1px solid #E2E8F0; color: #64748B; font-weight: 500; }
+        .rel-price { flex-shrink: 0; min-width: 116px; align-self: stretch; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding-left: 20px; border-left: 1px solid #E2E8F0; text-align: left; }
+        .rel-price strong { font-size: 17px; font-weight: 800; color: #0F172A; }
+        .rel-price s { font-size: 14px; color: #94A3B8; }
+        @@media (max-width: 640px) {
+            .rel-row { flex-wrap: wrap; padding: 14px; gap: 12px; }
+            .rel-thumb { width: 52px; height: 52px; }
+            .rel-price { flex-direction: row; justify-content: flex-start; align-items: baseline; gap: 10px; border-left: none; border-top: 1px solid #F1F5F9; padding: 10px 0 0; width: 100%; }
+            .rel-head { flex-direction: column; }
+            .fbt-card { flex-direction: column; padding: 14px; gap: 12px; }
+            .fbt-thumb { flex-basis: auto; width: 100%; height: 170px; }
+            .fbt-plus { margin: -10px auto; }
+            .fbt-total { justify-content: space-between; }
+            .fbt-btn-primary { width: 100%; }
+        }
+
         .custom-modal-body {
             padding: 0;
             background: #000000;
@@ -442,19 +522,6 @@
             min-height: 320px;
         }
 
-        /* Mã giảm giá áp dụng cho khóa học */
-        .cd-coupons { margin: -4px 0 16px; display: flex; flex-direction: column; gap: 8px; }
-        .cd-coupon { border: 1px dashed #C7D2FE; border-radius: 12px; padding: 10px 12px; background: #FFFFFF; }
-        .cd-coupon-top { display: flex; align-items: center; gap: 8px; }
-        .cd-coupon-code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12.5px; font-weight: 700; letter-spacing: .5px; color: #434CE8; background: #EEF2FF; border: 1px dashed #A5B4FC; border-radius: 6px; padding: 2px 8px; }
-        .cd-coupon-value { font-size: 13px; font-weight: 800; color: #0F172A; flex: 1; min-width: 0; }
-        .cd-coupon-copy { border: 1px solid #CBD5E1; background: #FFFFFF; color: #475569; font-size: 12px; font-weight: 700; border-radius: 8px; padding: 3px 10px; cursor: pointer; white-space: nowrap; }
-        .cd-coupon-copy:hover { border-color: #434CE8; color: #434CE8; }
-        .cd-coupon-copy:focus-visible { outline: 2px solid #A5B4FC; outline-offset: 2px; }
-        .cd-coupon-copy.is-copied { border-color: #434CE8; background: #EEF2FF; color: #434CE8; }
-        .cd-coupon-price { font-size: 12.5px; font-weight: 600; color: #434CE8; margin-top: 6px; }
-        .cd-coupon-meta { font-size: 11.5px; color: #64748B; margin-top: 3px; line-height: 1.45; }
-        .cd-coupon-more { font-size: 12px; color: #64748B; }
     </style>
 }
 
@@ -534,7 +601,7 @@
                         }
                         else
                         {
-                            <strong style="color: #FFFFFF; font-weight: 700;">Giảng viên E-Learning</strong>
+                            <strong style="color: #FFFFFF; font-weight: 700;">Giáo viên E-Learning</strong>
                         }
                     </div>
 
@@ -709,158 +776,25 @@
                         </div>
                     </div>
                     
-                    <!-- Section 4: Student Reviews (UC6) -->
-                    @{
-                        bool hasReviews = Model.DanhGiaKhoaHoc != null && Model.DanhGiaKhoaHoc.Count > 0;
-                        var reviews = hasReviews ? Model.DanhGiaKhoaHoc.OrderByDescending(d => d.ngayDanhGia).ToList() : null;
-                        double overallRating = hasReviews ? reviews.Average(d => (double)d.soSao) : 0;
-                        int totalReviewers = hasReviews ? reviews.Count : 0;
+                    <!-- Giảng viên + các khóa khác của giảng viên (số liệu thật: Services/InstructorProfileService.cs) -->
+                    @{ var giangVien = ViewBag.GiangVien as ECOLearning.ViewModels.GiangVienKhoaHocViewModel; }
+                    @if (giangVien != null)
+                    {
+                        @Html.Partial("_InstructorInfo", giangVien)
                     }
-                    <!-- Reviews Section -->
-                    <div class="card" style="margin-bottom: 40px;">
-                        <h3 class="h3" style="margin-bottom: 20px; font-size: 20px; font-weight: 700; color: var(--text-heading, #0F172A);">Đánh giá từ học viên</h3>
-                        <div style="display: flex; gap: 32px; align-items: center; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color, #E2E8F0); flex-wrap: wrap;">
-                            <div style="text-align: center; min-width: 120px;">
-                                <div style="font-size: 48px; font-weight: 800; color: var(--text-heading, #0F172A); line-height: 1;">@overallRating.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)</div>
-                                <div style="color: @(overallRating > 0 ? "var(--status-warning, #F59E0B)" : "#CBD5E1"); font-size: 18px; margin: 4px 0; display: flex; justify-content: center; gap: 2px;">
-                                    @for (int i = 1; i <= 5; i++)
-                                    {
-                                        if (overallRating > 0 && i <= Math.Round(overallRating))
-                                        {
-                                            <i class="bi bi-star-fill"></i>
-                                        }
-                                        else
-                                        {
-                                            <i class="bi bi-star"></i>
-                                        }
-                                    }
-                                </div>
-                                <span class="caption" style="font-size: 13px; color: var(--text-secondary, #64748B);">@totalReviewers lượt đánh giá</span>
-                            </div>
-                            <div style="flex: 1; min-width: 240px;">
-                                @if (hasReviews)
-                                {
-                                    for (int star = 5; star >= 1; star--)
-                                    {
-                                        int starCount = reviews.Count(r => r.soSao == star);
-                                        if (starCount > 0)
-                                        {
-                                            int starPercent = totalReviewers > 0 ? (int)Math.Round((double)starCount / totalReviewers * 100) : 0;
-                                            string barBg = star == 5 ? "#10B981" : (star == 4 ? "#434CE8" : (star == 3 ? "#06B6D4" : (star == 2 ? "#F59E0B" : "#EF4444")));
 
-                                            <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 6px;">
-                                                <span style="width: 40px; color: var(--text-secondary, #475569); font-weight: 500;">@star sao</span>
-                                                <div style="flex: 1; height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
-                                                    <div style="width: @starPercent%; height: 100%; background: @barBg; border-radius: 999px;"></div>
-                                                </div>
-                                                <span style="width: 36px; text-align: right; color: var(--text-heading, #1E293B); font-weight: 600;">@starPercent%</span>
-                                            </div>
-                                        }
-                                    }
-                                }
-                            </div>
-                        </div>
-
-                        <!-- Review Items List -->
-                        <div style="display: flex; flex-direction: column; gap: 18px;">
-                            @if (hasReviews)
-                            {
-                                foreach (var r in reviews)
-                                {
-                                    string reviewerName = r.NguoiDung != null ? r.NguoiDung.hoTen : "Học viên";
-                                    string reviewDateText = "Vừa xong";
-                                    if (r.ngayDanhGia.HasValue)
-                                    {
-                                        var diff = DateTime.Now - r.ngayDanhGia.Value;
-                                        if (diff.TotalDays >= 30)
-                                        {
-                                            reviewDateText = r.ngayDanhGia.Value.ToString("dd/MM/yyyy");
-                                        }
-                                        else if (diff.TotalDays >= 1)
-                                        {
-                                            reviewDateText = (int)diff.TotalDays + " ngày trước";
-                                        }
-                                        else if (diff.TotalHours >= 1)
-                                        {
-                                            reviewDateText = (int)diff.TotalHours + " giờ trước";
-                                        }
-                                        else if (diff.TotalMinutes >= 1)
-                                        {
-                                            reviewDateText = (int)diff.TotalMinutes + " phút trước";
-                                        }
-                                        else
-                                        {
-                                            reviewDateText = "Vừa xong";
-                                        }
-                                    }
-
-                                    string initials = "HV";
-                                    if (r.NguoiDung != null && !string.IsNullOrWhiteSpace(r.NguoiDung.hoTen))
-                                    {
-                                        var nameParts = r.NguoiDung.hoTen.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                                        if (nameParts.Length >= 2)
-                                        {
-                                            initials = (nameParts[0][0].ToString() + nameParts[1][0].ToString()).ToUpper();
-                                        }
-                                        else if (nameParts.Length == 1 && nameParts[0].Length >= 2)
-                                        {
-                                            initials = nameParts[0].Substring(0, 2).ToUpper();
-                                        }
-                                        else if (nameParts.Length == 1)
-                                        {
-                                            initials = nameParts[0].Substring(0, 1).ToUpper();
-                                        }
-                                    }
-
-                                    <div style="display: flex; gap: 14px; margin-bottom: 4px;">
-                                        @if (r.NguoiDung != null && !string.IsNullOrEmpty(r.NguoiDung.anhDaiDien) && !r.NguoiDung.anhDaiDien.Contains("avatar_default"))
-                                        {
-                                            string avatarSrc = r.NguoiDung.anhDaiDien.StartsWith("http") || r.NguoiDung.anhDaiDien.StartsWith("/") 
-                                                ? r.NguoiDung.anhDaiDien 
-                                                : Url.Content("~/" + r.NguoiDung.anhDaiDien);
-                                            <img src="@avatarSrc" alt="@reviewerName" style="width: 40px; height: 40px; border-radius: 999px; object-fit: cover; flex-shrink: 0;" />
-                                        }
-                                        else
-                                        {
-                                            <div style="width: 40px; height: 40px; border-radius: 999px; background: #EEF2FF; color: var(--primary, #434CE8); font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;">
-                                                @initials
-                                            </div>
-                                        }
-                                        <div>
-                                            <div style="font-weight: 700; font-size: 14px; color: var(--text-heading, #0F172A); margin-bottom: 2px;">@reviewerName</div>
-                                            <div style="color: #F59E0B; font-size: 12px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
-                                                <span style="display: inline-flex; gap: 2px;">
-                                                    @for (int s = 1; s <= 5; s++)
-                                                    {
-                                                        if (s <= r.soSao)
-                                                        {
-                                                            <i class="bi bi-star-fill"></i>
-                                                        }
-                                                        else
-                                                        {
-                                                            <i class="bi bi-star"></i>
-                                                        }
-                                                    }
-                                                </span>
-                                                <span style="color: #F59E0B; font-size: 12px;">• @reviewDateText</span>
-                                            </div>
-                                            <p class="body-2" style="font-size: 14px; color: var(--text-body, #334155); margin: 0; line-height: 1.6;">
-                                                @r.noiDung
-                                            </p>
-                                        </div>
-                                    </div>
-                                }
-                            }
-                            else
-                            {
-                                <div class="text-center py-4" style="background: #F8FAFC; border: 1px dashed #E2E8F0; border-radius: 12px; color: #64748B;">
-                                    <i class=" text-muted fs-3 d-block mb-2"></i>
-                                    <span style="font-size: 14px; font-weight: 600; color: #334155;">Chưa có nhận xét nào</span>
-                                    <p class="mb-0 mt-1" style="font-size: 13px; color: #94A3B8;">Khóa học này hiện chưa có nhận xét hay bình luận nào từ học viên.</p>
-                                </div>
-                            }
-                        </div>
-                    </div>
+                    <!-- Section 4: Student Reviews (UC6): 5 đánh giá mới nhất, hữu ích, phản hồi của giáo viên -->
+                    @{ var danhGia = ViewBag.DanhGia as ECOLearning.ViewModels.DanhSachDanhGiaViewModel; }
+                    @if (danhGia != null)
+                    {
+                        @Html.Partial("_ReviewSection", danhGia)
+                    }
+                    @* Item-based trên dữ liệu mua: "Thường xuyên được mua cùng nhau" + "Học viên khác cũng mua" *@
+                    @{ var lienQuan = ViewBag.KhoaHocLienQuan as ECOLearning.ViewModels.KhoaHocLienQuanViewModel; }
+                    @if (lienQuan != null && lienQuan.CoNoiDung)
+                    {
+                        <div class="rel-wrap">@Html.Partial("_RelatedCourses", lienQuan)</div>
+                    }
                 </div>
 
                 <!-- Right Sticky Sidebar Column (Fixed 360px) -->
@@ -908,38 +842,6 @@
                                 }
                             </div>
 
-                            <!-- Mã giảm giá công khai áp dụng cho khóa học (Marketing tạo) -->
-                            @{
-                                var maGiamGia = ViewBag.MaGiamGia as List<ECOLearning.ViewModels.MaGiamGiaHienThi> ?? new List<ECOLearning.ViewModels.MaGiamGiaHienThi>();
-                                decimal giaHienTai = ViewBag.GiaHienTai ?? effectivePrice;
-                            }
-                            @if (!isOwner && !isEnrolled && !isFree && maGiamGia.Count > 0)
-                            {
-                                <div class="cd-coupons" aria-label="Mã giảm giá áp dụng cho khóa học">
-                                    @foreach (var m in maGiamGia.Take(2))
-                                    {
-                                        <div class="cd-coupon">
-                                            <div class="cd-coupon-top">
-                                                <span class="cd-coupon-code">@m.MaCode</span>
-                                                <span class="cd-coupon-value">@m.MoTaUuDai</span>
-                                                <button type="button" class="cd-coupon-copy" data-code="@m.MaCode" onclick="copyCouponCode(this)">Sao chép</button>
-                                            </div>
-                                            @if (m.CoTheApDung && m.TienGiam > 0)
-                                            {
-                                                <div class="cd-coupon-price">Còn @((giaHienTai - m.TienGiam).ToString("N0")) đ khi dùng mã ở giỏ hàng</div>
-                                            }
-                                            <div class="cd-coupon-meta">
-                                                @(m.CoTheApDung ? string.Join(" · ", m.DieuKien) : m.LyDo) · HSD @m.NgayKetThuc.ToString("dd/MM/yyyy")
-                                            </div>
-                                        </div>
-                                    }
-                                    @if (maGiamGia.Count > 2)
-                                    {
-                                        <div class="cd-coupon-more">Và @(maGiamGia.Count - 2) mã khác, xem trong giỏ hàng.</div>
-                                    }
-                                </div>
-                            }
-
                             <!-- Action Buttons -->
                             @if (isOwner)
                             {
@@ -952,6 +854,17 @@
                                 <a href="@Url.Action("Study", "Learning", new { courseId = Model.maKhoaHoc })" class="btn btn-secondary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold text-decoration-none shadow-sm" style="background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px; transition: all 0.2s;">
                                     <i class="bi bi-play-circle-fill me-2 text-primary"></i> VÀO HỌC NGAY
                                 </a>
+                            }
+                            else if (isGuest)
+                            {
+                                @* Khách chưa đăng nhập (khóa có phí hay miễn phí): một nút "Đăng ký học" dẫn tới đăng nhập,
+                                   đăng nhập xong quay lại đúng khóa này; ẩn Mua ngay / Thêm vào giỏ hàng *@
+                                <div class="course-cta-row">
+                                    <a href="@Url.Action("Login", "Account", new { mode = "login", returnUrl = Request.RawUrl })" class="btn btn-cta-primary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold shadow-sm text-decoration-none" style="background: #10B981 !important; border: none !important; border-radius: 12px !important; font-size: 16px; color: #FFFFFF;">
+                                        <i class="bi bi-mortarboard-fill me-2"></i> Đăng ký học
+                                    </a>
+                                    @Html.Partial("_FavoriteButton", new ECOLearning.ViewModels.FavoriteButtonModel { CourseId = Model.maKhoaHoc, TeacherId = Model.maGiaoVien, Variant = "square" })
+                                </div>
                             }
                             else if (isFree)
                             {
@@ -1051,21 +964,138 @@
 </div>
 
 @section scripts {
+    <script src="@Url.Content("~/assets/js/course-reviews.js?v=1.0")"></script>
     <script>
-        // Sao chép mã giảm giá để dán vào giỏ hàng (phản hồi ngay trên nút, không bật toast)
-        function copyCouponCode(btn) {
-            const code = btn.getAttribute('data-code');
-            const done = function () {
-                btn.innerText = 'Đã chép';
-                btn.classList.add('is-copied');
-                setTimeout(function () { btn.innerText = 'Sao chép'; btn.classList.remove('is-copied'); }, 1500);
-            };
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(code).then(done, function () { window.prompt('Mã giảm giá:', code); });
-            } else {
-                window.prompt('Mã giảm giá:', code);
+        // Thu gọn / hiện các mục khóa học liên quan; nhớ lựa chọn trên trình duyệt này.
+        // Chỉ ảnh hưởng cột trái: thẻ khóa học bên phải là sticky trong cột phải (cao bằng cột trái), nên khi cột trái
+        // co lại thẻ sẽ bị đẩy lên và trang bị kéo cuộn. Vì vậy bù khoảng trống cuối cột trái vừa đủ để thẻ giữ nguyên
+        // vị trí, rồi trả lại vị trí cuộn cũ — tất cả trong cùng một khung hình nên không thấy nhảy.
+        (function () {
+            var wrap = document.querySelector('.rel-wrap');
+            var grid = document.querySelector('.details-layout-grid');
+            var card = document.querySelector('.sticky-course-card');
+
+            function giuViTriTheBenPhai(doiNoiDung) {
+                if (!wrap || !grid || !card || getComputedStyle(card).position !== 'sticky') {
+                    doiNoiDung();
+                    return;
+                }
+                var y = window.scrollY;
+                var r = card.getBoundingClientRect();
+                var dayTheMongMuon = y + r.bottom;               // đáy thẻ (tọa độ trang) cần giữ
+                wrap.style.paddingBottom = '0px';
+                doiNoiDung();
+                var dayLuoi = grid.getBoundingClientRect().bottom + window.scrollY;
+                var thieu = Math.ceil(dayTheMongMuon - dayLuoi);
+                wrap.style.paddingBottom = thieu > 0 ? thieu + 'px' : '0px';
+                // base.css bật scroll-behavior: smooth; trả vị trí cuộn phải tức thì, nếu không trang sẽ trượt thấy rõ
+                window.scrollTo({ top: y, left: window.scrollX, behavior: 'instant' });
             }
-        }
+
+            document.querySelectorAll('.rel-section').forEach(function (sec) {
+                var btn = sec.querySelector('.rel-toggle');
+                var body = document.getElementById(btn.getAttribute('aria-controls'));
+                var key = 'rel-collapsed-' + sec.getAttribute('data-rel-key');
+                function apply(collapsed) {
+                    body.hidden = collapsed;
+                    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                    btn.querySelector('.rel-toggle-text').textContent = collapsed ? 'Hiện ' + btn.getAttribute('data-count') + ' khóa học' : 'Thu gọn';
+                    btn.querySelector('.bi').className = collapsed ? 'bi bi-chevron-down' : 'bi bi-chevron-up';
+                }
+                var saved = null;
+                try { saved = localStorage.getItem(key); } catch (e) { }
+                apply(saved === '1');
+                btn.addEventListener('click', function () {
+                    var collapsed = !body.hidden;
+                    giuViTriTheBenPhai(function () { apply(collapsed); });
+                    try { localStorage.setItem(key, collapsed ? '1' : '0'); } catch (e) { }
+                });
+            });
+        })();
+
+        // Combo "Thường xuyên được mua cùng nhau": thêm từng khóa / thêm tất cả vào giỏ (Cart/AddManyToCart kiểm tra lại ở server)
+        (function () {
+            var cartUrl = '@Url.Action("Index", "Cart")';
+            var addManyUrl = '@Url.Action("AddManyToCart", "Cart")';
+            var khoaDangXem = '@Model.maKhoaHoc';
+
+            function daTrongGio(courseId) {
+                document.querySelectorAll('[data-fbt-add]').forEach(function (b) {
+                    if (b.getAttribute('data-course') !== courseId) return;
+                    var a = document.createElement('a');
+                    a.href = cartUrl;
+                    a.className = 'fbt-btn is-in-cart';
+                    a.innerHTML = '<i class="bi bi-check2"></i> Đã trong giỏ';
+                    b.replaceWith(a);
+                });
+                // Nút "Thêm vào giỏ hàng" của thẻ bên phải (khóa đang xem)
+                var main = document.getElementById('btnAddToCartMain');
+                if (courseId === khoaDangXem && main && main.tagName === 'BUTTON') {
+                    var link = document.createElement('a');
+                    link.href = cartUrl;
+                    link.id = 'btnAddToCartMain';
+                    link.className = 'btn w-100 py-3 fw-bold mb-3 text-center d-block text-decoration-none';
+                    link.style.cssText = 'background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px; transition: all 0.2s;';
+                    link.innerHTML = '<i class="bi bi-cart-check-fill me-1"></i> Chuyển đến giỏ hàng';
+                    main.replaceWith(link);
+                }
+            }
+
+            function capNhatNutTatCa() {
+                var all = document.querySelector('[data-fbt-add-all]');
+                if (!all) return;
+                var conLai = Array.prototype.map.call(document.querySelectorAll('[data-fbt-add]'), function (b) { return b.getAttribute('data-course'); });
+                if (conLai.length === 0) {
+                    var a = document.createElement('a');
+                    a.href = cartUrl;
+                    a.className = 'fbt-btn-primary';
+                    a.innerHTML = '<i class="bi bi-cart-check"></i> Đến giỏ hàng';
+                    all.replaceWith(a);
+                } else {
+                    all.setAttribute('data-courses', conLai.join(','));
+                }
+            }
+
+            function themVaoGio(ids, nut, nhanCu) {
+                nut.disabled = true;
+                nut.textContent = 'Đang thêm...';
+                $.ajax({
+                    url: addManyUrl,
+                    type: 'POST',
+                    traditional: true,
+                    data: { courseIds: ids },
+                    success: function (res) {
+                        (res.inCart || []).forEach(daTrongGio);
+                        if (typeof res.cartCount === 'number' && typeof updateHeaderCartBadge === 'function') updateHeaderCartBadge(res.cartCount);
+                        capNhatNutTatCa();
+                        if (res.errors && res.errors.length) {
+                            showToast(res.errors.map(function (e) { return e.message; }).join(' '), 'warning');
+                        } else if (!res.success) {
+                            showToast(res.message || 'Không thêm được vào giỏ hàng.', 'error');
+                        }
+                        if (document.body.contains(nut)) { nut.disabled = false; nut.textContent = nhanCu; }
+                    },
+                    error: function () {
+                        nut.disabled = false;
+                        nut.textContent = nhanCu;
+                        showToast('Có lỗi xảy ra khi thêm vào giỏ hàng!', 'error');
+                    }
+                });
+            }
+
+            document.addEventListener('click', function (e) {
+                var mot = e.target.closest('[data-fbt-add]');
+                if (mot) {
+                    themVaoGio([mot.getAttribute('data-course')], mot, 'Thêm vào giỏ hàng');
+                    return;
+                }
+                var tatCa = e.target.closest('[data-fbt-add-all]');
+                if (tatCa) {
+                    var ids = (tatCa.getAttribute('data-courses') || '').split(',').filter(Boolean);
+                    if (ids.length) themVaoGio(ids, tatCa, 'Thêm tất cả vào giỏ hàng');
+                }
+            });
+        })();
 
         function extractVideoInfo(url) {
             if (!url || typeof url !== 'string' || !url.trim()) return null;

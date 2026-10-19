@@ -35,8 +35,11 @@ namespace ECOLearning.ViewModels
         public string TenChienDich { get; set; }
         public DateTime NgayTao { get; set; }
 
-        /// <summary>true: học viên thấy mã ở giỏ hàng / trang khóa học; false: mã kín, Marketing gửi riêng.</summary>
+        /// <summary>true: học viên thấy mã ở trang chủ / trang khóa học để lưu vào ví; false: mã kín, Marketing gửi riêng.</summary>
         public bool CongKhai { get; set; }
+
+        /// <summary>Mô tả chính sách Marketing viết cho học viên (migration 009).</summary>
+        public string ChinhSach { get; set; }
 
         public string MaGiamGia { get; set; }
         public string MaCode { get; set; }
@@ -155,6 +158,7 @@ namespace ECOLearning.ViewModels
         public decimal? ChiTieuToiThieu { get; set; }
         public string DieuKienApDung { get; set; }
         public bool CongKhai { get; set; } = true;
+        public string ChinhSach { get; set; }
 
         // Chỉ dùng để hiển thị form
         public bool LaChinhSua => !string.IsNullOrEmpty(MaKhuyenMai);
@@ -183,12 +187,24 @@ namespace ECOLearning.ViewModels
     /// </summary>
     public class MaGiamGiaHienThi
     {
+        public string MaKhuyenMai { get; set; }
+        public string MaGiamGia { get; set; }
         public string MaCode { get; set; }
         public string TenKhuyenMai { get; set; }
         public string MoTaUuDai { get; set; }
 
-        /// <summary>Điều kiện ngắn gọn: phạm vi, đơn tối thiểu, thân thiết, ghi chú của Marketing.</summary>
+        /// <summary>Giá trị ngắn cho cuống vé: "25%", "50K".</summary>
+        public string GiaTriNgan { get; set; }
+
+        /// <summary>Dòng phụ dưới giá trị ngắn: "Tối đa 50K" (chỉ giảm %).</summary>
+        public string GhiChuGiaTri { get; set; }
+
+        /// <summary>Đã nằm trong ví của học viên đang xem.</summary>
+        public bool DaLuu { get; set; }
+
+        /// <summary>Điều kiện ngắn gọn: phạm vi, đơn tối thiểu, thân thiết, số lượt mỗi tài khoản.</summary>
         public List<string> DieuKien { get; set; } = new List<string>();
+        public DateTime NgayBatDau { get; set; }
         public DateTime NgayKetThuc { get; set; }
 
         /// <summary>Số lượt còn lại của cả chương trình (null = không giới hạn).</summary>
@@ -199,6 +215,87 @@ namespace ECOLearning.ViewModels
         public bool CoTheApDung { get; set; }
         public decimal TienGiam { get; set; }
         public string LyDo { get; set; }
+    }
+
+    /// <summary>Một mã trong ví "Mã giảm giá của tôi".</summary>
+    public class MaTrongVi
+    {
+        public MaGiamGiaHienThi Ma { get; set; }
+        public DateTime NgayLuu { get; set; }
+        public int LuotCuaToi { get; set; }
+        public int GioiHanMoiHocVien { get; set; }
+
+        /// <summary>CoTheDung / SapDienRa / DaDung / HetHieuLuc.</summary>
+        public string TrangThai { get; set; }
+
+        /// <summary>Nhãn trạng thái: "Có thể dùng", "Đã dùng", "Hết hạn", "Hết lượt", "Tạm ngưng", "Đã kết thúc", "Sắp diễn ra".</summary>
+        public string NhanTrangThai { get; set; }
+    }
+
+    /// <summary>Trang "Mã giảm giá của tôi".</summary>
+    public class ViMaGiamGiaViewModel
+    {
+        /// <summary>codung / dadung / hethan / thuthap.</summary>
+        public string Tab { get; set; }
+        public List<MaTrongVi> CoTheDung { get; set; } = new List<MaTrongVi>();
+        public List<MaTrongVi> DaDung { get; set; } = new List<MaTrongVi>();
+        public List<MaTrongVi> HetHieuLuc { get; set; } = new List<MaTrongVi>();
+
+        /// <summary>Mã công khai đang chạy mà học viên chưa lưu.</summary>
+        public List<MaGiamGiaHienThi> CoTheThuThap { get; set; } = new List<MaGiamGiaHienThi>();
+        public bool GioHangCoKhoaHoc { get; set; }
+    }
+
+    /// <summary>Trang chi tiết mã giảm giá kèm chính sách.</summary>
+    public class ChiTietMaGiamGiaViewModel
+    {
+        public ChuongTrinhKhuyenMai ChuongTrinh { get; set; }
+        public MaGiamGiaHienThi The { get; set; }
+        public MaTrongVi TrongVi { get; set; }
+
+        /// <summary>Còn lưu được (công khai, đang chạy, đủ điều kiện, chưa lưu).</summary>
+        public bool CoTheLuu { get; set; }
+
+        /// <summary>Các điều khoản sinh từ cấu hình chương trình.</summary>
+        public List<KeyValuePair<string, string>> DieuKhoan { get; set; } = new List<KeyValuePair<string, string>>();
+        public List<LuaChonKhoaHoc> KhoaHocApDung { get; set; } = new List<LuaChonKhoaHoc>();
+        public List<LuotSuDungUuDai> LichSuCuaToi { get; set; } = new List<LuotSuDungUuDai>();
+        public bool GioHangCoKhoaHoc { get; set; }
+    }
+
+    /// <summary>Tham số cho partial thẻ mã dùng chung (Views/Shared/_CouponTicket.cshtml).</summary>
+    public class TheMaGiamGiaModel
+    {
+        public MaGiamGiaHienThi Ma { get; set; }
+
+        /// <summary>Nhãn trạng thái thay cho hạn dùng (trang ví): "Đã dùng", "Hết hạn"...</summary>
+        public string NhanTrangThai { get; set; }
+
+        /// <summary>Làm mờ thẻ (mã đã dùng / hết hiệu lực).</summary>
+        public bool LamMo { get; set; }
+
+        /// <summary>Dòng phụ nhấn mạnh, ví dụ "Còn 517.500 đ khi dùng mã".</summary>
+        public string DongPhu { get; set; }
+
+        /// <summary>Có thì hiện nút "Dùng ngay" tới link này.</summary>
+        public string LinkDungNgay { get; set; }
+
+        /// <summary>Hiện nút "Lưu mã" / nhãn "Đã lưu".</summary>
+        public bool HienNutLuu { get; set; } = true;
+
+        /// <summary>Thẻ hẹp (cột bên phải trang khóa học).</summary>
+        public bool NhoGon { get; set; }
+
+        /// <summary>Hiện link "Chi tiết" (ẩn ở chính trang chi tiết mã).</summary>
+        public bool HienChiTiet { get; set; } = true;
+    }
+
+    /// <summary>Kết quả lưu mã vào ví.</summary>
+    public class KetQuaLuuMa
+    {
+        public bool Success { get; set; }
+        public bool DaCoTrongVi { get; set; }
+        public string Message { get; set; }
     }
 
     /// <summary>Một lần dùng ưu đãi (chi tiết chương trình / báo cáo).</summary>

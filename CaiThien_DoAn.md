@@ -7,7 +7,7 @@ Skeleton Screen, xử lý web chạy chậm và hoàn thiện phân hệ Marketi
 > **Trạng thái commit:** phần lớn đã commit trong `3944db4` (nhánh `phu`, đã merge qua PR #4).
 > **Chưa commit:** trang danh mục `/danh-muc/{slug}`, sửa lỗi mất viền card danh mục (mục 12),
 > xử lý cold-start bằng lĩnh vực quan tâm + khóa phổ biến (mục 13, migration 007)
-> và phân hệ Marketing / giá / doanh thu (mục 14, migration 008).
+> phân hệ Marketing / giá / doanh thu / ví mã giảm giá (mục 14, migration 008, 009) và tìm kiếm cho khách (mục 15, migration 010).
 > File `Database/Seed/01_du_lieu_demo.sql` và phần "số chạy tăng dần" ở mục thống kê của `Views/Home/Index.cshtml`
 > là thay đổi có sẵn từ trước, không thuộc đợt này.
 
@@ -15,7 +15,7 @@ Skeleton Screen, xử lý web chạy chậm và hoàn thiện phân hệ Marketi
 
 ## 0. Việc cần làm sau khi pull
 
-1. Chạy `Database/Migrations/005_GoiY_LocCongTac.sql`, `006_GoiY_GoiYLaiKhoaChiXem.sql`, `007_GoiY_SoThichNguoiDung.sql` rồi `008_Marketing_KhuyenMai.sql` trong SSMS. Chạy lại nhiều lần vẫn an toàn, không xóa dữ liệu.
+1. Chạy `Database/Migrations/005_GoiY_LocCongTac.sql`, `006_GoiY_GoiYLaiKhoaChiXem.sql`, `007_GoiY_SoThichNguoiDung.sql`, `008_Marketing_KhuyenMai.sql`, `009_ViMaGiamGia.sql`, `010_TimKiem.sql` rồi `011_DanhGia_HuuIch_PhanHoi.sql` trong SSMS. Chạy lại nhiều lần vẫn an toàn, không xóa dữ liệu.
 2. Visual Studio: **Rebuild Solution**.
 3. **Bắt buộc chạy job gợi ý ít nhất một lần.** Migration chỉ tạo bảng, view và thủ tục; các bảng `course_similarity`,
    `GoiY_TrongSo`, `KhoaHocKhuyenNghi` vẫn **trống** cho tới khi job chạy, nên web không có gợi ý lọc cộng tác nào
@@ -462,19 +462,32 @@ Làm theo `DacTa_LuongChucNang_Marketing_ECOLearning.md`. Bốn điểm đã ch�
   Ghi `DonHang`, `ChiTietDonHang`, `DangKyKhoaHoc`, `SuDungUuDai`; một đơn chỉ dùng một coupon (UNIQUE `maDonHang`).
   Không cho mua lại khóa đã sở hữu.
 
-**Học viên thấy mã giảm giá ở đâu** (trước đây Marketing tạo mã nhưng học viên không thấy ở đâu cả):
+**Học viên thu thập và dùng mã giảm giá (ví "Mã giảm giá của tôi", migration 009):**
 
-- Mỗi chương trình có tùy chọn **"Công khai mã"** (cột `congKhai`, mặc định bật). Bỏ chọn thì thành **mã kín**: không hiện trên hệ thống,
-  Marketing tự gửi (email, mạng xã hội), học viên vẫn nhập tay được. Danh sách chương trình có nhãn "Mã kín".
-- **Giỏ hàng:** khối "Mã giảm giá dành cho bạn" dưới ô nhập mã. Mỗi mã có mức giảm, tên chương trình, điều kiện, hạn dùng,
-  số tiền giảm cho giỏ hiện tại và nút **"Dùng mã"**. Mã chưa đủ điều kiện bị làm mờ, kèm lý do (ví dụ "Mã áp dụng cho đơn từ 1.000.000 đ").
-  Mã đang dùng đứng đầu, ghi "Đang dùng". Hiện 2 mã, còn lại bấm "Xem thêm" (khung tóm tắt dính theo màn hình nên không để quá dài).
-  Danh sách tự tải lại sau khi áp mã hoặc xóa khóa khỏi giỏ.
-- **Trang chi tiết khóa học:** dưới giá bán hiện tối đa 2 mã áp dụng cho khóa đó, kèm "Còn X đ khi dùng mã ở giỏ hàng" và nút "Sao chép".
-  Không hiện với giáo viên chủ khóa, học viên đã đăng ký, khóa miễn phí.
-- Chỉ hiện mã: công khai, đang chạy, trong thời gian, còn lượt, học viên chưa dùng hết lượt của mình.
-  **Mã thân thiết chỉ hiện với học viên đã đạt tiêu chí.** Số tiền giảm hiển thị tính bằng chính `KiemTraCoupon`, nên khớp với lúc áp mã thật.
-- Code: `PromotionService.LayMaChoHocVien`, `CartController.AvailableCoupons`, `Views/Cart/_CouponList.cshtml`, `CourseController.Details`.
+Luồng: Marketing tạo mã công khai → học viên **lưu mã** vào ví → ở bước thanh toán mở mục **Mã khuyến mãi**, chọn mã trong ví và bấm **Áp dụng**.
+
+- **Mã công khai / mã kín:** tùy chọn "Công khai mã" (cột `congKhai`, mặc định bật). Mã kín không hiện ở đâu, Marketing tự gửi,
+  học viên nhập tay ở hộp chọn mã. Danh sách chương trình có nhãn "Mã kín".
+- **Trang chủ:** mục **"Mã khuyến mãi"** nằm ngay dưới "Danh mục đào tạo" (chỉ học viên / giáo viên đã đăng nhập), mã chưa lưu đứng trước,
+  có link "Mã giảm giá của tôi". Hiện dạng **slider**: thẻ mã thu nhỏ, **3 mã một hàng** (2 trên tablet, 1 trên điện thoại); nhiều hơn thì có
+  **mũi tên ← →** (mỗi lần dời đúng một lượt), vuốt được trên cảm ứng; tên / điều kiện dài cắt bằng "…". Dùng lại slider `.course-slider` của trang chủ
+  (thêm biến CSS `--slide-step`; hai slider khóa học giữ cách bước cũ).
+- **Lưu mã:** bấm "Lưu mã" → hộp thoại xác nhận *"Sau khi lưu, mã không thể xóa khỏi danh sách và thao tác này không thể hoàn tác"*
+  → Hủy hoặc Lưu mã. Lưu xong mọi nút cùng mã trên trang chuyển "Đã lưu". **Không có thao tác xóa / hoàn tác**, server cũng không có endpoint xóa.
+  Server kiểm tra lại: mã công khai, đang chạy, còn lượt, đủ tiêu chí thân thiết, chưa dùng hết lượt; lưu lần hai trả "đã có trong ví".
+- **Menu Khám phá → "Mã giảm giá của tôi"** (`/ma-giam-gia-cua-toi`): tab **Có thể dùng** (có nút "Dùng ngay", gồm mã sắp diễn ra),
+  **Đã dùng**, **Hết hiệu lực** (hết hạn / hết lượt / tạm ngưng / đã kết thúc), **Thu thập thêm** (mã công khai chưa lưu).
+- **Chi tiết mã** (`/ma-giam-gia/{mã}`): thẻ mã, **Chính sách áp dụng** do hệ thống sinh từ cấu hình (mức ưu đãi, thời gian, khóa học áp dụng,
+  đơn tối thiểu, đối tượng, số lượt, cách dùng), **Mô tả chương trình** do Marketing viết (cột `chinhSach`, ô mới trong form),
+  danh sách khóa áp dụng, **Quy định chung**, tình trạng của học viên và lịch sử dùng. Mã kín chưa lưu hoặc mã thân thiết chưa đạt tiêu chí → 404.
+- **Giỏ hàng / thanh toán:** khung tóm tắt chỉ có mục **"Mã khuyến mãi"**: nút "Chọn hoặc nhập mã" (kèm "N mã dùng được").
+  Bấm mới mở hộp thoại **Chọn mã khuyến mãi**: ô nhập tay (mã kín) + **chỉ mã trong ví**, mỗi mã có số tiền giảm cho giỏ hiện tại
+  và nút **Áp dụng**; mã chưa đủ điều kiện bị khóa nút, kèm lý do. Áp xong hiện mã đang dùng với "Đổi" / "Bỏ" (`Cart/RemoveCoupon`).
+- **Trang chi tiết khóa học:** không hiển thị mã khuyến mãi (đã bỏ theo yêu cầu); học viên thu thập mã ở trang chủ hoặc trang "Mã giảm giá của tôi".
+- Mã dùng khi thanh toán (kể cả nhập tay) được tự đưa vào ví để có lịch sử. Số tiền giảm hiển thị luôn tính bằng `KiemTraCoupon`, khớp lúc áp mã thật.
+- Code: `Services/PromotionService.ViMa.cs` (`LayMaChoHocVien`, `LayViCuaToi`, `LuuMa`, `LayChiTiet`), `Controllers/CouponController.cs`,
+  `Views/Coupon/*`, `Views/Shared/_CouponTicket.cshtml`, `Views/Shared/_CouponCollectModal.cshtml`, `assets/js/coupon-wallet.js`,
+  `assets/css/coupon.css`, `Views/Cart/_CouponList.cshtml`, `App_Start/RouteConfig.cs` (route `ma-giam-gia-cua-toi`, `ma-giam-gia/{code}`).
 
 ### 14.6. Báo cáo
 
@@ -500,13 +513,15 @@ Làm theo `DacTa_LuongChucNang_Marketing_ECOLearning.md`. Bốn điểm đã ch�
 - **Tạo nhiều chương trình / chiến dịch trong cùng một giây bị lỗi** do trùng mã (`KM`/`CD` + thời gian + 2 số `new Random()`).
   Nay dùng 4 số ngẫu nhiên lấy từ Guid và kiểm tra mã chưa tồn tại trước khi ghi (`PromotionService.HauToMaMoi`).
 
-### 14.9. CSDL: migration 008
+### 14.9. CSDL: migration 008 và 009
 
 | Bảng | Thay đổi |
 | :--- | :--- |
 | `ChienDich` (mới) | `maChienDich`, `tenChienDich`, `mucTieu`, `noiDung`, `doiTuong`, `ngayBatDau`, `ngayKetThuc`, `trangThai` (HoatDong / KetThuc), `maNhanVienMarketing`, `ngayTao` |
 | `SuDungUuDai` (mới) | Mỗi lần dùng coupon: đơn hàng (UNIQUE), học viên, khuyến mãi, mã giảm giá, tiền được áp dụng, tiền giảm, thời gian |
 | `KhuyenMai` | Thêm `loaiUuDai`, `giamToiDa`, `donHangToiThieu`, `phamVi`, `doiTuong`, `soKhoaToiThieu`, `chiTieuToiThieu`, `trangThai`, `maChienDich`, `ngayTao`, `congKhai` (1 = học viên thấy mã). `mucUuDai` là % hoặc số tiền tùy `loaiUuDai` |
+| `ViMaGiamGia` (mới, **009**) | Ví mã của học viên: `maHocVien`, `maGiamGia` (PK kép), `ngayLuu`. Không xóa được |
+| `KhuyenMai.chinhSach` (**009**) | Mô tả chính sách Marketing viết cho học viên, hiện ở trang chi tiết mã |
 | `MaGiamGia` | Thêm `gioiHanLuotDung`, `gioiHanMoiHocVien` (mặc định 1) |
 | Trigger | `tongTien = SUM(donGia) − tiền giảm trong SuDungUuDai` |
 
@@ -518,26 +533,260 @@ Làm theo `DacTa_LuongChucNang_Marketing_ECOLearning.md`. Bốn điểm đã ch�
   thanh toán thành công, `DonHang.tongTien` = 1.330.000; dùng lại mã → "đã hết lượt".
 - Báo cáo Marketing, chi tiết chương trình, danh sách thân thiết, Dashboard, Admin doanh thu theo ngày đều khớp số liệu; khoảng ngày sai thì báo lỗi.
 - Giáo viên gửi duyệt khóa có bài thiếu video → bị chặn, nêu tên bài. Admin phê duyệt khóa có video mất file → bị chặn.
-- Hiển thị mã: mã kín `TESTKIN` không hiện nhưng nhập tay vẫn giảm 30.000 đ; `TESTUI` (20%, chỉ 1 khóa) hiện ở trang khóa đó và ở giỏ;
-  `TESTMIN` (đơn từ 1.000.000 đ) bị làm mờ kèm lý do khi giỏ 690.000 đ, dùng được khi giỏ 1.380.000 đ;
-  bấm "Dùng mã" → giảm 138.000 đ, thẻ chuyển "Đang dùng"; xóa khóa → mã tự bỏ, danh sách cập nhật lý do.
+- Ví mã: mục mã ở trang chủ nằm ngay sau "Danh mục đào tạo"; bấm "Lưu mã" → hộp thoại xác nhận, Hủy thì không lưu, Lưu thì nút thành "Đã lưu";
+  lưu lại lần hai → "đã có trong ví"; lưu mã kín qua API → bị từ chối; xem chi tiết mã kín chưa lưu → 404.
+- Giỏ trước khi lưu mã: "Chưa có mã dùng được", hộp chọn mã trống kèm link thu thập. Sau khi lưu `TESTWALLET` (20%, tối đa 100.000 đ):
+  "1 mã dùng được", Áp dụng → giảm 100.000 đ (690.000 → 590.000), Bỏ → về 690.000; nhập tay mã kín `TESTKIN` → giảm 30.000 đ; mã sai → báo lỗi trong hộp.
+- Thanh toán với `TESTWALLET` → mã chuyển sang tab "Đã dùng", trang chi tiết hiện lịch sử đơn và "Đã dùng 1/1 lượt".
 
 File chính: `Services/PromotionService.cs`, `Services/CampaignService.cs`, `Services/RevenueService.cs`, `Services/CourseContentService.cs`,
 `ViewModels/PromotionModels.cs`, `ViewModels/CampaignModels.cs`, `Controllers/CartController.cs`, `Views/Cart/Index.cshtml`,
 `Areas/Marketing/Controllers/{Promotion,Loyalty,Campaign,CoursePrice,CampaignReport,Dashboard,MarketingBase}Controller.cs`,
 `Areas/Marketing/Views/{Promotion,Loyalty,Campaign,CoursePrice,CampaignReport,Dashboard,Shared}/…`, `Areas/Marketing/Models/MarketingReportModels.cs`,
 `assets/css/marketing.css`, `Areas/Admin/Controllers/{RevenueReport,SystemReport,CourseApproval}Controller.cs`, `Areas/Admin/Views/RevenueReport/Index.cshtml`,
-`Areas/Instructor/Controllers/CourseController.cs`, `Areas/Instructor/Views/Course/{Create,Edit}.cshtml`, `Database/Migrations/008_Marketing_KhuyenMai.sql`, `ECOLearning.csproj`.
+`Areas/Instructor/Controllers/CourseController.cs`, `Areas/Instructor/Views/Course/{Create,Edit}.cshtml`, `Database/Migrations/008_Marketing_KhuyenMai.sql`, `Database/Migrations/009_ViMaGiamGia.sql`, `ECOLearning.csproj`.
 
 ---
 
-## 15. Việc còn lại / cần quyết định
+## 15. Tìm kiếm khóa học: gợi ý khi gõ và trang /tim-kiem (mới, **chưa commit**)
+
+**Yêu cầu:** khách chưa đăng nhập vẫn tìm được; khi gõ hiện tối đa **7 từ khóa** liên quan và **5 khóa học** có tên gần đúng
+(chỉ khóa chưa mua / đăng ký), thêm tối đa **2 giảng viên**; Enter mở trang kết quả.
+
+**Đã chốt với nhóm:** khách xem được trang chi tiết khóa học, trang danh mục và hồ sơ giáo viên (chỉ Mua / Thêm giỏ / Thả tim / Vào học
+mới bắt đăng nhập); từ khóa gợi ý lấy từ **lịch sử tìm kiếm + dữ liệu khóa học**; trang kết quả riêng `/tim-kiem`; dropdown có giảng viên.
+
+### 15.1. Cách tìm (Services/SearchService.cs, Services/SearchText.cs)
+
+- **Chỉ mục trong bộ nhớ**, dựng từ CSDL và cache 2 phút (`HttpRuntime.Cache`): khóa đang bán (tên, danh mục, giáo viên, mô tả ngắn,
+  mô tả đã bỏ thẻ HTML), danh mục, giáo viên, cụm từ trong tên khóa, từ vựng. Dữ liệu cỡ vài trăm khóa nên đủ nhanh; khi lớn hơn thay bằng
+  SQL Server Full-Text Search / Elasticsearch mà không đổi giao diện.
+- **Không dấu:** "lap trinh" khớp "Lập trình", "đ" → "d"; giữ ký hiệu "C#", "C++"; "ASP.NET" → "asp net".
+- **Gần đúng:** từ cuối khớp **tiền tố** (đang gõ dở: "lap tr"); từ dài cho phép **gõ sai** (4–7 ký tự sai 1, từ 8 ký tự sai 2,
+  khoảng cách Levenshtein): "pythn" → Python, "javscript" → JavaScript. Bỏ hư từ ("và", "với", "the", "of"...).
+- **Điểm liên quan** = Σ trọng số trường × độ khớp (tên 10, danh mục 6, giáo viên 5, mô tả ngắn 2.5, mô tả 1;
+  trùng 1 / tiền tố 0.85 / gõ sai 0.6), **+12** nếu cả cụm nằm liền trong tên (+4 nếu ở đầu tên), cộng nhẹ số học viên và điểm đánh giá.
+- Mặc định phải **khớp mọi từ**; không có khóa nào thì nới thành khớp từ nửa số từ và báo "khớp một phần".
+- **Ẩn khóa đã đăng ký** và khóa do chính giáo viên dạy (khách thấy tất cả).
+
+### 15.2. Gợi ý khi gõ (assets/js/search-suggest.js, `GET /Search/Suggest?q=`)
+
+- **7 từ khóa** = từ khóa nhiều người đã tìm (bảng `TuKhoaTimKiem`) + cụm 1–3 từ trong tên khóa / tên danh mục.
+  Cụm được cắt theo **từ ghép tiếng Việt** (`SearchText.TuGhep`: "cơ bản", "lập trình", "hiện đại"...) để không ra "figma cơ".
+- **5 khóa học** (ảnh, tên, giảng viên) xếp theo điểm liên quan; **2 giảng viên** có tên khớp (ảnh, số khóa).
+- Kỹ thuật phía trình duyệt: chờ ngừng gõ 180 ms, hủy request cũ (`AbortController`), bỏ kết quả về muộn, cache 30 câu;
+  phím ↑ ↓ / Enter / Esc; ARIA `combobox` / `listbox` / `aria-activedescendant`; dựng DOM bằng `textContent` (không chèn HTML).
+  Phần người dùng đã gõ được tô đậm. Hộp tự canh trong màn hình hẹp.
+
+### 15.3. Thống kê từ khóa (migration 010, bảng `TuKhoaTimKiem`)
+
+- Ghi khi **mở trang kết quả** (không ghi mỗi phím gõ), mỗi phiên chỉ cộng 1 lượt cho một từ khóa, gộp theo dạng không dấu (`MERGE`).
+- **Không lưu ai tìm** (không có mã người dùng).
+- Chỉ gợi ý lại từ khóa **có kết quả khớp đủ** và **mọi từ đều có trong dữ liệu khóa học**: câu gõ sai ("pythn"), câu rác,
+  câu chỉ khớp một phần không lan sang người khác.
+
+### 15.4. Trang kết quả `/tim-kiem?q=` (Views/Search/Index.cshtml)
+
+- Tiêu đề + số kết quả, chip **danh mục liên quan**, bộ lọc **danh mục / cấp độ / giá / đánh giá** (đếm số khóa từng mục,
+  chọn là áp dụng), **sắp xếp** (liên quan, nhiều học viên, đánh giá, giá tăng / giảm), **phân trang** 12 khóa / trang.
+- Không có kết quả: "Có phải bạn muốn tìm: …" (sửa từ gõ sai theo từ vựng), từ khóa được tìm nhiều, khóa phổ biến.
+- Cho phép tìm chuỗi có ký tự đặc biệt (`<div>`, `C++`): tắt Request Validation cho 2 action này, mọi chỗ xuất ra đều encode.
+
+### 15.5. Mở trang cho khách
+
+- `Course/Details`, `/danh-muc/{slug}`: bỏ bắt đăng nhập. Nút Mua / Thêm giỏ / Thả tim / Đăng ký học vẫn yêu cầu đăng nhập như cũ.
+- `User/Index`, `User/Courses` (hồ sơ giáo viên): khách **chỉ xem được tài khoản giáo viên** đang hoạt động (học viên → 404);
+  **email / số điện thoại chỉ hiện khi đã đăng nhập**.
+- Header: ô tìm kiếm gửi `q` tới `/tim-kiem` (trước đây gửi tới `/Course` vốn bắt đăng nhập).
+
+**Kiểm thử (khách + học viên tạm, dữ liệu test đã xóa):** gợi ý "web", "lap trinh", "pythn", "javscript", "tran minh" (ra giảng viên),
+"figma", "c#", "thiet ke ui" đúng; gõ thật "lap tr" → dropdown 4 từ khóa + 5 khóa, ↓↓ Enter mở từ khóa thứ 2; trang kết quả "lap trinh"
+8 khóa, lọc "Trung cấp" 2 khóa, sắp xếp giá; "figmaa photoshopp" → khớp một phần và không được gợi ý lại; "xyzabc" → trang không có
+kết quả + khóa phổ biến; `<script>` hiển thị an toàn; khách mở chi tiết khóa / danh mục / hồ sơ giáo viên (không thấy email), hồ sơ học viên → 404;
+học viên đã đăng ký DMKH01 không còn thấy khóa đó (8 → 7 kết quả).
+
+File: `Services/SearchService.cs`, `Services/SearchText.cs`, `Controllers/SearchController.cs`, `ViewModels/SearchViewModels.cs`,
+`Views/Search/Index.cshtml`, `assets/js/search-suggest.js`, `assets/css/search.css`, `Views/Shared/_Layout.cshtml`,
+`App_Start/RouteConfig.cs` (route `tim-kiem`), `Controllers/CourseController.cs`, `Controllers/CategoryController.cs`,
+`Controllers/UserController.cs`, `Views/User/Index.cshtml`, `Database/Migrations/010_TimKiem.sql`, `ECOLearning.csproj`.
+
+---
+
+## 16. Trang chi tiết khóa học: "Thường xuyên được mua cùng nhau" và "Học viên khác cũng mua" (mới, **chưa commit**)
+
+Hai mục ở cuối trang, **cùng là lọc cộng tác Item-based trên dữ liệu MUA** (đơn hàng "Đã thanh toán"), khác nhau ở điều kiện "mua chung".
+Không dùng luật kết hợp (Apriori) vì hiện **không có đơn nào mua từ 2 khóa** (36 đơn, mỗi đơn 1 khóa) nên luật theo đơn hàng sẽ luôn trống.
+
+| Mục | Hai khóa được tính là mua chung khi | Ngưỡng |
+| :--- | :--- | :--- |
+| **Thường xuyên được mua cùng nhau** (đặt trên) | Cùng một học viên mua cả hai, **cách nhau ≤ 30 ngày** | ≥ 1 học viên |
+| **Học viên khác cũng mua** (đặt dưới) | Cùng một học viên mua cả hai, bất kỳ lúc nào; **bỏ các khóa đã có ở mục trên** | ≥ 2 học viên (như `min_common_users`) |
+
+- **Độ tương đồng:** `sim(i, j) = |U(i) ∩ U(j)| / sqrt(|U(i)| · |U(j)|)`, cosine trên vector nhị phân "học viên đã mua"; xếp giảm dần, mỗi mục tối đa 5 khóa.
+- **Vì sao là Item-based, không phải User-based:** đầu vào là **khóa đang xem**, so cột (khóa) với cột; danh sách giống nhau với mọi người xem,
+  kể cả khách. Đây chính là tính năng "Customers who bought this item also bought" (Linden, Smith, York 2003, *Item-to-Item Collaborative Filtering*).
+- Không gợi ý: khóa đang xem, khóa người xem đã đăng ký, khóa do chính họ dạy, khóa không còn bán (tạm khóa, khóa vĩnh viễn).
+- Mục không có dữ liệu thì **ẩn** (không bù khóa phổ biến để tiêu đề luôn đúng).
+- **Giao diện:** hai mục nằm **cuối cột trái** (dưới Đánh giá). Mỗi khóa một dòng: ảnh nhỏ, tên, điểm ★, số học viên,
+  tổng thời lượng bài học ("1,5 giờ" / "39 phút"), "Đã cập nhật: M/yyyy" (lần duyệt gần nhất), giá bán (giá gạch nếu đang giảm).
+  Rê chuột hiện lý do ("2 học viên đã mua cả hai khóa").
+- **Combo "Thường xuyên được mua cùng nhau":** khóa đang xem (nhãn "Khóa học này", nếu người xem còn mua được) + tối đa 3 khóa hay mua cùng,
+  nối bằng dấu "+". Mỗi khóa: ảnh, tên, mô tả ngắn, giảng viên, nhãn "Bán chạy" (≥ 3 học viên) / "Đánh giá cao" (≥ 4.5), điểm, số đánh giá,
+  thời lượng, giá và nút **"Thêm vào giỏ hàng"**. Cuối mục: **Tổng (N khóa)** giá bán + giá gốc gạch, nút **"Thêm tất cả vào giỏ hàng"**
+  (`Cart/AddManyToCart`, kiểm tra từng khóa: đang bán, không phải khóa mình dạy, chưa sở hữu). Khóa đã trong giỏ hiện "Đã trong giỏ";
+  đủ hết thì nút tổng thành "Đến giỏ hàng"; thêm khóa đang xem thì nút giỏ ở thẻ bên phải cũng đổi. Khách: các nút dẫn tới đăng nhập.
+  `AddToCart` nay cũng chặn khóa đã sở hữu (trước đây chỉ chặn lúc thanh toán).
+- **Thẻ "Mua ngay / Thêm vào giỏ hàng" dính khi cuộn:** trước đây `.sticky-course-card` có `position: sticky` nhưng không dính,
+  vì lưới 2 cột dùng `align-items: flex-start` nên cột phải chỉ cao bằng thẻ. Thêm `align-self: stretch` cho cột phải; màn hình ≤ 991 px thì không dính.
+- Mỗi mục có nút **Thu gọn / Hiện N khóa học** (`aria-expanded`), lựa chọn nhớ trên trình duyệt (localStorage).
+- Ma trận mua dựng từ CSDL, cache 10 phút trong bộ nhớ; dữ liệu đơn hàng nhỏ nên tính trực tiếp, không cần job riêng.
+  Khác ma trận `course_similarity` của job Python (dựa trên mọi tương tác: xem, học, đánh giá, tim) dùng ở trang chủ / `/Recommendation`.
+
+**Kiểm thử (khách chưa đăng nhập, so với kết quả tính bằng SQL):** DMKH12 → mua cùng nhau: DMKH10, DMKH02, DMKH04; cũng mua: DMKH05
+(DMKH09, DMKH13 đang khóa bị loại). DMKH01 → mua cùng nhau: DMKH10; cũng mua: DMKH02, DMKH05, DMKH04. DMKH03 không có dữ liệu → hai mục ẩn.
+Thu gọn → "Hiện 3 khóa học", tải lại trang vẫn thu gọn. Cuộn tới hai mục, thẻ mua vẫn ở top 96 px; thu gọn / hiện không làm thẻ bên phải
+nhảy (bù khoảng trống cuối cột trái, giữ vị trí cuộn). Combo DMKH12: tổng 2.560.000 đ (gốc 3.360.000 đ); thêm 1 khóa → giỏ 1; thêm tất cả → giỏ 4,
+tạm tính 2.560.000 đ; API thêm khóa đã sở hữu bị chặn.
+
+File: `Services/RelatedCourseService.cs`, `ViewModels/RelatedCourseViewModels.cs`, `Views/Course/_RelatedCourses.cshtml`,
+`Views/Course/Details.cshtml` (CSS `.rel-*`, sticky cột phải, script thu gọn), `Controllers/CourseController.cs` (`Details`), `Controllers/CartController.cs` (`AddManyToCart`, `ThemKhoaVaoGio`), `ECOLearning.csproj`.
+
+**Báo cáo:** mục 3.x có thể trình bày hai biến thể Item-based (theo khoảng thời gian mua và toàn bộ lịch sử); luật kết hợp đưa vào hướng phát triển
+khi có đủ đơn nhiều khóa.
+
+---
+
+## 17. Trang chi tiết khóa học: mục Giảng viên và Đánh giá (hữu ích, phản hồi của giáo viên) (mới, **chưa commit**)
+
+### 17.1. Giảng viên + "Các khóa học khác của …"
+
+- Đặt sau "Mô tả chi tiết", trước "Đánh giá". Tên (link hồ sơ, tab mới), chuyên môn, ảnh, **xếp hạng giảng viên** (điểm trung bình
+  trên mọi lượt đánh giá các khóa đang bán), **số đánh giá**, **số học viên** (không trùng), **số khóa học**, tiểu sử thu gọn có "Hiện thêm".
+- Số liệu lấy từ CSDL bằng `Services/InstructorProfileService.cs` — tách từ `UserController.BuildProfile` để trang hồ sơ `/User` và
+  trang chi tiết **cùng một cách tính**. Chuyên môn / tiểu sử chỉ hiện khi giáo viên đã khai (`DangKyGiaoVien`), **không điền câu mặc định**
+  (trang hồ sơ vẫn giữ câu mặc định cũ).
+- "Các khóa học khác của …": tối đa 3 thẻ (khóa đang bán, trừ khóa đang xem), nhiều hơn có "Xem tất cả" → `/User/Courses/{id}`.
+  **Giáo viên chỉ có một khóa thì ẩn mục này.**
+
+### 17.2. Đánh giá từ học viên
+
+- Trang chi tiết hiện tổng quan (điểm, phân bố sao) + **5 đánh giá mới nhất**; **nhiều hơn 5** thì có nút **"Xem tất cả N đánh giá"**
+  → trang `/Course/Reviews/{id}`: lọc theo số sao (bấm thanh phân bố), tìm nội dung / tên không phân biệt dấu, sắp xếp (mới nhất, hữu ích nhất,
+  điểm cao / thấp), phân trang 10 đánh giá. Lọc và phân trang làm trong SQL (`OFFSET / FETCH`).
+- **"Bạn thấy hữu ích?"** 👍 / 👎: người dùng đã đăng nhập chọn một trong hai, bấm lại để bỏ, bấm cái kia để đổi; hiện số lượt.
+  Không tự chấm đánh giá của mình (hiện "Đánh giá của bạn · N người thấy hữu ích"). Khách bấm → đăng nhập rồi quay lại `#danh-gia`.
+- **Phản hồi của giáo viên:** chỉ **giáo viên dạy khóa đó** thấy nút "Phản hồi đánh giá", viết / sửa ("đã sửa") / xóa; mỗi đánh giá tối đa
+  một phản hồi, tối đa 1000 ký tự; hiển thị dưới đánh giá cho mọi người. Server kiểm tra quyền (học viên / giáo viên khác gọi API bị từ chối).
+- An toàn: POST có AntiForgeryToken; nội dung luôn được encode (Razor / `textContent`), gõ `<b>` hiện đúng chữ; ghi bình chọn có khóa
+  `UPDLOCK, HOLDLOCK` để hai lần bấm liên tiếp không tạo trùng.
+
+**CSDL — migration 011** (`011_DanhGia_HuuIch_PhanHoi.sql`):
+
+| Bảng | Cột | Ghi chú |
+| :--- | :--- | :--- |
+| `DanhGiaHuuIch` | `maDanhGia`, `maNguoiDung` (PK kép), `huuIch` (1 / 0), `ngayCapNhat` | FK đánh giá `ON DELETE CASCADE` |
+| `PhanHoiDanhGia` | `maDanhGia` (PK), `maGiaoVien`, `noiDung` (≤ 1000), `ngayTao`, `ngayCapNhat` | FK đánh giá `ON DELETE CASCADE` |
+
+`ON DELETE CASCADE` để xóa đánh giá (vd. `99_xoa_du_lieu_demo.sql`) không bị khóa ngoại chặn.
+
+**Kiểm thử (khách, 4 học viên tạm có tiến độ học thật để qua trigger 25%, giáo viên demo; dữ liệu test đã xóa):**
+DMKH12 → Trần Minh Khoa: số liệu khớp SQL; 3 khóa khác; DMKH05 (Phạm Quốc Bảo, 1 khóa) ẩn mục khóa khác. 6 đánh giá → hiện 5 + "Xem tất cả 6".
+Thích → bỏ → không thích → đổi thích đúng; 2 người thích đếm 2; tự chấm mình bị chặn. Giáo viên phản hồi / sửa / xóa; học viên và giáo viên khác
+gọi API bị chặn. Trang tất cả: lọc 3 sao ra 2, tìm "rat hay" ra "rất hay", sắp "hữu ích nhất" đúng thứ tự.
+
+**Dữ liệu hiện tại:** mỗi khóa có tối đa 4 đánh giá nên nút "Xem tất cả" chưa xuất hiện; không thêm đánh giá ảo — nút tự hiện khi khóa có trên 5 đánh giá.
+
+File: `Services/InstructorProfileService.cs`, `Services/CourseReviewService.cs`, `Services/ReviewTime.cs`, `ViewModels/CourseReviewViewModels.cs`,
+`Views/Course/_InstructorInfo.cshtml`, `_ReviewSection.cshtml`, `_ReviewItem.cshtml`, `Reviews.cshtml`, `Views/Course/Details.cshtml`,
+`assets/css/course-reviews.css`, `assets/js/course-reviews.js`, `Controllers/CourseController.cs` (`Details`, `Reviews`),
+`Controllers/ReviewController.cs` (`Helpful`, `Reply`, `DeleteReply`), `Controllers/UserController.cs`, `Database/Migrations/011_DanhGia_HuuIch_PhanHoi.sql`.
+
+---
+
+## 18. Thông tin ngân hàng của giáo viên: trang đăng ký `/Instructor/TeacherApplication/Register` và trang hồ sơ (mới, **chưa commit**)
+
+- **Màu sắc:** bỏ màu xanh ngọc `#0D9488`, dùng màu chủ đạo `#434CE8` của hệ thống (banner, số bước, nút, ô chọn); trang trạng thái hồ sơ cũng đổi theo.
+- **Thông tin nhận thanh toán** (trước đây gõ tự do, dữ liệu thật đã có "VietComBank", "ACB Chi nhánh Gò Mây", "Techcombank Chi nhánh TP.HCM"):
+  - **Ngân hàng chọn từ danh mục** `Services/BankDirectory.cs` (46 ngân hàng, mã theo VietQR / Napas): ô tìm có gợi ý, gõ mã / tên viết tắt /
+    tên đầy đủ, có dấu hay không ("vcb", "ngoai thuong", "a chau"); xếp theo mức khớp (gõ "mb" ra MB Bank trước); ↑ ↓ Enter Esc.
+    **Không cho gõ tên ngân hàng tự do** (đã bỏ lựa chọn "Ngân hàng khác"); cần thêm ngân hàng thì bổ sung vào `BankDirectory`.
+    Lưu tên viết tắt chuẩn (vd. `Vietcombank`).
+  - **Dùng chung** ở trang đăng ký và **trang hồ sơ giáo viên** (phần "Thông tin nhận thù lao"): `Views/Shared/_BankPicker.cshtml`,
+    `assets/js/bank-picker.js`, `assets/css/bank-picker.css`; server kiểm tra như nhau (`TeacherApplicationController.Register`,
+    `ProfileController.UpdateTeacherProfile` nhận `bankCode`, không còn nhận tên ngân hàng gõ tay).
+  - **Dữ liệu cũ gõ tự do** ("VietComBank", "ACB Chi nhánh Gò Mây", "Techcombank Chi nhánh TP.HCM"): `BankDirectory.DoanNganHang`
+    nhận ra ngân hàng (trùng tên / mã, hoặc tên viết tắt đứng đầu) để chọn sẵn, kèm ghi chú vàng "Đã nhận ra … — vui lòng kiểm tra lại rồi lưu";
+    không nhận ra thì nhắc chọn lại. Dữ liệu trong CSDL chỉ đổi khi giáo viên bấm lưu.
+  - **Số tài khoản:** tự bỏ ký tự không phải số khi gõ / dán, 6–19 chữ số, bàn phím số trên điện thoại.
+  - **Tên chủ tài khoản:** điền sẵn từ họ tên tài khoản ở dạng IN HOA KHÔNG DẤU ("Nguyễn Thị Đào" → "NGUYEN THI DAO"); chuẩn hóa khi rời ô
+    (không đổi trong lúc gõ để không phá bộ gõ tiếng Việt).
+  - **Khung xem trước** "Doanh thu sẽ được chuyển tới: Vietcombank · STK 1012 3456 789 · NGUYEN THI DAO" để tự soát trước khi gửi.
+  - Server **kiểm tra và chuẩn hóa lại** tất cả (mã ngân hàng giả, số tài khoản sai, tên rỗng đều bị chặn), không tin dữ liệu trình duyệt.
+- **Sửa lỗi:** ô "Tên chủ tài khoản" có 2 thuộc tính `style` nên mất định dạng; nộp bị lỗi thì **giữ lại mọi giá trị đã nhập**
+  (trước đây xóa sạch); hồ sơ bị từ chối khi nộp lại được **điền sẵn** thông tin cũ; lỗi hiện ngay dưới từng ô.
+
+**Kiểm thử (giáo viên / học viên tạm, dữ liệu test đã xóa, `App_Data/TeacherApplications.json` khôi phục):** hồ sơ "ACB Chi nhánh Gò Mây" → chọn sẵn ACB
++ ghi chú; gõ tên tự do → lỗi, không lưu được; chọn "quan doi" → MB Bank, lưu `MB Bank` / `0720015799` / `TRAN THI HONG NHUNG`; gọi API với tên tự do
+→ bị chặn. Nộp lại hồ sơ bị từ chối "Techcombank Chi nhánh TP.HCM" → chọn sẵn Techcombank, điền sẵn các ô khác.
+
+File: `Services/BankDirectory.cs`, `ViewModels/TeacherRegisterViewModels.cs` (`BankPickerViewModel`), `Views/Shared/_BankPicker.cshtml`,
+`assets/js/bank-picker.js`, `assets/css/bank-picker.css`, `Areas/Instructor/Controllers/TeacherApplicationController.cs`,
+`Areas/Instructor/Views/TeacherApplication/Register.cshtml`, `Status.cshtml`, `Controllers/ProfileController.cs`, `Views/Profile/Index.cshtml`.
+
+---
+
+## 19. Phân trang danh sách khóa học và trang "Tất cả lĩnh vực" (mới, **chưa commit**)
+
+### 19.1. Phân trang 12 khóa / trang
+
+- **Trang áp dụng:** `/danh-muc/{slug}`, `/Course`, `/Learning/MyCourses`. Có từ 13 khóa trở lên thì sang trang tiếp theo.
+- **Dùng chung** `ViewModels/PhanTrangViewModel.cs`, `Views/Shared/_Pagination.cshtml` và `assets/css/pagination.css`:
+  - thanh "‹ Trước 1 … 4 [5] 6 … 10 Sau ›", kèm dòng "Hiển thị 13–24 trong 40 khóa học";
+  - link giữ mọi bộ lọc / sắp xếp trên URL, chỉ đổi `?trang=`;
+  - bấm sang trang thì nhảy tới đầu danh sách (`#ds-khoa-hoc`);
+  - số trang sai (`trang=99`, `-3`, `abc`) được đưa về trang hợp lệ gần nhất;
+  - đổi bộ lọc hoặc sắp xếp thì quay về trang 1.
+- **`/Course`:** lọc "Đánh giá tối thiểu" chuyển xuống SQL (trước đây lọc trong bộ nhớ sau khi tải hết). Đếm tổng rồi chỉ tải 12 khóa của trang (OFFSET/FETCH).
+  - Sắp xếp theo giá có thêm khóa phụ là mã khóa để thứ tự giữa các trang không nhảy.
+  - Đầu danh sách hiện "Tìm thấy N khóa học • Trang x/y".
+- **`/Learning/MyCourses`:**
+  - Hai tab "Đang học" / "Đã hoàn thành" thành link (`?tab=hoan-thanh`), mỗi tab phân trang riêng.
+  - Tiến độ của mọi khóa tính bằng 3 truy vấn cho cả trang. Trước đây là 3 truy vấn cho mỗi khóa.
+  - Thứ tự bài theo thứ tự chương, như trang Study.
+
+### 19.2. Trang "Tất cả lĩnh vực" `/danh-muc`
+
+- **Nút "Tất cả các lĩnh vực"** đặt cạnh mũi tên ở mục "Khám phá theo lĩnh vực" trang chủ. Nút luôn hiện, mũi tên vẫn chỉ hiện khi có trên 4 danh mục.
+- **Trang mới** `CategoryController.All`, `Views/Category/All.cshtml`, route `TatCaDanhMuc`. Trang mở cho cả khách.
+  - Mỗi lĩnh vực đang hoạt động là một thẻ gồm biểu tượng, tên, mô tả, số khóa, số giảng viên và số học viên. Bấm thẻ sang `/danh-muc/{slug}`.
+  - Số khóa bỏ khóa người dùng đã sở hữu, khớp với trang danh mục.
+  - Lĩnh vực chưa có khóa vẫn hiện, ghi "Chưa có khóa học".
+  - Lĩnh vực có nhiều khóa xếp lên trước.
+- **Biểu tượng:** dùng chung `IconDanhMuc`, trang chủ cũng sắp danh mục theo mã, nên một lĩnh vực mang cùng biểu tượng ở cả hai nơi.
+- **Breadcrumb:** trang danh mục đổi "Khóa học" thành "Tất cả lĩnh vực". `/danh-muc/` không có slug giờ ra trang này.
+
+**Kiểm thử (14 khóa tạm `TESTPG01–14` và 2 học viên tạm, đã xóa):**
+- Danh mục 21 khóa ra 2 trang (12 + 9), giữ `sort` khi sang trang. Link cũ `/danh-muc/DM01?trang=2` chuyển về đúng trang 2.
+- `/Course` có 24 khóa ra 2 trang. Tìm "test" + giá giảm dần ở trang 2 cho 13–14 / 14 khóa.
+- Khóa học của tôi có 14 khóa đang học ra 2 trang.
+- Tiến độ học viên thật (an.nguyen) trùng với SQL: 2/5, 5/6, 5/5, 6/6.
+- Ở 390 px thanh phân trang nằm gọn trong màn hình.
+
+File: `ViewModels/PhanTrangViewModel.cs`, `Views/Shared/_Pagination.cshtml`, `assets/css/pagination.css`, `Views/Shared/_Layout.cshtml`,
+`Controllers/CategoryController.cs` (`Index`, `All`), `ViewModels/CategoryPageViewModels.cs` (`IconDanhMuc`, `LinhVucItem`, `TatCaLinhVucViewModel`),
+`Views/Category/Index.cshtml`, `Views/Category/All.cshtml`, `App_Start/RouteConfig.cs`, `Controllers/CourseController.cs`, `Views/Course/Index.cshtml`,
+`Controllers/LearningController.cs` (`MyCourses`), `ViewModels/MyCoursesViewModel.cs`, `Views/Learning/MyCourses.cshtml`,
+`Controllers/HomeController.cs`, `Views/Home/Index.cshtml`.
+
+---
+
+## 20. Việc còn lại / cần quyết định
 
 | Việc | Ghi chú |
 | :--- | :--- |
-| Commit trang danh mục (mục 12), cold-start (mục 13) và Marketing (mục 14) | Đang ở thư mục làm việc nhánh `phu`. Thành viên khác cần chạy migration 007, 008 |
+| Commit trang danh mục (mục 12), cold-start (mục 13) và Marketing (mục 14) | Đang ở thư mục làm việc nhánh `phu`. Thành viên khác cần chạy migration 007, 008, 009, 010, 011 |
 | Thành viên khác chạy migration 006, 007 và job Python | Xem mục 0. Không chạy job thì chỉ thấy khóa phổ biến, không có gợi ý lọc cộng tác |
-| Mục "Khóa học tương tự" ở trang chi tiết | Stored procedure `sp_GoiY_KhoaHocTuongTu` đã có, chỉ cần gắn vào view. Hình 4.13 trong báo cáo đang có mục này |
+| Mục "Khóa học tương tự" (theo mọi tương tác) ở trang chi tiết | Trang chi tiết đã có 2 mục dựa trên dữ liệu mua (mục 16). `sp_GoiY_KhoaHocTuongTu` (dựa trên `course_similarity`) vẫn chưa gắn; Hình 4.13 trong báo cáo cần vẽ lại theo 2 mục mới |
 | Link danh mục ở footer | `_Layout.cshtml` vẫn dùng mã giả (`category = "CNTT"`, `"Design"`, `"Business"`), nên đổi sang trang danh mục |
 | `ReviewController.SubmitReview` | Chỉ kiểm tra đăng nhập, **chưa kiểm tra đã đăng ký khóa và tiến độ**. Giao diện học yêu cầu 100% bài, hàm `fn_DuDieuKienDanhGia` (25%) chưa được gọi, báo cáo ghi 70%. Cần chốt một ngưỡng và kiểm tra phía server |
 | Quản lý người dùng của Admin | Báo cáo có Hình 4.37–4.38 nhưng code chưa có. Làm thêm hoặc bỏ hình |
@@ -552,4 +801,7 @@ File chính: `Services/PromotionService.cs`, `Services/CampaignService.cs`, `Ser
 | Bộ nhớ tối thiểu cho SQL Server | `EXEC sp_configure 'min server memory (MB)', 512; RECONFIGURE;` (cần bật `show advanced options`). Trị tận gốc việc chậm 25 giây, cần chủ máy đồng ý |
 | Thẻ nổi "98% – Web Development Masterclass" trên banner 1 | Vẫn là dữ liệu cố định (khi đã đăng nhập) |
 | Video cũ trong Git | Xem mục 6 |
+| Màu khu vực giáo viên | Layout / Dashboard / Payout / Analytics / Student của khu vực giáo viên còn dùng `#0D9488`; đổi nếu muốn đồng bộ toàn hệ thống |
+| Header chưa co giãn trên điện thoại | Ở màn hình ~390 px trang bị tràn ngang (có từ trước, không thuộc phần tìm kiếm) |
+| Khóa có `giaKhuyenMai = 0` (dữ liệu cũ) | Thẻ khóa học / trang chi tiết hiện "0 đ" / "Miễn phí" nhưng giá thanh toán bỏ qua giá 0 (tính giá gốc). Nên sửa dữ liệu hoặc thống nhất một quy tắc |
 | Hướng triển khai thật cho video | Azure Blob Storage / AWS S3 + link có thời hạn (đưa vào báo cáo như hướng phát triển) |

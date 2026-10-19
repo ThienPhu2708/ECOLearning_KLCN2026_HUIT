@@ -187,9 +187,15 @@
                     <input type="hidden" name="CongKhai" value="false" />
                     <span>
                         <strong>Công khai mã</strong>
-                        <span class="mk-hint" style="display: block; margin-top: 2px;">Học viên thấy mã trong giỏ hàng và trang chi tiết khóa học được áp dụng. Mã thân thiết chỉ hiện với học viên đã đạt tiêu chí. Bỏ chọn nếu muốn gửi mã riêng (email, mạng xã hội); học viên vẫn nhập tay được.</span>
+                        <span class="mk-hint" style="display: block; margin-top: 2px;">Mã hiện ở mục "Mã khuyến mãi" trên trang chủ và trang "Mã giảm giá của tôi" để học viên lưu vào ví, rồi chọn ở bước thanh toán. Mã thân thiết chỉ hiện với học viên đã đạt tiêu chí. Bỏ chọn nếu muốn gửi mã riêng (email, mạng xã hội); học viên vẫn nhập tay được.</span>
                     </span>
                 </label>
+                <div class="form-group" style="margin-top: 14px;">
+                    <label class="form-label" for="ChinhSach">Mô tả / chính sách cho học viên</label>
+                    <textarea id="ChinhSach" name="ChinhSach" class="form-control" rows="4" maxlength="1000" placeholder="VD: Ưu đãi Black Friday cho toàn bộ khóa học có phí. Mã không áp dụng cùng chương trình khác...">@Model.ChinhSach</textarea>
+                    <div class="mk-hint">Hiện ở trang chi tiết mã (mục "Mô tả chương trình"). Điều kiện, thời gian, phạm vi... hệ thống tự sinh từ cấu hình, không cần nhập lại.</div>
+                    @loi("ChinhSach")
+                </div>
             </div>
 
             <div style="display: flex; gap: 10px; justify-content: flex-end;">

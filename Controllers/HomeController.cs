@@ -43,8 +43,10 @@ namespace ECOLearning.Controllers
                         .ToDictionary(x => x.MaKhoaHoc, x => x.SoHocVien);
 
                     // Lấy danh sách danh mục thực sự có trong CSDL SQL Server
+                    // Sắp theo mã như trang Tất cả lĩnh vực (CategoryController.All) để biểu tượng khớp nhau
                     ViewBag.Categories = db.DanhMuc
                         .Where(c => c.trangThai == null || c.trangThai == true)
+                        .OrderBy(c => c.maDanhMuc)
                         .ToList();
                 }
             }
@@ -68,6 +70,24 @@ namespace ECOLearning.Controllers
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine("Fetch interests error: " + ex.Message);
+                }
+
+                // Mục "Mã khuyến mãi" dưới Danh mục đào tạo: mã công khai đang chạy để học viên lưu vào ví
+                string role = Session["Role"] as string;
+                if (role == "HocVien" || role == "GiaoVien")
+                {
+                    try
+                    {
+                        var promotions = new PromotionService(db);
+                        if (promotions.IsInstalled())
+                        {
+                            ViewBag.HomeCoupons = promotions.LayMaChoHocVien(currentUserId);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Fetch coupons error: " + ex.Message);
+                    }
                 }
 
                 try

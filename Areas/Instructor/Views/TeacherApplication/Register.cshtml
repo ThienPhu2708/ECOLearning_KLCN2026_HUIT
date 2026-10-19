@@ -1,25 +1,81 @@
 ﻿@using ECOLearning.Models
+@using ECOLearning.Services
 @{
-ViewBag.Title = "Đăng Ký Trở Thành Giảng Viên | E-Learning";
-Layout = "~/Views/Shared/_Layout.cshtml";
-var user = ViewBag.User as NguoiDung;
-var existingApp = ViewBag.ExistingApp as TeacherApplication;
+    ViewBag.Title = "Đăng ký trở thành giáo viên";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var user = ViewBag.User as NguoiDung;
+    var existingApp = ViewBag.ExistingApp as TeacherApplication;
+    var form = ViewBag.Form as ECOLearning.ViewModels.TeacherRegisterFormViewModel ?? new ECOLearning.ViewModels.TeacherRegisterFormViewModel();
+    Func<string, bool> coLoi = k => ViewData.ModelState[k] != null && ViewData.ModelState[k].Errors.Count > 0;
+    Func<string, string> loi = k => coLoi(k) ? ViewData.ModelState[k].Errors[0].ErrorMessage : null;
 }
 
-<div style="background-color: var(--bg-body, #F8FAFC); min-height: calc(100vh - 70px); padding: 40px 0;">
-    <div class="container" style="max-width: 860px; margin: 0 auto; padding: 0 20px;">
+@section styles {
+    <link rel="stylesheet" href="@Url.Content("~/assets/css/bank-picker.css?v=1.0")" />
+    <style>
+        .tr-page { background: var(--bg-canvas, #F8FAFC); min-height: calc(100vh - 70px); padding: 40px 0 64px; }
+        .tr-wrap { max-width: 860px; margin: 0 auto; padding: 0 20px; }
+        .tr-hero { background: linear-gradient(135deg, #1E1B4B 0%, #434CE8 100%); border-radius: 20px; padding: 34px 40px; color: #FFFFFF; margin-bottom: 28px; box-shadow: 0 12px 30px -12px rgba(67, 76, 232, 0.45); }
+        .tr-hero-tag { display: inline-block; background: rgba(255, 255, 255, 0.16); padding: 6px 14px; border-radius: 30px; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+        .tr-hero h1 { font-size: 28px; font-weight: 800; margin: 0 0 10px; color: #FFFFFF; line-height: 1.3; }
+        .tr-hero p { font-size: 15px; color: rgba(255, 255, 255, 0.86); margin: 0; max-width: 620px; line-height: 1.6; }
+        .tr-card { background: #FFFFFF; border-radius: 20px; border: 1px solid #E2E8F0; padding: 36px; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03); }
+        .tr-section { margin-bottom: 32px; }
+        .tr-section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px; }
+        .tr-step { width: 28px; height: 28px; border-radius: 50%; background: #434CE8; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+        .tr-section-head h2 { font-size: 18px; font-weight: 700; color: #0F172A; margin: 0; }
+        .tr-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .tr-field { margin-bottom: 18px; }
+        .tr-grid-2 .tr-field { margin-bottom: 0; }
+        .tr-label { display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px; }
+        .tr-req { color: #EF4444; }
+        .tr-input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #CBD5E1; background: #FFFFFF; font: inherit; font-size: 14px; color: #0F172A; box-sizing: border-box; transition: border-color .15s, box-shadow .15s; }
+        .tr-input:focus { outline: none; border-color: #434CE8; box-shadow: 0 0 0 3px rgba(67, 76, 232, 0.15); }
+        .tr-input[readonly] { background: #F8FAFC; color: #64748B; font-weight: 600; }
+        .tr-input.is-invalid { border-color: #EF4444; }
+        .tr-input.is-invalid:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+        textarea.tr-input { line-height: 1.55; resize: vertical; }
+        .tr-hint { color: #94A3B8; font-size: 12.5px; margin-top: 5px; display: block; line-height: 1.45; }
+        .tr-error { color: #DC2626; font-size: 12.5px; font-weight: 600; margin-top: 5px; display: block; }
+        .tr-error:empty { display: none; }
+        .tr-counter { font-size: 12px; color: #94A3B8; font-weight: 600; }
+        .tr-counter.is-ok { color: #434CE8; }
 
-        <!-- Header Banner -->
-        <div style="background: linear-gradient(135deg, #0F172A 0%, #0D9488 100%); border-radius: 20px; padding: 36px 40px; color: #FFFFFF; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(13, 148, 136, 0.15); position: relative; overflow: hidden;">
-            <span style="display: inline-block; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 30px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">
-                Cổng Đăng Ký giáo viên
-            </span>
-            <h1 style="font-size: 28px; font-weight: 800; margin-bottom: 10px; color: #FFFFFF; line-height: 1.3;">
-                Gia nhập và trực tiếp giảng dạy trên hệ thống
-            </h1>
-            <p style="font-size: 15px; color: rgba(255,255,255,0.85); margin: 0; max-width: 620px; line-height: 1.6;">
-                Nộp hồ sơ chuyên môn của bạn để tham gia đội ngũ giáo viên. Sau khi được phê duyệt, bạn có thể tự do xuất bản các khóa học và nhận mức doanh thu hấp dẫn.
-            </p>
+        .tr-drop { border: 2px dashed #CBD5E1; border-radius: 14px; padding: 24px; text-align: center; background: #F8FAFC; cursor: pointer; transition: border-color .2s, background .2s; }
+        .tr-drop:hover, .tr-drop:focus-visible { border-color: #434CE8; background: #F5F7FF; outline: none; }
+        .tr-drop .bi { font-size: 34px; color: #434CE8; }
+        .tr-drop-title { font-size: 15px; font-weight: 700; color: #0F172A; margin: 6px 0 4px; }
+        .tr-drop-sub { font-size: 13px; color: #64748B; }
+        .tr-file { margin-top: 12px; font-size: 13px; font-weight: 700; color: #434CE8; }
+
+        .tr-preview { display: flex; gap: 12px; align-items: flex-start; margin-top: 18px; padding: 14px 16px; background: #F5F7FF; border: 1px solid #C7D2FE; border-radius: 12px; font-size: 14px; color: #1E293B; line-height: 1.6; }
+        .tr-preview .bi { color: #434CE8; font-size: 18px; margin-top: 2px; }
+        .tr-preview strong { color: #0F172A; }
+        .tr-preview small { display: block; color: #64748B; font-size: 12.5px; }
+
+        .tr-terms { margin-bottom: 24px; padding: 18px 20px; background: #F8FAFC; border-radius: 12px; border: 1px solid #E2E8F0; }
+        .tr-terms label { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; margin: 0; font-size: 14px; color: #475569; line-height: 1.55; }
+        .tr-terms input { width: 18px; height: 18px; margin-top: 2px; accent-color: #434CE8; flex-shrink: 0; }
+        .tr-terms a { color: #434CE8; text-decoration: underline; font-weight: 600; }
+        .tr-actions { display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+        .tr-submit { background: #434CE8; color: #FFFFFF; border-radius: 12px; padding: 12px 30px; font-weight: 700; border: none; font-size: 15px; cursor: pointer; box-shadow: 0 6px 16px -6px rgba(67, 76, 232, 0.55); }
+        .tr-submit:hover { background: #3730C9; }
+        .tr-submit:focus-visible, .tr-terms input:focus-visible { outline: 2px solid #A5B4FC; outline-offset: 2px; }
+
+        @@media (max-width: 720px) {
+            .tr-card { padding: 22px 18px; }
+            .tr-hero { padding: 26px 22px; }
+            .tr-grid-2 { grid-template-columns: 1fr; gap: 18px; }
+        }
+    </style>
+}
+
+<div class="tr-page">
+    <div class="tr-wrap">
+        <div class="tr-hero">
+            <span class="tr-hero-tag">Cổng đăng ký giáo viên</span>
+            <h1>Gia nhập và trực tiếp giảng dạy trên hệ thống</h1>
+            <p>Nộp hồ sơ chuyên môn của bạn để tham gia đội ngũ giáo viên. Sau khi được phê duyệt, bạn có thể xuất bản khóa học và nhận doanh thu từ học viên.</p>
         </div>
 
         @if (existingApp != null && existingApp.Status == "Rejected")
@@ -31,183 +87,202 @@ var existingApp = ViewBag.ExistingApp as TeacherApplication;
                 </div>
                 <div style="font-size: 14px; line-height: 1.5; color: #7F1D1D;">
                     Lý do: <strong>@(string.IsNullOrEmpty(existingApp.RejectionReason) ? "Thông tin bằng cấp chưa đủ điều kiện" : existingApp.RejectionReason)</strong>.
-                    Bạn có thể cập nhật lại hồ sơ mới bên dưới để gửi xét duyệt lại.
+                    Thông tin cũ đã được điền sẵn bên dưới — chỉnh phần cần sửa, tải lại tệp chứng chỉ rồi gửi xét duyệt lại.
                 </div>
             </div>
         }
 
-        <!-- Registration Form Card -->
-        <div style="background: #FFFFFF; border-radius: 20px; border: 1px solid #E2E8F0; padding: 36px; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
-
+        <div class="tr-card">
             @using (Html.BeginForm("Register", "TeacherApplication", new { area = "Instructor" }, FormMethod.Post, new { enctype = "multipart/form-data", id = "teacher-register-form" }))
             {
                 @Html.AntiForgeryToken()
 
                 if (!ViewData.ModelState.IsValid)
                 {
-                    <div style="background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; color: #991B1B; font-size: 14px;">
+                    <div style="background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; color: #991B1B; font-size: 14px;" role="alert">
                         <strong style="display: block; margin-bottom: 6px;"><i class="bi bi-exclamation-triangle-fill me-1"></i> Vui lòng kiểm tra lại các thông tin:</strong>
                         @Html.ValidationSummary(false, "", new { style = "margin: 0; padding-left: 20px;" })
+                        @if (coLoi("certificateFile") == false)
+                        {
+                            <div style="margin-top: 6px; font-size: 13px;">Lưu ý: trình duyệt không giữ lại tệp đã chọn, vui lòng chọn lại tệp chứng chỉ.</div>
+                        }
                     </div>
                 }
 
-                <!-- Section 1: Thông tin cá nhân -->
-                <div style="margin-bottom: 32px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px;">
-                        <span style="width: 28px; height: 28px; border-radius: 50%; background: #0D9488; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;">1</span>
-                        <h2 style="font-size: 18px; font-weight: 700; color: #0F172A; margin: 0;">Thông tin cá nhân</h2>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        <div>
-                            <label style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;">
-                                Họ và tên <span style="color: #EF4444;">*</span>
-                            </label>
-                            <input type="text" value="@(user != null ? user.hoTen : "")" readonly
-                            style="width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid #CBD5E1; background: #F8FAFC; color: #64748B; font-weight: 600; font-size: 14px; box-sizing: border-box;" />
-                            <small style="color: #94A3B8; font-size: 12px; margin-top: 4px; display: block;">Lấy từ thông tin tài khoản hiện tại</small>
+                <!-- 1. Thông tin cá nhân -->
+                <div class="tr-section">
+                    <div class="tr-section-head"><span class="tr-step">1</span><h2>Thông tin cá nhân</h2></div>
+                    <div class="tr-grid-2">
+                        <div class="tr-field">
+                            <label class="tr-label" for="tr-name">Họ và tên</label>
+                            <input id="tr-name" type="text" class="tr-input" value="@(user != null ? user.hoTen : "")" readonly />
+                            <small class="tr-hint">Lấy từ thông tin tài khoản hiện tại</small>
                         </div>
-
-                        <div>
-                            <label style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;">
-                                Email liên hệ <span style="color: #EF4444;">*</span>
-                            </label>
-                            <input type="email" value="@(user != null ? user.email : "")" readonly
-                            style="width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid #CBD5E1; background: #F8FAFC; color: #64748B; font-weight: 600; font-size: 14px; box-sizing: border-box;" />
-                            <small style="color: #94A3B8; font-size: 12px; margin-top: 4px; display: block;">Dùng để nhận thông báo duyệt hồ sơ</small>
+                        <div class="tr-field">
+                            <label class="tr-label" for="tr-email">Email liên hệ</label>
+                            <input id="tr-email" type="email" class="tr-input" value="@(user != null ? user.email : "")" readonly />
+                            <small class="tr-hint">Dùng để nhận thông báo duyệt hồ sơ</small>
                         </div>
                     </div>
                 </div>
 
-                <!-- Section 2: Chuyên môn & Kinh nghiệm -->
-                <div style="margin-bottom: 32px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px;">
-                        <span style="width: 28px; height: 28px; border-radius: 50%; background: #0D9488; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;">2</span>
-                        <h2 style="font-size: 18px; font-weight: 700; color: #0F172A; margin: 0;">Năng lực chuyên môn & Giảng dạy</h2>
+                <!-- 2. Chuyên môn & Kinh nghiệm -->
+                <div class="tr-section">
+                    <div class="tr-section-head"><span class="tr-step">2</span><h2>Năng lực chuyên môn &amp; giảng dạy</h2></div>
+                    <div class="tr-field">
+                        <label class="tr-label" for="specialization">Lĩnh vực chuyên môn chính <span class="tr-req">*</span></label>
+                        <input type="text" id="specialization" name="specialization" class="tr-input @(coLoi("specialization") ? "is-invalid" : "")" maxlength="200" required
+                               value="@form.Specialization" placeholder="VD: Lập trình Web Fullstack, Thiết kế UI/UX, AI & Machine Learning..." />
+                        <span class="tr-error">@loi("specialization")</span>
                     </div>
-
-                    <div style="margin-bottom: 20px;">
-                        <label style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;">
-                            Lĩnh vực chuyên môn chính <span style="color: #EF4444;">*</span>
-                        </label>
-                        <input type="text" name="specialization" placeholder="VD: Lập trình Web Fullstack, Thiết kế UI/UX, AI & Machine Learning..."
-                        required style="width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid #CBD5E1; font-size: 14px; box-sizing: border-box; transition: all 0.2s;" />
-                    </div>
-
-                    <div>
+                    <div class="tr-field">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <label style="font-size: 14px; font-weight: 600; color: #334155; margin: 0;">
-                                Giới thiệu bản thân & Kinh nghiệm thực chiến <span style="color: #EF4444;">*</span>
-                            </label>
-                            <span id="char-count" style="font-size: 12px; color: #94A3B8; font-weight: 600;">0 / 50 ký tự tối thiểu</span>
+                            <label class="tr-label" for="bioExperience" style="margin: 0;">Giới thiệu bản thân &amp; kinh nghiệm thực chiến <span class="tr-req">*</span></label>
+                            <span id="char-count" class="tr-counter">0 / 50 ký tự tối thiểu</span>
                         </div>
-                        <textarea name="bioExperience" id="bioExperience" rows="5" placeholder="Hãy mô tả ngắn gọn lịch sử làm việc, kinh nghiệm giảng dạy hoặc các dự án tiêu biểu bạn từng thực hiện (tối thiểu 50 ký tự)..."
-                        required style="width: 100%; padding: 14px 16px; border-radius: 10px; border: 1px solid #CBD5E1; font-size: 14px; font-family: inherit; line-height: 1.5; box-sizing: border-box; resize: vertical;"></textarea>
+                        <textarea name="bioExperience" id="bioExperience" rows="5" class="tr-input @(coLoi("bioExperience") ? "is-invalid" : "")" required
+                                  placeholder="Mô tả ngắn gọn quá trình làm việc, kinh nghiệm giảng dạy hoặc các dự án tiêu biểu (tối thiểu 50 ký tự)...">@form.BioExperience</textarea>
+                        <span class="tr-error">@loi("bioExperience")</span>
                     </div>
                 </div>
 
-                <!-- Section 3: Hồ sơ bằng cấp -->
-                <div style="margin-bottom: 32px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px;">
-                        <span style="width: 28px; height: 28px; border-radius: 50%; background: #0D9488; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;">3</span>
-                        <h2 style="font-size: 18px; font-weight: 700; color: #0F172A; margin: 0;">Tệp bằng cấp / Chứng chỉ đính kèm</h2>
-                    </div>
-
-                    <div style="border: 2px dashed #CBD5E1; border-radius: 14px; padding: 24px; text-align: center; background: #F8FAFC; cursor: pointer; transition: all 0.2s;" id="drop-zone" onclick="document.getElementById('certificateFile').click();">
-                        <div style="font-size: 36px; margin-bottom: 8px; color: #0D9488;"><i class="bi bi-file-earmark-arrow-up"></i></div>
-                        <div style="font-size: 15px; font-weight: 700; color: #0F172A; margin-bottom: 4px;">
-                            Nhấn để tải lên tệp bằng cấp hoặc chứng chỉ chuyên môn
-                        </div>
-                        <div style="font-size: 13px; color: #64748B;">
-                            Định dạng hỗ trợ: <strong>.PDF, .PNG, .JPG, .JPEG</strong> (Dung lượng tối đa <strong>5MB</strong>)
-                        </div>
+                <!-- 3. Hồ sơ bằng cấp -->
+                <div class="tr-section">
+                    <div class="tr-section-head"><span class="tr-step">3</span><h2>Tệp bằng cấp / chứng chỉ đính kèm</h2></div>
+                    <div class="tr-drop" id="drop-zone" role="button" tabindex="0" aria-describedby="file-name-display"
+                         onclick="document.getElementById('certificateFile').click();"
+                         onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); document.getElementById('certificateFile').click(); }">
+                        <i class="bi bi-file-earmark-arrow-up"></i>
+                        <div class="tr-drop-title">Nhấn để tải lên tệp bằng cấp hoặc chứng chỉ chuyên môn</div>
+                        <div class="tr-drop-sub">Định dạng: <strong>.PDF, .PNG, .JPG, .JPEG</strong> · tối đa <strong>5MB</strong></div>
                         <input type="file" name="certificateFile" id="certificateFile" accept=".pdf,.png,.jpg,.jpeg" required style="display: none;" onchange="handleFileSelect(this);" />
-                        <div id="file-name-display" style="margin-top: 12px; font-size: 13px; font-weight: 700; color: #0D9488; display: none;"></div>
+                        <div id="file-name-display" class="tr-file" hidden></div>
+                    </div>
+                    <span class="tr-error">@loi("certificateFile")</span>
+                </div>
+
+                <!-- 4. Thông tin nhận thanh toán -->
+                <div class="tr-section">
+                    <div class="tr-section-head"><span class="tr-step">4</span><h2>Thông tin nhận thanh toán doanh thu</h2></div>
+
+                    <div class="tr-field">
+                        <label class="tr-label" for="bank-search">Ngân hàng <span class="tr-req">*</span></label>
+                        @Html.Partial("_BankPicker", new ECOLearning.ViewModels.BankPickerViewModel
+                        {
+                            Id = "bank-search",
+                            Name = "bankCode",
+                            SelectedCode = form.BankCode,
+                            InputClass = "tr-input",
+                            Error = loi("bankCode"),
+                            Note = form.BankNote,
+                            NextFieldId = "accountNumber"
+                        })
+                        <small class="tr-hint">Chọn trong danh sách ngân hàng để tên luôn chính xác (không nhập tay).</small>
+                    </div>
+
+                    <div class="tr-grid-2">
+                        <div class="tr-field">
+                            <label class="tr-label" for="accountNumber">Số tài khoản <span class="tr-req">*</span></label>
+                            <input type="text" id="accountNumber" name="accountNumber" class="tr-input @(coLoi("accountNumber") ? "is-invalid" : "")"
+                                   inputmode="numeric" autocomplete="off" maxlength="24" required value="@form.AccountNumber" placeholder="VD: 1012345678" />
+                            <span class="tr-error">@loi("accountNumber")</span>
+                            <small class="tr-hint">Chỉ gồm chữ số (6–19 số); khoảng trắng, dấu chấm khi dán vào sẽ tự bỏ.</small>
+                        </div>
+                        <div class="tr-field">
+                            <label class="tr-label" for="accountName">Tên chủ tài khoản <span class="tr-req">*</span></label>
+                            <input type="text" id="accountName" name="accountName" class="tr-input @(coLoi("accountName") ? "is-invalid" : "")"
+                                   autocomplete="off" maxlength="100" required value="@form.AccountName" placeholder="VD: NGUYEN VAN A" />
+                            <span class="tr-error">@loi("accountName")</span>
+                            <small class="tr-hint">In hoa, không dấu, đúng như trên ứng dụng ngân hàng. Đã điền sẵn từ họ tên tài khoản — sửa nếu khác.</small>
+                        </div>
+                    </div>
+
+                    <div class="tr-preview" id="bank-preview" aria-live="polite" hidden>
+                        <i class="bi bi-bank"></i>
+                        <div>
+                            Doanh thu sẽ được chuyển tới: <strong id="pv-bank"></strong> · STK <strong id="pv-number"></strong> · <strong id="pv-name"></strong>
+                            <small>Vui lòng kiểm tra kỹ — sai số tài khoản hoặc tên chủ tài khoản sẽ không nhận được tiền.</small>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Section 4: Thông tin nhận thanh toán -->
-                <div style="margin-bottom: 32px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px;">
-                        <span style="width: 28px; height: 28px; border-radius: 50%; background: #0D9488; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;">4</span>
-                        <h2 style="font-size: 18px; font-weight: 700; color: #0F172A; margin: 0;">Thông tin nhận thanh toán doanh thu</h2>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
-                        <div>
-                            <label style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;">
-                                Tên Ngân hàng <span style="color: #EF4444;">*</span>
-                            </label>
-                            <input type="text" name="bankName" placeholder="VD: Vietcombank, MB Bank, Techcombank..." required
-                            style="width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #CBD5E1; font-size: 14px; box-sizing: border-box;" />
-                        </div>
-
-                        <div>
-                            <label style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;">
-                                Số tài khoản <span style="color: #EF4444;">*</span>
-                            </label>
-                            <input type="text" name="accountNumber" placeholder="VD: 1012345678" required
-                            style="width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #CBD5E1; font-size: 14px; box-sizing: border-box;" />
-                        </div>
-
-                        <div>
-                            <label style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;">
-                                Tên chủ tài khoản <span style="color: #EF4444;">*</span>
-                            </label>
-                            <input type="text" name="accountName" placeholder="VD: NGUYEN VAN A" required style="text-transform: uppercase;"
-                            style="width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #CBD5E1; font-size: 14px; box-sizing: border-box;" />
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section 5: Điều khoản & Nộp đơn -->
-                <div style="margin-bottom: 24px; padding: 20px; background: #F8FAFC; border-radius: 12px; border: 1px solid #E2E8F0;">
-                    <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer; margin: 0;">
-                        <input type="checkbox" name="termsAgreed" value="true" required style="width: 18px; height: 18px; margin-top: 2px; accent-color: #0D9488;" />
-                        <span style="font-size: 14px; color: #475569; line-height: 1.5;">
-                            Tôi cam kết toàn bộ thông tin bằng cấp & kinh nghiệm cung cấp là hoàn toàn chính xác. Tôi đồng ý tuân thủ
-                            <a href="#" style="color: #0D9488; text-decoration: underline; font-weight: 600;">Điều khoản hợp tác đối tác giảng dạy</a> của E-Learning.
+                <!-- 5. Điều khoản & nộp đơn -->
+                <div class="tr-terms">
+                    <label>
+                        <input type="checkbox" name="termsAgreed" value="true" required />
+                        <span>
+                            Tôi cam kết toàn bộ thông tin bằng cấp, kinh nghiệm và tài khoản nhận thanh toán cung cấp là chính xác. Tôi đồng ý tuân thủ
+                            <a href="#">Điều khoản hợp tác đối tác giảng dạy</a> của E-Learning.
                         </span>
                     </label>
+                    <span class="tr-error">@loi("termsAgreed")</span>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 14px;">
-                    <a href="@Url.Action("Index", "Home", new { area = "" })" class="btn btn-outline" style="border-radius: 12px; padding: 12px 24px; font-weight: 600; text-decoration: none;">
-                        Hủy bỏ
-                    </a>
-                    <button type="submit" class="btn" style="background: #0D9488; color: #FFFFFF; border-radius: 12px; padding: 12px 32px; font-weight: 700; border: none; font-size: 15px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);">
-                        Gửi Hồ Sơ Xét Duyệt
-                    </button>
+                <div class="tr-actions">
+                    <a href="@Url.Action("Index", "Home", new { area = "" })" class="btn btn-outline" style="border-radius: 12px; padding: 12px 24px; font-weight: 600; text-decoration: none;">Hủy bỏ</a>
+                    <button type="submit" class="tr-submit">Gửi hồ sơ xét duyệt</button>
                 </div>
             }
         </div>
     </div>
 </div>
 
-<script>
-    const bioInput = document.getElementById('bioExperience');
-    const charCount = document.getElementById('char-count');
+@section scripts {
+    <script src="@Url.Content("~/assets/js/bank-picker.js?v=1.0")"></script>
+    <script>
+        (function () {
+            // ----- Giới thiệu bản thân: đếm ký tự
+            var bio = document.getElementById('bioExperience');
+            var dem = document.getElementById('char-count');
+            function capNhatDem() {
+                var n = bio.value.trim().length;
+                dem.textContent = n + ' / 50 ký tự tối thiểu';
+                dem.classList.toggle('is-ok', n >= 50);
+            }
+            bio.addEventListener('input', capNhatDem);
+            capNhatDem();
 
-    if (bioInput && charCount) {
-    bioInput.addEventListener('input', function () {
-    const len = this.value.trim().length;
-    charCount.textContent = len + ' / 50 ký tự tối thiểu';
-    if (len >= 50) {
-    charCount.style.color = '#10B981';
-}
-else
-{
-    charCount.style.color = '#94A3B8';
-}
-});
-}
+            var chiSo = BankPicker.chiSo, tenChuTaiKhoan = BankPicker.tenChuTaiKhoan;
+            var picker = document.querySelector('[data-bank-picker]');
+            picker.addEventListener('bank:change', function () { xemTruoc(); });
 
-function handleFileSelect(input) {
-const display = document.getElementById('file-name-display');
-if (input.files && input.files[0]) {
-const file = input.files[0];
-display.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Đã chọn: ' + file.name + ' (' + (file.size / (1024 * 1024)).toFixed(2) + ' MB)';
-display.style.display = 'block';
+            // ----- Số tài khoản: chỉ giữ chữ số; tên chủ tài khoản: IN HOA KHÔNG DẤU khi rời ô (không đổi lúc đang gõ để không vỡ bộ gõ tiếng Việt)
+            var stk = document.getElementById('accountNumber');
+            var ten = document.getElementById('accountName');
+            stk.addEventListener('input', function () {
+                var v = chiSo(stk.value).slice(0, 19);
+                if (stk.value !== v) stk.value = v;
+                xemTruoc();
+            });
+            ten.addEventListener('blur', function () { ten.value = tenChuTaiKhoan(ten.value); xemTruoc(); });
+            ten.addEventListener('input', xemTruoc);
+
+            function xemTruoc() {
+                var nganHang = picker.bankPicker.shortName();
+                var so = chiSo(stk.value), chu = tenChuTaiKhoan(ten.value);
+                var box = document.getElementById('bank-preview');
+                box.hidden = !(nganHang && so.length >= 6 && chu);
+                document.getElementById('pv-bank').textContent = nganHang;
+                document.getElementById('pv-number').textContent = so.replace(/(\d{4})(?=\d)/g, '$1 ');
+                document.getElementById('pv-name').textContent = chu;
+            }
+            stk.value = chiSo(stk.value);
+            xemTruoc();
+
+            // Chặn gửi khi chưa chọn ngân hàng (server vẫn kiểm tra lại)
+            document.getElementById('teacher-register-form').addEventListener('submit', function (e) {
+                ten.value = tenChuTaiKhoan(ten.value);
+                if (!picker.bankPicker.validate()) e.preventDefault();
+            });
+        })();
+
+        function handleFileSelect(input) {
+            var display = document.getElementById('file-name-display');
+            if (input.files && input.files[0]) {
+                var file = input.files[0];
+                display.textContent = '✓ Đã chọn: ' + file.name + ' (' + (file.size / (1024 * 1024)).toFixed(2) + ' MB)';
+                display.hidden = false;
+            }
+        }
+    </script>
 }
-}
-</script>

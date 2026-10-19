@@ -14,7 +14,7 @@ namespace ECOLearning.Services
     /// Mọi giá và số tiền giảm được tính ở server từ CSDL, không tin giá trị trình duyệt gửi lên.
     /// Các cột cấu hình và bảng SuDungUuDai thuộc Database/Migrations/008_Marketing_KhuyenMai.sql (chưa có trong mô hình EF).
     /// </summary>
-    public class PromotionService
+    public partial class PromotionService
     {
         public const string HoatDong = "HoatDong";
         public const string TamNgung = "TamNgung";
@@ -32,7 +32,7 @@ namespace ECOLearning.Services
             this.db = db;
         }
 
-        /// <summary>Đã chạy migration 008 hay chưa.</summary>
+        /// <summary>Đã chạy migration 008 và 009 hay chưa.</summary>
         public bool IsInstalled()
         {
             try
@@ -41,6 +41,8 @@ namespace ECOLearning.Services
                     SELECT CASE WHEN OBJECT_ID(N'dbo.SuDungUuDai', N'U') IS NOT NULL
                                  AND COL_LENGTH(N'dbo.KhuyenMai', N'loaiUuDai') IS NOT NULL
                                  AND COL_LENGTH(N'dbo.KhuyenMai', N'congKhai') IS NOT NULL
+                                 AND COL_LENGTH(N'dbo.KhuyenMai', N'chinhSach') IS NOT NULL
+                                 AND OBJECT_ID(N'dbo.ViMaGiamGia', N'U') IS NOT NULL
                            THEN 1 ELSE 0 END").FirstOrDefault() == 1;
             }
             catch
@@ -79,7 +81,7 @@ namespace ECOLearning.Services
                    km.phamVi AS PhamVi, km.doiTuong AS DoiTuong, km.soKhoaToiThieu AS SoKhoaToiThieu,
                    km.chiTieuToiThieu AS ChiTieuToiThieu, km.trangThai AS TrangThaiLuu,
                    km.ngayBatDau AS NgayBatDau, km.ngayKetThuc AS NgayKetThuc, km.dieuKienApDung AS DieuKienApDung,
-                   km.maChienDich AS MaChienDich, cd.tenChienDich AS TenChienDich, km.ngayTao AS NgayTao, km.congKhai AS CongKhai,
+                   km.maChienDich AS MaChienDich, cd.tenChienDich AS TenChienDich, km.ngayTao AS NgayTao, km.congKhai AS CongKhai, km.chinhSach AS ChinhSach,
                    mg.maGiamGia AS MaGiamGia, mg.maCode AS MaCode, CAST(ISNULL(mg.trangThai, 1) AS BIT) AS CouponDangBat,
                    mg.gioiHanLuotDung AS GioiHanLuotDung, ISNULL(mg.gioiHanMoiHocVien, 1) AS GioiHanMoiHocVien,
                    ISNULL(sd.soLuot, 0) AS SoLuotDaDung,
@@ -222,6 +224,7 @@ namespace ECOLearning.Services
                 ChiTieuToiThieu = p.ChiTieuToiThieu,
                 DieuKienApDung = p.DieuKienApDung,
                 CongKhai = p.CongKhai,
+                ChinhSach = p.ChinhSach,
                 SoLuotDaDung = p.SoLuotDaDung
             };
         }
@@ -238,11 +241,13 @@ namespace ECOLearning.Services
             f.TenKhuyenMai = (f.TenKhuyenMai ?? "").Trim();
             f.MaCode = (f.MaCode ?? "").Trim().ToUpperInvariant();
             f.DieuKienApDung = string.IsNullOrWhiteSpace(f.DieuKienApDung) ? null : f.DieuKienApDung.Trim();
+            f.ChinhSach = string.IsNullOrWhiteSpace(f.ChinhSach) ? null : f.ChinhSach.Trim();
             f.LoaiUuDai = f.LoaiUuDai == "SoTien" ? "SoTien" : "PhanTram";
             f.PhamVi = f.PhamVi == "KhoaHoc" ? "KhoaHoc" : "TatCa";
             f.DoiTuong = f.DoiTuong == "ThanThiet" ? "ThanThiet" : "TatCa";
             f.KhoaHocApDung = (f.KhoaHocApDung ?? new List<string>()).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToList();
 
+            if (f.ChinhSach != null && f.ChinhSach.Length > 1000) loi["ChinhSach"] = "Mô tả chính sách tối đa 1000 ký tự.";
             if (f.TenKhuyenMai.Length == 0) loi["TenKhuyenMai"] = "Vui lòng nhập tên chương trình.";
             else if (f.TenKhuyenMai.Length > 150) loi["TenKhuyenMai"] = "Tên chương trình tối đa 150 ký tự.";
 
@@ -340,8 +345,8 @@ namespace ECOLearning.Services
                 db.Database.ExecuteSqlCommand(@"
                     INSERT INTO dbo.KhuyenMai (maKhuyenMai, tenKhuyenMai, mucUuDai, ngayBatDau, ngayKetThuc, dieuKienApDung, maNhanVienMarketing,
                                                loaiUuDai, giamToiDa, donHangToiThieu, phamVi, doiTuong, soKhoaToiThieu, chiTieuToiThieu,
-                                               trangThai, maChienDich, congKhai)
-                    VALUES (@ma, @ten, @muc, @bd, @kt, @dk, @nv, @loai, @toiDa, @donMin, @phamVi, @doiTuong, @soKhoa, @chiTieu, N'HoatDong', @cd, @congKhai)",
+                                               trangThai, maChienDich, congKhai, chinhSach)
+                    VALUES (@ma, @ten, @muc, @bd, @kt, @dk, @nv, @loai, @toiDa, @donMin, @phamVi, @doiTuong, @soKhoa, @chiTieu, N'HoatDong', @cd, @congKhai, @chinhSach)",
                     ThamSoChuongTrinh(f, maKm, maNhanVien).ToArray());
 
                 db.Database.ExecuteSqlCommand(@"
@@ -371,7 +376,7 @@ namespace ECOLearning.Services
                     UPDATE dbo.KhuyenMai
                     SET tenKhuyenMai = @ten, mucUuDai = @muc, ngayBatDau = @bd, ngayKetThuc = @kt, dieuKienApDung = @dk,
                         loaiUuDai = @loai, giamToiDa = @toiDa, donHangToiThieu = @donMin, phamVi = @phamVi, doiTuong = @doiTuong,
-                        soKhoaToiThieu = @soKhoa, chiTieuToiThieu = @chiTieu, maChienDich = @cd, congKhai = @congKhai
+                        soKhoaToiThieu = @soKhoa, chiTieuToiThieu = @chiTieu, maChienDich = @cd, congKhai = @congKhai, chinhSach = @chinhSach
                     WHERE maKhuyenMai = @ma",
                     ThamSoChuongTrinh(f, hienTai.MaKhuyenMai, 0).Where(p => p.ParameterName != "@nv").ToArray());
 
@@ -411,7 +416,8 @@ namespace ECOLearning.Services
                 new SqlParameter("@soKhoa", (object)f.SoKhoaToiThieu ?? DBNull.Value),
                 new SqlParameter("@chiTieu", (object)f.ChiTieuToiThieu ?? DBNull.Value),
                 new SqlParameter("@cd", (object)f.MaChienDich ?? DBNull.Value),
-                new SqlParameter("@congKhai", f.CongKhai)
+                new SqlParameter("@congKhai", f.CongKhai),
+                new SqlParameter("@chinhSach", (object)f.ChinhSach ?? DBNull.Value)
             };
         }
 
@@ -505,93 +511,6 @@ namespace ECOLearning.Services
                 .OrderByDescending(h => DatTieuChi(p, h))
                 .ThenByDescending(h => h.ChiTieu)
                 .ThenByDescending(h => h.SoKhoa)
-                .ToList();
-        }
-
-        // ================================================================== mã hiển thị cho học viên
-
-        public class LuotDungTheoMa
-        {
-            public string MaGiamGia { get; set; }
-            public int SoLuot { get; set; }
-        }
-
-        /// <summary>
-        /// Mã giảm giá học viên được thấy: chương trình công khai, đang chạy, còn lượt, học viên chưa dùng hết lượt của mình.
-        /// Mã thân thiết chỉ hiện với học viên đã đạt tiêu chí. Có <paramref name="gioHang"/> thì tính luôn số tiền giảm
-        /// (hoặc lý do chưa dùng được) bằng chính <see cref="KiemTraCoupon"/>. <paramref name="maKhoaHoc"/> chỉ lấy mã áp dụng cho khóa đó.
-        /// Mã kín (congKhai = 0) không hiện ở đây nhưng vẫn nhập tay được.
-        /// </summary>
-        public List<MaGiamGiaHienThi> LayMaChoHocVien(int maHocVien, IList<DongGioHang> gioHang = null, string maKhoaHoc = null)
-        {
-            var now = DateTime.Now;
-            var chuongTrinh = db.Database.SqlQuery<ChuongTrinhKhuyenMai>(SelectChuongTrinh + @"
-                WHERE km.congKhai = 1 AND km.trangThai = N'HoatDong' AND mg.maCode IS NOT NULL AND ISNULL(mg.trangThai, 1) = 1
-                  AND km.ngayBatDau <= @now AND km.ngayKetThuc >= @now
-                  AND (@kh IS NULL OR km.phamVi = N'TatCa'
-                       OR EXISTS (SELECT 1 FROM dbo.KhuyenMaiKhoaHoc k WHERE k.maKhuyenMai = km.maKhuyenMai AND k.maKhoaHoc = @kh))
-                ORDER BY km.ngayKetThuc",
-                new SqlParameter("@now", now),
-                new SqlParameter("@kh", SqlDbType.VarChar, 20) { Value = (object)maKhoaHoc ?? DBNull.Value })
-                .Where(p => !p.HetLuot)
-                .ToList();
-            var ketQua = new List<MaGiamGiaHienThi>();
-            if (chuongTrinh.Count == 0) return ketQua;
-
-            HocVienThanThietItem hv = null;
-            var daDung = new Dictionary<string, int>();
-            if (maHocVien > 0)
-            {
-                hv = ThongKeHocVien(maHocVien);
-                daDung = db.Database.SqlQuery<LuotDungTheoMa>(@"
-                    SELECT s.maGiamGia AS MaGiamGia, COUNT(*) AS SoLuot
-                    FROM dbo.SuDungUuDai s
-                    INNER JOIN dbo.DonHang d ON d.maDonHang = s.maDonHang AND d.trangThai = N'Đã thanh toán'
-                    WHERE s.maHocVien = @hv
-                    GROUP BY s.maGiamGia",
-                    new SqlParameter("@hv", maHocVien)).ToDictionary(x => x.MaGiamGia, x => x.SoLuot);
-            }
-
-            foreach (var p in chuongTrinh)
-            {
-                // Chưa đăng nhập (hv = null) thì không thấy mã thân thiết
-                if (p.LaThanThiet && !DatTieuChi(p, hv)) continue;
-                int luotCuaToi;
-                daDung.TryGetValue(p.MaGiamGia, out luotCuaToi);
-                if (luotCuaToi >= p.GioiHanMoiHocVien) continue;
-
-                var dieuKien = new List<string>();
-                if (p.LaThanThiet) dieuKien.Add("Ưu đãi học viên thân thiết");
-                dieuKien.Add(p.PhamVi == "KhoaHoc" ? "Áp dụng cho " + p.SoKhoaApDung + " khóa học" : "Áp dụng mọi khóa học");
-                if (p.DonHangToiThieu.HasValue && p.DonHangToiThieu.Value > 0)
-                    dieuKien.Add("Đơn từ " + p.DonHangToiThieu.Value.ToString("N0") + " đ");
-                dieuKien.Add("Mỗi tài khoản dùng " + p.GioiHanMoiHocVien + " lần");
-
-                var ma = new MaGiamGiaHienThi
-                {
-                    MaCode = p.MaCode,
-                    TenKhuyenMai = p.TenKhuyenMai,
-                    MoTaUuDai = p.MoTaUuDai,
-                    DieuKien = dieuKien,
-                    NgayKetThuc = p.NgayKetThuc,
-                    ConLai = p.GioiHanLuotDung.HasValue ? p.GioiHanLuotDung.Value - p.SoLuotDaDung : (int?)null,
-                    LaThanThiet = p.LaThanThiet,
-                    CoTheApDung = true
-                };
-                if (gioHang != null && gioHang.Count > 0)
-                {
-                    var kq = KiemTraCoupon(maHocVien, p.MaCode, gioHang);
-                    ma.CoTheApDung = kq.Success;
-                    ma.TienGiam = kq.TienGiam;
-                    ma.LyDo = kq.Success ? null : kq.Message;
-                }
-                ketQua.Add(ma);
-            }
-
-            return ketQua
-                .OrderByDescending(m => m.CoTheApDung)
-                .ThenByDescending(m => m.TienGiam)
-                .ThenBy(m => m.NgayKetThuc)
                 .ToList();
         }
 
@@ -693,6 +612,13 @@ namespace ECOLearning.Services
                 new SqlParameter("@hv", maHocVien),
                 new SqlParameter("@truoc", kq.TienApDung),
                 new SqlParameter("@giam", kq.TienGiam));
+
+            // Mã nhập tay (kể cả mã kín) cũng vào ví để trang "Mã giảm giá của tôi" có lịch sử
+            db.Database.ExecuteSqlCommand(@"
+                IF NOT EXISTS (SELECT 1 FROM dbo.ViMaGiamGia WHERE maHocVien = @hv AND maGiamGia = @mgg)
+                    INSERT INTO dbo.ViMaGiamGia (maHocVien, maGiamGia) VALUES (@hv, @mgg)",
+                new SqlParameter("@hv", maHocVien),
+                new SqlParameter("@mgg", kq.MaGiamGia));
         }
     }
 }

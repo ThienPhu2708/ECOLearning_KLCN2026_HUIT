@@ -5,6 +5,7 @@ using System.Web;
 using System.Web.Mvc;
 using ECOLearning.Models;
 using ECOLearning.Services;
+using ECOLearning.ViewModels;
 
 namespace ECOLearning.Areas.Instructor.Controllers
 {
@@ -48,13 +49,28 @@ namespace ECOLearning.Areas.Instructor.Controllers
 
             ViewBag.User = user;
             ViewBag.ExistingApp = existingApp;
+
+            // Nộp lại hồ sơ đã bị từ chối: điền sẵn thông tin cũ để người dùng chỉ sửa phần cần sửa
+            var form = new TeacherRegisterFormViewModel { AccountName = BankDirectory.ChuanHoaTenChuTaiKhoan(user.hoTen) };
+            if (existingApp != null)
+            {
+                // Tên ngân hàng cũ có thể gõ tự do ("ACB Chi nhánh Gò Mây"): nhận ra ngân hàng trong danh mục, nhắc kiểm tra lại
+                var bank = BankDirectory.DoanNganHang(existingApp.BankName);
+                form.Specialization = existingApp.Specialization;
+                form.BioExperience = existingApp.BioExperience;
+                form.BankCode = bank != null ? bank.Code : null;
+                form.BankNote = BankDirectory.GhiChuTenCu(existingApp.BankName, bank);
+                form.AccountNumber = existingApp.AccountNumber;
+                form.AccountName = string.IsNullOrWhiteSpace(existingApp.AccountName) ? form.AccountName : existingApp.AccountName;
+            }
+            ViewBag.Form = form;
             return View();
         }
 
         // POST: /Instructor/TeacherApplication/Register (Xử lý nộp hồ sơ)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Register(string specialization, string bioExperience, string bankName, string accountNumber, string accountName, bool termsAgreed = false, HttpPostedFileBase certificateFile = null)
+        public ActionResult Register(string specialization, string bioExperience, string bankCode, string accountNumber, string accountName, bool termsAgreed = false, HttpPostedFileBase certificateFile = null)
         {
             int? userId = GetCurrentUserId();
             if (!userId.HasValue)
@@ -69,6 +85,16 @@ namespace ECOLearning.Areas.Instructor.Controllers
             }
 
             ViewBag.User = user;
+            ViewBag.ExistingApp = TeacherApplicationService.GetByUserId(user.maNguoiDung);
+            // Giữ lại giá trị đã nhập nếu phải hiện lại form vì lỗi
+            ViewBag.Form = new TeacherRegisterFormViewModel
+            {
+                Specialization = specialization,
+                BioExperience = bioExperience,
+                BankCode = bankCode,
+                AccountNumber = accountNumber,
+                AccountName = accountName
+            };
 
             // 1. Kiểm tra validation các trường thông tin
             if (string.IsNullOrWhiteSpace(specialization))
@@ -81,9 +107,25 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 ModelState.AddModelError("bioExperience", "Mô tả giới thiệu bản thân & kinh nghiệm phải có tối thiểu 50 ký tự!");
             }
 
-            if (string.IsNullOrWhiteSpace(bankName) || string.IsNullOrWhiteSpace(accountNumber) || string.IsNullOrWhiteSpace(accountName))
+            // Thông tin nhận thanh toán: ngân hàng chỉ chọn từ danh mục (không gõ tự do), số tài khoản chỉ gồm chữ số,
+            // tên chủ tài khoản IN HOA KHÔNG DẤU như ngân hàng ghi. Chuẩn hóa ở server, không tin dữ liệu trình duyệt gửi lên.
+            var nganHang = BankDirectory.Find(bankCode);
+            if (nganHang == null)
             {
-                ModelState.AddModelError("bankInfo", "Vui lòng nhập đầy đủ thông tin nhận thanh toán (Tên ngân hàng, Số TK, Tên chủ TK)!");
+                ModelState.AddModelError("bankCode", "Vui lòng chọn ngân hàng nhận thanh toán trong danh sách!");
+            }
+            string tenNganHang = nganHang != null ? nganHang.ShortName : null;
+
+            string soTaiKhoan = BankDirectory.ChuanHoaSoTaiKhoan(accountNumber);
+            if (!BankDirectory.SoTaiKhoanHopLe(soTaiKhoan))
+            {
+                ModelState.AddModelError("accountNumber", "Số tài khoản chỉ gồm chữ số, dài từ 6 đến 19 số!");
+            }
+
+            string tenChuTaiKhoan = BankDirectory.ChuanHoaTenChuTaiKhoan(accountName);
+            if (tenChuTaiKhoan.Length < 2 || tenChuTaiKhoan.Length > 100)
+            {
+                ModelState.AddModelError("accountName", "Vui lòng nhập tên chủ tài khoản (in hoa, không dấu, như trên ứng dụng ngân hàng)!");
             }
 
             if (!termsAgreed)
@@ -153,9 +195,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 Phone = user.soDienThoai,
                 Specialization = specialization.Trim(),
                 BioExperience = bioExperience.Trim(),
-                BankName = bankName.Trim(),
-                AccountNumber = accountNumber.Trim(),
-                AccountName = accountName.Trim().ToUpper(),
+                BankName = tenNganHang,
+                AccountNumber = soTaiKhoan,
+                AccountName = tenChuTaiKhoan,
                 CertificateFilePath = savedFilePath,
                 CertificateFileName = originalFileName,
                 CreatedAt = DateTime.Now,

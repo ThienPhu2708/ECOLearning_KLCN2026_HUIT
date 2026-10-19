@@ -1,0 +1,205 @@
+/* =============================================================================
+   Mã giảm giá phía học viên: thẻ mã (Views/Shared/_CouponTicket.cshtml), mục mã khuyến mãi ở trang chủ,
+   trang "Mã giảm giá của tôi", chi tiết mã, hộp thoại xác nhận lưu mã.
+   ========================================================================== */
+
+.cpn-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 860px) { .cpn-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Thẻ mã ---------- */
+.cpn-ticket {
+    --cpn-notch: var(--bg-canvas, #F8FAFC);
+    display: flex;
+    min-height: 132px;
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    transition: border-color .2s, box-shadow .2s;
+}
+.cpn-ticket:hover { border-color: #C7D2FE; box-shadow: 0 6px 18px -8px rgba(67, 76, 232, 0.25); }
+
+.cpn-stub {
+    position: relative;
+    flex: 0 0 112px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 14px 8px;
+    background: #EEF2FF;
+    color: #434CE8;
+    border-radius: 13px 0 0 13px;
+    border-right: 2px dashed #C7D2FE;
+    text-align: center;
+}
+/* Hai khuyết tròn trên / dưới đường cắt vé */
+.cpn-stub::before,
+.cpn-stub::after {
+    content: "";
+    position: absolute;
+    right: -9px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--cpn-notch);
+}
+.cpn-stub::before { top: -9px; }
+.cpn-stub::after { bottom: -9px; }
+
+.cpn-stub-value { font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+.cpn-stub-note { font-size: 11.5px; font-weight: 600; color: #4F46E5; }
+.cpn-stub-tag { margin-top: 2px; font-size: 11px; font-weight: 700; color: #475569; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 9999px; padding: 1px 8px; white-space: nowrap; }
+
+.cpn-body { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 14px 16px 12px 20px; }
+.cpn-title { font-size: 15px; font-weight: 800; color: #0F172A; line-height: 1.35; }
+.cpn-name { margin-top: 4px; font-size: 13px; color: #334155; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cpn-code {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: #434CE8;
+    background: #F5F7FF;
+    border: 1px dashed #A5B4FC;
+    border-radius: 6px;
+    padding: 1px 7px;
+}
+.cpn-cond { margin-top: 4px; font-size: 12px; color: #64748B; line-height: 1.5; }
+.cpn-extra { margin-top: 4px; font-size: 12.5px; font-weight: 600; color: #434CE8; }
+.cpn-foot { margin-top: auto; padding-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.cpn-exp { font-size: 12px; color: #94A3B8; }
+.cpn-status { font-size: 12px; font-weight: 700; color: #475569; background: #F1F5F9; border-radius: 9999px; padding: 2px 10px; }
+.cpn-actions { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+
+.cpn-link { font-size: 13px; font-weight: 600; color: #475569; text-decoration: none; }
+.cpn-link:hover { color: #434CE8; text-decoration: underline; }
+
+.cpn-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-decoration: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+.cpn-btn-primary { background: #434CE8; color: #FFFFFF; }
+.cpn-btn-primary:hover { background: #3730C9; color: #FFFFFF; }
+.cpn-btn-primary:disabled { opacity: .6; cursor: progress; }
+.cpn-btn-outline { background: #FFFFFF; color: #434CE8; border-color: #434CE8; }
+.cpn-btn-outline:hover { background: #EEF2FF; color: #434CE8; }
+.cpn-btn-saved { background: transparent; color: #434CE8; cursor: default; padding: 0 2px; }
+.cpn-btn:focus-visible, .cpn-link:focus-visible { outline: 2px solid #A5B4FC; outline-offset: 2px; }
+
+/* Mã đã dùng / hết hiệu lực */
+.cpn-ticket.is-muted .cpn-stub { background: #F1F5F9; color: #94A3B8; border-right-color: #E2E8F0; }
+.cpn-ticket.is-muted .cpn-stub-note { color: #94A3B8; }
+.cpn-ticket.is-muted .cpn-title { color: #64748B; }
+.cpn-ticket.is-muted .cpn-code { color: #94A3B8; border-color: #CBD5E1; background: #F8FAFC; }
+.cpn-ticket.is-muted:hover { border-color: #E2E8F0; box-shadow: none; }
+
+/* Thẻ hẹp ở cột bên phải trang khóa học */
+.cpn-ticket.is-compact { min-height: 0; --cpn-notch: #FFFFFF; }
+.cpn-ticket.is-compact .cpn-stub { flex-basis: 78px; padding: 10px 4px; }
+.cpn-ticket.is-compact .cpn-stub-value { font-size: 20px; }
+.cpn-ticket.is-compact .cpn-stub-note { font-size: 10.5px; }
+.cpn-ticket.is-compact .cpn-body { padding: 10px 12px 10px 16px; }
+.cpn-ticket.is-compact .cpn-title { font-size: 13.5px; }
+.cpn-ticket.is-compact .cpn-name { font-size: 12px; }
+.cpn-ticket.is-compact .cpn-cond { font-size: 11.5px; }
+.cpn-ticket.is-compact .cpn-extra { font-size: 12px; }
+.cpn-ticket.is-compact .cpn-foot { padding-top: 6px; }
+.cpn-ticket.is-compact .cpn-btn { height: 28px; padding: 0 10px; font-size: 12px; }
+.cpn-ticket.is-compact .cpn-link { font-size: 12px; }
+
+/* ---------- Mục "Mã khuyến mãi" ở trang chủ ---------- */
+.cpn-home { padding: 8px 0 48px; background: var(--bg-canvas, #F8FAFC); }
+.cpn-section-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.cpn-section-link { font-size: 14px; font-weight: 700; color: #434CE8; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.cpn-section-link:hover { text-decoration: underline; }
+.cpn-section-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+/* Slider mã khuyến mãi ở trang chủ (dùng chung .course-slider của Views/Home/Index.cshtml):
+   3 thẻ một lượt, mỗi lần bấm mũi tên dời đúng 1 lượt; 2 thẻ trên tablet, 1 thẻ trên điện thoại */
+.course-slider.cpn-slider { --per-view: 3; --slide-step: 3; --slide-gap: 16px; }
+@media (max-width: 1000px) { .course-slider.cpn-slider { --per-view: 2; --slide-step: 2; } }
+@media (max-width: 640px) { .course-slider.cpn-slider { --per-view: 1; --slide-step: 1; --slide-gap: 12px; } }
+.cpn-slider .course-slide .cpn-ticket { width: 100%; }
+
+/* Thẻ mã thu nhỏ trong slider */
+.cpn-slider .cpn-ticket { min-height: 118px; }
+.cpn-slider .cpn-stub { flex-basis: 92px; padding: 10px 6px; }
+.cpn-slider .cpn-stub-value { font-size: 22px; }
+.cpn-slider .cpn-stub-note { font-size: 10.5px; }
+.cpn-slider .cpn-stub-tag { font-size: 10px; padding: 1px 6px; }
+.cpn-slider .cpn-body { padding: 12px 14px 10px 18px; }
+.cpn-slider .cpn-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Tên chương trình dài: một dòng, có dấu "…" (block thay vì flex để text-overflow áp dụng được) */
+.cpn-slider .cpn-name { display: block; font-size: 12.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cpn-slider .cpn-name .cpn-code { font-size: 11px; margin-right: 4px; }
+.cpn-slider .cpn-cond { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cpn-slider .cpn-foot { padding-top: 8px; gap: 8px; }
+.cpn-slider .cpn-exp { font-size: 11.5px; }
+.cpn-slider .cpn-actions { gap: 10px; }
+.cpn-slider .cpn-link { font-size: 12.5px; }
+.cpn-slider .cpn-btn { height: 30px; padding: 0 12px; font-size: 12.5px; }
+
+/* ---------- Hộp thoại xác nhận lưu mã ---------- */
+.cpn-confirm { max-width: 440px; padding: 28px 28px 24px; border-radius: 20px; background: #FFFFFF; text-align: center; }
+.cpn-confirm-icon { width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 50%; background: #EEF2FF; color: #434CE8; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.cpn-confirm h3 { font-size: 19px; font-weight: 800; color: #0F172A; margin: 0 0 8px; }
+.cpn-confirm p { font-size: 14px; color: #475569; line-height: 1.6; margin: 0 0 14px; }
+.cpn-confirm-note { display: flex; gap: 8px; text-align: left; font-size: 13px; color: #334155; line-height: 1.5; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 10px 12px; margin-bottom: 20px; }
+.cpn-confirm-note .bi { color: #434CE8; margin-top: 2px; }
+.cpn-confirm-error { display: none; font-size: 13px; font-weight: 600; color: #B91C1C; margin: -8px 0 14px; }
+.cpn-confirm-actions { display: flex; gap: 10px; }
+.cpn-confirm-actions .btn { flex: 1; height: 44px; border-radius: 12px; font-weight: 700; }
+
+/* ---------- Trang Mã giảm giá của tôi / chi tiết ---------- */
+.cpn-page { padding: 32px 0 64px; background: var(--bg-canvas, #F8FAFC); min-height: 60vh; }
+.cpn-page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.cpn-page-head h1 { font-size: 28px; font-weight: 800; color: #0F172A; margin: 0 0 6px; }
+.cpn-page-head p { font-size: 14px; color: #64748B; margin: 0; }
+/* Đường kẻ dưới vẽ bằng box-shadow (không dùng margin âm) để không lố 1px làm hiện thanh cuộn dọc;
+   màn hình hẹp vẫn vuốt ngang được nhưng ẩn thanh cuộn */
+.cpn-tabs { display: flex; gap: 4px; box-shadow: inset 0 -1px 0 #E2E8F0; margin-bottom: 20px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; }
+.cpn-tabs::-webkit-scrollbar { display: none; }
+.cpn-tab { flex-shrink: 0; padding: 10px 14px; font-size: 14px; font-weight: 600; color: #64748B; text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; }
+.cpn-tab:hover { color: #0F172A; }
+.cpn-tab.is-active { color: #434CE8; border-bottom-color: #434CE8; }
+.cpn-tab-count { display: inline-block; min-width: 20px; margin-left: 4px; padding: 0 6px; border-radius: 9999px; background: #F1F5F9; color: #475569; font-size: 12px; text-align: center; }
+.cpn-tab.is-active .cpn-tab-count { background: #EEF2FF; color: #434CE8; }
+.cpn-empty { text-align: center; padding: 48px 20px; background: #FFFFFF; border: 1px dashed #CBD5E1; border-radius: 16px; color: #64748B; font-size: 14px; }
+.cpn-empty .bi { display: block; font-size: 32px; color: #94A3B8; margin-bottom: 8px; }
+.cpn-empty a { color: #434CE8; font-weight: 700; }
+
+.cpn-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+@media (max-width: 960px) { .cpn-detail-grid { grid-template-columns: minmax(0, 1fr); } }
+.cpn-card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 20px 22px; margin-bottom: 20px; }
+.cpn-card h2 { font-size: 16px; font-weight: 800; color: #0F172A; margin: 0 0 14px; }
+.cpn-terms { margin: 0; display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 10px 16px; font-size: 14px; }
+.cpn-terms dt { color: #64748B; font-weight: 600; }
+.cpn-terms dd { margin: 0; color: #0F172A; line-height: 1.5; }
+@media (max-width: 600px) { .cpn-terms { grid-template-columns: minmax(0, 1fr); gap: 2px; } .cpn-terms dd { margin-bottom: 10px; } }
+.cpn-rules { list-style: disc; margin: 0; padding-left: 20px; font-size: 14px; color: #334155; line-height: 1.7; }
+.cpn-policy { font-size: 14px; color: #334155; line-height: 1.7; white-space: pre-line; margin: 0; }
+.cpn-course-list { list-style: none; margin: 0; padding: 0; }
+.cpn-course-list li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid #F1F5F9; font-size: 14px; }
+.cpn-course-list li:first-child { border-top: none; padding-top: 0; }
+.cpn-course-list a { color: #0F172A; font-weight: 600; text-decoration: none; }
+.cpn-course-list a:hover { color: #434CE8; text-decoration: underline; }
+.cpn-course-list .cpn-price { color: #64748B; white-space: nowrap; }
+.cpn-side-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; padding: 6px 0; }
+.cpn-side-row span:first-child { color: #64748B; }
+.cpn-side-row span:last-child { color: #0F172A; font-weight: 600; text-align: right; }
+.cpn-history { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.cpn-history th { text-align: left; color: #64748B; font-weight: 600; padding: 8px 6px; border-bottom: 1px solid #E2E8F0; }
+.cpn-history td { padding: 10px 6px; border-bottom: 1px solid #F1F5F9; color: #0F172A; }
+.cpn-history .num { text-align: right; white-space: nowrap; }

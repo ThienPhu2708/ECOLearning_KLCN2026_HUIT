@@ -1,0 +1,56 @@
+@model ECOLearning.ViewModels.DanhSachDanhGiaViewModel
+@* Mục "Đánh giá từ học viên" ở trang chi tiết: tổng quan + 5 đánh giá mới nhất; nhiều hơn 5 thì có nút "Xem tất cả"
+   (trang /Course/Reviews/{id}). Tương tác hữu ích / phản hồi: assets/js/course-reviews.js *@
+<section class="card rv-root" id="danh-gia" aria-labelledby="rv-title"
+         data-login-url="@Url.Action("Login", "Account", new { mode = "login", returnUrl = Request.RawUrl + "#danh-gia" })"
+         data-helpful-url="@Url.Action("Helpful", "Review")"
+         data-reply-url="@Url.Action("Reply", "Review")"
+         data-delete-reply-url="@Url.Action("DeleteReply", "Review")">
+    @Html.AntiForgeryToken()
+    <h3 id="rv-title" class="rv-section-title">Đánh giá từ học viên</h3>
+
+    <div class="rv-summary">
+        <div class="rv-score">
+            <div class="rv-score-num">@Model.DiemTrungBinh.ToString("0.0")</div>
+            <div class="rv-stars rv-stars-lg" aria-hidden="true">
+                @for (int i = 1; i <= 5; i++)
+                {
+                    <i class="bi @(Model.TongSo > 0 && i <= Math.Round(Model.DiemTrungBinh) ? "bi-star-fill" : "bi-star")"></i>
+                }
+            </div>
+            <div class="rv-score-count">@Model.TongSo.ToString("N0") lượt đánh giá</div>
+        </div>
+        <div class="rv-bars">
+            @for (int s = 5; s >= 1; s--)
+            {
+                int pt = Model.PhanTramSao(s);
+                <div class="rv-bar-row">
+                    <span class="rv-bar-label">@s sao</span>
+                    <div class="rv-bar" role="img" aria-label="@s sao: @pt%"><div style="width: @pt%;"></div></div>
+                    <span class="rv-bar-pct">@pt%</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (Model.TongSo == 0)
+    {
+        <div class="rv-empty">
+            <strong>Chưa có nhận xét nào</strong>
+            <p>Khóa học này hiện chưa có nhận xét hay bình luận nào từ học viên.</p>
+        </div>
+    }
+    else
+    {
+        <div class="rv-list">
+            @foreach (var r in Model.Items)
+            {
+                @Html.Partial("_ReviewItem", new ECOLearning.ViewModels.DanhGiaItemModel { Item = r, DanhSach = Model })
+            }
+        </div>
+        if (Model.CoXemTatCa)
+        {
+            <a class="rv-all" href="@Url.Action("Reviews", "Course", new { id = Model.MaKhoaHoc })">Xem tất cả @Model.TongSo.ToString("N0") đánh giá <i class="bi bi-arrow-right"></i></a>
+        }
+    }
+</section>

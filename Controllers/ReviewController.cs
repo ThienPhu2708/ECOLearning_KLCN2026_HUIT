@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Models;
+using ECOLearning.Services;
 
 namespace ECOLearning.Controllers
 {
@@ -70,6 +71,72 @@ namespace ECOLearning.Controllers
         public ActionResult GetCourseReviews(string courseId)
         {
             return PartialView();
+        }
+
+        private int CurrentUserId
+        {
+            get
+            {
+                int id = (Session["UserId"] as int?) ?? 0;
+                if (id == 0 && Session["User"] is NguoiDung u) id = u.maNguoiDung;
+                return id;
+            }
+        }
+
+        // POST: Review/Helpful — "Bạn thấy hữu ích?" (helpful = true / false; bấm lại lựa chọn đang có để bỏ)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public JsonResult Helpful(string reviewId, bool helpful)
+        {
+            int userId = CurrentUserId;
+            if (userId == 0) return Json(new { success = false, requireLogin = true, message = "Vui lòng đăng nhập để bình chọn đánh giá." });
+            using (var db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1())
+            {
+                var service = new CourseReviewService(db);
+                if (!service.IsInstalled()) return Json(new { success = false, message = "Chức năng chưa sẵn sàng (cần chạy migration 011)." });
+                var kq = service.BinhChon(reviewId, userId, helpful);
+                return Json(new { success = kq.Success, message = kq.Message, helpfulCount = kq.SoHuuIch, notHelpfulCount = kq.SoKhongHuuIch, myVote = kq.BinhChon });
+            }
+        }
+
+        // POST: Review/Reply — giáo viên của khóa viết / sửa phản hồi cho một đánh giá.
+        // ValidateInput(false): cho phép ký tự như "<" trong nội dung; mọi chỗ hiển thị đều encode (Razor / textContent).
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [ValidateInput(false)]
+        public JsonResult Reply(string reviewId, string content)
+        {
+            int userId = CurrentUserId;
+            if (userId == 0) return Json(new { success = false, requireLogin = true, message = "Vui lòng đăng nhập." });
+            using (var db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1())
+            {
+                var service = new CourseReviewService(db);
+                if (!service.IsInstalled()) return Json(new { success = false, message = "Chức năng chưa sẵn sàng (cần chạy migration 011)." });
+                var kq = service.LuuPhanHoi(reviewId, userId, content);
+                return Json(new
+                {
+                    success = kq.Success,
+                    message = kq.Message,
+                    content = kq.NoiDung,
+                    dateText = kq.Success ? ReviewTime.ThoiGianTruoc(kq.NgayCapNhat ?? kq.NgayTao) + (kq.NgayCapNhat.HasValue ? " (đã sửa)" : "") : null
+                });
+            }
+        }
+
+        // POST: Review/DeleteReply
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public JsonResult DeleteReply(string reviewId)
+        {
+            int userId = CurrentUserId;
+            if (userId == 0) return Json(new { success = false, requireLogin = true, message = "Vui lòng đăng nhập." });
+            using (var db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1())
+            {
+                var service = new CourseReviewService(db);
+                if (!service.IsInstalled()) return Json(new { success = false, message = "Chức năng chưa sẵn sàng (cần chạy migration 011)." });
+                var kq = service.XoaPhanHoi(reviewId, userId);
+                return Json(new { success = kq.Success, message = kq.Message });
+            }
         }
     }
 }

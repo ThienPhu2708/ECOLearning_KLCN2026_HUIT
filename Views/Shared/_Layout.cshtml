@@ -15,6 +15,9 @@
         <link rel="stylesheet" href="@Url.Content("~/assets/css/variables.css?v=2.0")" />
         <link rel="stylesheet" href="@Url.Content("~/assets/css/base.css?v=2.0")" />
         <link rel="stylesheet" href="@Url.Content("~/assets/css/components.css?v=2.9")" />
+        <link rel="stylesheet" href="@Url.Content("~/assets/css/coupon.css?v=1.4")" />
+        <link rel="stylesheet" href="@Url.Content("~/assets/css/search.css?v=1.0")" />
+        <link rel="stylesheet" href="@Url.Content("~/assets/css/pagination.css?v=1.0")" />
 
         <!-- Skeleton Screen cho thẻ khóa học: hiện khung xương tới khi ảnh bìa tải xong (tối đa 2,5 giây).
              Chạy trong <head> để khung xương xuất hiện ngay lần vẽ đầu tiên, không nháy nội dung thật. -->
@@ -114,9 +117,10 @@
                 </div>
                     <!-- Search Bar -->
                     <div class="header-search">
-                        <form action="@Url.Action("Index", "Course", new { area = "" })" method="get" style="display: flex; align-items: center; width: 100%;">
+                        @* Mở cho cả khách: /tim-kiem (SearchController). Gợi ý khi gõ: assets/js/search-suggest.js *@
+                        <form action="@Url.Action("Index", "Search", new { area = "" })" method="get" role="search" style="display: flex; align-items: center; width: 100%;">
                             <i class="bi bi-search search-icon" style="font-size: 16px;"></i>
-                            <input type="text" name="search" placeholder="Tìm kiếm khóa học, kỹ năng hoặc giảng viên..." value="@Request.QueryString["search"]" />
+                            <input type="search" name="q" maxlength="100" aria-label="Tìm kiếm khóa học" placeholder="Tìm kiếm khóa học, kỹ năng hoặc giảng viên..." value="@(Request.Unvalidated.QueryString["q"] ?? Request.Unvalidated.QueryString["search"])" />
                         </form>
                     </div>
                 <!-- Header Actions -->
@@ -305,6 +309,14 @@
         </div>
     </div>
 
+    @{
+        string vaiTroMaGiamGia = Session["Role"]?.ToString();
+    }
+    @if (Session["UserId"] != null && (vaiTroMaGiamGia == "HocVien" || vaiTroMaGiamGia == "GiaoVien"))
+    {
+        @Html.Partial("_CouponCollectModal")
+    }
+
     <!-- Toast Notifications Container -->
     <div id="toast-container" class="toast-container" style="position: fixed; top: 24px; right: 24px; z-index: 99999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; max-width: 420px; width: calc(100% - 48px);"></div>
 
@@ -329,9 +341,14 @@ window.updateHeaderCartBadge = updateHeaderCartBadge;
 window.FAVORITE_TOGGLE_URL = '@Url.Action("Toggle", "Favorite", new { area = "" })';
 window.FAVORITE_STATE_URL = '@Url.Action("State", "Favorite", new { area = "" })';
 window.MYCOURSES_MENU_URL = '@Url.Action("MyCoursesMenuPanel", "Navigation", new { area = "" })';
+window.COUPON_COLLECT_URL = '@Url.Action("Collect", "Coupon", new { area = "" })';
+window.COUPON_LOGIN_URL = '@Url.Action("Login", "Account", new { area = "" })';
+window.SEARCH_SUGGEST_URL = '@Url.Action("Suggest", "Search", new { area = "" })';
 </script>
 <script src="@Url.Content("~/assets/js/explore-menu.js?v=1.1")"></script>
 <script src="@Url.Content("~/assets/js/favorite.js?v=1.2")"></script>
+<script src="@Url.Content("~/assets/js/coupon-wallet.js?v=1.0")"></script>
+<script src="@Url.Content("~/assets/js/search-suggest.js?v=1.1")"></script>
 @RenderSection("scripts", required: false)
 </body>
 </html>

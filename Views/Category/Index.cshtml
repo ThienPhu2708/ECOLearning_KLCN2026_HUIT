@@ -1,7 +1,8 @@
 @model ECOLearning.ViewModels.CategoryPageViewModel
 @*
     Trang danh mục /danh-muc/{slug}: MỘT view cho mọi danh mục, nội dung theo danh mục người dùng chọn
-    (CategoryController.Index). Lọc cấp độ / sắp xếp qua query string (?level=...&sort=...).
+    (CategoryController.Index). Lọc cấp độ / sắp xếp / trang qua query string (?level=...&sort=...&trang=...),
+    12 khóa mỗi trang (Views/Shared/_Pagination.cshtml).
 *@
 @{
     ViewBag.Title = Model.TenDanhMuc;
@@ -128,7 +129,7 @@
         <nav class="category-breadcrumb" aria-label="Breadcrumb">
             <a href="@Url.Action("Index", "Home", new { area = "" })">Trang chủ</a>
             <i class="bi bi-chevron-right" style="font-size: 11px;"></i>
-            <a href="@Url.Action("Index", "Course", new { area = "" })">Khóa học</a>
+            <a href="@Url.Action("All", "Category", new { area = "" })">Tất cả lĩnh vực</a>
             <i class="bi bi-chevron-right" style="font-size: 11px;"></i>
             <span style="color: #E2E8F0;">@Model.TenDanhMuc</span>
         </nav>
@@ -153,7 +154,7 @@
     <div class="safe-container">
 
         <!-- Lọc cấp độ + sắp xếp -->
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;">
+        <div id="ds-khoa-hoc" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; scroll-margin-top: 96px;">
             <div class="level-tabs" aria-label="Lọc theo cấp độ">
                 <a class="level-tab @(string.IsNullOrEmpty(Model.CapDoDangChon) ? "is-active" : "")"
                    href="@Url.Action("Index", "Category", new { area = "", slug = Model.Slug, sort = sortParam })">
@@ -196,6 +197,7 @@
                     @Html.Partial("_CourseCard", item)
                 }
             </div>
+            @Html.Partial("_Pagination", Model.PhanTrang)
         }
         else
         {

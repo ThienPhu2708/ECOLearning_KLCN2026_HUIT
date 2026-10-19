@@ -14,8 +14,8 @@ namespace ECOLearning.Controllers
     {
         private QL_HETHONG_CUNGCAP_KHOAHOCEntities1 db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1();
 
-        // GET: Learning/MyCourses (UC8: Khóa học của tôi)
-        public ActionResult MyCourses()
+        // GET: Learning/MyCourses?tab=hoan-thanh&trang=2 (UC8: Khóa học của tôi), 12 khóa mỗi trang trong từng tab
+        public ActionResult MyCourses(string tab, int trang = 1)
         {
             int currentUserId = (Session["UserId"] as int?) ?? 0;
             var currentUser = Session["User"] as NguoiDung;
@@ -27,7 +27,7 @@ namespace ECOLearning.Controllers
 
             if (currentUser == null)
             {
-                return RedirectToAction("Login", "Account", new { returnUrl = Url.Action("MyCourses", "Learning") });
+                return RedirectToAction("Login", "Account", new { returnUrl = Request.RawUrl });
             }
 
             int userId = currentUser.maNguoiDung;
@@ -37,51 +37,74 @@ namespace ECOLearning.Controllers
                 .Include(d => d.KhoaHoc)
                 .Include(d => d.KhoaHoc.DanhMuc)
                 .Include(d => d.KhoaHoc.NguoiDung)
-                // Không Include ChuongHoc / ChuongHoc.BaiHoc: nạp lồng nhiều danh sách con sinh truy vấn cần nhiều
-                // bộ nhớ, máy thiếu RAM thì SQL Server bắt chờ tới 25 giây. Chương / bài học được nạp khi dùng tới
-                // bằng các truy vấn nhỏ trong vòng lặp bên dưới.
                 .OrderByDescending(d => d.ngayDangKy)
                 .ToList();
+            var courseIds = enrollments.Where(d => d.KhoaHoc != null).Select(d => d.maKhoaHoc).Distinct().ToList();
 
-            var viewModel = new MyCoursesViewModel();
+            // Phải biết tiến độ của MỌI khóa mới chia được hai tab và đếm số khóa mỗi tab, nên tiến độ được tính bằng
+            // 3 truy vấn chỉ lấy cột cần dùng cho cả trang, thay vì 3 truy vấn cho từng khóa như trước.
+            // Không Include ChuongHoc.BaiHoc: nạp lồng nhiều danh sách con tốn bộ nhớ, máy ít RAM bị SQL Server bắt chờ.
+            var baiHoc = db.BaiHoc
+                .Where(b => b.maChuong != null && courseIds.Contains(b.ChuongHoc.maKhoaHoc))
+                .Select(b => new { MaKhoaHoc = b.ChuongHoc.maKhoaHoc, b.maBaiHoc, b.tenBaiHoc, ThuTuChuong = b.ChuongHoc.thuTu, b.maChuong, b.thuTu })
+                .ToList()
+                .OrderBy(b => b.ThuTuChuong ?? int.MaxValue).ThenBy(b => b.maChuong).ThenBy(b => b.thuTu ?? int.MaxValue)
+                .Select(b => new BaiHocTomTat { MaKhoaHoc = b.MaKhoaHoc, MaBaiHoc = b.maBaiHoc, TenBaiHoc = b.tenBaiHoc })
+                .ToList();
+
+            // Bài không phân chương có mã dạng "{maKhoaHoc}_..." (cùng quy ước với trang Study), xếp sau bài trong chương
+            var baiKhongChuong = db.BaiHoc
+                .Where(b => b.maChuong == null)
+                .Select(b => new { b.maBaiHoc, b.tenBaiHoc, b.thuTu })
+                .ToList()
+                .OrderBy(b => b.thuTu ?? int.MaxValue);
+            foreach (var b in baiKhongChuong)
+            {
+                string maKhoa = courseIds.FirstOrDefault(id => b.maBaiHoc.StartsWith(id + "_"));
+                if (maKhoa != null)
+                {
+                    baiHoc.Add(new BaiHocTomTat { MaKhoaHoc = maKhoa, MaBaiHoc = b.maBaiHoc, TenBaiHoc = b.tenBaiHoc });
+                }
+            }
+            var baiTheoKhoa = baiHoc.GroupBy(b => b.MaKhoaHoc).ToDictionary(g => g.Key, g => g.ToList());
+
+            // Ngày hoàn thành của từng bài học viên đã học xong
+            var ngayXongTheoBai = db.TienDoBaiHoc
+                .Where(t => t.maHocVien == userId && t.daHoanThanh == true)
+                .Select(t => new { t.maBaiHoc, t.ngayHoanThanh, t.lanTruyCapGanNhat })
+                .ToList()
+                .GroupBy(t => t.maBaiHoc)
+                .ToDictionary(g => g.Key, g => g.Max(t => t.ngayHoanThanh ?? t.lanTruyCapGanNhat));
+
+            var ongoing = new List<MyCourseItemViewModel>();
+            var completed = new List<MyCourseItemViewModel>();
 
             foreach (var dk in enrollments)
             {
                 var course = dk.KhoaHoc;
                 if (course == null) continue;
 
-                // Lấy tất cả bài học của khóa học (cả có chương và không phân chương)
-                var chapterLessons = (course.ChuongHoc != null)
-                    ? course.ChuongHoc.SelectMany(c => c.BaiHoc != null ? c.BaiHoc.OrderBy(b => b.thuTu) : Enumerable.Empty<BaiHoc>()).ToList()
-                    : new List<BaiHoc>();
-
-                var unchaptered = db.BaiHoc
-                    .Where(b => b.maChuong == null && b.maBaiHoc.StartsWith(course.maKhoaHoc + "_"))
-                    .OrderBy(b => b.thuTu)
-                    .ToList();
-
-                var allLessons = chapterLessons.Concat(unchaptered).ToList();
+                List<BaiHocTomTat> allLessons;
+                if (!baiTheoKhoa.TryGetValue(course.maKhoaHoc, out allLessons))
+                {
+                    allLessons = new List<BaiHocTomTat>();
+                }
                 int totalLessons = allLessons.Count;
 
-                // Lấy các bài học đã hoàn thành của học viên
-                var lessonIds = allLessons.Select(b => b.maBaiHoc).ToList();
-                var completedRecords = db.TienDoBaiHoc
-                    .Where(t => t.maHocVien == userId && lessonIds.Contains(t.maBaiHoc) && t.daHoanThanh == true)
-                    .ToList();
-
-                int completedCount = completedRecords.Count;
+                // Các bài học đã hoàn thành của học viên trong khóa này
+                var completedLessons = allLessons.Where(b => ngayXongTheoBai.ContainsKey(b.MaBaiHoc)).ToList();
+                int completedCount = completedLessons.Count;
                 int progressPercent = (totalLessons > 0) ? (int)Math.Round((double)completedCount / totalLessons * 100) : 0;
                 if (progressPercent > 100) progressPercent = 100;
 
                 // Xác định bài học tiếp theo (bài đầu tiên chưa hoàn thành)
-                var completedIdSet = new HashSet<string>(completedRecords.Select(c => c.maBaiHoc));
-                var nextLesson = allLessons.FirstOrDefault(b => !completedIdSet.Contains(b.maBaiHoc)) ?? allLessons.FirstOrDefault();
+                var nextLesson = allLessons.FirstOrDefault(b => !ngayXongTheoBai.ContainsKey(b.MaBaiHoc)) ?? allLessons.FirstOrDefault();
 
                 // Ngày hoàn thành (lấy ngày hoàn thành bài học cuối cùng nếu đã đạt 100%)
                 DateTime? completionDate = null;
-                if (progressPercent >= 100 && completedRecords.Any())
+                if (progressPercent >= 100 && completedCount > 0)
                 {
-                    completionDate = completedRecords.Max(c => c.ngayHoanThanh ?? c.lanTruyCapGanNhat);
+                    completionDate = completedLessons.Max(b => ngayXongTheoBai[b.MaBaiHoc]);
                 }
 
                 var item = new MyCourseItemViewModel
@@ -96,21 +119,40 @@ namespace ECOLearning.Controllers
                     TongSoBaiHoc = totalLessons,
                     SoBaiDaHoanThanh = completedCount,
                     PhanTramTienDo = progressPercent,
-                    TenBaiHocTiepTheo = nextLesson != null ? nextLesson.tenBaiHoc : "Bắt đầu học bài đầu tiên",
-                    MaBaiHocTiepTheo = nextLesson != null ? nextLesson.maBaiHoc : null
+                    TenBaiHocTiepTheo = nextLesson != null ? nextLesson.TenBaiHoc : "Bắt đầu học bài đầu tiên",
+                    MaBaiHocTiepTheo = nextLesson != null ? nextLesson.MaBaiHoc : null
                 };
 
                 if (item.DaHoanThanh)
                 {
-                    viewModel.CompletedCourses.Add(item);
+                    completed.Add(item);
                 }
                 else
                 {
-                    viewModel.OngoingCourses.Add(item);
+                    ongoing.Add(item);
                 }
             }
 
+            // Mỗi tab phân trang riêng (link tab không mang số trang nên đổi tab luôn về trang 1)
+            var viewModel = new MyCoursesViewModel
+            {
+                Tab = tab == MyCoursesViewModel.TabHoanThanh ? MyCoursesViewModel.TabHoanThanh : MyCoursesViewModel.TabDangHoc,
+                SoDangHoc = ongoing.Count,
+                SoHoanThanh = completed.Count
+            };
+            var dangXem = viewModel.LaTabHoanThanh ? completed : ongoing;
+            viewModel.PhanTrang = new PhanTrangViewModel(trang, dangXem.Count) { Neo = "ds-khoa-hoc" };
+            viewModel.Items = viewModel.PhanTrang.CatTrang(dangXem);
+
             return View(viewModel);
+        }
+
+        /// <summary>Bài học rút gọn để tính tiến độ ở trang Khóa học của tôi.</summary>
+        private class BaiHocTomTat
+        {
+            public string MaKhoaHoc { get; set; }
+            public string MaBaiHoc { get; set; }
+            public string TenBaiHoc { get; set; }
         }
 
         // GET: Learning/Favorites — trang quản lý "Khóa học đã tim" (trang riêng, tách khỏi Khóa học đã đăng ký)

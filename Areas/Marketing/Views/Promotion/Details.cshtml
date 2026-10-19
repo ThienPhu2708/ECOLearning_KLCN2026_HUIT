@@ -86,7 +86,12 @@
                 <dt>Phạm vi</dt>
                 <dd>@Model.MoTaPhamVi</dd>
                 <dt>Hiển thị</dt>
-                <dd>@(Model.CongKhai ? "Công khai: học viên thấy mã ở giỏ hàng và trang khóa học" : "Mã kín: chỉ ai được gửi mã mới dùng được")</dd>
+                <dd>@(Model.CongKhai ? "Công khai: học viên thấy mã ở trang chủ / Mã giảm giá của tôi và lưu vào ví" : "Mã kín: chỉ ai được gửi mã mới dùng được")</dd>
+                @if (!string.IsNullOrEmpty(Model.ChinhSach))
+                {
+                    <dt>Chính sách</dt>
+                    <dd style="white-space: pre-line;">@Model.ChinhSach</dd>
+                }
                 <dt>Chiến dịch</dt>
                 <dd>
                     @if (string.IsNullOrEmpty(Model.MaChienDich)) { <span class="mk-muted">Không thuộc chiến dịch nào</span> }

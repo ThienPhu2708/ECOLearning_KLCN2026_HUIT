@@ -1,0 +1,233 @@
+@model ECOLearning.ViewModels.TimKiemViewModel
+@{
+    bool coTuKhoa = !string.IsNullOrEmpty(Model.Q);
+    ViewBag.Title = coTuKhoa ? "Kết quả tìm kiếm \"" + Model.Q + "\"" : "Tìm kiếm khóa học";
+    var sortOptions = new[]
+    {
+        new { Value = "lienquan", Text = "Liên quan nhất" },
+        new { Value = "phobien", Text = "Nhiều học viên nhất" },
+        new { Value = "danhgia", Text = "Đánh giá cao nhất" },
+        new { Value = "giatang", Text = "Giá thấp đến cao" },
+        new { Value = "giagiam", Text = "Giá cao đến thấp" }
+    };
+    var diemOptions = new[] { 4.5, 4.0, 3.5, 3.0 };
+    Func<int, string> linkTrang = t => Url.Action("Index", "Search", new { q = Model.Q, danhMuc = Model.DanhMuc, capDo = Model.CapDo, gia = Model.Gia, diem = Model.Diem, sapXep = Model.SapXep == "lienquan" ? null : Model.SapXep, trang = t > 1 ? (int?)t : null });
+}
+
+<main class="sr-page">
+    <div class="safe-container">
+        <div class="sr-head">
+            @if (coTuKhoa)
+            {
+                <h1>Kết quả cho “@Model.Q”</h1>
+                <p>@(Model.TongSo > 0 ? Model.TongSo + " khóa học phù hợp" : "Không có khóa học phù hợp")@(Model.CoBoLoc ? " với bộ lọc đang chọn" : "")</p>
+                if (Model.KhopMotPhan && Model.TongSo > 0)
+                {
+                    <div class="sr-note">Không có khóa học khớp đủ mọi từ trong “@Model.Q”. Dưới đây là các khóa khớp một phần.</div>
+                }
+            }
+            else
+            {
+                <h1>Tìm kiếm khóa học</h1>
+                <p>Nhập tên khóa học, kỹ năng, chủ đề hoặc tên giảng viên vào ô tìm kiếm phía trên.</p>
+            }
+        </div>
+
+        @if (Model.DanhMucLienQuan.Count > 0)
+        {
+            <div class="sr-chips" aria-label="Danh mục liên quan">
+                @foreach (var dm in Model.DanhMucLienQuan)
+                {
+                    <a class="sr-chip" href="@Url.Action("Index", "Category", new { slug = dm.Slug })"><i class="bi bi-grid"></i> @dm.Ten <span>@dm.SoKhoaHoc khóa</span></a>
+                }
+            </div>
+        }
+
+        @if (coTuKhoa && (Model.TongSo > 0 || Model.CoBoLoc))
+        {
+            <div class="sr-layout">
+                <form class="sr-filter" method="get" action="@Url.Action("Index", "Search")" id="sr-filter-form" aria-label="Bộ lọc kết quả">
+                    <input type="hidden" name="q" value="@Model.Q" />
+                    @if (Model.SapXep != "lienquan")
+                    {
+                        <input type="hidden" name="sapXep" value="@Model.SapXep" />
+                    }
+
+                    @if (Model.BoLocDanhMuc.Count > 0)
+                    {
+                        <fieldset>
+                            <legend>Danh mục</legend>
+                            <label class="sr-opt"><input type="radio" name="danhMuc" value="" @(string.IsNullOrEmpty(Model.DanhMuc) ? "checked" : "") /> <span>Tất cả</span></label>
+                            @foreach (var dm in Model.BoLocDanhMuc)
+                            {
+                                <label class="sr-opt"><input type="radio" name="danhMuc" value="@dm.Ma" @(dm.Ma == Model.DanhMuc ? "checked" : "") /> <span>@dm.Ten</span> <em>@dm.SoLuong</em></label>
+                            }
+                        </fieldset>
+                    }
+
+                    @if (Model.BoLocCapDo.Count > 0)
+                    {
+                        <fieldset>
+                            <legend>Cấp độ</legend>
+                            <label class="sr-opt"><input type="radio" name="capDo" value="" @(string.IsNullOrEmpty(Model.CapDo) ? "checked" : "") /> <span>Tất cả</span></label>
+                            @foreach (var cd in Model.BoLocCapDo)
+                            {
+                                <label class="sr-opt"><input type="radio" name="capDo" value="@cd.Ma" @(cd.Ma == Model.CapDo ? "checked" : "") /> <span>@cd.Ten</span> <em>@cd.SoLuong</em></label>
+                            }
+                        </fieldset>
+                    }
+
+                    <fieldset>
+                        <legend>Giá</legend>
+                        <label class="sr-opt"><input type="radio" name="gia" value="" @(Model.Gia == null ? "checked" : "") /> <span>Tất cả</span></label>
+                        <label class="sr-opt"><input type="radio" name="gia" value="mienphi" @(Model.Gia == "mienphi" ? "checked" : "") /> <span>Miễn phí</span></label>
+                        <label class="sr-opt"><input type="radio" name="gia" value="cophi" @(Model.Gia == "cophi" ? "checked" : "") /> <span>Có phí</span></label>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>Đánh giá</legend>
+                        <label class="sr-opt"><input type="radio" name="diem" value="" @(!Model.Diem.HasValue ? "checked" : "") /> <span>Tất cả</span></label>
+                        @foreach (var d in diemOptions)
+                        {
+                            <label class="sr-opt"><input type="radio" name="diem" value="@d.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(Model.Diem.HasValue && Math.Abs(Model.Diem.Value - d) < 0.01 ? "checked" : "") /> <span><i class="bi bi-star-fill" style="color: #F59E0B; font-size: 12px;"></i> Từ @d.ToString("0.0")</span></label>
+                        }
+                    </fieldset>
+
+                    <div class="sr-filter-actions">
+                        <noscript><button type="submit" class="btn btn-primary btn-sm">Lọc</button></noscript>
+                        @if (Model.CoBoLoc)
+                        {
+                            <a href="@Url.Action("Index", "Search", new { q = Model.Q })">Bỏ tất cả bộ lọc</a>
+                        }
+                    </div>
+                </form>
+
+                <div>
+                    <div class="sr-toolbar">
+                        <div class="sr-count"><strong>@Model.TongSo</strong> khóa học</div>
+                        <form class="sr-sort" method="get" action="@Url.Action("Index", "Search")">
+                            <input type="hidden" name="q" value="@Model.Q" />
+                            @if (!string.IsNullOrEmpty(Model.DanhMuc)) { <input type="hidden" name="danhMuc" value="@Model.DanhMuc" /> }
+                            @if (!string.IsNullOrEmpty(Model.CapDo)) { <input type="hidden" name="capDo" value="@Model.CapDo" /> }
+                            @if (!string.IsNullOrEmpty(Model.Gia)) { <input type="hidden" name="gia" value="@Model.Gia" /> }
+                            @if (Model.Diem.HasValue) { <input type="hidden" name="diem" value="@Model.Diem.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)" /> }
+                            <label for="sr-sort">Sắp xếp:</label>
+                            <select id="sr-sort" name="sapXep" onchange="this.form.submit()">
+                                @foreach (var o in sortOptions)
+                                {
+                                    <option value="@o.Value" @(o.Value == Model.SapXep ? "selected" : "")>@o.Text</option>
+                                }
+                            </select>
+                            <noscript><button type="submit" class="btn btn-outline btn-sm">Áp dụng</button></noscript>
+                        </form>
+                    </div>
+
+                    @if (Model.KetQua.Count > 0)
+                    {
+                        <div class="sr-grid">
+                            @foreach (var item in Model.KetQua)
+                            {
+                                @Html.Partial("_CourseCard", item)
+                            }
+                        </div>
+
+                        if (Model.SoTrang > 1)
+                        {
+                            <nav class="sr-pager" aria-label="Phân trang">
+                                @if (Model.Trang > 1)
+                                {
+                                    <a href="@linkTrang(Model.Trang - 1)" aria-label="Trang trước"><i class="bi bi-chevron-left"></i></a>
+                                }
+                                @for (int t = 1; t <= Model.SoTrang; t++)
+                                {
+                                    if (t == 1 || t == Model.SoTrang || Math.Abs(t - Model.Trang) <= 1)
+                                    {
+                                        if (t == Model.Trang)
+                                        {
+                                            <span class="is-current" aria-current="page">@t</span>
+                                        }
+                                        else
+                                        {
+                                            <a href="@linkTrang(t)">@t</a>
+                                        }
+                                    }
+                                    else if (t == 2 || t == Model.SoTrang - 1)
+                                    {
+                                        <span class="is-gap">…</span>
+                                    }
+                                }
+                                @if (Model.Trang < Model.SoTrang)
+                                {
+                                    <a href="@linkTrang(Model.Trang + 1)" aria-label="Trang sau"><i class="bi bi-chevron-right"></i></a>
+                                }
+                            </nav>
+                        }
+                    }
+                    else
+                    {
+                        <div class="sr-empty">
+                            <i class="bi bi-funnel"></i>
+                            <h2>Không có khóa học khớp bộ lọc</h2>
+                            <p><a href="@Url.Action("Index", "Search", new { q = Model.Q })" style="color: #434CE8; font-weight: 700;">Bỏ bộ lọc</a> để xem tất cả kết quả cho “@Model.Q”.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            if (coTuKhoa)
+            {
+                <div class="sr-empty" style="margin-top: 22px;">
+                    <i class="bi bi-search"></i>
+                    <h2>Không tìm thấy khóa học cho “@Model.Q”</h2>
+                    @if (!string.IsNullOrEmpty(Model.GoiYSuaLoi))
+                    {
+                        <p>Có phải bạn muốn tìm: <a href="@Url.Action("Index", "Search", new { q = Model.GoiYSuaLoi })" style="color: #434CE8; font-weight: 700;">@Model.GoiYSuaLoi</a>?</p>
+                    }
+                    else
+                    {
+                        <p>Thử từ khóa ngắn hơn, kiểm tra chính tả, hoặc tìm theo chủ đề / tên giảng viên.</p>
+                    }
+                </div>
+            }
+
+            if (Model.TuKhoaPhoBien.Count > 0)
+            {
+                <h2 class="sr-section-title">Từ khóa được tìm nhiều</h2>
+                <div class="sr-chips">
+                    @foreach (var t in Model.TuKhoaPhoBien)
+                    {
+                        <a class="sr-chip" href="@Url.Action("Index", "Search", new { q = t })"><i class="bi bi-search"></i> @t</a>
+                    }
+                </div>
+            }
+
+            if (Model.KhoaPhoBien.Count > 0)
+            {
+                <h2 class="sr-section-title">Khóa học được nhiều người học</h2>
+                <div class="sr-grid">
+                    @foreach (var item in Model.KhoaPhoBien)
+                    {
+                        @Html.Partial("_CourseCard", item)
+                    }
+                </div>
+            }
+        }
+    </div>
+</main>
+
+@section scripts {
+    <script>
+        // Bộ lọc: chọn là áp dụng ngay (về trang 1)
+        (function () {
+            var form = document.getElementById('sr-filter-form');
+            if (!form) return;
+            form.addEventListener('change', function () {
+                // Bỏ tham số rỗng cho URL gọn
+                form.querySelectorAll('input[type=radio]:checked').forEach(function (r) { r.disabled = r.value === ''; });
+                form.submit();
+            });
+        })();
+    </script>
+}

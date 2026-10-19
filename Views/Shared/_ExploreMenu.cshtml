@@ -8,6 +8,9 @@
             <a class="explore-row" href="@Url.Action("Index", "Course", new { area = "" })">
                 <i class="bi bi-grid"></i><span class="explore-label">Tất cả khóa học</span>
             </a>
+            <a class="explore-row" href="@Url.Action("Index", "Coupon", new { area = "" })">
+                <i class="bi bi-ticket-perforated"></i><span class="explore-label">Mã giảm giá của tôi</span>
+            </a>
         </div>
         <div class="explore-heading">Khám phá theo danh mục</div>
         @for (int i = 0; i < Model.Count; i++)

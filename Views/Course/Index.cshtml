@@ -12,6 +12,9 @@
     string selectedLevel = ViewBag.SelectedLevel as string;
     double? minRating = ViewBag.MinRating as double?;
     string currentSort = ViewBag.Sort as string;
+    // 12 khóa mỗi trang (CourseController.Index); bộ lọc / sắp xếp gửi lại form nên luôn về trang 1
+    var phanTrang = ViewBag.PhanTrang as ECOLearning.ViewModels.PhanTrangViewModel;
+    int tongSoKhoa = phanTrang != null ? phanTrang.TongSo : Model.Count;
 }
 
 @section styles {
@@ -214,10 +217,14 @@
                 <!-- RIGHT: COURSE GRID & RESULTS -->
                 <div class="col-8">
                     <!-- Results header bar & Sort dropdown -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #FFFFFF; border: 1px solid #E2E8F0; padding: 14px 20px; border-radius: 16px;">
+                    <div id="ds-khoa-hoc" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #FFFFFF; border: 1px solid #E2E8F0; padding: 14px 20px; border-radius: 16px; scroll-margin-top: 96px;">
                         <div>
                             <div style="font-weight: 700; color: #0F172A; font-size: 15px;">
-                                Đang hiển thị <span style="color: #434CE8;">@Model.Count</span> khóa học
+                                Tìm thấy <span style="color: #434CE8;">@tongSoKhoa</span> khóa học
+                                @if (phanTrang != null && phanTrang.CoNhieuTrang)
+                                {
+                                    <span style="font-weight: 500; color: #64748B; font-size: 13.5px;">• Trang @phanTrang.Trang/@phanTrang.TongSoTrang</span>
+                                }
                             </div>
                             @if ((ViewBag.SoKhoaDaSoHuu as int? ?? 0) > 0)
                             {
@@ -273,6 +280,7 @@
                                 </div>
                             }
                         </div>
+                        @Html.Partial("_Pagination", phanTrang)
                     }
                 </div>
             </div>

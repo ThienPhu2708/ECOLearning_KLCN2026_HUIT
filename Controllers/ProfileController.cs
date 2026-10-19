@@ -300,7 +300,7 @@ namespace ECOLearning.Controllers
 
         // POST: Profile/UpdateTeacherProfile (Cập nhật hồ sơ giáo viên và đồng bộ CSDL)
         [HttpPost]
-        public JsonResult UpdateTeacherProfile(string specialization, string bioExperience, string bankName, string accountNumber, string accountName, HttpPostedFileBase certificateFile)
+        public JsonResult UpdateTeacherProfile(string specialization, string bioExperience, string bankCode, string accountNumber, string accountName, HttpPostedFileBase certificateFile)
         {
             int? userId = GetCurrentUserId();
             if (!userId.HasValue)
@@ -321,6 +321,24 @@ namespace ECOLearning.Controllers
                     return Json(new { success = false, message = "Chức năng chỉ dành cho tài khoản Giáo viên/Giảng viên!" });
                 }
 
+                // Thông tin nhận thù lao: ngân hàng chỉ chọn trong danh mục (không gõ tự do), số tài khoản chỉ gồm chữ số,
+                // tên chủ tài khoản IN HOA KHÔNG DẤU — kiểm tra / chuẩn hóa ở server như trang đăng ký giáo viên
+                var nganHang = BankDirectory.Find(bankCode);
+                if (nganHang == null)
+                {
+                    return Json(new { success = false, message = "Vui lòng chọn ngân hàng thụ hưởng trong danh sách!" });
+                }
+                string soTaiKhoan = BankDirectory.ChuanHoaSoTaiKhoan(accountNumber);
+                if (!BankDirectory.SoTaiKhoanHopLe(soTaiKhoan))
+                {
+                    return Json(new { success = false, message = "Số tài khoản chỉ gồm chữ số, dài từ 6 đến 19 số!" });
+                }
+                string tenChuTaiKhoan = BankDirectory.ChuanHoaTenChuTaiKhoan(accountName);
+                if (tenChuTaiKhoan.Length < 2 || tenChuTaiKhoan.Length > 100)
+                {
+                    return Json(new { success = false, message = "Vui lòng nhập tên chủ tài khoản (in hoa, không dấu)!" });
+                }
+
                 var app = TeacherApplicationService.GetByUserId(user.maNguoiDung);
                 if (app == null)
                 {
@@ -339,9 +357,9 @@ namespace ECOLearning.Controllers
 
                 app.Specialization = specialization?.Trim();
                 app.BioExperience = bioExperience?.Trim();
-                app.BankName = bankName?.Trim();
-                app.AccountNumber = accountNumber?.Trim();
-                app.AccountName = accountName?.Trim();
+                app.BankName = nganHang.ShortName;
+                app.AccountNumber = soTaiKhoan;
+                app.AccountName = tenChuTaiKhoan;
 
                 // Xử lý tệp chứng chỉ mới tải lên
                 if (certificateFile != null && certificateFile.ContentLength > 0)

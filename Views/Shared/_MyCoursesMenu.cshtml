@@ -2,7 +2,7 @@
 @*
     Menu "Khóa học của tôi" 2 tầng, cùng giao diện và cách hoạt động với menu "Khám phá" (class explore-*,
     xử lý hover ở assets/js/explore-menu.js): Khóa học đã đăng ký / Khóa học đã tim → các khóa gần đây.
-*@
+*@  
 @{
     string dangKyUrl = Url.Action("MyCourses", "Learning", new { area = "" });
     string daTimUrl = Url.Action("Favorites", "Learning", new { area = "" });
@@ -17,7 +17,7 @@
             <i class="bi bi-chevron-right"></i>
         </a>
         <a class="explore-row" data-explore-cat="my-da-tim" href="@daTimUrl">
-            <span class="explore-label">Khóa học đã tim</span>
+            <span class="explore-label">Khóa học đã thích</span>
             <i class="bi bi-chevron-right"></i>
         </a>
     </div>
@@ -43,7 +43,7 @@
         </div>
 
         <div class="explore-sub" data-explore-panel="my-da-tim">
-            <div class="explore-heading">Khóa học đã tim</div>
+            <div class="explore-heading">Khóa học đã thích</div>
             @foreach (var kh in Model.KhoaDaTim)
             {
                 <a class="explore-row explore-course" href="@Url.Action("Details", "Course", new { area = "", id = kh.MaKhoaHoc })" target="_blank" rel="noopener">

@@ -20,10 +20,21 @@ namespace ECOLearning.ViewModels
         public bool DaHoanThanh => PhanTramTienDo >= 100;
     }
 
+    /// <summary>Trang Khóa học của tôi: hai tab (?tab=dang-hoc | hoan-thanh), mỗi tab 12 khóa / trang.</summary>
     public class MyCoursesViewModel
     {
-        public List<MyCourseItemViewModel> OngoingCourses { get; set; } = new List<MyCourseItemViewModel>();
-        public List<MyCourseItemViewModel> CompletedCourses { get; set; } = new List<MyCourseItemViewModel>();
-        public int TotalCount => (OngoingCourses != null ? OngoingCourses.Count : 0) + (CompletedCourses != null ? CompletedCourses.Count : 0);
+        public const string TabDangHoc = "dang-hoc";
+        public const string TabHoanThanh = "hoan-thanh";
+
+        public string Tab { get; set; } = TabDangHoc;
+        public bool LaTabHoanThanh => Tab == TabHoanThanh;
+
+        public int SoDangHoc { get; set; }
+        public int SoHoanThanh { get; set; }
+        public int TotalCount => SoDangHoc + SoHoanThanh;
+
+        /// <summary>Các khóa của tab và trang đang xem.</summary>
+        public List<MyCourseItemViewModel> Items { get; set; } = new List<MyCourseItemViewModel>();
+        public PhanTrangViewModel PhanTrang { get; set; }
     }
 }

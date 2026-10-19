@@ -8,16 +8,6 @@
     var homeRecommendation = ViewBag.HomeRecommendation as ECOLearning.ViewModels.GoiYTrangChuViewModel ?? new ECOLearning.ViewModels.GoiYTrangChuViewModel();
     var recommendations = homeRecommendation.Items;
     var interestPicker = ViewBag.InterestPicker as ECOLearning.ViewModels.InterestPickerViewModel;
-
-    var iconStyles = new[] {
-        new { Icon = "bi-laptop", Bg = "#EEF2FF", Color = "#434CE8" },
-        new { Icon = "bi-palette", Bg = "#FFF7ED", Color = "#EA580C" },
-        new { Icon = "bi-bar-chart-line", Bg = "#ECFDF5", Color = "#10B981" },
-        new { Icon = "bi-rocket-takeoff", Bg = "#F0F9FF", Color = "#0284C7" },
-        new { Icon = "bi-code-slash", Bg = "#F3E8FF", Color = "#9333EA" },
-        new { Icon = "bi-megaphone", Bg = "#FCE7F3", Color = "#DB2777" },
-        new { Icon = "bi-briefcase", Bg = "#FEF3C7", Color = "#D97706" }
-    };
 }
 
 <!-- Hero Section: carousel 4 banner (Views/Home/_HeroCarousel.cshtml) -->
@@ -101,21 +91,55 @@ border-color: var(--primary, #434CE8);
 opacity: 0.4;
 cursor: not-allowed;
 }
+
+.cat-head-actions {
+display: flex;
+gap: 10px;
+align-items: center;
+flex-shrink: 0;
+}
+
+.cat-all-link {
+height: 38px;
+padding: 0 16px;
+display: inline-flex;
+align-items: center;
+gap: 6px;
+border-radius: 9999px;
+border: 1px solid var(--border-color, #E2E8F0);
+background: #FFFFFF;
+color: var(--primary, #434CE8);
+font-size: 14px;
+font-weight: 700;
+text-decoration: none;
+white-space: nowrap;
+box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06);
+transition: all 0.2s ease;
+}
+
+.cat-all-link:hover {
+background: var(--primary, #434CE8);
+border-color: var(--primary, #434CE8);
+color: #FFFFFF;
+}
 </style>
 
 <div class="safe-container">
-    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px 16px; margin-bottom: 24px;">
         <div>
             <span class="caption" style="text-transform: uppercase; color: var(--primary); font-weight: 700;">Danh mục đào tạo</span>
             <h2 class="h2" style="margin-top: 4px;">Khám phá theo lĩnh vực</h2>
         </div>
-        @if (categories.Count > 4)
-        {
-            <div style="display: flex; gap: 10px; align-items: center;">
+        <div class="cat-head-actions">
+            @if (categories.Count > 4)
+            {
                 <button id="cat-prev-btn" class="cat-nav-btn" onclick="slideCategory(-1)" title="Danh mục trước" disabled><i class="bi bi-chevron-left"></i></button>
                 <button id="cat-next-btn" class="cat-nav-btn" onclick="slideCategory(1)" title="Danh mục tiếp theo"><i class="bi bi-chevron-right"></i></button>
-            </div>
-        }
+            }
+            <a class="cat-all-link" href="@Url.Action("All", "Category", new { area = "" })">
+                Tất cả các lĩnh vực <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
     </div>
 
     @if (categories != null && categories.Any())
@@ -125,7 +149,7 @@ cursor: not-allowed;
                 @for (int i = 0; i < categories.Count; i++)
                 {
                     var cat = categories[i];
-                    var style = iconStyles[i % iconStyles.Length];
+                    var style = ECOLearning.ViewModels.IconDanhMuc.TheoViTri(i);
                     <div class="category-item-col">
                         <a href="@Url.Action("Index", "Category", new { area = "", slug = ECOLearning.Services.SlugHelper.ToSlug(cat.tenDanhMuc) })" class="category-card" title="Xem danh mục @cat.tenDanhMuc">
                             <div class="category-icon-bg" style="width: 48px; height: 48px; border-radius: 12px; background: @style.Bg; color: @style.Color; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; transition: transform 0.25s ease;">
@@ -148,6 +172,41 @@ cursor: not-allowed;
     }
 </div>
 </section>
+
+    @* Mã khuyến mãi công khai (Marketing) — lưu vào "Mã giảm giá của tôi", dùng ở bước thanh toán *@
+    var homeCoupons = ViewBag.HomeCoupons as List<ECOLearning.ViewModels.MaGiamGiaHienThi>;
+    if (homeCoupons != null && homeCoupons.Count > 0)
+    {
+        <section id="coupons-section" class="cpn-home" aria-labelledby="coupons-heading">
+            <div class="safe-container">
+                <div class="cpn-section-head">
+                    <div>
+                        <span class="caption" style="text-transform: uppercase; color: var(--primary); font-weight: 700;">Ưu đãi dành cho bạn</span>
+                        <h2 class="h2" id="coupons-heading" style="margin-top: 4px;">Mã khuyến mãi</h2>
+                        <p style="margin: 6px 0 0; font-size: 14px; color: var(--text-secondary, #64748B);">Lưu mã vào ví, sau đó chọn mã ở bước thanh toán để được giảm giá.</p>
+                    </div>
+                    <div class="cpn-section-actions">
+                        @* Mũi tên chỉ hiện khi nhiều mã hơn số thẻ một lượt (slider dùng chung với khóa học, JS cuối trang) *@
+                        <div class="course-slider-nav" data-slider-nav="coupon-slider" style="display: flex; gap: 10px; align-items: center;" hidden>
+                            <button type="button" class="cat-nav-btn js-slider-prev" title="Mã trước" aria-label="Mã khuyến mãi trước" disabled><i class="bi bi-chevron-left"></i></button>
+                            <button type="button" class="cat-nav-btn js-slider-next" title="Mã tiếp theo" aria-label="Mã khuyến mãi tiếp theo"><i class="bi bi-chevron-right"></i></button>
+                        </div>
+                        <a class="cpn-section-link" href="@Url.Action("Index", "Coupon", new { area = "" })">Mã giảm giá của tôi <i class="bi bi-arrow-right"></i></a>
+                    </div>
+                </div>
+                <div class="course-slider cpn-slider" id="coupon-slider" aria-roledescription="carousel" aria-label="Mã khuyến mãi">
+                    <div class="course-slider-track">
+                        @foreach (var cp in homeCoupons.OrderBy(c => c.DaLuu))
+                        {
+                            <div class="course-slide">
+                                @Html.Partial("_CouponTicket", new ECOLearning.ViewModels.TheMaGiamGiaModel { Ma = cp })
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
 
     <style>
         /* Slider khóa học (gợi ý + nổi bật): 5 thẻ một lượt, mỗi lần trượt dời (5 - 1) thẻ để thẻ cuối lượt trước thành thẻ đầu lượt sau */
@@ -999,7 +1058,8 @@ document.querySelectorAll('.course-slider').forEach(function initCourseSlider(sl
     }
 
     function slide(direction) {
-        const step = Math.max(1, perView() - 1);
+        // Số thẻ dời mỗi lần bấm: --slide-step nếu có (slider mã khuyến mãi dời đúng 1 lượt), mặc định perView - 1
+        const step = parseInt(getComputedStyle(slider).getPropertyValue('--slide-step'), 10) || Math.max(1, perView() - 1);
         index += direction * step;
         render();
     }

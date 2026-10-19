@@ -1,0 +1,122 @@
+@model ECOLearning.ViewModels.ChiTietMaGiamGiaViewModel
+@{
+    var p = Model.ChuongTrinh;
+    ViewBag.Title = "Mã giảm giá " + p.MaCode;
+    var vi = Model.TrongVi;
+    bool dungDuoc = vi != null && vi.TrangThai == "CoTheDung";
+    string nhan = vi == null ? null : vi.TrangThai == "CoTheDung" ? null : vi.TrangThai == "SapDienRa" ? "Dùng được từ " + p.NgayBatDau.ToString("dd/MM/yyyy") : vi.NhanTrangThai;
+}
+
+<main class="cpn-page">
+    <div class="safe-container">
+        <a href="@Url.Action("Index", "Coupon")" style="display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #475569; text-decoration: none; margin-bottom: 14px;">
+            <i class="bi bi-arrow-left"></i> Mã giảm giá của tôi
+        </a>
+
+        <div class="cpn-detail-grid">
+            <div>
+                <div style="margin-bottom: 20px;">
+                    @Html.Partial("_CouponTicket", new ECOLearning.ViewModels.TheMaGiamGiaModel
+                    {
+                        Ma = Model.The,
+                        NhanTrangThai = nhan,
+                        LamMo = vi != null && (vi.TrangThai == "DaDung" || vi.TrangThai == "HetHieuLuc"),
+                        LinkDungNgay = dungDuoc ? (Model.GioHangCoKhoaHoc ? Url.Action("Index", "Cart") : Url.Action("Index", "Course")) : null,
+                        HienNutLuu = vi == null && Model.CoTheLuu,
+                        HienChiTiet = false
+                    })
+                </div>
+
+                <section class="cpn-card" aria-labelledby="cpn-terms-title">
+                    <h2 id="cpn-terms-title">Chính sách áp dụng</h2>
+                    <dl class="cpn-terms">
+                        @foreach (var dk in Model.DieuKhoan)
+                        {
+                            <dt>@dk.Key</dt>
+                            <dd>@dk.Value</dd>
+                        }
+                    </dl>
+                </section>
+
+                @if (!string.IsNullOrWhiteSpace(p.ChinhSach))
+                {
+                    <section class="cpn-card" aria-labelledby="cpn-policy-title">
+                        <h2 id="cpn-policy-title">Mô tả chương trình</h2>
+                        <p class="cpn-policy">@p.ChinhSach</p>
+                    </section>
+                }
+
+                @if (Model.KhoaHocApDung.Count > 0)
+                {
+                    <section class="cpn-card" aria-labelledby="cpn-courses-title">
+                        <h2 id="cpn-courses-title">Khóa học áp dụng (@Model.KhoaHocApDung.Count)</h2>
+                        <ul class="cpn-course-list">
+                            @foreach (var k in Model.KhoaHocApDung)
+                            {
+                                <li>
+                                    <a href="@Url.Action("Details", "Course", new { id = k.MaKhoaHoc })">@k.TenKhoaHoc</a>
+                                    <span class="cpn-price">@k.GiaBan.ToString("N0") đ</span>
+                                </li>
+                            }
+                        </ul>
+                    </section>
+                }
+
+                <section class="cpn-card" aria-labelledby="cpn-rules-title">
+                    <h2 id="cpn-rules-title">Quy định chung</h2>
+                    <ul class="cpn-rules">
+                        <li>Mỗi đơn hàng chỉ áp dụng một mã giảm giá, không cộng dồn nhiều mã.</li>
+                        <li>Mã giảm trên giá bán hiện tại của khóa học (đã gồm giá khuyến mãi của khóa học nếu có).</li>
+                        <li>Lượt dùng chỉ được tính khi đơn hàng thanh toán thành công.</li>
+                        <li>Mã đã lưu không thể xóa khỏi danh sách và thao tác lưu không thể hoàn tác.</li>
+                        <li>Tiền giảm không quy đổi thành tiền mặt và không chuyển cho tài khoản khác.</li>
+                        <li>Chương trình có thể tạm ngưng hoặc kết thúc sớm; khi đó mã không dùng được nữa.</li>
+                    </ul>
+                </section>
+            </div>
+
+            <aside>
+                <section class="cpn-card">
+                    <h2>Tình trạng của bạn</h2>
+                    <div class="cpn-side-row"><span>Trạng thái</span><span>@(vi == null ? "Chưa lưu" : vi.NhanTrangThai)</span></div>
+                    @if (vi != null)
+                    {
+                        <div class="cpn-side-row"><span>Ngày lưu</span><span>@vi.NgayLuu.ToString("dd/MM/yyyy HH:mm")</span></div>
+                        <div class="cpn-side-row"><span>Đã dùng</span><span>@vi.LuotCuaToi/@vi.GioiHanMoiHocVien lượt</span></div>
+                    }
+                    <div class="cpn-side-row"><span>Hạn dùng</span><span>@p.NgayKetThuc.ToString("HH:mm dd/MM/yyyy")</span></div>
+                    @if (vi == null && !Model.CoTheLuu)
+                    {
+                        <p style="font-size: 13px; color: #64748B; margin: 10px 0 0;">Bạn không thể lưu mã này (đã dùng hết lượt).</p>
+                    }
+                </section>
+
+                @if (Model.LichSuCuaToi.Count > 0)
+                {
+                    <section class="cpn-card">
+                        <h2>Lịch sử sử dụng</h2>
+                        <table class="cpn-history">
+                            <thead><tr><th>Đơn hàng</th><th class="num">Đã giảm</th></tr></thead>
+                            <tbody>
+                                @foreach (var l in Model.LichSuCuaToi)
+                                {
+                                    <tr>
+                                        <td>@l.MaDonHang<div style="font-size: 12px; color: #94A3B8;">@l.NgaySuDung.ToString("dd/MM/yyyy HH:mm")</div></td>
+                                        <td class="num">- @l.TienGiam.ToString("N0") đ</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </section>
+                }
+            </aside>
+        </div>
+    </div>
+</main>
+
+@section scripts {
+    <script>
+        // Lưu mã ngay trên trang chi tiết: tải lại để cập nhật "Tình trạng của bạn" và nút "Dùng ngay"
+        document.addEventListener('coupon:saved', function () { window.location.reload(); });
+    </script>
+}

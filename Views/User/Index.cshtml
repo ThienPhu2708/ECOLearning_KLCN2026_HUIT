@@ -303,11 +303,15 @@
 
                 <!-- Liên hệ & Thông tin bổ sung -->
                 <div style="display: flex; align-items: center; gap: 20px; font-size: 13.5px; color: #94A3B8; flex-wrap: wrap;">
-                    <div style="display: inline-flex; align-items: center; gap: 6px;">
-                        <i class="bi bi-envelope-at" style="color: #818CF8;"></i>
-                        <span>@Model.Email</span>
-                    </div>
-                    @if (!string.IsNullOrEmpty(Model.SoDienThoai))
+                    @* Email / số điện thoại chỉ hiện khi đã đăng nhập (hồ sơ mở công khai cho khách từ trang tìm kiếm) *@
+                    @if (Session["UserId"] != null)
+                    {
+                        <div style="display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="bi bi-envelope-at" style="color: #818CF8;"></i>
+                            <span>@Model.Email</span>
+                        </div>
+                    }
+                    @if (Session["UserId"] != null && !string.IsNullOrEmpty(Model.SoDienThoai))
                     {
                         <div style="display: inline-flex; align-items: center; gap: 6px;">
                             <i class="bi bi-telephone" style="color: #818CF8;"></i>

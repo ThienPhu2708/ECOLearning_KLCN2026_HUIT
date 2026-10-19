@@ -1,0 +1,60 @@
+@model ECOLearning.ViewModels.TheMaGiamGiaModel
+@* Thẻ mã giảm giá dùng chung: trang chủ, Mã giảm giá của tôi, chi tiết mã, trang khóa học.
+   Nút "Lưu mã" (data-coupon-collect) do assets/js/coupon-wallet.js xử lý: hỏi xác nhận rồi lưu, không hoàn tác. *@
+@{
+    var m = Model.Ma;
+    string linkChiTiet = Url.Action("Details", "Coupon", new { area = "", code = m.MaCode });
+}
+<div class="cpn-ticket @(Model.LamMo ? "is-muted" : "") @(Model.NhoGon ? "is-compact" : "")">
+    <div class="cpn-stub">
+        <div class="cpn-stub-value">@m.GiaTriNgan</div>
+        @if (!string.IsNullOrEmpty(m.GhiChuGiaTri))
+        {
+            <div class="cpn-stub-note">@m.GhiChuGiaTri</div>
+        }
+        @if (m.LaThanThiet)
+        {
+            <div class="cpn-stub-tag"><i class="bi bi-award"></i> Thân thiết</div>
+        }
+    </div>
+    <div class="cpn-body">
+        <div class="cpn-title">@m.MoTaUuDai</div>
+        <div class="cpn-name"><span class="cpn-code">@m.MaCode</span> @m.TenKhuyenMai</div>
+        <div class="cpn-cond">@string.Join(" · ", m.DieuKien)</div>
+        @if (!string.IsNullOrEmpty(Model.DongPhu))
+        {
+            <div class="cpn-extra">@Model.DongPhu</div>
+        }
+        <div class="cpn-foot">
+            @if (!string.IsNullOrEmpty(Model.NhanTrangThai))
+            {
+                <span class="cpn-status">@Model.NhanTrangThai</span>
+            }
+            else
+            {
+                <span class="cpn-exp">HSD @m.NgayKetThuc.ToString("dd/MM/yyyy")@(m.ConLai.HasValue && m.ConLai.Value <= 20 ? " · còn " + m.ConLai.Value + " lượt" : "")</span>
+            }
+            <div class="cpn-actions">
+                @if (Model.HienChiTiet)
+                {
+                    <a class="cpn-link" href="@linkChiTiet">Chi tiết</a>
+                }
+                @if (!string.IsNullOrEmpty(Model.LinkDungNgay))
+                {
+                    <a class="cpn-btn cpn-btn-primary" href="@Model.LinkDungNgay">Dùng ngay</a>
+                }
+                else if (Model.HienNutLuu)
+                {
+                    if (m.DaLuu)
+                    {
+                        <span class="cpn-btn cpn-btn-saved"><i class="bi bi-check2"></i> Đã lưu</span>
+                    }
+                    else
+                    {
+                        <button type="button" class="cpn-btn cpn-btn-primary" data-coupon-collect data-code="@m.MaCode" data-label="@m.MoTaUuDai">Lưu mã</button>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>

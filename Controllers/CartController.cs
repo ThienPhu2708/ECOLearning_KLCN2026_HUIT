@@ -50,7 +50,8 @@ namespace ECOLearning.Controllers
                 DiscountAmount = discount,
                 AppliedCouponCode = couponCode,
                 TotalAmount = Math.Max(0, subtotal - discount),
-                AvailableCoupons = LayMaGoiY(cart)
+                AvailableCoupons = LayMaGoiY(cart),
+                IsLoggedIn = ((Session["UserId"] as int?) ?? 0) > 0
             };
 
             return View(model);
@@ -60,51 +61,115 @@ namespace ECOLearning.Controllers
         [HttpPost]
         public JsonResult AddToCart(string courseId)
         {
-            if (string.IsNullOrWhiteSpace(courseId))
-            {
-                return Json(new { success = false, message = "Vui lòng chọn khóa học!" });
-            }
-
             var cart = GetCartSession();
-
-            if (cart.Any(i => i.CourseId == courseId))
-            {
-                return Json(new { success = false, message = "Khóa học này đã có trong giỏ hàng của bạn!", cartCount = cart.Count });
-            }
-
             try
             {
-                var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == courseId && (k.trangThai == "Đã xuất bản" || k.trangThai == "Đã duyệt" || k.trangThai == "Active"));
-                if (course == null)
-                {
-                    return Json(new { success = false, message = "Không tìm thấy khóa học hợp lệ hoặc khóa học chưa được phê duyệt!" });
-                }
-
-                int userId = (Session["UserId"] as int?) ?? 0;
-                if (userId > 0 && course.maGiaoVien == userId)
-                {
-                    return Json(new { success = false, message = "Bạn là giáo viên của khóa học này nên không thể tự mua!", cartCount = cart.Count });
-                }
-
-                cart.Add(new CartItemViewModel
-                {
-                    CourseId = course.maKhoaHoc,
-                    CourseName = course.tenKhoaHoc,
-                    InstructorName = course.NguoiDung != null ? course.NguoiDung.hoTen : "Giảng viên E-Learning",
-                    DurationText = "30 giờ học",
-                    Price = PromotionService.GiaBanHienTai(course),
-                    OriginalPrice = course.giaBan,
-                    ThumbnailUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia
-                });
-
-                SaveCartSession(cart);
-                return Json(new { success = true, message = "Đã thêm khóa học vào giỏ hàng thành công!", cartCount = cart.Count });
+                string message;
+                bool ok = ThemKhoaVaoGio(courseId, cart, out message);
+                if (ok) SaveCartSession(cart);
+                return Json(new { success = ok, message, cartCount = cart.Count });
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("AddToCart Error: " + ex.Message);
                 return Json(new { success = false, message = "Có lỗi xảy ra khi thêm vào giỏ hàng!" });
             }
+        }
+
+        // POST: Cart/AddManyToCart — nút "Thêm tất cả vào giỏ hàng" của mục "Thường xuyên được mua cùng nhau".
+        // Kiểm tra từng khóa như AddToCart; khóa đã có trong giỏ tính là thành công (không thêm lần hai).
+        [HttpPost]
+        public JsonResult AddManyToCart(string[] courseIds)
+        {
+            var ids = (courseIds ?? new string[0]).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().Take(10).ToList();
+            if (ids.Count == 0)
+            {
+                return Json(new { success = false, message = "Vui lòng chọn khóa học!" });
+            }
+
+            var cart = GetCartSession();
+            var daThem = new List<string>();
+            var trongGio = new List<string>();
+            var loi = new List<object>();
+            try
+            {
+                foreach (var id in ids)
+                {
+                    if (cart.Any(i => i.CourseId == id)) { trongGio.Add(id); continue; }
+                    string message;
+                    if (ThemKhoaVaoGio(id, cart, out message)) daThem.Add(id);
+                    else loi.Add(new { courseId = id, message });
+                }
+                SaveCartSession(cart);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("AddManyToCart Error: " + ex.Message);
+                return Json(new { success = false, message = "Có lỗi xảy ra khi thêm vào giỏ hàng!", cartCount = cart.Count });
+            }
+
+            int coTrongGio = daThem.Count + trongGio.Count;
+            return Json(new
+            {
+                success = coTrongGio > 0,
+                message = loi.Count == 0
+                    ? "Giỏ hàng đã có đủ " + coTrongGio + " khóa học."
+                    : coTrongGio + "/" + ids.Count + " khóa học đã có trong giỏ; " + loi.Count + " khóa không thêm được.",
+                added = daThem,
+                inCart = daThem.Concat(trongGio).ToList(),
+                errors = loi,
+                cartCount = cart.Count
+            });
+        }
+
+        /// <summary>
+        /// Thêm một khóa vào giỏ (session) sau khi kiểm tra: đang bán, chưa có trong giỏ, không phải khóa mình dạy,
+        /// chưa đăng ký. Giá lấy từ CSDL (PromotionService.GiaBanHienTai) và còn được tính lại khi mở giỏ / thanh toán.
+        /// </summary>
+        private bool ThemKhoaVaoGio(string courseId, List<CartItemViewModel> cart, out string message)
+        {
+            if (string.IsNullOrWhiteSpace(courseId))
+            {
+                message = "Vui lòng chọn khóa học!";
+                return false;
+            }
+            if (cart.Any(i => i.CourseId == courseId))
+            {
+                message = "Khóa học này đã có trong giỏ hàng của bạn!";
+                return false;
+            }
+
+            var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == courseId && (k.trangThai == "Đã xuất bản" || k.trangThai == "Đã duyệt" || k.trangThai == "Active"));
+            if (course == null)
+            {
+                message = "Không tìm thấy khóa học hợp lệ hoặc khóa học chưa được phê duyệt!";
+                return false;
+            }
+
+            int userId = (Session["UserId"] as int?) ?? 0;
+            if (userId > 0 && course.maGiaoVien == userId)
+            {
+                message = "Bạn là giáo viên của khóa học này nên không thể tự mua!";
+                return false;
+            }
+            if (userId > 0 && db.DangKyKhoaHoc.Any(d => d.maHocVien == userId && d.maKhoaHoc == courseId))
+            {
+                message = "Bạn đã sở hữu khóa học này.";
+                return false;
+            }
+
+            cart.Add(new CartItemViewModel
+            {
+                CourseId = course.maKhoaHoc,
+                CourseName = course.tenKhoaHoc,
+                InstructorName = course.NguoiDung != null ? course.NguoiDung.hoTen : "Giảng viên E-Learning",
+                DurationText = "30 giờ học",
+                Price = PromotionService.GiaBanHienTai(course),
+                OriginalPrice = course.giaBan,
+                ThumbnailUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia
+            });
+            message = "Đã thêm khóa học vào giỏ hàng thành công!";
+            return true;
         }
 
         // POST: Cart/RemoveFromCart (Xóa khóa học khỏi giỏ)
@@ -395,16 +460,19 @@ namespace ECOLearning.Controllers
             return promotions.KiemTraCoupon(userId, couponCode, ToLines(cart));
         }
 
-        /// <summary>Mã công khai cho giỏ hiện tại; giỏ trống thì vẫn liệt kê để học viên biết đang có ưu đãi.</summary>
+        /// <summary>
+        /// Mã trong ví "Mã giảm giá của tôi" cho giỏ hiện tại (kèm số tiền giảm / lý do chưa dùng được).
+        /// Mã chưa lưu không hiện ở giỏ; học viên thu thập ở trang chủ / trang Mã giảm giá của tôi, hoặc nhập tay mã kín.
+        /// </summary>
         private List<MaGiamGiaHienThi> LayMaGoiY(List<CartItemViewModel> cart)
         {
             var promotions = new PromotionService(db);
             if (!promotions.IsInstalled()) return new List<MaGiamGiaHienThi>();
             int userId = (Session["UserId"] as int?) ?? 0;
-            return promotions.LayMaChoHocVien(userId, cart.Count > 0 ? ToLines(cart) : null);
+            return promotions.LayMaChoHocVien(userId, cart.Count > 0 ? ToLines(cart) : null, null, chiTrongVi: true);
         }
 
-        // GET: Cart/AvailableCoupons — danh sách mã sau khi giỏ thay đổi (xóa khóa học)
+        // GET: Cart/AvailableCoupons — danh sách mã trong hộp thoại "Chọn mã khuyến mãi" (tải lại mỗi lần mở / sau khi giỏ đổi)
         [HttpGet]
         public ActionResult AvailableCoupons()
         {
@@ -414,8 +482,20 @@ namespace ECOLearning.Controllers
             {
                 Items = cart,
                 AppliedCouponCode = Session[SessionCoupon] as string,
-                AvailableCoupons = LayMaGoiY(cart)
+                AvailableCoupons = LayMaGoiY(cart),
+                IsLoggedIn = ((Session["UserId"] as int?) ?? 0) > 0
             });
+        }
+
+        // POST: Cart/RemoveCoupon — bỏ mã đang áp dụng (mã vẫn nằm trong ví, chưa tính lượt dùng)
+        [HttpPost]
+        public JsonResult RemoveCoupon()
+        {
+            Session.Remove(SessionCoupon);
+            var cart = GetCartSession();
+            CapNhatGia(cart);
+            decimal subtotal = cart.Sum(i => i.Price);
+            return Json(new { success = true, discount = "- 0 đ", total = subtotal.ToString("N0") + " đ" });
         }
 
         protected override void Dispose(bool disposing)

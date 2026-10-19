@@ -7,6 +7,7 @@
 }
 
 @section styles {
+    <link rel="stylesheet" href="@Url.Content("~/assets/css/bank-picker.css?v=1.0")" />
     <style>
         .profile-header-banner {
             height: 160px;
@@ -233,19 +234,34 @@
                                     <i class="bi bi-credit-card-2-front-fill" style="color: #434CE8; font-size: 18px;"></i> Thông tin nhận thù lao giảng dạy
                                 </div>
 
+                                @{
+                                    // Tên ngân hàng cũ có thể gõ tự do: nhận ra ngân hàng trong danh mục để chọn sẵn, nhắc kiểm tra lại
+                                    var nganHangCu = ECOLearning.Services.BankDirectory.DoanNganHang(Model.BankName);
+                                }
                                 <div class="form-group" style="margin-bottom: 16px;">
-                                    <label class="form-label" for="teacher-bank-name">Ngân hàng thụ hưởng</label>
-                                    <input type="text" id="teacher-bank-name" class="form-control" value="@Model.BankName" placeholder="VD: Vietcombank, Techcombank, MB Bank, ACB...">
+                                    <label class="form-label" for="teacher-bank-search">Ngân hàng thụ hưởng</label>
+                                    @Html.Partial("_BankPicker", new ECOLearning.ViewModels.BankPickerViewModel
+                                    {
+                                        Id = "teacher-bank-search",
+                                        Name = "bankCode",
+                                        SelectedCode = nganHangCu != null ? nganHangCu.Code : null,
+                                        InputClass = "form-control",
+                                        Note = ECOLearning.Services.BankDirectory.GhiChuTenCu(Model.BankName, nganHangCu),
+                                        NextFieldId = "teacher-account-number"
+                                    })
+                                    <span style="display: block; font-size: 12px; color: #64748B; margin-top: 6px;">Chọn trong danh sách ngân hàng (không nhập tay) để tránh sai sót khi chuyển thù lao.</span>
                                 </div>
 
                                 <div class="grid-12" style="margin-bottom: 24px;">
                                     <div class="col-6">
                                         <label class="form-label" for="teacher-account-number">Số tài khoản</label>
-                                        <input type="text" id="teacher-account-number" class="form-control" value="@Model.AccountNumber" placeholder="VD: 0123456789" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                                        <input type="text" id="teacher-account-number" class="form-control" value="@Model.AccountNumber" placeholder="VD: 0123456789" inputmode="numeric" autocomplete="off" maxlength="19" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                                        <span style="display: block; font-size: 12px; color: #64748B; margin-top: 6px;">Chỉ gồm chữ số (6–19 số).</span>
                                     </div>
                                     <div class="col-6">
                                         <label class="form-label" for="teacher-account-name">Tên chủ tài khoản</label>
-                                        <input type="text" id="teacher-account-name" class="form-control" value="@Model.AccountName" placeholder="VD: NGUYEN VAN A" style="text-transform: uppercase;">
+                                        <input type="text" id="teacher-account-name" class="form-control" value="@Model.AccountName" placeholder="VD: NGUYEN VAN A" autocomplete="off" maxlength="100" onblur="this.value = BankPicker.tenChuTaiKhoan(this.value)">
+                                        <span style="display: block; font-size: 12px; color: #64748B; margin-top: 6px;">In hoa, không dấu, đúng như trên ứng dụng ngân hàng.</span>
                                     </div>
                                 </div>
 
@@ -297,6 +313,7 @@
 </main>
 
 @section scripts {
+    <script src="@Url.Content("~/assets/js/bank-picker.js?v=1.0")"></script>
     <script>
         // Switch Profile Tabs
         function switchProfileTab(tabName) {
@@ -334,14 +351,33 @@
         function handleSaveTeacherProfile() {
             const specialization = document.getElementById('teacher-specialization') ? document.getElementById('teacher-specialization').value.trim() : '';
             const bioExperience = document.getElementById('teacher-experience') ? document.getElementById('teacher-experience').value.trim() : '';
-            const bankName = document.getElementById('teacher-bank-name') ? document.getElementById('teacher-bank-name').value.trim() : '';
-            const accountNumber = document.getElementById('teacher-account-number') ? document.getElementById('teacher-account-number').value.trim() : '';
-            const accountName = document.getElementById('teacher-account-name') ? document.getElementById('teacher-account-name').value.trim() : '';
+            // Ngân hàng chỉ chọn trong danh mục (assets/js/bank-picker.js); số TK chỉ gồm chữ số; tên chủ TK in hoa không dấu
+            const bankPicker = BankPicker.get(document.getElementById('teacher-bank-search'));
+            const bankCode = bankPicker ? bankPicker.value() : '';
+            const accountNumberEl = document.getElementById('teacher-account-number');
+            const accountNameEl = document.getElementById('teacher-account-name');
+            const accountNumber = accountNumberEl ? BankPicker.chiSo(accountNumberEl.value) : '';
+            if (accountNameEl) accountNameEl.value = BankPicker.tenChuTaiKhoan(accountNameEl.value);
+            const accountName = accountNameEl ? accountNameEl.value : '';
             const certInput = document.getElementById('teacher-cert-file');
 
             if (!specialization) {
                 showToast('Vui lòng nhập chuyên môn giảng dạy!', 'error');
                 if (document.getElementById('teacher-specialization')) document.getElementById('teacher-specialization').focus();
+                return;
+            }
+            if (bankPicker && !bankPicker.validate()) {
+                showToast('Vui lòng chọn ngân hàng thụ hưởng trong danh sách!', 'error');
+                return;
+            }
+            if (accountNumber.length < 6 || accountNumber.length > 19) {
+                showToast('Số tài khoản chỉ gồm chữ số, dài từ 6 đến 19 số!', 'error');
+                if (accountNumberEl) accountNumberEl.focus();
+                return;
+            }
+            if (accountName.length < 2) {
+                showToast('Vui lòng nhập tên chủ tài khoản (in hoa, không dấu)!', 'error');
+                if (accountNameEl) accountNameEl.focus();
                 return;
             }
 
@@ -354,7 +390,7 @@
             const formData = new FormData();
             formData.append('specialization', specialization);
             formData.append('bioExperience', bioExperience);
-            formData.append('bankName', bankName);
+            formData.append('bankCode', bankCode);
             formData.append('accountNumber', accountNumber);
             formData.append('accountName', accountName);
 

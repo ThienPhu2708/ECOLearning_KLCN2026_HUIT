@@ -2,9 +2,10 @@
 @{
     ViewBag.Title = "Khóa học của tôi - E-Learning";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    int ongoingCount = Model?.OngoingCourses != null ? Model.OngoingCourses.Count : 0;
-    int completedCount = Model?.CompletedCourses != null ? Model.CompletedCourses.Count : 0;
+    int ongoingCount = Model != null ? Model.SoDangHoc : 0;
+    int completedCount = Model != null ? Model.SoHoanThanh : 0;
     int totalCount = Model != null ? Model.TotalCount : 0;
+    bool tabHoanThanh = Model != null && Model.LaTabHoanThanh;
 }
 
 <style>
@@ -43,6 +44,7 @@
         color: var(--text-secondary, #64748B);
         cursor: pointer;
         position: relative;
+        text-decoration: none;
         transition: color 0.2s ease;
     }
 
@@ -135,18 +137,20 @@
         }
         else
         {
-            <!-- Tab Navigation (Đang học / Đã hoàn thành) -->
-            <div class="tab-nav">
-                <button type="button" class="tab-btn active" data-tab="tab-ongoing">
+            <!-- Tab Navigation (Đang học / Đã hoàn thành): mỗi tab là một link, phân trang riêng 12 khóa / trang -->
+            <nav id="ds-khoa-hoc" class="tab-nav" style="scroll-margin-top: 96px;">
+                <a class="tab-btn @(tabHoanThanh ? "" : "active")" href="@Url.Action("MyCourses", "Learning")" aria-current="@(tabHoanThanh ? null : "page")">
                     Đang học (@ongoingCount)
-                </button>
-                <button type="button" class="tab-btn" data-tab="tab-completed">
+                </a>
+                <a class="tab-btn @(tabHoanThanh ? "active" : "")" href="@Url.Action("MyCourses", "Learning", new { tab = ECOLearning.ViewModels.MyCoursesViewModel.TabHoanThanh })" aria-current="@(tabHoanThanh ? "page" : null)">
                     Đã hoàn thành (@completedCount)
-                </button>
-            </div>
+                </a>
+            </nav>
 
+            if (!tabHoanThanh)
+            {
             <!-- TAB 1: ONGOING COURSES (ĐANG HỌC) -->
-            <div id="tab-ongoing" class="tab-content" style="display: block;">
+            <div id="tab-ongoing" class="tab-content">
                 @if (ongoingCount == 0)
                 {
                     <div style="text-align: center; padding: 48px 20px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--border-color, #E2E8F0);">
@@ -159,7 +163,7 @@
                 else
                 {
                     <div class="grid-12">
-                        @foreach (var item in Model.OngoingCourses)
+                        @foreach (var item in Model.Items)
                         {
                             string studyUrl = Url.Action("Study", "Learning", new { courseId = item.MaKhoaHoc, lessonId = item.MaBaiHocTiepTheo });
                             string badgeLabel = item.PhanTramTienDo > 0 ? "Đang học" : "Mới bắt đầu";
@@ -210,8 +214,11 @@
                 }
             </div>
 
+            }
+            else
+            {
             <!-- TAB 2: COMPLETED COURSES (ĐÃ HOÀN THÀNH) -->
-            <div id="tab-completed" class="tab-content" style="display: none;">
+            <div id="tab-completed" class="tab-content">
                 @if (completedCount == 0)
                 {
                     <div style="text-align: center; padding: 48px 20px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--border-color, #E2E8F0);">
@@ -223,7 +230,7 @@
                 else
                 {
                     <div class="grid-12">
-                        @foreach (var item in Model.CompletedCourses)
+                        @foreach (var item in Model.Items)
                         {
                             string studyUrl = Url.Action("Study", "Learning", new { courseId = item.MaKhoaHoc });
                             string certUrl = Url.Action("Certificate", "Learning", new { courseId = item.MaKhoaHoc });
@@ -279,12 +286,19 @@
                 }
             </div>
 
-            <!-- Total Courses Summary Footer -->
+            }
+
+            @Html.Partial("_Pagination", Model.PhanTrang)
+
+            if (Model.PhanTrang == null || !Model.PhanTrang.CoNhieuTrang)
+            {
+            <!-- Total Courses Summary Footer (nhiều trang thì thanh phân trang đã có dòng tóm tắt) -->
             <div style="margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--border-color, #E2E8F0); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div style="font-size: 14px; color: var(--text-secondary, #64748B);">
-                    Hiển thị <strong>@totalCount</strong> trên tổng số <strong>@totalCount</strong> khóa học của bạn
+                    Hiển thị <strong>@Model.Items.Count</strong> @(tabHoanThanh ? "khóa đã hoàn thành" : "khóa đang học") trên tổng số <strong>@totalCount</strong> khóa học của bạn
                 </div>
             </div>
+            }
         }
 
     </div>
@@ -292,26 +306,12 @@
 
 @section scripts {
 <script>
-    // Tab switching compliant with UI-Desgin-Project specification
+    // Hai tab là link thường (?tab=hoan-thanh) để mỗi tab có phân trang riêng, không cần JS chuyển tab
     document.addEventListener('DOMContentLoaded', function () {
         @if (TempData["ErrorMessage"] != null)
         {
             @:showToast('@Html.Raw(HttpUtility.JavaScriptStringEncode((string)TempData["ErrorMessage"]))', 'warning');
         }
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', function () {
-                const targetId = this.getAttribute('data-tab');
-                if (!targetId) return;
-
-                tabBtns.forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.style.display = (content.id === targetId) ? 'block' : 'none';
-                });
-            });
-        });
     });
 </script>
 }

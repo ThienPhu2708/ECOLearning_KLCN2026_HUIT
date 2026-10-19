@@ -1,0 +1,107 @@
+@model ECOLearning.ViewModels.DanhGiaItemModel
+@* Một đánh giá: sao, nội dung, "Bạn thấy hữu ích?", phản hồi của giáo viên (chỉ giáo viên của khóa được viết / sửa / xóa).
+   Tương tác: assets/js/course-reviews.js *@
+@{
+    var r = Model.Item;
+    var ds = Model.DanhSach;
+    Func<string, string> anhUrl = a => string.IsNullOrEmpty(a) || a.Contains("avatar_default") ? null
+        : (a.StartsWith("http") || a.StartsWith("/") ? a : Url.Content("~/" + a));
+    Func<string, string> chuCai = ten =>
+    {
+        var p = (ten ?? "").Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (p.Length >= 2) return (p[p.Length - 2].Substring(0, 1) + p[p.Length - 1].Substring(0, 1)).ToUpper();
+        return p.Length == 1 ? p[0].Substring(0, Math.Min(2, p[0].Length)).ToUpper() : "HV";
+    };
+    string anhHocVien = anhUrl(r.AnhDaiDien);
+    string anhGiaoVien = anhUrl(ds.AnhGiaoVien);
+    bool laCuaToi = ds.MaNguoiXem > 0 && ds.MaNguoiXem == r.MaHocVien;
+    bool huuIch = r.BinhChonCuaToi == 1, khongHuuIch = r.BinhChonCuaToi == 0;
+}
+<article class="rv-item" id="review-@r.MaDanhGia" data-review-id="@r.MaDanhGia">
+    <div class="rv-head">
+        @if (anhHocVien != null)
+        {
+            <img class="rv-avatar" src="@anhHocVien" alt="" loading="lazy" />
+        }
+        else
+        {
+            <div class="rv-avatar rv-avatar-text" aria-hidden="true">@chuCai(r.TenHocVien)</div>
+        }
+        <div>
+            <div class="rv-name">@r.TenHocVien</div>
+            <div class="rv-meta">
+                <span class="rv-stars" aria-label="@r.SoSao trên 5 sao">
+                    @for (int s = 1; s <= 5; s++)
+                    {
+                        <i class="bi @(s <= r.SoSao ? "bi-star-fill" : "bi-star")"></i>
+                    }
+                </span>
+                <span>@ECOLearning.Services.ReviewTime.ThoiGianTruoc(r.NgayDanhGia)</span>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(r.NoiDung))
+    {
+        <p class="rv-text">@r.NoiDung</p>
+    }
+
+    @if (ds.CoTuongTac)
+    {
+        <div class="rv-helpful">
+            @if (laCuaToi)
+            {
+                <span class="rv-own">Đánh giá của bạn · @r.SoHuuIch người thấy hữu ích</span>
+            }
+            else
+            {
+                <span>Bạn thấy hữu ích?</span>
+                <button type="button" class="rv-vote @(huuIch ? "is-active" : "")" data-rv-vote="1" aria-pressed="@(huuIch ? "true" : "false")" aria-label="Hữu ích" title="Hữu ích">
+                    <i class="bi @(huuIch ? "bi-hand-thumbs-up-fill" : "bi-hand-thumbs-up")"></i> <span class="rv-count">@(r.SoHuuIch > 0 ? r.SoHuuIch.ToString() : "")</span>
+                </button>
+                <button type="button" class="rv-vote @(khongHuuIch ? "is-active" : "")" data-rv-vote="0" aria-pressed="@(khongHuuIch ? "true" : "false")" aria-label="Không hữu ích" title="Không hữu ích">
+                    <i class="bi @(khongHuuIch ? "bi-hand-thumbs-down-fill" : "bi-hand-thumbs-down")"></i> <span class="rv-count">@(r.SoKhongHuuIch > 0 ? r.SoKhongHuuIch.ToString() : "")</span>
+                </button>
+            }
+        </div>
+
+        <div class="rv-reply" @(r.CoPhanHoi ? "" : "hidden")>
+            <div class="rv-head">
+                @if (anhGiaoVien != null)
+                {
+                    <img class="rv-avatar" src="@anhGiaoVien" alt="" loading="lazy" />
+                }
+                else
+                {
+                    <div class="rv-avatar rv-avatar-text" aria-hidden="true">@chuCai(ds.TenGiaoVien)</div>
+                }
+                <div>
+                    <div class="rv-name">@ds.TenGiaoVien</div>
+                    <div class="rv-meta">Phản hồi của giảng viên · <span class="rv-reply-time">@(r.CoPhanHoi ? ECOLearning.Services.ReviewTime.ThoiGianTruoc(r.PhanHoiNgayCapNhat ?? r.PhanHoiNgayTao) + (r.PhanHoiNgayCapNhat.HasValue ? " (đã sửa)" : "") : "")</span></div>
+                </div>
+            </div>
+            <p class="rv-text rv-reply-text">@r.PhanHoiNoiDung</p>
+            @if (ds.LaGiaoVienKhoaHoc)
+            {
+                <div class="rv-reply-actions">
+                    <button type="button" class="rv-link" data-rv-reply-edit>Sửa</button>
+                    <button type="button" class="rv-link rv-link-danger" data-rv-reply-delete>Xóa</button>
+                </div>
+            }
+        </div>
+
+        if (ds.LaGiaoVienKhoaHoc)
+        {
+            <button type="button" class="rv-reply-open" data-rv-reply-open @(r.CoPhanHoi ? "hidden" : "")><i class="bi bi-reply"></i> Phản hồi đánh giá</button>
+            <form class="rv-reply-form" hidden>
+                <label class="visually-hidden" for="reply-@r.MaDanhGia">Phản hồi đánh giá của @r.TenHocVien</label>
+                <textarea id="reply-@r.MaDanhGia" name="content" rows="3" maxlength="@ECOLearning.Services.CourseReviewService.DoDaiPhanHoiToiDa" placeholder="Viết phản hồi cho học viên (hiển thị công khai dưới đánh giá này)"></textarea>
+                <div class="rv-reply-form-foot">
+                    <span class="rv-reply-error" role="alert"></span>
+                    <button type="button" class="rv-btn-ghost" data-rv-reply-cancel>Hủy</button>
+                    <button type="submit" class="rv-btn">Gửi phản hồi</button>
+                </div>
+            </form>
+        }
+    }
+</article>

@@ -12,8 +12,11 @@ namespace ECOLearning.ViewModels
             AvailableCoupons = new List<MaGiamGiaHienThi>();
         }
 
-        /// <summary>Mã giảm giá công khai học viên dùng được (hoặc chưa đủ điều kiện, kèm lý do) cho giỏ hiện tại.</summary>
+        /// <summary>Mã trong ví "Mã giảm giá của tôi" (dùng được hoặc chưa đủ điều kiện, kèm lý do) cho giỏ hiện tại.</summary>
         public List<MaGiamGiaHienThi> AvailableCoupons { get; set; }
+
+        /// <summary>Đã đăng nhập (khách chưa có ví mã, chỉ nhập tay được).</summary>
+        public bool IsLoggedIn { get; set; }
 
         public List<CartItemViewModel> Items { get; set; }
         public decimal SubTotal { get; set; }

@@ -1,0 +1,26 @@
+@model ECOLearning.ViewModels.BankPickerViewModel
+@using ECOLearning.Services
+@* Ô chọn ngân hàng dùng chung (trang đăng ký giáo viên, trang hồ sơ giáo viên): chỉ chọn trong danh mục
+   Services/BankDirectory.cs, không gõ tên tự do. Gửi lên server trường ẩn @Model.Name = mã ngân hàng.
+   Cần kèm assets/css/bank-picker.css và assets/js/bank-picker.js. Label do trang gọi tự đặt (for="@Model.Id"). *@
+@{
+    var chon = BankDirectory.Find(Model.SelectedCode);
+    string danhSach = Json.Encode(BankDirectory.Banks.Select(b => new { c = b.Code, s = b.ShortName, f = b.FullName }));
+    bool coLoi = !string.IsNullOrEmpty(Model.Error);
+}
+<div class="bp" data-bank-picker data-banks="@danhSach" data-next="@Model.NextFieldId">
+    <div class="bp-combo">
+        <input type="text" id="@Model.Id" class="@Model.InputClass bp-search @(coLoi ? "is-invalid" : "")" autocomplete="off"
+               role="combobox" aria-expanded="false" aria-controls="@(Model.Id)-list" aria-autocomplete="list"
+               placeholder="Gõ để tìm: VCB, Vietcombank, ngoai thuong, MB..."
+               value="@(chon != null ? chon.ShortName + " — " + chon.FullName : "")" />
+        <i class="bi bi-chevron-down bp-icon" aria-hidden="true"></i>
+        <ul id="@(Model.Id)-list" class="bp-list" role="listbox" aria-label="Danh sách ngân hàng" hidden></ul>
+    </div>
+    <input type="hidden" name="@Model.Name" class="bp-value" value="@(chon != null ? chon.Code : "")" />
+    <span class="bp-error" role="alert">@Model.Error</span>
+    @if (!string.IsNullOrEmpty(Model.Note))
+    {
+        <small class="bp-note"><i class="bi bi-info-circle"></i> @Model.Note</small>
+    }
+</div>

@@ -1,0 +1,112 @@
+﻿@model ECOLearning.ViewModels.QuizTakeViewModel
+@{ViewBag.Title=Model.Attempt.Title;if(ViewContext.RouteData.DataTokens["area"] as string=="Instructor"){Layout="~/Areas/Instructor/Views/Shared/_LayoutInstructor.cshtml";}else{Layout="~/Views/Shared/_Layout.cshtml";}bool solutions=ViewBag.ShowSolutions==true;}
+@Html.Partial("~/Views/Quiz/_Style.cshtml")
+<style>
+.quiz-taking{margin-top:24px}.qt-header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:22px 26px;border:1px solid #e4e7f1;border-radius:16px;background:#fff;margin-bottom:20px;box-shadow:0 3px 16px #24345b04}.qt-header-main{min-width:0}.qt-eyebrow{display:block;font-size:11px;font-weight:700;color:#8c83ad;letter-spacing:.8px;margin-bottom:8px}.quiz-taking .qt-header h1{font-size:24px;line-height:1.5;letter-spacing:-.5px;margin:0 0 10px}.qt-meta{display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:12px;color:#7e899c}.qt-meta>span{display:inline-flex;gap:6px;align-items:center}.qt-meta i{color:#9a91b8}.qt-timer{display:flex;align-items:center;gap:13px;background:#f5f3ff;border:1px solid #e7e1fa;border-radius:12px;padding:13px 18px;flex-shrink:0}.qt-timer>i{font-size:24px;color:#9583cf}.qt-timer span{display:block;font-size:11px;color:#8a7eaa;margin-bottom:3px}.qt-timer strong{font-size:27px;font-weight:700;letter-spacing:.5px;color:#6550ad;font-variant-numeric:tabular-nums;line-height:1.2}.qt-help{display:flex;align-items:center;justify-content:space-between;gap:16px;font-size:12px;color:#8390a3;line-height:1.7;padding:0 4px;margin-bottom:22px}.qt-help>span{display:inline-flex;align-items:center;gap:7px}.quiz-taking fieldset.quiz-card{padding:22px 26px 26px;border-radius:16px;margin-bottom:22px}.quiz-taking fieldset legend{font-size:13px;color:#6553ae;letter-spacing:.2px;background:#f3f0fd;padding:5px 11px;border-radius:7px}.quiz-taking fieldset>p:first-of-type{font-size:16px;font-weight:600;line-height:1.8;margin:5px 0 18px}.quiz-taking .quiz-option{border:1px solid #e8ecf3;background:#fff;padding:14px 16px;margin:10px 0;border-radius:10px;font-size:14px;font-weight:400;line-height:1.8}.quiz-taking .quiz-option:has(input:checked){border-color:#b1a1ec;background:#f7f4ff}.quiz-taking .quiz-option input{accent-color:#7154cb;flex-shrink:0}.quiz-taking .quiz-correct{border-color:#b5dfc7;background:#eff9f3}.quiz-taking #quiz-form>button{min-width:160px;border-radius:10px;padding:12px 24px;margin-bottom:30px}
+@@media(max-width:600px){.qt-header{padding:18px;gap:14px;align-items:flex-start}.quiz-taking .qt-header h1{font-size:20px}.qt-meta{gap:7px 12px}.qt-timer{padding:10px 12px;gap:8px}.qt-timer>i{display:none}.qt-timer strong{font-size:22px}.qt-help{flex-direction:column;align-items:flex-start;gap:5px}.quiz-taking fieldset.quiz-card{padding:18px}}
+
+.qt-workspace{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:24px;align-items:start}.qt-workspace #quiz-form{min-width:0}.quiz-taking fieldset[id]{scroll-margin-top:100px}.quiz-taking fieldset[id]:focus{outline:none}.quiz-taking fieldset[id]:focus-visible{outline:2px solid #b3a4ec;outline-offset:3px}.qt-navigation{position:sticky;top:92px;margin-top:18px;background:#fff;border:1px solid #e4e7f1;border-radius:14px;box-shadow:0 3px 14px #24345b04;max-height:calc(100dvh - 112px);overflow:auto}.qt-navigation summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px;list-style:none;cursor:pointer;font-size:14px;font-weight:600;color:#344159}.qt-navigation summary>span{display:flex;align-items:center;gap:9px}.qt-navigation summary>i{font-size:12px;color:#9a91b5}.qt-navigation summary::-webkit-details-marker{display:none}.qt-navigation details[open] summary>i{transform:rotate(180deg)}.qt-navigation-body{padding:0 18px 18px}.qt-navigation-body>p:first-child{font-size:12px;color:#8290a3;margin:0 0 16px}.qt-number-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.qt-number-grid a{display:grid;place-items:center;aspect-ratio:1;min-height:34px;border:1px solid #e0e5ef;border-radius:9px;color:#768297;text-decoration:none;font-size:13px;font-weight:600;background:#fff}.qt-number-grid a.is-answered{background:#7154cb;color:#fff;border-color:#7154cb}.qt-number-grid a[aria-current]{outline:2px solid #b2a0ea;outline-offset:2px}.qt-number-grid a:hover{border-color:#7154cb}.qt-number-grid a:focus-visible{outline:2px solid #7154cb;outline-offset:3px}.qt-nav-key{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid #edf0f6;font-size:10px;color:#8590a2}.qt-nav-key>span{display:flex;align-items:center;gap:6px}.qt-nav-key b{width:9px;height:9px;border-radius:3px;border:1px solid #dbe0eb}.qt-nav-key b.answered{background:#7154cb;border-color:#7154cb}.qt-navigation-body .qt-nav-hint{font-size:11px;color:#a0a7b6;margin:12px 0 0}
+@@media(max-width:800px){.qt-workspace{display:flex;flex-direction:column;gap:12px}.qt-navigation{order:-1;position:sticky;top:68px;width:100%;margin:0;z-index:15;max-height:45dvh}.qt-workspace #quiz-form{width:100%}.qt-number-grid{grid-template-columns:repeat(auto-fill,minmax(36px,1fr))}.qt-number-grid a{aspect-ratio:auto;height:36px}.qt-navigation summary{padding:13px 16px}.qt-navigation-body{padding:0 16px 16px}.quiz-taking fieldset[id]{scroll-margin-top:145px}}
+
+.qt-submit-dialog{position:fixed;inset:0;margin:auto;width:min(460px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box;border:1px solid #e7e3f1;border-radius:20px;padding:30px;background:#fff;color:#263247;box-shadow:0 24px 80px #19143130}.qt-submit-dialog::backdrop{background:#17203370;backdrop-filter:blur(3px)}.qt-submit-dialog>form{margin:0}.qt-submit-close{position:absolute;right:14px;top:12px;border:0;background:none;color:#9299a9;font-size:26px;cursor:pointer;width:32px;height:32px;border-radius:8px}.qt-submit-icon{display:grid;place-items:center;width:54px;height:54px;border-radius:16px;background:#f0edff;color:#6854d9;font-size:25px;margin-bottom:20px}.qt-submit-dialog h2{font-size:23px;font-weight:700;letter-spacing:-.4px;margin:0 0 12px}.qt-submit-dialog>p{font-size:14px;line-height:1.85;color:#778297;margin:0 0 20px}.qt-submit-note{padding:14px;background:#f7f6fc;border-radius:10px;font-size:12px;line-height:1.8;color:#7c7298}.qt-submit-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:26px}.qt-submit-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13px;padding:12px 16px;border-radius:10px}.qt-submit-actions button:disabled{opacity:.7;cursor:wait}.qt-submit-dialog button:focus-visible{outline:2px solid #a092e9;outline-offset:3px}
+
+.qt-result{border:1px solid #dcecdf;background:linear-gradient(110deg,#f2faf5,#fff);border-radius:16px;padding:24px 26px;margin-bottom:26px}.qt-result-heading{display:flex;align-items:center;gap:14px}.qt-result-icon{display:grid;place-items:center;width:48px;height:48px;background:#e1f2e7;color:#398561;border-radius:14px;font-size:25px;flex-shrink:0}.qt-result h2{font-size:21px;font-weight:700;margin:0 0 7px;color:#2f6d53}.qt-result-heading p{font-size:13px;color:#7b8c82;margin:0;line-height:1.7}.qt-result-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:24px 0}.qt-result-metrics>div{border-right:1px solid #e2eae4}.qt-result-metrics>div:last-child{border:0}.qt-result-metrics span{display:block;font-size:12px;color:#819087;margin-bottom:8px}.qt-result-metrics strong{font-size:29px;line-height:1.3;color:#345b48;font-weight:700}.qt-result-metrics small{font-size:13px;font-weight:400;color:#89968e;margin-left:4px}.qt-result-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border-top:1px solid #e3ece6;padding-top:17px;font-size:12px;color:#829187}.qt-result-footer>span{display:flex;gap:7px;align-items:center}.qt-result-footer a{display:inline-flex;gap:8px;align-items:center;font-weight:600;color:#4d8065;text-decoration:none}.qt-result.is-failed{border-color:#eddfcc;background:linear-gradient(110deg,#fff9f0,#fff)}.qt-result.is-failed .qt-result-icon{background:#f9ecd7;color:#ae8139}.qt-result.is-failed h2{color:#946e32}.qt-result.is-failed .qt-result-metrics strong{color:#7b6547}.qt-review-note{font-size:13px;line-height:1.8;color:#8190a4;margin-bottom:24px}.quiz-taking .quiz-option.quiz-correct{background:#eff9f3;border-color:#b5dfc7}.quiz-taking .quiz-option.quiz-wrong{background:#fff4f3;border-color:#edc6c3}.quiz-taking .quiz-option.quiz-wrong input{accent-color:#c66e66}.qt-review-explanation{display:flex;gap:10px;padding:16px 0 0;margin-top:18px;border-top:1px solid #edf0f5;color:#8390a1;font-size:13px;line-height:1.8}.qt-review-explanation>i{color:#b79754;font-size:18px}.qt-review-explanation strong{color:#66748a;font-weight:600}.qt-review-explanation p{margin:4px 0 0;white-space:pre-wrap}
+@@media(max-width:576px){.qt-result{padding:20px}.qt-result-metrics{gap:12px}.qt-result-metrics strong{font-size:24px}.qt-result-metrics small{font-size:11px}.qt-result h2{font-size:19px}}
+</style>
+<div class="quiz-page quiz-taking"><header class="qt-header"><div class="qt-header-main"><span class="qt-eyebrow">@(Model.Review ? "KẾT QUẢ BÀI LÀM" : "BÀI KIỂM TRA CUỐI KHÓA")</span><h1>@Model.Attempt.Title</h1><div class="qt-meta"><span><i class="bi bi-list-check" aria-hidden="true"></i> @Model.Attempt.Total câu hỏi</span><span><i class="bi bi-check-circle" aria-hidden="true"></i> Đạt từ @Model.Attempt.PassPercent%</span><span>Lượt #@Model.Attempt.Id</span></div></div>@if (!Model.Review) {<div class="qt-timer" role="timer" aria-label="Thời gian còn lại"><i class="bi bi-clock" aria-hidden="true"></i><div><span>Thời gian còn lại</span><strong id="quiz-time">…</strong></div></div>}</header>
+@if (Model.Review)
+{
+    <section class="qt-result @(Model.Attempt.Passed == true ? "is-passed" : "is-failed")"><div class="qt-result-heading"><span class="qt-result-icon"><i class="bi @(Model.Attempt.Passed == true ? "bi-check-circle" : "bi-arrow-repeat")" aria-hidden="true"></i></span><div><h2>@(Model.Attempt.Passed == true ? "Bạn đã đạt quiz!" : "Bài làm chưa đạt")</h2><p>@(Model.Attempt.Passed == true ? "Bạn đã hoàn thành yêu cầu của bài kiểm tra." : "Xem lại kết quả để chuẩn bị tốt hơn cho lượt tiếp theo.")</p></div></div><div class="qt-result-metrics"><div><span>Điểm của bạn</span><strong>@Model.Attempt.Score<small>/10</small></strong></div><div><span>Câu trả lời đúng</span><strong>@Model.Attempt.Correct<small>/@Model.Attempt.Total câu</small></strong></div><div><span>Ngưỡng đạt</span><strong>@Model.Attempt.PassPercent<small>%</small></strong></div></div><div class="qt-result-footer"><span><i class="bi bi-shield-check" aria-hidden="true"></i> @(Model.Attempt.TimedOut ? "Bài thi đã tự nộp khi hết giờ" : "Kết quả bài làm đã được ghi nhận")</span><a href="@(ViewContext.RouteData.DataTokens["area"] as string == "Instructor" ? Url.Action("History", new { courseId = Model.Attempt.CourseId, studentId = Model.Attempt.StudentId }) : Url.Action("Index", new { courseId = Model.Attempt.CourseId }))">Quay lại kết quả <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div></section>
+    if (!solutions) {<p class="qt-review-note">Đáp án đúng và giải thích sẽ hiển thị khi bạn đạt quiz. Giáo viên có thể xem xét cấp thêm lượt nếu bạn đã hết lượt.</p>}
+}
+else{<div class="qt-help"><span><i class="bi bi-cloud-check" aria-hidden="true"></i> Tự lưu lựa chọn <span id="quiz-save-status" role="status"></span></span><span>Hết giờ, hệ thống tự nộp bài.</span></div>}
+<div class="qt-workspace">
+<form id="quiz-form" method="post" action="@Url.Action("Submit","Quiz",new{area=""})">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Attempt.Id"/>
+@for(int i=0;i<Model.Questions.Count;i++) {var q=Model.Questions[i];int chosen=Model.Answers.Length>i?Model.Answers[i]:-1;
+<fieldset class="quiz-card" id="quiz-question-@i" tabindex="-1"><legend>Câu @(i+1)</legend><p style="white-space:pre-wrap">@q.Text</p>
+@if(!Model.Review){<input type="hidden" name="answers[@i]" id="answer-@i" value="@chosen"/>}
+@for(int j=0;j<q.Options.Length;j++){<label class="quiz-option @(Model.Review && chosen==j?"quiz-selected":"") @(solutions && q.CorrectOption==j?"quiz-correct":"") @(Model.Review && solutions && chosen==j && q.CorrectOption!=j ? "quiz-wrong" : "")"><input type="radio" name="choice-@i" value="@j" checked="@(chosen==j)" disabled="@Model.Review" data-question="@i"/> <span>@((char)('A'+j)). @q.Options[j] @(solutions && q.CorrectOption==j?"✓":"")</span></label>}
+@if(Model.Review && chosen<0){<p>Chưa chọn đáp án.</p>}
+@if(solutions && !string.IsNullOrWhiteSpace(q.Explanation)){<div class="qt-review-explanation"><i class="bi bi-lightbulb" aria-hidden="true"></i><div><strong>Giải thích</strong><p>@q.Explanation</p></div></div>}
+</fieldset>}
+@if(!Model.Review){<button class="btn btn-primary" type="submit">Nộp bài</button>}
+</form>
+<aside class="qt-navigation"><details id="quiz-navigation" open><summary><span><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i> Câu hỏi</span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary><div class="qt-navigation-body"><p id="quiz-answer-count" role="status"></p><nav class="qt-number-grid" aria-label="Đi đến câu hỏi">
+@for (int i = 0; i < Model.Questions.Count; i++)
+{
+    <a href="#quiz-question-@i" data-question-link="@i" aria-label="Đi đến câu @(i + 1)">@(i + 1)</a>
+}
+</nav><div class="qt-nav-key"><span><b class="answered"></b> Đã trả lời</span><span><b></b> Chưa trả lời</span></div></div></details></aside>
+</div>
+<script>
+(function () {
+    const form = document.getElementById('quiz-form');
+    const links = [...document.querySelectorAll('[data-question-link]')];
+    const sections = links.map(function (link) {return document.getElementById('quiz-question-' + link.dataset.questionLink);});
+    const count = document.getElementById('quiz-answer-count');
+    const panel = document.getElementById('quiz-navigation');
+    if (window.matchMedia('(max-width:800px)').matches) panel.open = false;
+    function refresh() {
+        let answered = 0;
+        links.forEach(function (link, index) {
+            const done = !!sections[index].querySelector('input[type=radio]:checked');
+            link.classList.toggle('is-answered', done);
+            link.setAttribute('aria-label', 'Câu ' + (index + 1) + (done ? ', đã trả lời' : ', chưa trả lời'));
+            if (done) answered++;
+        });
+        count.textContent = 'Đã trả lời ' + answered + '/' + links.length + ' câu';
+    }
+    function markCurrent(index) {
+        links.forEach(function (link, i) {if (i === index) link.setAttribute('aria-current', 'true'); else link.removeAttribute('aria-current');});
+    }
+    links.forEach(function (link, index) {
+        link.addEventListener('click', function (event) {
+            event.preventDefault(); markCurrent(index);
+            sections[index].focus({preventScroll:true});
+            sections[index].scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',block:'start'});
+        });
+    });
+    form.addEventListener('change', refresh);
+    let scheduled = false;
+    window.addEventListener('scroll', function () {
+        if (scheduled) return; scheduled = true;
+        requestAnimationFrame(function () {
+            scheduled = false; let index = 0;
+            sections.forEach(function (section, i) {if (section.getBoundingClientRect().top <= 180) index = i;});
+            markCurrent(index);
+        });
+    }, {passive:true});
+    refresh(); markCurrent(0);
+})();
+</script>
+@if(!Model.Review){
+<dialog id="quiz-submit-dialog" class="qt-submit-dialog" aria-labelledby="qt-submit-title" aria-describedby="qt-submit-description">
+    <form method="dialog"><button class="qt-submit-close" aria-label="Đóng">×</button></form>
+    <span class="qt-submit-icon"><i class="bi bi-send-check" aria-hidden="true"></i></span><h2 id="qt-submit-title">Nộp bài quiz?</h2>
+    <p id="qt-submit-description"></p><div class="qt-submit-note">Sau khi nộp, bạn không thể thay đổi đáp án của lượt làm này.</div>
+    <div class="qt-submit-actions"><button type="button" id="qt-submit-cancel" class="btn btn-outline">Làm tiếp</button><button type="button" id="qt-submit-confirm" class="btn btn-primary">Xác nhận nộp bài <i class="bi bi-check2" aria-hidden="true"></i></button></div>
+</dialog>
+<script>
+(function(){
+const form=document.getElementById('quiz-form');
+const end=performance.now()+@((long)Math.Max(0,(Model.Attempt.ExpiresAt-DateTime.UtcNow).TotalMilliseconds));
+let queue=Promise.resolve();function saveDraft(){const body=new URLSearchParams(new FormData(form));document.getElementById('quiz-save-status').textContent='Đang lưu…';queue=queue.catch(function(){}).then(function(){return fetch('@Url.Action("SaveDraft","Quiz",new{area=""})',{method:'POST',body:body,credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error();return r.json();}).then(function(data){document.getElementById('quiz-save-status').textContent=data.saved?'Đã lưu.':'Lượt làm đã kết thúc.';}).catch(function(){document.getElementById('quiz-save-status').textContent='Chưa lưu lên máy chủ. Kiểm tra kết nối trước khi hết giờ.';});});}
+document.querySelectorAll('input[data-question]').forEach(function(r){const i=r.dataset.question;r.addEventListener('change',function(){document.getElementById('answer-'+i).value=r.value;saveDraft();});});
+let sent=false;function tick(){const remain=Math.max(0,Math.ceil((end-performance.now())/1000));document.getElementById('quiz-time').textContent=Math.floor(remain/60)+':'+String(remain%60).padStart(2,'0');if(remain===0&&!sent){sent=true;form.submit();}}
+const submitDialog=document.getElementById('quiz-submit-dialog');
+const submitConfirm=document.getElementById('qt-submit-confirm');
+form.addEventListener('submit',function(e){
+    if(sent){e.preventDefault();return;}
+    e.preventDefault();
+    const missing=[...form.querySelectorAll('input[name^="answers["]')].filter(function(input){return input.value==='-1';}).length;
+    document.getElementById('qt-submit-description').textContent=missing ? 'Bạn còn '+missing+' câu chưa trả lời. Bạn có muốn nộp bài ngay không?' : 'Bạn đã trả lời đầy đủ '+@Model.Questions.Count+' câu. Nộp bài để xem kết quả của bạn.';
+    submitDialog.showModal();document.getElementById('qt-submit-cancel').focus();
+});
+document.getElementById('qt-submit-cancel').addEventListener('click',function(){submitDialog.close();});
+submitDialog.addEventListener('click',function(event){if(event.target!==submitDialog)return;const r=submitDialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)submitDialog.close();});
+submitConfirm.addEventListener('click',function(){if(sent)return;sent=true;submitConfirm.disabled=true;submitConfirm.textContent='Đang nộp bài…';form.submit();});
+tick();setInterval(tick,1000);
+})();
+</script>
+}
+</div>

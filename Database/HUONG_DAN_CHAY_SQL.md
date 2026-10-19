@@ -19,7 +19,8 @@ Thư mục: `Database/Migrations/`
 | 4 | `004_XuLyViPham_TraoDoi.sql` | Thêm bước xử lý và bảng `PhanHoiViPham` (giáo viên ↔ Admin trao đổi khi khóa học bị tạm khóa). |
 | 5 | `005_GoiY_LocCongTac.sql` | Gợi ý khóa học (lọc cộng tác): bảng `TuongTacKhoaHoc`, `course_similarity`, `GoiY_TrongSo`, view, hàm và 3 stored procedure (khóa tương tự, gợi ý cho bạn, nút "Gợi ý khóa học"). Sau khi chạy, xem `Recommender/README.md` để chạy job tính gợi ý. |
 | 6 | `006_GoiY_GoiYLaiKhoaChiXem.sql` | Sửa quy tắc gợi ý: chỉ không gợi ý lại khóa **đã đăng ký / đã học / đã đánh giá**; khóa chỉ mới xem qua vẫn được gợi ý. Thiếu file này thì người xem nhiều khóa (chưa mua) sẽ thấy trang "Khóa học gợi ý" trống. |
-| 7 | `007_GoiY_SoThichNguoiDung.sql` | Cold-start: bảng `SoThichNguoiDung` (lĩnh vực học viên mới chọn) và `KhaoSatSoThich` (đã trả lời / bỏ qua). Thiếu file này thì hộp thoại "Bạn quan tâm lĩnh vực nào?" không hiện; trang chủ vẫn chạy, học viên mới chỉ thấy khóa phổ biến. |
+| 7a | `007_GoiY_SoThichNguoiDung.sql` | Cold-start: bảng `SoThichNguoiDung` (lĩnh vực học viên mới chọn) và `KhaoSatSoThich` (đã trả lời / bỏ qua). Thiếu file này thì hộp thoại "Bạn quan tâm lĩnh vực nào?" không hiện; trang chủ vẫn chạy, học viên mới chỉ thấy khóa phổ biến. |
+| 7b | `007_Quiz_ChungChi.sql` | Quiz cuối khóa và chứng chỉ: bảng `QuizQuestion`, `QuizConfig`, `QuizAttempt`, `QuizCertificate`, `QuizAttemptGrant`. Hai file `007` không phụ thuộc nhau, chạy cả hai. Thiếu file này thì trang Chứng chỉ báo "Chưa khởi tạo chức năng quiz và chứng chỉ" và học viên không gửi được đánh giá khóa học (phải đạt quiz mới được đánh giá). |
 | 8 | `008_Marketing_KhuyenMai.sql` | Phân hệ Marketing: bảng `ChienDich` (chiến dịch) và `SuDungUuDai` (lịch sử dùng coupon theo đơn); thêm cột cấu hình cho `KhuyenMai` (loại ưu đãi % / số tiền, giảm tối đa, đơn tối thiểu, phạm vi khóa học, đối tượng thân thiết + tiêu chí, trạng thái, chiến dịch, công khai mã cho học viên) và giới hạn lượt dùng cho `MaGiamGia`; sửa trigger `trg_ChiTietDonHang_CapNhatTongTien` để tổng tiền đơn trừ tiền giảm. Thiếu file này thì các trang Marketing báo "Chưa khởi tạo dữ liệu" và giỏ hàng không áp dụng được coupon. |
 | 9 | `009_ViMaGiamGia.sql` | Ví mã giảm giá: bảng `ViMaGiamGia` (mã học viên đã lưu ở trang chủ / trang khóa học, không xóa được) và cột `KhuyenMai.chinhSach` (mô tả chính sách hiển thị cho học viên). Thiếu file này thì trang Marketing và giỏ hàng báo "chưa sẵn sàng", trang "Mã giảm giá của tôi" không mở được. |
 | 10 | `010_TimKiem.sql` | Thống kê từ khóa tìm kiếm: bảng `TuKhoaTimKiem` (từ khóa đã tìm, số lượt, số kết quả; không lưu người tìm). Thiếu file này thì tìm kiếm vẫn chạy nhưng gợi ý chỉ lấy từ tên khóa học / danh mục, không có từ khóa phổ biến. |
@@ -29,9 +30,11 @@ Thư mục: `Database/Migrations/`
 1. Mở SSMS, kết nối vào SQL Server trên máy bạn.
 2. **File → Open → File...** → chọn file `001_...sql`.
 3. Bấm **Execute** (hoặc phím **F5**). Thấy *"Commands completed successfully"* là xong.
-4. Lặp lại với `002`, `003`, `004`, `005`, `006`, `007`, `008`, `009`, `010`, `011` **theo đúng thứ tự**.
+4. Lặp lại với `002`, `003`, `004`, `005`, `006`, cả hai file `007`, `008`, `009`, `010`, `011` **theo đúng thứ tự**.
 
 > Mỗi file đã có sẵn dòng `USE QL_HETHONG_CUNGCAP_KHOAHOC;` nên không cần chọn database trước.
+> Nếu chạy bằng dòng lệnh `sqlcmd` thì thêm tham số **`-I`** (bật `QUOTED_IDENTIFIER`), nếu không `007_Quiz_ChungChi.sql`
+> báo lỗi `CREATE INDEX failed ... 'QUOTED_IDENTIFIER'`. SSMS bật sẵn nên không gặp lỗi này.
 > Nếu database của bạn đặt **tên khác**, sửa dòng `USE ...` ở đầu file cho đúng tên.
 
 ### Kiểm tra đã chạy đủ chưa
@@ -45,14 +48,15 @@ SELECT
   CASE WHEN OBJECT_ID('dbo.PhanHoiViPham') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 004' END AS [004],
   CASE WHEN OBJECT_ID('dbo.course_similarity') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 005' END AS [005],
   CASE WHEN OBJECT_DEFINITION(OBJECT_ID('dbo.fn_GoiY_KhoaHocDuocGoiY')) LIKE N'%DangKyKhoaHoc%' THEN N'OK' ELSE N'THIẾU - chạy 006' END AS [006],
-  CASE WHEN OBJECT_ID('dbo.SoThichNguoiDung') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 007' END AS [007],
+  CASE WHEN OBJECT_ID('dbo.SoThichNguoiDung') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 007_GoiY' END AS [007_GoiY],
+  CASE WHEN OBJECT_ID('dbo.QuizAttemptGrant') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 007_Quiz' END AS [007_Quiz],
   CASE WHEN OBJECT_ID('dbo.SuDungUuDai') IS NOT NULL AND COL_LENGTH('dbo.KhuyenMai','congKhai') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 008' END AS [008],
   CASE WHEN OBJECT_ID('dbo.ViMaGiamGia') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 009' END AS [009],
   CASE WHEN OBJECT_ID('dbo.TuKhoaTimKiem') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 010' END AS [010],
   CASE WHEN OBJECT_ID('dbo.PhanHoiDanhGia') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 011' END AS [011];
 ```
 
-Cả 10 cột đều ra **OK** là được.
+Cả 11 cột đều ra **OK** là được.
 
 > **Sau khi chạy 005/006 phải chạy job Python ít nhất một lần** (`Recommender/README.md`), nếu không bảng
 > `course_similarity` trống và không có gợi ý lọc cộng tác nào. Kiểm tra: `SELECT COUNT(*) FROM course_similarity;` phải lớn hơn 0.

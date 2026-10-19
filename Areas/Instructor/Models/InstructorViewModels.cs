@@ -146,6 +146,9 @@ namespace ECOLearning.Areas.Instructor.Models
 
     public class InstructorStudentItem
     {
+        public string QuizStatus { get; set; }
+        public decimal? QuizScore { get; set; }
+        public string CertificateStatus { get; set; }
         public int MaHocVien { get; set; }
         public string HoTen { get; set; }
         public string Email { get; set; }

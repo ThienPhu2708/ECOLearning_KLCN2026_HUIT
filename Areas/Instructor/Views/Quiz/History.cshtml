@@ -1,0 +1,69 @@
+﻿@model List<ECOLearning.ViewModels.QuizAttempt>
+@{
+    ViewBag.Title = "Lịch sử quiz";
+    ViewBag.BreadcrumbCurrent = "Chi tiết học viên";
+    ViewBag.ShowStudentBreadcrumb = true;
+    var student = ViewBag.Student as ECOLearning.ViewModels.QuizStudentRow;
+    var config = ViewBag.Config as ECOLearning.ViewModels.QuizConfig;
+    var grants = ViewBag.Grants as List<ECOLearning.ViewModels.QuizAttemptGrant>;
+    var lessons = ViewBag.Lessons as List<ECOLearning.Models.BaiHoc>;
+    var completed = ViewBag.CompletedLessonIds as List<string> ?? new List<string>();
+    int allowed = (config?.MaxAttempts ?? 0) + (student?.ExtraAttempts ?? 0);
+}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=3" />
+<div class="student-quiz-history">
+    <header class="qe-heading"><div><h1>@(student?.Name)</h1><p>Theo dõi kết quả quiz và tiến độ học tập trong khóa học.</p></div><span class="qe-course"><i class="bi bi-journal-bookmark" aria-hidden="true"></i> @ViewBag.CourseName</span></header>
+    @if (TempData["QuizMessage"] != null) {<div class="qb-message" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i> @TempData["QuizMessage"]</div>}
+    @if (student != null)
+    {
+        <div class="qh-overview">
+            <section class="card qh-stat"><span>Tiến độ học tập</span><strong>@student.Progress<span>%</span></strong><div class="qh-progress" role="progressbar" aria-label="Tiến độ học tập" aria-valuenow="@student.Progress" aria-valuemin="0" aria-valuemax="100"><span style="width:@(student.Progress)%"></span></div><p>@student.CompletedLessons/@student.TotalLessons bài học đã hoàn thành</p></section>
+            <section class="card qh-stat"><span>Điểm quiz cao nhất</span><strong>@(student.BestScore.HasValue ? student.BestScore.Value.ToString("0.##") : "—")<span> /10</span></strong><span class="qh-badge @(student.Passed ? "is-success" : student.HasOpenAttempt ? "is-info" : "")">@student.QuizStatus</span><p>@(config != null ? "Đã dùng " + student.Attempts + "/" + allowed + " lượt thi" : "Khóa học chưa cấu hình quiz")</p></section>
+            <section class="card qh-stat"><span>Chứng chỉ khóa học</span><div class="qh-certificate"><i class="bi bi-award" aria-hidden="true"></i><span class="qh-badge @(student.IssuedAt.HasValue ? "is-success" : "")">@student.CertificateStatus</span></div>@if (student.IssuedAt.HasValue) {<p>Mã: @student.Code<br />Ngày cấp: @student.IssuedAt.Value.ToLocalTime().ToString("dd/MM/yyyy")</p>} else {<p>Hoàn thành bài học và đạt quiz để nhận chứng chỉ.</p>}</section>
+        </div>
+    }
+    <section class="card qh-panel">
+        <div class="qh-panel-heading"><div class="qe-section-heading"><i class="bi bi-clock-history" aria-hidden="true"></i><div><h2>Lịch sử quiz</h2><p>Kết quả từng lượt làm bài của học viên.</p></div></div><span class="qh-badge">@Model.Count lượt thi</span></div>
+        @if (Model.Any())
+        {
+            <div class="table-responsive"><table class="table"><thead><tr><th>Lượt</th><th>Bắt đầu</th><th>Nộp bài</th><th>Số câu đúng</th><th>Điểm /10</th><th>Kết quả</th><th><span class="qb-sr-only">Thao tác</span></th></tr></thead><tbody>
+            @foreach (var a in Model)
+            {
+                <tr><td><strong>#@a.Id</strong></td><td>@a.StartedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td><td>@(a.SubmittedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Chưa nộp") @if (a.TimedOut) {<small class="qh-timeout">Hết giờ</small>}</td><td>@(a.SubmittedAt.HasValue ? a.Correct + "/" + a.Total : "—")</td><td><strong>@(a.Score.HasValue ? a.Score.Value.ToString("0.##") : "—")</strong></td><td><span class="qh-badge @(!a.SubmittedAt.HasValue ? "is-info" : a.Passed == true ? "is-success" : "is-warning")">@(!a.SubmittedAt.HasValue ? "Đang làm" : a.Passed == true ? "Đạt" : "Chưa đạt")</span></td><td>@if (a.SubmittedAt.HasValue) {<a class="qb-text-link" href="@Url.Action("Review", new { id = a.Id })">Xem bài làm <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>}</td></tr>
+            }
+            </tbody></table></div>
+        }
+        else
+        {
+            <div class="qh-empty"><span><i class="bi bi-clipboard-check" aria-hidden="true"></i></span><h3>Học viên chưa làm quiz</h3><p>@(student != null && !student.LessonsDone ? "Học viên cần hoàn thành các bài học trước khi bắt đầu quiz." : "Kết quả sẽ xuất hiện tại đây sau khi học viên bắt đầu làm bài.")</p></div>
+        }
+    </section>
+    <section class="card qh-panel">
+        <div class="qh-panel-heading"><div class="qe-section-heading"><i class="bi bi-journal-check" aria-hidden="true"></i><div><h2>Tiến độ từng bài học</h2><p>Theo dõi các bài học đã hoàn thành trong khóa học này.</p></div></div>@if (student != null) {<span class="qh-badge">@student.CompletedLessons/@student.TotalLessons bài học</span>}</div>
+        @if (lessons != null && lessons.Any())
+        {
+            <div class="table-responsive"><table class="table qh-lessons"><thead><tr><th>Bài học</th><th>Trạng thái</th></tr></thead><tbody>
+            @for (int i = 0; i < lessons.Count; i++)
+            {
+                var lesson = lessons[i]; bool done = completed.Contains(lesson.maBaiHoc);
+                <tr><td><div class="qh-lesson-name"><span class="qh-lesson-number">@((i + 1).ToString("00"))</span><span>@lesson.tenBaiHoc</span></div></td><td><span class="qh-badge @(done ? "is-success" : "")"><i class="bi @(done ? "bi-check-circle" : "bi-circle")" aria-hidden="true"></i> @(done ? "Đã hoàn thành" : "Chưa hoàn thành")</span></td></tr>
+            }
+            </tbody></table></div>
+        }
+        else {<div class="qh-empty"><h3>Khóa học chưa có bài học</h3><p>Tiến độ sẽ được hiển thị khi khóa học có nội dung.</p></div>}
+    </section>
+    @if (config != null && student != null && !student.Passed && !student.HasOpenAttempt && student.Attempts >= allowed && allowed < 100)
+    {
+        <section class="card qe-card qh-retake"><div class="qe-section-heading"><i class="bi bi-arrow-repeat" aria-hidden="true"></i><div><h2>Xem xét thi lại</h2><p>Học viên đã hết lượt và chưa đạt. Cấp thêm một lượt riêng cho học viên này.</p></div></div>
+        @using (Html.BeginForm("GrantAttempt", "Quiz"))
+        {
+            @Html.AntiForgeryToken()<input type="hidden" name="courseId" value="@ViewBag.CourseId" /><input type="hidden" name="studentId" value="@student.StudentId" />
+            <div class="form-group"><label class="form-label" for="grant-reason">Lý do cấp thêm lượt <span class="required">*</span></label><textarea class="form-control" id="grant-reason" name="reason" maxlength="400" rows="3" required placeholder="Nhập lý do cho phép học viên thi lại…"></textarea></div><button class="btn btn-primary" type="submit"><i class="bi bi-plus-lg" aria-hidden="true"></i> Cấp thêm 1 lượt</button>
+        }
+        </section>
+    }
+    @if (grants != null && grants.Any())
+    {
+        <details class="qb-topic-manager qh-grants"><summary><span><i class="bi bi-clock-history" aria-hidden="true"></i> Lịch sử cấp thêm lượt <span class="qb-count">@grants.Count</span></span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary><div class="qh-grant-list">@foreach (var grant in grants) {<div><time>@grant.GrantedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</time><span class="qh-badge is-info">+@grant.Quantity lượt</span><p>@grant.Reason</p></div>}</div></details>
+    }
+</div>

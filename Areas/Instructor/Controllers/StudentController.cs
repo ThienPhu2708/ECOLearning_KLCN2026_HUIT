@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
@@ -9,13 +9,13 @@ namespace ECOLearning.Areas.Instructor.Controllers
 {
     public class StudentController : InstructorBaseController
     {
-        public ActionResult CourseStudents(string courseId, string search = "", string sort = "date_desc")
+        public ActionResult CourseStudents(string courseId, string search = "", string sort = "date_desc", string status = "")
         {
             int teacherId = CurrentTeacherId;
             var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == courseId && k.maGiaoVien == teacherId);
             if (course == null) return HttpNotFound();
 
-            var result = (ViewResult)Index(courseId, search, sort);
+            var result = (ViewResult)Index(courseId, search, sort, status);
             ViewBag.IsCourseStudentPage = true;
             ViewBag.ShowCourseBreadcrumb = true;
             ViewBag.BreadcrumbCourseName = course.tenKhoaHoc;
@@ -27,7 +27,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
 
         // GET: Instructor/Student (UC11: Quản lý học viên)
         // sort: date_desc (mặc định) | date_asc | progress_desc | progress_asc | rating_desc | rating_asc
-        public ActionResult Index(string courseId = "", string search = "", string sort = "date_desc")
+        public ActionResult Index(string courseId = "", string search = "", string sort = "date_desc", string status = "")
         {
             int teacherId = CurrentTeacherId;
             var teacherCourses = db.KhoaHoc
@@ -35,6 +35,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 .ToList();
 
             var courseIds = teacherCourses.Select(k => k.maKhoaHoc).ToList();
+            if (!string.IsNullOrEmpty(courseId) && !courseIds.Contains(courseId)) return HttpNotFound();
 
             var enrollmentsQuery = db.DangKyKhoaHoc
                 .Where(dk => courseIds.Contains(dk.maKhoaHoc))
@@ -81,35 +82,25 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 });
             }
 
-            // Nếu DB chưa có DangKyKhoaHoc nhưng có đơn hàng hoàn tất, lấy từ ChiTietDonHang
-            if (!studentList.Any())
+            // Use the same lesson-level progress and quiz state as certificate eligibility.
+            var quizService = new ECOLearning.Services.QuizService(db);
+            var quizRows = new List<ECOLearning.ViewModels.QuizStudentRow>();
+            if (quizService.Installed())
             {
-                var paidDetails = db.ChiTietDonHang
-                    .Where(ct => courseIds.Contains(ct.maKhoaHoc) && ct.DonHang != null
-                        && (string.IsNullOrEmpty(courseId) || ct.maKhoaHoc == courseId))
-                    .ToList();
-
-                foreach (var ct in paidDetails)
+                var states = quizService.Gradebook(teacherId, courseId);
+                quizRows = QuizController.Filter(states, status);
+                var allowed = new HashSet<string>(quizRows.Select(r => r.CourseId + ":" + r.StudentId));
+                studentList = studentList.Where(s => allowed.Contains(s.MaKhoaHoc + ":" + s.MaHocVien)).ToList();
+                foreach (var item in studentList)
                 {
-                    var user = ct.DonHang?.NguoiDung;
-                    if (user != null && !studentList.Any(s => s.MaHocVien == user.maNguoiDung && s.MaKhoaHoc == ct.maKhoaHoc))
-                    {
-                        studentList.Add(new InstructorStudentItem
-                        {
-                            MaHocVien = user.maNguoiDung,
-                            HoTen = user.hoTen,
-                            Email = user.email,
-                            AnhDaiDien = user.anhDaiDien ?? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-                            MaKhoaHoc = ct.maKhoaHoc,
-                            TenKhoaHoc = ct.KhoaHoc != null ? ct.KhoaHoc.tenKhoaHoc : ct.maKhoaHoc,
-                            NgayThamGia = ct.DonHang.ngayDat ?? DateTime.Now,
-                            TienDoHoanThanh = 25.0,
-                            SoSao = 5
-                        });
-                    }
+                    var state = states.FirstOrDefault(r => r.StudentId == item.MaHocVien && r.CourseId == item.MaKhoaHoc);
+                    if (state == null) continue;
+                    item.TienDoHoanThanh = state.Progress;
+                    item.QuizStatus = state.QuizStatus;
+                    item.QuizScore = state.BestScore;
+                    item.CertificateStatus = state.CertificateStatus;
                 }
             }
-
             if (!string.IsNullOrEmpty(search))
             {
                 string s = search.Trim().ToLower();
@@ -128,6 +119,12 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 case "progress_asc":
                     studentList = studentList.OrderBy(st => st.TienDoHoanThanh).ThenByDescending(st => st.NgayThamGia).ToList();
                     break;
+                case "quiz_desc":
+                    studentList = studentList.OrderBy(st => st.QuizScore.HasValue ? 0 : 1).ThenByDescending(st => st.QuizScore).ThenByDescending(st => st.NgayThamGia).ToList();
+                    break;
+                case "quiz_asc":
+                    studentList = studentList.OrderBy(st => st.QuizScore.HasValue ? 0 : 1).ThenBy(st => st.QuizScore).ThenByDescending(st => st.NgayThamGia).ToList();
+                    break;
                 case "rating_desc":
                     studentList = studentList.OrderBy(st => st.SoSao.HasValue && st.SoSao > 0 ? 0 : 1).ThenByDescending(st => st.SoSao).ThenByDescending(st => st.NgayThamGia).ToList();
                     break;
@@ -141,6 +138,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
             }
 
             ViewBag.Sort = sort;
+            var visible = new HashSet<string>(studentList.Select(s => s.MaKhoaHoc + ":" + s.MaHocVien));
+            ViewBag.QuizRows = quizRows.Where(r => visible.Contains(r.CourseId + ":" + r.StudentId)).ToList();
+            ViewBag.Status = status;
             ViewBag.TeacherCourses = teacherCourses;
             ViewBag.SelectedCourseId = courseId;
             ViewBag.Search = search;

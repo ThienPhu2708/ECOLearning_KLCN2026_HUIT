@@ -98,7 +98,7 @@
             </div>
 
             <p style="font-size: 15px; color: #334155; max-width: 640px; margin: 0 auto 28px; line-height: 26px;">
-                Đã hoàn thành xuất sắc 100% nội dung và các bài kiểm tra thực hành của khóa học:<br />
+                Đã hoàn thành nội dung học và đạt bài kiểm tra cuối khóa:<br />
                 <strong style="color: #0F172A; font-size: 18px; display: inline-block; margin-top: 6px;">@courseName</strong>
             </p>
 
@@ -114,7 +114,7 @@
                 <div class="cert-seal">
                     <span>OFFICIAL</span>
                     <span>★ VERIFIED ★</span>
-                    <span>@DateTime.Now.Year</span>
+                    <span>@(((DateTime?)ViewBag.CertificateIssuedAt)?.ToString("dd/MM/yyyy"))</span>
                 </div>
 
                 <div style="text-align: center; width: 180px;">

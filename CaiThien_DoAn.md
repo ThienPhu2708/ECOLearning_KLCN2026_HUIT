@@ -784,7 +784,8 @@ File: `ViewModels/PhanTrangViewModel.cs`, `Views/Shared/_Pagination.cshtml`, `as
 
 | Việc | Ghi chú |
 | :--- | :--- |
-| Commit trang danh mục (mục 12), cold-start (mục 13) và Marketing (mục 14) | Đang ở thư mục làm việc nhánh `phu`. Thành viên khác cần chạy migration 007, 008, 009, 010, 011 |
+| Commit trang danh mục (mục 12), cold-start (mục 13) và Marketing (mục 14) | Đang ở thư mục làm việc nhánh `phu`. Thành viên khác cần chạy migration 007 (cả `007_GoiY_SoThichNguoiDung.sql` và `007_Quiz_ChungChi.sql` của nhánh `ngoc`), 008, 009, 010, 011 |
+| Đã merge nhánh `ngoc` (Quiz cuối khóa, cấp chứng chỉ tự động) | Conflict ở `LearningController.MyCourses` và `MyCourses.cshtml`: giữ phân trang (mục 19), thêm trạng thái quiz cho các khóa của trang đang xem, tab "Đã học đủ bài", làm tròn tiến độ xuống. Học viên phải đạt quiz mới nhận chứng chỉ và mới gửi được đánh giá |
 | Thành viên khác chạy migration 006, 007 và job Python | Xem mục 0. Không chạy job thì chỉ thấy khóa phổ biến, không có gợi ý lọc cộng tác |
 | Mục "Khóa học tương tự" (theo mọi tương tác) ở trang chi tiết | Trang chi tiết đã có 2 mục dựa trên dữ liệu mua (mục 16). `sp_GoiY_KhoaHocTuongTu` (dựa trên `course_similarity`) vẫn chưa gắn; Hình 4.13 trong báo cáo cần vẽ lại theo 2 mục mới |
 | Link danh mục ở footer | `_Layout.cshtml` vẫn dùng mã giả (`category = "CNTT"`, `"Design"`, `"Business"`), nên đổi sang trang danh mục |

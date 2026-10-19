@@ -1,0 +1,46 @@
+﻿@model ECOLearning.ViewModels.QuizQuestion
+@{
+    ViewBag.Title = Model.Id == 0 ? "Thêm câu hỏi" : "Chỉnh sửa câu hỏi";
+    ViewBag.BreadcrumbCurrent = ViewBag.Title;
+    ViewBag.ShowQuestionBankBreadcrumb = true;
+    ViewBag.QuestionBankCourseId = Model.CourseId;
+    var bankUrl = Url.Action("Index", new { courseId = Model.CourseId });
+}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=2" />
+<div class="question-editor">
+    <div style="display:flex;justify-content:flex-start;margin-bottom:24px;"><span class="qe-course"><i class="bi bi-journal-bookmark" aria-hidden="true"></i> @ViewBag.CourseName</span></div>
+    @using (Html.BeginForm())
+    {
+        @Html.AntiForgeryToken()
+        @Html.HiddenFor(m => m.Id)
+        @Html.HiddenFor(m => m.CourseId)
+        @Html.ValidationSummary(false, "", new { @class = "form-feedback-error qe-validation", role = "alert" })
+        <div class="qe-layout">
+            <div class="qe-main">
+                <section class="card qe-card">
+                    <div class="qe-section-heading"><i class="bi bi-file-text" aria-hidden="true"></i><div><h2>Nội dung câu hỏi</h2><p>Viết câu hỏi rõ ràng, phù hợp với nội dung khóa học.</p></div></div>
+                    <div class="form-group"><label class="form-label" for="Text">Câu hỏi <span class="required">*</span></label>@Html.TextAreaFor(m => m.Text, new { @class = "form-control", rows = 5, maxlength = 4000, required = "required", placeholder = "Nhập nội dung câu hỏi…" })</div>
+                </section>
+                <section class="card qe-card">
+                    <div class="qe-section-heading"><i class="bi bi-list-check" aria-hidden="true"></i><div><h2>Các lựa chọn trả lời</h2><p>Nhập đủ 4 lựa chọn và chọn một đáp án đúng.</p></div></div>
+                    <div class="qe-answers">
+                        @for (int i = 0; i < 4; i++)
+                        {
+                            <div class="form-group qe-answer"><label class="form-label" for="answer-@i"><span class="qe-answer-letter">@((char)('A' + i))</span> Đáp án @((char)('A' + i)) <span class="required">*</span></label><textarea class="form-control" id="answer-@i" name="Options[@i]" rows="2" required maxlength="2000" placeholder="Nhập đáp án @((char)('A' + i))…">@(Model.Options != null && Model.Options.Length > i ? Model.Options[i] : "")</textarea></div>
+                        }
+                    </div>
+                    <div class="form-group qe-correct-answer"><label class="form-label" for="CorrectOption"><i class="bi bi-check-circle" aria-hidden="true"></i> Đáp án đúng <span class="required">*</span></label>@Html.DropDownListFor(m => m.CorrectOption, Enumerable.Range(0, 4).Select(i => new SelectListItem { Value = i.ToString(), Text = "Đáp án " + (char)('A' + i) }), new { @class = "form-control" })</div>
+                    <div class="form-group"><label class="form-label" for="Explanation">Giải thích đáp án <span class="qe-optional">Không bắt buộc</span></label>@Html.TextAreaFor(m => m.Explanation, new { @class = "form-control", rows = 3, maxlength = 2000, placeholder = "Giải thích vì sao đáp án này đúng…" })</div>
+                </section>
+            </div>
+            <aside class="card qe-card qe-settings">
+                <div class="qe-section-heading"><i class="bi bi-sliders" aria-hidden="true"></i><div><h2>Thiết lập câu hỏi</h2><p>Phân loại và cách hiển thị đáp án.</p></div></div>
+                <div class="form-group"><label class="form-label" for="Topic">Chủ đề <span class="required">*</span></label>@Html.TextBoxFor(m => m.Topic, new { @class = "form-control", maxlength = 120, required = "required", placeholder = "Ví dụ: Chương 1" })<p class="qe-hint">Nhóm các câu hỏi cùng nội dung vào một chủ đề.</p></div>
+                <div class="form-group"><label class="form-label" for="Difficulty">Mức độ</label>@Html.DropDownListFor(m => m.Difficulty, new[] { new SelectListItem { Value = "1", Text = "Dễ" }, new SelectListItem { Value = "2", Text = "Trung bình" }, new SelectListItem { Value = "3", Text = "Khó" } }, new { @class = "form-control" })</div>
+                <div class="qe-shuffle"><label for="ShuffleOptions">@Html.CheckBoxFor(m => m.ShuffleOptions)<span>Cho phép đảo đáp án</span></label><p class="qe-hint">Tắt nếu đáp án phụ thuộc vị trí, ví dụ “Cả A và B”.</p></div>
+                <div class="qe-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Thay đổi câu hỏi không ảnh hưởng đến nội dung các lượt thi đã bắt đầu.</span></div>
+            </aside>
+        </div>
+        <footer class="qe-footer"><span><span class="required">*</span> Thông tin bắt buộc</span><div><a class="btn btn-outline" href="@bankUrl">Hủy</a><button type="submit" class="btn btn-primary"><i class="bi bi-check2" aria-hidden="true"></i> Lưu câu hỏi</button></div></footer>
+    }
+</div>

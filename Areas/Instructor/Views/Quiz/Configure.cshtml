@@ -1,0 +1,57 @@
+﻿@model ECOLearning.ViewModels.QuizConfig
+@{
+    ViewBag.Title = "Cấu hình quiz cuối khóa";
+    ViewBag.BreadcrumbCurrent = ViewBag.Title;
+    ViewBag.ShowQuestionBankBreadcrumb = true;
+    ViewBag.QuestionBankCourseId = Model.CourseId;
+    var questions = ViewBag.Questions as List<ECOLearning.ViewModels.QuizQuestion> ?? new List<ECOLearning.ViewModels.QuizQuestion>();
+    var ids = Newtonsoft.Json.JsonConvert.DeserializeObject<int[]>(Model.SelectedIdsJson ?? "[]") ?? new int[0];
+    var bankUrl = Url.Action("Index", new { courseId = Model.CourseId });
+}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=6" />
+<div class="question-editor quiz-config-editor">
+    <div style="display:flex;justify-content:flex-start;margin-bottom:24px;"><span class="qe-course"><i class="bi bi-journal-bookmark" aria-hidden="true"></i> @ViewBag.CourseName</span></div>
+    @if (TempData["QuizMessage"] != null) {<div class="qb-message" role="status">@TempData["QuizMessage"]</div>}
+    @using (Html.BeginForm())
+    {
+        @Html.AntiForgeryToken() @Html.HiddenFor(m => m.CourseId)
+        @Html.ValidationSummary(false, "", new { @class = "form-feedback-error qe-validation", role = "alert" })
+        <div class="qe-layout">
+            <div class="qe-main">
+                <section class="card qe-card">
+                    <div class="qe-section-heading"><i class="bi bi-clipboard" aria-hidden="true"></i><div><h2>Thông tin bài quiz</h2><p>Thời gian làm bài, ngưỡng đạt và số lượt thi.</p></div></div>
+                    <div class="form-group"><label class="form-label" for="Title">Tên bài quiz <span class="required">*</span></label>@Html.TextBoxFor(m => m.Title, new { @class = "form-control", required = "required", maxlength = 200, placeholder = "Nhập tên bài kiểm tra" })</div>
+                    <div class="qc-fields">
+                        <div class="form-group"><label class="form-label" for="Minutes">Thời gian (phút)</label>@Html.TextBoxFor(m => m.Minutes, new { @class = "form-control", type = "number", min = 1, max = 180, required = "required" })</div>
+                        <div class="form-group"><label class="form-label" for="PassPercent">Tỷ lệ đúng để đạt (%)</label>@Html.TextBoxFor(m => m.PassPercent, new { @class = "form-control", type = "number", min = 1, max = 100, required = "required" })</div>
+                        <div class="form-group"><label class="form-label" for="MaxAttempts">Số lượt làm tối đa</label>@Html.TextBoxFor(m => m.MaxAttempts, new { @class = "form-control", type = "number", min = 1, max = 100, required = "required" })</div>
+                    </div>
+                    <p class="qe-hint">Ghi nhận điểm cao nhất. Học viên đạt quiz không cần thi lại.</p>
+                </section>
+                <section class="card qe-card">
+                    <div class="qe-section-heading"><i class="bi bi-collection" aria-hidden="true"></i><div><h2>Chọn câu hỏi</h2><p>Xây dựng cơ cấu đề theo chủ đề và mức độ.</p></div></div>
+                    <div class="qc-setting qc-selection"><label for="RandomSelection">@Html.CheckBoxFor(m => m.RandomSelection)<span>Lấy câu hỏi ngẫu nhiên</span></label><p class="qe-hint">Hệ thống chọn câu từ ngân hàng theo số lượng từng mức độ bên dưới.</p></div>
+                    <div class="form-group"><label class="form-label" for="Topic">Chủ đề câu hỏi</label>@Html.DropDownListFor(m => m.Topic, new[] { new SelectListItem { Value = "", Text = "Tất cả chủ đề" } }.Concat(questions.Select(q => q.Topic).Distinct().Select(t => new SelectListItem { Value = t, Text = t })), new { @class = "form-control" })</div>
+                    <div class="qc-fields qc-counts">
+                        <div class="form-group"><label class="form-label" for="EasyCount"><b class="qc-dot easy"></b> Số câu dễ</label>@Html.TextBoxFor(m => m.EasyCount, new { @class = "form-control", type = "number", min = 0, max = 100, required = "required" })</div>
+                        <div class="form-group"><label class="form-label" for="MediumCount"><b class="qc-dot medium"></b> Số câu trung bình</label>@Html.TextBoxFor(m => m.MediumCount, new { @class = "form-control", type = "number", min = 0, max = 100, required = "required" })</div>
+                        <div class="form-group"><label class="form-label" for="HardCount"><b class="qc-dot hard"></b> Số câu khó</label>@Html.TextBoxFor(m => m.HardCount, new { @class = "form-control", type = "number", min = 0, max = 100, required = "required" })</div>
+                    </div>
+                    <p class="qe-hint">Tổng từ 1–100 câu. Chủ đề chỉ áp dụng khi lấy ngẫu nhiên.</p>
+                    <details class="qc-manual"><summary><span><i class="bi bi-list-check" aria-hidden="true"></i> Chọn câu thủ công <span class="qb-count">@questions.Count</span></span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary><div class="qc-manual-body"><p class="qe-hint">Bỏ chọn “Lấy câu hỏi ngẫu nhiên”, sau đó chọn đủ câu theo số lượng mỗi mức độ đã thiết lập.</p>
+                    @foreach (var q in questions) {<label class="qc-question"><input type="checkbox" name="selectedIds" value="@q.Id" checked="@(ids.Contains(q.Id))" /><span><span class="qc-question-meta">@q.Level · @q.Topic</span><span>@q.Text</span></span></label>}
+                    @if (!questions.Any()) {<p class="qc-no-questions">Chưa có câu hỏi đang dùng. Thêm câu hỏi vào ngân hàng trước khi mở quiz.</p>}
+                    </div></details>
+                </section>
+            </div>
+            <aside class="card qe-card">
+                <div class="qe-section-heading"><i class="bi bi-sliders" aria-hidden="true"></i><div><h2>Thiết lập bài thi</h2><p>Thứ tự hiển thị và trạng thái quiz.</p></div></div>
+                <div class="qc-setting"><label for="ShuffleQuestions">@Html.CheckBoxFor(m => m.ShuffleQuestions)<span>Đảo thứ tự câu hỏi</span></label><p class="qe-hint">Thay đổi vị trí câu hỏi giữa các lượt thi.</p></div>
+                <div class="qc-setting"><label for="ShuffleAnswers">@Html.CheckBoxFor(m => m.ShuffleAnswers)<span>Đảo thứ tự đáp án</span></label><p class="qe-hint">Không áp dụng cho câu hỏi đã tắt quyền đảo đáp án.</p></div>
+                <div class="qc-setting qc-publish"><label for="Published">@Html.CheckBoxFor(m => m.Published)<span>Mở quiz cho học viên</span></label><p class="qe-hint">Chỉ học viên đã hoàn thành các bài học mới được làm quiz. Bỏ chọn để lưu nháp.</p></div>
+                <div class="qe-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Ngân hàng phải đủ câu theo cấu hình để mở quiz. Các lượt đang làm giữ nguyên thời gian và ngưỡng đạt.</span></div>
+            </aside>
+        </div>
+        <footer class="qe-footer"><span><i class="bi bi-shield-check" aria-hidden="true"></i> Các lượt thi đã bắt đầu giữ nguyên cấu hình.</span><div><a class="btn btn-outline" href="@bankUrl">Hủy</a><button type="submit" class="btn btn-primary"><i class="bi bi-check2" aria-hidden="true"></i> Lưu cấu hình</button></div></footer>
+    }
+</div>

@@ -1,0 +1,25 @@
+@model List<ECOLearning.ViewModels.QuizQuestion>
+@{
+    ViewBag.Title = "Xem trước quiz";
+    ViewBag.BreadcrumbCurrent = ViewBag.Title;
+    ViewBag.ShowQuestionBankBreadcrumb = true;
+    ViewBag.QuestionBankCourseId = ViewBag.CourseId;
+    var config = ViewBag.Config as ECOLearning.ViewModels.QuizConfig;
+}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=11" />
+<div class="instructor-quiz-preview">
+    <div class="qp-toolbar"><span class="qe-course"><i class="bi bi-journal-bookmark" aria-hidden="true"></i> @ViewBag.CourseName</span><a class="btn btn-outline" href="@Url.Action("Configure", new { courseId = ViewBag.CourseId })"><i class="bi bi-sliders" aria-hidden="true"></i> Cấu hình quiz</a></div>
+    <section class="card qe-card qp-overview"><div class="qe-section-heading"><i class="bi bi-clipboard-check" aria-hidden="true"></i><div><h1>@config.Title</h1><p>Bản xem trước dành cho giáo viên</p></div></div><div class="qp-metrics"><span><i class="bi bi-list-check" aria-hidden="true"></i><strong>@config.Total</strong> câu hỏi</span><span><i class="bi bi-clock" aria-hidden="true"></i><strong>@config.Minutes</strong> phút</span><span><i class="bi bi-check-circle" aria-hidden="true"></i>Đạt từ <strong>@config.PassPercent%</strong></span><span><i class="bi bi-arrow-repeat" aria-hidden="true"></i><strong>@config.MaxAttempts</strong> lượt thi</span></div></section>
+    <div class="qp-notice"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Đáp án đúng được đánh dấu để giáo viên kiểm tra. Khi học viên bắt đầu, đề được chọn và đảo theo cấu hình đã lưu.</span></div>
+    @for (int i = 0; i < Model.Count; i++)
+    {
+        var q = Model[i];
+        <article class="card qe-card qp-question"><div class="qp-question-meta"><span class="qp-question-number">Câu @((i + 1).ToString("00"))</span><span>@q.Topic</span><span class="qb-difficulty level-@q.Difficulty">@q.Level</span></div><h2>@q.Text</h2><div class="qp-options">
+        @for (int j = 0; j < 4; j++)
+        {
+            bool correct = q.CorrectOption == j;
+            <div class="qp-option @(correct ? "is-correct" : "")"><span class="qp-letter">@((char)('A' + j))</span><span class="qp-option-text">@q.Options[j]</span>@if (correct) {<span class="qp-correct-label"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>Đáp án đúng</span></span>}</div>
+        }
+        </div>@if (!string.IsNullOrWhiteSpace(q.Explanation)) {<div class="qp-explanation"><i class="bi bi-lightbulb" aria-hidden="true"></i><div><strong>Giải thích</strong><p>@q.Explanation</p></div></div>}</article>
+    }
+</div>

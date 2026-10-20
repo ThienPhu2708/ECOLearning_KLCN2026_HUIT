@@ -1,0 +1,196 @@
+@model ECOLearning.ViewModels.KhoaHocLienQuanViewModel
+@* Cột trái trang chi tiết khóa học: hai mục lọc cộng tác Item-based trên dữ liệu mua (Services/RelatedCourseService.cs).
+   1. "Thường xuyên được mua cùng nhau": combo khóa đang xem + khóa hay mua cùng; mỗi khóa có nút thêm giỏ,
+      cuối mục là tổng tiền và "Thêm tất cả vào giỏ hàng" (Cart/AddManyToCart).
+   2. "Học viên khác cũng mua": mỗi khóa một dòng gọn.
+   Nút Thu gọn / Hiện và xử lý thêm giỏ: script cuối Views/Course/Details.cshtml. *@
+@{
+    int soNgay = ECOLearning.Services.RelatedCourseService.SoNgayMuaCungNhau;
+    string anhMacDinh = "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400&auto=format&fit=crop&q=60";
+    string cartUrl = Url.Action("Index", "Cart");
+    string loginUrl = Url.Action("Login", "Account", new { mode = "login", returnUrl = Request.RawUrl });
+    var goi = Model.GoiMuaCung;
+    var chuaTrongGio = goi.Where(x => !Model.TrongGio.Contains(x.The.Course.maKhoaHoc)).Select(x => x.The.Course.maKhoaHoc).ToList();
+}
+
+@if (Model.MuaCungNhau.Count > 0)
+{
+    <section class="rel-section" data-rel-key="mua-cung-nhau" aria-labelledby="rel-title-mua-cung-nhau">
+        <div class="rel-head">
+            <div>
+                <h2 id="rel-title-mua-cung-nhau">Thường xuyên được mua cùng nhau</h2>
+                <p>Học viên mua khóa này thường mua thêm trong vòng @soNgay ngày.</p>
+            </div>
+            <button type="button" class="rel-toggle" aria-expanded="true" aria-controls="rel-body-mua-cung-nhau" data-count="@goi.Count">
+                <span class="rel-toggle-text">Thu gọn</span> <i class="bi bi-chevron-up"></i>
+            </button>
+        </div>
+        <div id="rel-body-mua-cung-nhau">
+            <ul class="fbt-list">
+                @for (int i = 0; i < goi.Count; i++)
+                {
+                    var item = goi[i];
+                    var k = item.The.Course;
+                    decimal gia = item.GiaHienTai;
+                    bool laKhoaDangXem = item == Model.KhoaDangXem;
+                    string link = Url.Action("Details", "Course", new { id = k.maKhoaHoc });
+                    <li class="fbt-item">
+                        <article class="fbt-card @(laKhoaDangXem ? "is-current" : "")">
+                            <a class="fbt-thumb" href="@link" tabindex="-1" aria-hidden="true">
+                                <img src="@(string.IsNullOrEmpty(k.anhBia) ? anhMacDinh : k.anhBia)" alt="" loading="lazy" />
+                            </a>
+                            <div class="fbt-body">
+                                <div class="fbt-top">
+                                    @if (laKhoaDangXem)
+                                    {
+                                        <span class="fbt-current">Khóa học này</span>
+                                    }
+                                    <a class="fbt-title" href="@link">@k.tenKhoaHoc</a>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(k.moTaNgan))
+                                {
+                                    <p class="fbt-desc">@k.moTaNgan</p>
+                                }
+                                <div class="fbt-teacher">@(k.NguoiDung != null ? k.NguoiDung.hoTen : "")</div>
+                                <div class="rel-meta">
+                                    @if (item.The.SoHocVien >= 3)
+                                    {
+                                        <span class="rel-chip rel-chip-hot">Bán chạy</span>
+                                    }
+                                    @if (item.The.SoDanhGia > 0 && item.The.DiemDanhGia >= 4.5)
+                                    {
+                                        <span class="rel-chip rel-chip-top">Đánh giá cao</span>
+                                    }
+                                    @if (item.The.SoDanhGia > 0)
+                                    {
+                                        <span class="rel-chip rel-chip-rating rel-chip-outline" aria-label="Đánh giá @item.The.DiemDanhGia.ToString("0.0") trên 5"><i class="bi bi-star-fill"></i> @item.The.DiemDanhGia.ToString("0.0")</span>
+                                        <span class="rel-chip rel-chip-outline">@item.The.SoDanhGia đánh giá</span>
+                                    }
+                                    @if (item.ThoiLuongHienThi != null)
+                                    {
+                                        <span class="rel-chip rel-chip-outline">@item.ThoiLuongHienThi</span>
+                                    }
+                                </div>
+                                <div class="fbt-foot">
+                                    <div class="fbt-price">
+                                        @if (gia <= 0)
+                                        {
+                                            <strong>Miễn phí</strong>
+                                        }
+                                        else
+                                        {
+                                            <strong>@gia.ToString("N0") đ</strong>
+                                            if (gia < k.giaBan)
+                                            {
+                                                <s>@k.giaBan.ToString("N0") đ</s>
+                                            }
+                                        }
+                                    </div>
+                                    @if (Model.TrongGio.Contains(k.maKhoaHoc))
+                                    {
+                                        <a class="fbt-btn is-in-cart" href="@cartUrl"><i class="bi bi-check2"></i> Đã trong giỏ</a>
+                                    }
+                                    else if (Model.LaKhach)
+                                    {
+                                        <a class="fbt-btn" href="@loginUrl">Thêm vào giỏ hàng</a>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="fbt-btn" data-fbt-add data-course="@k.maKhoaHoc" aria-label="Thêm @k.tenKhoaHoc vào giỏ hàng">Thêm vào giỏ hàng</button>
+                                    }
+                                </div>
+                            </div>
+                        </article>
+                        @if (i < goi.Count - 1)
+                        {
+                            <div class="fbt-plus" aria-hidden="true"><i class="bi bi-plus-lg"></i></div>
+                        }
+                    </li>
+                }
+            </ul>
+            <div class="fbt-total">
+                <div class="fbt-total-price">
+                    <span>Tổng (@goi.Count khóa):</span>
+                    <strong>@Model.TongGia.ToString("N0") đ</strong>
+                    @if (Model.TongGiaGoc > Model.TongGia)
+                    {
+                        <s>@Model.TongGiaGoc.ToString("N0") đ</s>
+                    }
+                </div>
+                @if (chuaTrongGio.Count == 0)
+                {
+                    <a class="fbt-btn-primary" href="@cartUrl"><i class="bi bi-cart-check"></i> Đến giỏ hàng</a>
+                }
+                else if (Model.LaKhach)
+                {
+                    <a class="fbt-btn-primary" href="@loginUrl">Thêm tất cả vào giỏ hàng</a>
+                }
+                else
+                {
+                    <button type="button" class="fbt-btn-primary" data-fbt-add-all data-courses="@string.Join(",", chuaTrongGio)">Thêm tất cả vào giỏ hàng</button>
+                }
+            </div>
+        </div>
+    </section>
+}
+
+@if (Model.CungMua.Count > 0)
+{
+    <section class="rel-section" data-rel-key="cung-mua" aria-labelledby="rel-title-cung-mua">
+        <div class="rel-head">
+            <div>
+                <h2 id="rel-title-cung-mua">Học viên khác cũng mua</h2>
+                <p>Các khóa được nhiều học viên của khóa này mua.</p>
+            </div>
+            <button type="button" class="rel-toggle" aria-expanded="true" aria-controls="rel-body-cung-mua" data-count="@Model.CungMua.Count">
+                <span class="rel-toggle-text">Thu gọn</span> <i class="bi bi-chevron-up"></i>
+            </button>
+        </div>
+        <div id="rel-body-cung-mua">
+            <ul class="rel-list">
+                @foreach (var item in Model.CungMua)
+                {
+                    var k = item.The.Course;
+                    decimal gia = item.GiaHienTai;
+                    <li>
+                        <a class="rel-row" href="@Url.Action("Details", "Course", new { id = k.maKhoaHoc })" title="@item.SoNguoiChung học viên đã mua cả hai khóa">
+                            <img class="rel-thumb" src="@(string.IsNullOrEmpty(k.anhBia) ? anhMacDinh : k.anhBia)" alt="" loading="lazy" />
+                            <div class="rel-main">
+                                <div class="rel-title">@k.tenKhoaHoc</div>
+                                <div class="rel-meta">
+                                    @if (item.The.SoDanhGia > 0)
+                                    {
+                                        <span class="rel-chip rel-chip-rating" aria-label="Đánh giá @item.The.DiemDanhGia.ToString("0.0") trên 5">@item.The.DiemDanhGia.ToString("0.0") <i class="bi bi-star-fill"></i></span>
+                                    }
+                                    <span class="rel-chip" aria-label="@item.The.SoHocVien học viên"><i class="bi bi-people"></i> @item.The.SoHocVien</span>
+                                    @if (item.ThoiLuongHienThi != null)
+                                    {
+                                        <span class="rel-chip rel-chip-outline">@item.ThoiLuongHienThi</span>
+                                    }
+                                    @if (item.NgayCapNhat.HasValue)
+                                    {
+                                        <span class="rel-chip rel-chip-outline">Đã cập nhật: @item.NgayCapNhat.Value.ToString("M/yyyy")</span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="rel-price">
+                                @if (gia <= 0)
+                                {
+                                    <strong>Miễn phí</strong>
+                                }
+                                else
+                                {
+                                    <strong>@gia.ToString("N0") đ</strong>
+                                    if (gia < k.giaBan)
+                                    {
+                                        <s>@k.giaBan.ToString("N0") đ</s>
+                                    }
+                                }
+                            </div>
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+    </section>
+}

@@ -1,253 +1,130 @@
-@model ECOLearning.Areas.Marketing.Models.CampaignReportViewModel
+@model ECOLearning.Areas.Marketing.Models.MarketingReportViewModel
 @{
-    ViewBag.Title = "Thống Kê & Báo Cáo Marketing (UC18)";
-    var campaigns = ViewBag.Campaigns as List<ECOLearning.Models.KhuyenMai> ?? new List<ECOLearning.Models.KhuyenMai>();
+    ViewBag.Title = "Báo cáo Marketing";
+    var chuongTrinh = ViewBag.ChuongTrinh as List<ECOLearning.ViewModels.ChuongTrinhKhuyenMai> ?? new List<ECOLearning.ViewModels.ChuongTrinhKhuyenMai>();
+    var chienDich = ViewBag.ChienDich as List<ECOLearning.ViewModels.ChienDichItem> ?? new List<ECOLearning.ViewModels.ChienDichItem>();
+    string tu = Model.TuNgay.ToString("yyyy-MM-dd");
+    string den = Model.DenNgay.ToString("yyyy-MM-dd");
+    int maxChart = Model.ChartData.Count > 0 ? Math.Max(1, Model.ChartData.Max()) : 1;
 }
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+<div class="mk-page-head">
     <div>
-        <h1 class="h2" style="margin-top: 6px;">Thống Kê & Báo Cáo Hiệu Quả Marketing</h1>
-        <p class="body-2" style="color: var(--text-secondary);">Đo lường mức độ chuyển đổi từ lượt click coupon sang đơn hàng thanh toán thành công</p>
+        <h1 class="h2">Báo cáo hiệu quả Marketing</h1>
+        <p>Chỉ tính đơn hàng đã thanh toán có dùng ưu đãi trong khoảng ngày đã chọn (theo thời điểm dùng mã).</p>
     </div>
-    <a href="@Url.Action("ExportCsv", "CampaignReport", new { campaignId = Model.SelectedCampaignId, period = Model.Period })" 
-       class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-        </svg>
-        Xuất Báo Cáo (.CSV)
-    </a>
-</div>
-
-<!-- FILTER SECTION (UC18) -->
-<div class="card" style="margin-bottom: 24px; padding: 16px 20px;">
-    @using (Html.BeginForm("Index", "CampaignReport", FormMethod.Get, new { id = "report-filter-form", style = "display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;" }))
+    @if (Model.ThongBaoLoi == null)
     {
-        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <label class="caption" style="font-weight: 700; color: var(--text-heading);">Chọn chương trình:</label>
-            <select name="campaignId" class="form-control" style="width: 320px; height: 38px; font-size: 13px;" onchange="this.form.submit()">
-                <option value="all" @(Model.SelectedCampaignId == "all" ? "selected" : "")>Tất cả các chương trình khuyến mãi</option>
-                @foreach (var c in campaigns)
-                {
-                    var mgg = c.MaGiamGia.FirstOrDefault();
-                    string code = mgg != null ? mgg.maCode : c.maKhuyenMai;
-                    <option value="@c.maKhuyenMai" @(Model.SelectedCampaignId == c.maKhuyenMai ? "selected" : "")>
-                        @code - @c.tenKhuyenMai
-                    </option>
-                }
-            </select>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <label class="caption" style="font-weight: 700; color: var(--text-heading);">Kỳ thống kê:</label>
-            <div style="display: flex; gap: 6px;">
-                <button type="submit" name="period" value="7days" 
-                        class="btn btn-sm @(Model.Period == "7days" ? "btn-primary" : "btn-secondary")"
-                        style="@(Model.Period == "7days" ? "background-color: #E11D48; border-color: #E11D48;" : "")">
-                    7 ngày qua
-                </button>
-                <button type="submit" name="period" value="month" 
-                        class="btn btn-sm @(Model.Period == "month" ? "btn-primary" : "btn-secondary")"
-                        style="@(Model.Period == "month" ? "background-color: #E11D48; border-color: #E11D48;" : "")">
-                    30 ngày gần nhất
-                </button>
-                <button type="submit" name="period" value="year" 
-                        class="btn btn-sm @(Model.Period == "year" ? "btn-primary" : "btn-secondary")"
-                        style="@(Model.Period == "year" ? "background-color: #E11D48; border-color: #E11D48;" : "")">
-                    Năm @DateTime.Now.Year
-                </button>
-            </div>
-        </div>
+        <a href="@Url.Action("ExportCsv", "CampaignReport", new { tuNgay = tu, denNgay = den, khuyenMai = Model.MaKhuyenMai, chienDich = Model.MaChienDich })" class="btn btn-outline"><i class="bi bi-download me-1"></i> Xuất CSV</a>
     }
 </div>
 
-<!-- 4 KPI SUMMARY CARDS -->
-<div class="grid-12" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 28px;">
-    <div class="card" style="padding: 20px 24px;">
-        <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Tổng lượt dùng coupon</span>
-        <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 8px;">
-            <span class="h2" style="font-weight: 700; color: var(--text-heading);">@Model.TotalUsed.ToString("N0")</span>
-            <span class="caption" style="color: var(--text-muted);">lượt</span>
-        </div>
+@Html.Partial("_Flash")
+
+<form method="get" action="@Url.Action("Index", "CampaignReport")" class="card mk-filter">
+    <div class="mk-field">
+        <label for="tuNgay">Từ ngày</label>
+        <input type="date" id="tuNgay" name="tuNgay" class="form-control" value="@tu" required />
+    </div>
+    <div class="mk-field">
+        <label for="denNgay">Đến ngày</label>
+        <input type="date" id="denNgay" name="denNgay" class="form-control" value="@den" required />
+    </div>
+    <div class="mk-field" style="min-width: 220px;">
+        <label for="khuyenMai">Chương trình</label>
+        <select id="khuyenMai" name="khuyenMai" class="form-control">
+            <option value="">Tất cả chương trình</option>
+            @foreach (var p in chuongTrinh)
+            {
+                <option value="@p.MaKhuyenMai" @(p.MaKhuyenMai == Model.MaKhuyenMai ? "selected" : "")>@p.TenKhuyenMai (@p.MaCode)</option>
+            }
+        </select>
+    </div>
+    <div class="mk-field" style="min-width: 200px;">
+        <label for="chienDich">Chiến dịch</label>
+        <select id="chienDich" name="chienDich" class="form-control">
+            <option value="">Tất cả chiến dịch</option>
+            @foreach (var c in chienDich)
+            {
+                <option value="@c.MaChienDich" @(c.MaChienDich == Model.MaChienDich ? "selected" : "")>@c.TenChienDich</option>
+            }
+        </select>
+    </div>
+    <button type="submit" class="btn mk-btn-accent btn-sm" style="height: 38px;">Xem báo cáo</button>
+</form>
+
+@if (Model.ThongBaoLoi != null)
+{
+    <div class="mk-flash mk-flash-error" role="alert"><span><i class="bi bi-exclamation-triangle-fill me-1"></i> @Model.ThongBaoLoi</span></div>
+}
+else
+{
+    <div class="mk-stats">
+        <div class="card mk-stat"><div class="mk-stat-label">Chương trình trong phạm vi</div><div class="mk-stat-value">@Model.SoChuongTrinh</div></div>
+        <div class="card mk-stat"><div class="mk-stat-label">Lượt dùng ưu đãi</div><div class="mk-stat-value">@Model.SoLuotDung</div><div class="mk-stat-note">= @Model.SoDonHang đơn hàng thành công</div></div>
+        <div class="card mk-stat"><div class="mk-stat-label">Doanh thu trước giảm</div><div class="mk-stat-value">@Model.DoanhThuTruocGiam.ToString("N0") đ</div></div>
+        <div class="card mk-stat"><div class="mk-stat-label">Tổng tiền ưu đãi</div><div class="mk-stat-value" style="color: #E11D48;">@Model.TienGiam.ToString("N0") đ</div></div>
+        <div class="card mk-stat"><div class="mk-stat-label">Doanh thu sau giảm</div><div class="mk-stat-value">@Model.DoanhThuSauGiam.ToString("N0") đ</div></div>
     </div>
 
-    <div class="card" style="padding: 20px 24px;">
-        <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Tổng tiền chiết khấu</span>
-        <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 8px;">
-            <span class="h2" style="font-weight: 700; color: #EF4444;">-@Model.TotalDiscountGiven.ToString("N0") đ</span>
-        </div>
-    </div>
-
-    <div class="card" style="padding: 20px 24px;">
-        <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Doanh thu ròng thu về</span>
-        <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 8px;">
-            <span class="h2" style="font-weight: 700; color: #10B981;">@Model.TotalDrivenRevenue.ToString("N0") đ</span>
-        </div>
-    </div>
-
-    <div class="card" style="padding: 20px 24px;">
-        <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Tỷ lệ chuyển đổi TB</span>
-        <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 8px;">
-            <span class="h2" style="font-weight: 700; color: #E11D48;">@Model.AvgConversionRate.ToString("F1")%</span>
-        </div>
-    </div>
-</div>
-
-<!-- CONVERSION LINE CHART (UC18) -->
-<div class="card" style="margin-bottom: 32px; padding: 24px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
-        <div>
-            <h3 class="h3" style="margin-bottom: 4px;">Tương Quan Lượt Sử Dụng Coupon & Chuyển Đổi Thành Công</h3>
-            <span class="caption" style="color: var(--text-secondary);">Đo lường mức độ tiếp cận và hiệu ứng kích cầu theo các mốc thời gian</span>
-        </div>
-        <span class="badge badge-success" style="padding: 6px 12px; font-size: 13px;">Tỷ lệ hoàn tất TB: @Model.AvgConversionRate.ToString("F1")%</span>
-    </div>
-    <div id="conversion-line-chart" style="min-height: 260px; width: 100%;"></div>
-</div>
-
-<!-- DETAILED CAMPAIGN EFFECTIVENESS TABLE (UC18) -->
-<div class="card" style="padding: 0; overflow: hidden;">
-    <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-        <h3 class="h3">Bảng thống kê hiệu quả chi tiết từng mã coupon</h3>
-        <span class="caption" style="color: var(--text-secondary);">Dữ liệu cập nhật từ hệ thống đơn hàng</span>
-    </div>
-
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Tên Chương Trình</th>
-                    <th>Mã Coupon</th>
-                    <th>Mức Giảm</th>
-                    <th>Tổng Lượt Dùng</th>
-                    <th>Tổng Tiền Chiết Khấu</th>
-                    <th>Doanh Thu Ròng Thu Về</th>
-                    <th>Tỷ Lệ Chuyển Đổi</th>
-                    <th>Trạng Thái</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.ReportRows != null && Model.ReportRows.Any())
+    <div class="card mk-section">
+        <h2>Lượt dùng ưu đãi @(Model.ChartTheoThang ? "theo tháng" : "theo ngày")</h2>
+        @if (Model.SoLuotDung == 0)
+        {
+            <p class="mk-muted" style="margin: 0;">Không có lượt dùng ưu đãi nào trong khoảng ngày đã chọn.</p>
+        }
+        else
+        {
+            <div class="mk-bars" role="img" aria-label="Biểu đồ lượt dùng ưu đãi">
+                @for (int i = 0; i < Model.ChartData.Count; i++)
                 {
-                    foreach (var row in Model.ReportRows)
+                    int v = Model.ChartData[i];
+                    <div class="mk-bar" style="height: @(v == 0 ? 0 : Math.Max(4, v * 100 / maxChart))%;" title="@Model.ChartLabels[i]: @v lượt"></div>
+                }
+            </div>
+            <div class="mk-bar-labels">
+                <span>@Model.ChartLabels.First()</span>
+                <span>@Model.ChartLabels.Last()</span>
+            </div>
+        }
+    </div>
+
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 18px 22px 6px;"><h2 style="font-size: 15px; font-weight: 800; margin: 0;">Kết quả theo chương trình</h2></div>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Chương trình</th>
+                        <th>Ưu đãi</th>
+                        <th>Trạng thái</th>
+                        <th style="text-align: right;">Lượt dùng</th>
+                        <th style="text-align: right;">Trước giảm</th>
+                        <th style="text-align: right;">Tiền giảm</th>
+                        <th style="text-align: right;">Sau giảm</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
                     {
                         <tr>
-                            <td><strong>@row.TenChienDich</strong></td>
-                            <td><code style="background: #F1F5F9; padding: 3px 8px; border-radius: 4px; font-weight: 700; color: #0F172A;">@row.MaCode</code></td>
-                            <td><strong style="color: #E11D48;">-@row.MucGiam%</strong></td>
-                            <td><strong>@row.SoLuotDung.ToString("N0")</strong> lượt</td>
-                            <td><span style="color: #EF4444; font-weight: 600;">-@row.TienGiamTru.ToString("N0") đ</span></td>
-                            <td><strong style="color: #10B981;">@row.DoanhThuRong.ToString("N0") đ</strong></td>
-                            <td>
-                                @if (row.TyLeChuyenDoi >= 70)
-                                {
-                                    <span class="badge badge-success">@row.TyLeChuyenDoi.ToString("F1")%</span>
-                                }
-                                else if (row.TyLeChuyenDoi >= 50)
-                                {
-                                    <span class="badge badge-warning">@row.TyLeChuyenDoi.ToString("F1")%</span>
-                                }
-                                else
-                                {
-                                    <span class="badge badge-secondary">@row.TyLeChuyenDoi.ToString("F1")%</span>
-                                }
+                            <td><a href="@Url.Action("Details", "Promotion", new { id = r.MaKhuyenMai })" style="font-weight: 700;">@r.TenKhuyenMai</a> <span class="mk-code" style="font-size: 11.5px;">@r.MaCode</span>
+                                @if (!string.IsNullOrEmpty(r.TenChienDich)) { <div class="mk-muted"><i class="bi bi-megaphone"></i> @r.TenChienDich</div> }
                             </td>
-                            <td>
-                                @if (row.TrangThai == "Đang chạy")
-                                {
-                                    <span class="badge badge-success">Đang chạy</span>
-                                }
-                                else if (row.TrangThai == "Tạm ngưng")
-                                {
-                                    <span class="badge badge-warning">Tạm ngưng</span>
-                                }
-                                else
-                                {
-                                    <span class="badge badge-secondary">@row.TrangThai</span>
-                                }
-                            </td>
+                            <td>@r.MoTaUuDai</td>
+                            <td>@r.TrangThai</td>
+                            <td style="text-align: right;">@r.SoLuotDung</td>
+                            <td style="text-align: right;">@r.DoanhThuTruocGiam.ToString("N0") đ</td>
+                            <td style="text-align: right; color: #E11D48;">@r.TienGiam.ToString("N0") đ</td>
+                            <td style="text-align: right; font-weight: 700;">@r.DoanhThuSauGiam.ToString("N0") đ</td>
                         </tr>
                     }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="8" style="text-align: center; padding: 48px 20px; color: var(--text-secondary);">
-                            <div style="font-size: 32px; margin-bottom: 8px; color: var(--text-muted);"><i class="bi bi-bar-chart-line"></i></div>
-                            <p>Không có dữ liệu chiến dịch trong kỳ thống kê này.</p>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-
-    <!-- PAGINATION CONTAINER -->
-    <div class="pagination-container" style="padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-        <div class="pagination-info">
-            Hiển thị <strong>@Model.ReportRows.Count</strong> chương trình
+                    @if (!Model.Rows.Any())
+                    {
+                        <tr><td colspan="7" class="mk-empty"><i class="bi bi-bar-chart"></i>Không có chương trình nào trong phạm vi lọc.</td></tr>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
-</div>
-
-<script src="~/assets/js/charts.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const labels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartLabels));
-        const data = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartData));
-
-        if (typeof Charts !== 'undefined' && typeof Charts.renderLineChart === 'function') {
-            Charts.renderLineChart('conversion-line-chart', {
-                data: data,
-                labels: labels,
-                color: '#E11D48',
-                fillColor: 'rgba(225, 29, 72, 0.08)'
-            });
-        } else {
-            // Fallback lightweight SVG chart
-            renderFallbackChart('conversion-line-chart', labels, data);
-        }
-    });
-
-    function renderFallbackChart(containerId, labels, data) {
-        const container = document.getElementById(containerId);
-        if (!container || !data || data.length === 0) return;
-
-        const maxVal = Math.max(...data, 1);
-        const w = container.clientWidth || 800;
-        const h = 240;
-        const padding = 40;
-
-        const points = data.map((v, i) => {
-            const x = padding + (i * (w - padding * 2) / (data.length - 1));
-            const y = h - padding - ((v / maxVal) * (h - padding * 2));
-            return `${x},${y}`;
-        }).join(' ');
-
-        let svg = `<svg viewBox="0 0 ${w} ${h}" style="width: 100%; height: 240px; overflow: visible;">`;
-        // Grid lines
-        for (let i = 0; i <= 4; i++) {
-            const y = padding + (i * (h - padding * 2) / 4);
-            svg += `<line x1="${padding}" y1="${y}" x2="${w - padding}" y2="${y}" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4" />`;
-        }
-        // Area fill
-        const firstX = padding;
-        const lastX = padding + (w - padding * 2);
-        const bottomY = h - padding;
-        svg += `<polygon points="${points} ${lastX},${bottomY} ${firstX},${bottomY}" fill="rgba(225, 29, 72, 0.08)" />`;
-        // Polyline
-        svg += `<polyline points="${points}" fill="none" stroke="#E11D48" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />`;
-        // Circles & Labels
-        data.forEach((v, i) => {
-            const x = padding + (i * (w - padding * 2) / (data.length - 1));
-            const y = h - padding - ((v / maxVal) * (h - padding * 2));
-            svg += `<circle cx="${x}" cy="${y}" r="4" fill="#FFFFFF" stroke="#E11D48" stroke-width="2" />`;
-            if (labels[i]) {
-                svg += `<text x="${x}" y="${h - 10}" font-size="11" fill="#64748B" text-anchor="middle">${labels[i]}</text>`;
-            }
-        });
-        svg += '</svg>';
-        container.innerHTML = svg;
-    }
-</script>
+}

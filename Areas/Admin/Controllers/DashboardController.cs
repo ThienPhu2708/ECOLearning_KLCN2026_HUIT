@@ -117,8 +117,21 @@ namespace ECOLearning.Areas.Admin.Controllers
                 }
             }
 
+            // 8. Số báo cáo vi phạm khóa học chưa xử lý (0 nếu chưa chạy script tạo bảng)
+            model.PendingViolationReports = new ECOLearning.Services.ViolationReportService(db).CountPendingReports();
+
             ViewBag.BreadcrumbCurrent = "Dashboard hệ thống";
             return View(model);
+        }
+
+        // GET: Admin/Dashboard/PendingCounts (menu tự làm mới chấm đỏ khi Admin đang mở trang)
+        [HttpGet]
+        public JsonResult PendingCounts()
+        {
+            Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+            var dem = new ECOLearning.Services.AdminPendingService(db).Dem();
+            return Json(new { success = true, courses = dem.KhoaHoc, teachers = dem.GiaoVien, violations = dem.ViPham, payouts = dem.ChiTra },
+                JsonRequestBehavior.AllowGet);
         }
 
         protected override void Dispose(bool disposing)

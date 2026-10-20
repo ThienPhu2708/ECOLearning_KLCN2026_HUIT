@@ -32,7 +32,7 @@
             <div style="font-size: 30px; font-weight: 800; color: #10B981; margin-bottom: 4px;">
                 @Model.ActiveCampaignsCount.ToString("00") chiến dịch
             </div>
-            <span class="caption" style="color: var(--text-muted);">Đang áp dụng trên toàn sàn</span>
+            <span class="caption" style="color: var(--text-muted);">Chương trình trong thời gian áp dụng</span>
         </div>
     </div>
 
@@ -50,7 +50,7 @@
             <div style="font-size: 30px; font-weight: 800; color: #E11D48; margin-bottom: 4px;">
                 @Model.TotalCouponsUsed.ToString("#,##0") lượt
             </div>
-            <span class="caption" style="color: var(--status-success); font-weight: 600;">Tỷ lệ áp dụng tích cực</span>
+            <span class="caption" style="color: var(--status-success); font-weight: 600;">Chỉ tính đơn hàng đã thanh toán</span>
         </div>
     </div>
 
@@ -110,7 +110,7 @@
                             </div>
                             <div style="text-align: right;">
                                 <strong style="font-size: 13px; color: var(--text-heading);">@cp.SoLuongDung lượt</strong>
-                                <div style="font-size: 11px; color: var(--status-success); font-weight: 600;">Giảm @cp.MucUuDai%</div>
+                                <div style="font-size: 11px; color: var(--status-success); font-weight: 600;">@cp.MoTaUuDai</div>
                             </div>
                         </div>
                     }

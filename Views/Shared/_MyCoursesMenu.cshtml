@@ -1,0 +1,67 @@
+@model ECOLearning.ViewModels.MyCoursesMenuViewModel
+@*
+    Menu "Khóa học của tôi" 2 tầng, cùng giao diện và cách hoạt động với menu "Khám phá" (class explore-*,
+    xử lý hover ở assets/js/explore-menu.js): Khóa học đã đăng ký / Khóa học đã tim → các khóa gần đây.
+*@  
+@{
+    string dangKyUrl = Url.Action("MyCourses", "Learning", new { area = "" });
+    string daTimUrl = Url.Action("Favorites", "Learning", new { area = "" });
+}
+
+<div class="explore-panel is-stacked">
+    <!-- Tầng 1 -->
+    <div class="explore-col">
+        <div class="explore-heading">Khóa học của tôi</div>
+        <a class="explore-row" data-explore-cat="my-dang-ky" href="@dangKyUrl">
+            <span class="explore-label">Khóa học đã đăng ký</span>
+            <i class="bi bi-chevron-right"></i>
+        </a>
+        <a class="explore-row" data-explore-cat="my-da-tim" href="@daTimUrl">
+            <span class="explore-label">Khóa học đã thích</span>
+            <i class="bi bi-chevron-right"></i>
+        </a>
+        <a class="explore-row" href="@Url.Action("History", "Payment", new { area = "" })">
+            <span class="explore-label">Lịch sử mua hàng</span>
+            <i class="bi bi-receipt"></i>
+        </a>
+    </div>
+
+    <!-- Tầng 2: khóa gần đây của nhóm đang chọn -->
+    <div class="explore-col explore-col-2">
+        <div class="explore-sub" data-explore-panel="my-dang-ky">
+            <div class="explore-heading">Khóa học đã đăng ký</div>
+            @foreach (var kh in Model.KhoaDaDangKy)
+            {
+                <a class="explore-row explore-course" href="@Url.Action("Study", "Learning", new { area = "", courseId = kh.MaKhoaHoc })">
+                    <span class="explore-label" title="@kh.TenKhoaHoc">@kh.TenKhoaHoc</span>
+                </a>
+            }
+            @if (Model.SoKhoaDaDangKy == 0)
+            {
+                <div class="explore-empty">Bạn chưa đăng ký khóa học nào.</div>
+            }
+            else
+            {
+                <a class="explore-all" href="@dangKyUrl">Xem tất cả khóa học <i class="bi bi-arrow-right"></i></a>
+            }
+        </div>
+
+        <div class="explore-sub" data-explore-panel="my-da-tim">
+            <div class="explore-heading">Khóa học đã thích</div>
+            @foreach (var kh in Model.KhoaDaTim)
+            {
+                <a class="explore-row explore-course" href="@Url.Action("Details", "Course", new { area = "", id = kh.MaKhoaHoc })" target="_blank" rel="noopener">
+                    <span class="explore-label" title="@kh.TenKhoaHoc">@kh.TenKhoaHoc</span>
+                </a>
+            }
+            @if (Model.SoKhoaDaTim == 0)
+            {
+                <div class="explore-empty">Bạn chưa thả tim khóa học nào.</div>
+            }
+            else
+            {
+                <a class="explore-all" href="@daTimUrl">Xem tất cả khóa học <i class="bi bi-arrow-right"></i></a>
+            }
+        </div>
+    </div>
+</div>

@@ -1,21 +1,86 @@
-@model List<ECOLearning.Areas.Instructor.Models.InstructorStudentItem>
+﻿@model List<ECOLearning.Areas.Instructor.Models.InstructorStudentItem>
 @{
-ViewBag.Title = "Quản Lý Học Viên";
+ViewBag.Title = ViewBag.IsCourseStudentPage == true ? "Danh sách học viên" : "Quản Lý Học Viên";
 var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
 }
+@Html.Partial("~/Views/Quiz/_Style.cshtml")
+@if(TempData["QuizMessage"]!=null){<div class="quiz-notice" role="status">@TempData["QuizMessage"]</div>}
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-    <div>
-        <h1 class="h2" style="margin-top: 6px;">Quản Lý Học Viên</h1>
-        <p class="body-2" style="color: var(--text-secondary);">Theo dõi tiến độ học tập, thời gian tham gia và đánh giá của học viên (UC11)</p>
-    </div>
-</div>
+@* Tiêu đề cột có nút sắp xếp: bấm lần 1 giảm dần, bấm lần 2 tăng dần (giữ lọc khóa học & tìm kiếm) *@
+@helper SortHeader(string label, string key, string descTitle, string ascTitle)
+{
+    string current = ViewBag.Sort as string ?? "date_desc";
+    bool active = current.StartsWith(key + "_");
+    bool desc = current == key + "_desc";
+    string next = active && desc ? key + "_asc" : key + "_desc";
+    string icon = !active ? "bi-arrow-down-up" : (desc ? "bi-arrow-down" : "bi-arrow-up");
+    string title = "Sắp xếp: " + (next.EndsWith("_desc") ? descTitle : ascTitle);
+    <a class="sort-header @(active ? "active" : "")" title="@title"
+       href="@Url.Action(ViewBag.IsCourseStudentPage == true ? "CourseStudents" : "Index", "Student", new { area = "Instructor", courseId = ViewBag.SelectedCourseId as string, search = ViewBag.Search as string, status = ViewBag.Status as string, sort = next })">
+        @label <i class="bi @icon sort-icon"></i>
+    </a>
+}
 
+<style>
+.student-filter-fields { display:flex;gap:12px;align-items:center;flex:1;min-width:0;flex-wrap:wrap; }
+.student-filter-fields .teacher-select { flex:1;min-width:200px; }
+.student-filter-card { overflow:visible; }
+.student-export { position:relative;flex-shrink:0;margin-left:auto; }
+.student-export > summary { list-style:none;display:flex;align-items:center;gap:9px;cursor:pointer;min-height:46px;white-space:nowrap; }
+.student-export > summary::-webkit-details-marker { display:none; }
+.student-export[open] > summary { background:#eef0ff;color:var(--primary);border-color:#c7c9ff; }
+.student-export-menu { position:absolute;right:0;top:calc(100% + 8px);z-index:100;width:270px;padding:6px;background:#fff;border:1px solid var(--border-color);border-radius:12px;box-shadow:0 10px 28px rgba(15,23,42,.12); }
+.student-export-menu a { display:flex;align-items:center;gap:12px;padding:12px;border-radius:8px;text-decoration:none;color:var(--text-heading); }
+.student-export-menu a:hover,.student-export-menu a:focus-visible { background:#f3f2ff;outline:none; }
+.student-export-menu a > i { color:var(--primary);font-size:19px; }
+.student-export-menu strong { display:block;font-size:13px;font-weight:600; }
+.student-export-menu small { display:block;color:var(--text-secondary);font-size:11px;margin-top:4px;line-height:1.5; }
+.sort-header { display:inline-flex;align-items:center;gap:6px;color:inherit;text-decoration:none;cursor:pointer;white-space:nowrap; }
+.sort-header:hover { color:var(--primary); }
+.sort-header .sort-icon { font-size:12px;opacity:.45; }
+.sort-header.active { color:var(--primary); }
+.sort-header.active .sort-icon { opacity:1; }
+.student-empty-icon { width:64px;height:64px;border-radius:18px;background:#eef0ff;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;color:var(--primary); }
+.student-quiz-cell { min-width:210px; }
+.student-quiz-result { display:flex;align-items:center;gap:10px;flex-wrap:nowrap;margin-bottom:0; }
+.student-quiz-status { display:inline-flex;align-items:center;padding:5px 9px;border-radius:7px;background:#f1f5f9;color:#64748b;font-size:12px;line-height:1.6; }
+.student-quiz-status.is-passed { background:#eaf7f0;color:#287454; }
+.student-quiz-status.is-failed { background:#fff3e1;color:#a36b19; }
+.student-quiz-status.is-working { background:#eef0ff;color:#4f46e5; }
+.student-quiz-score { font-size:16px;color:var(--text-heading);white-space:nowrap; }
+.student-quiz-score small { font-size:12px;font-weight:400;color:var(--text-secondary);margin-left:2px; }
+.student-quiz-detail { display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;border-radius:7px;font-size:16px;color:var(--primary);text-decoration:none; }
+.student-quiz-detail:hover { background:#eef0ff; }
+.student-quiz-detail:focus-visible { outline:2px solid var(--primary);outline-offset:2px; }
+.dashboard-main table.student-table:has(> thead) th,
+.dashboard-main table.student-table:has(> thead) td { padding-left:20px;padding-right:20px; }
+.student-table { min-width:100%;width:max-content;table-layout:auto; }
+.student-table th:first-child,.student-table td:first-child { min-width:240px; }
+.student-table th:nth-child(2),.student-table td:nth-child(2) { min-width:290px; }
+.student-table th:nth-child(3),.student-table td:nth-child(3) { min-width:260px; }
+.student-table td:first-child > div { min-width:200px; }
+.student-table td:first-child img { flex-shrink:0; }
+.student-table td:first-child strong { white-space:nowrap; }
+</style>
 <!-- FILTER & SEARCH BAR -->
-<div class="card" style="margin-bottom: 24px; padding: 16px 20px;">
-    <form method="get" action="@Url.Action("Index", "Student", new { area = "Instructor" })" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-        <div style="display: flex; gap: 12px; align-items: center; flex: 1; min-width: 300px;">
-            <select name="courseId" class="form-control" style="max-width: 300px;">
+@if (ViewBag.IsCourseStudentPage == true)
+{
+    <div style="margin-bottom:24px;">
+        <h2 class="h3">Danh sách học viên — @ViewBag.BreadcrumbCourseName</h2>
+        <p class="caption" style="margin-top:6px;">Học viên đã ghi danh và tiến độ học tập trong khóa học này</p>
+    </div>
+}
+@Html.Partial("_QuizSummary", ViewBag.QuizRows as List<ECOLearning.ViewModels.QuizStudentRow>)
+<div class="card student-filter-card" style="margin-bottom: 24px; padding: 16px 20px;">
+    <form id="student-filter-form" method="get" action="@Url.Action(ViewBag.IsCourseStudentPage == true ? "CourseStudents" : "Index", "Student", new { area = "Instructor" })" style="display: flex; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div class="student-filter-fields">
+            @if (ViewBag.IsCourseStudentPage == true)
+            {
+                <input type="hidden" name="courseId" value="@ViewBag.SelectedCourseId" />
+            }
+            else
+            {
+            <select name="courseId" class="form-control" aria-label="Khóa học" style="max-width: 300px;">
                 <option value="">Tất cả khóa học của bạn</option>
                 @if (teacherCourses != null)
                 {
@@ -27,27 +92,87 @@ var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
                     }
                 }
             </select>
-            <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Tìm kiếm theo họ tên hoặc email..." style="max-width: 320px;">
-            <button type="submit" class="btn btn-secondary">Lọc</button>
+            }
+            <input type="search" name="search" value="@ViewBag.Search" class="form-control" aria-label="Tìm theo họ tên hoặc email" placeholder="Tìm kiếm theo họ tên hoặc email..." style="flex:1;min-width:200px;">
+            <select name="status" class="form-control" aria-label="Trạng thái học viên" style="max-width:280px;">
+                @foreach(var option in new[]{new[]{"","Tất cả trạng thái"},new[]{"notTaken","Học xong, chưa thi"},new[]{"inProgress","Đang làm quiz"},new[]{"failed","Quiz chưa đạt"},new[]{"passed","Quiz đã đạt"},new[]{"eligible","Đủ điều kiện nhận chứng chỉ"},new[]{"issued","Đã cấp chứng chỉ"}})
+                {<option value="@option[0]" selected="@(option[0]==(string)ViewBag.Status)">@option[1]</option>}
+            </select>
+            <input type="hidden" name="sort" value="@(ViewBag.Sort as string ?? "date_desc")" />
         </div>
-        <div>
-            <span class="caption" style="font-weight: 600; color: var(--text-secondary);">Tổng số: <strong>@(Model != null ? Model.Count : 0)</strong> học viên</span>
-        </div>
+        <details id="student-export" class="student-export">
+            <summary class="btn btn-outline"><i class="bi bi-download" aria-hidden="true"></i> Xuất file <i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+            <div class="student-export-menu">
+                <a href="@Url.Action("Export", "Quiz", new { area = "Instructor", courseId = ViewBag.SelectedCourseId, search = ViewBag.Search, status = ViewBag.Status })"><i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i><span><strong>Xuất Excel tổng hợp</strong><small>Tiến độ, điểm quiz và chứng chỉ</small></span></a>
+                <a href="@Url.Action("Export", "Quiz", new { area = "Instructor", courseId = ViewBag.SelectedCourseId, search = ViewBag.Search, status = ViewBag.Status, history = true })"><i class="bi bi-clock-history" aria-hidden="true"></i><span><strong>Xuất lịch sử thi</strong><small>Chi tiết kết quả từng lượt làm quiz</small></span></a>
+            </div>
+        </details>
     </form>
 </div>
 
 <!-- STUDENTS TABLE (UC11) -->
+<script>
+(function () {
+    const form = document.getElementById('student-filter-form');
+    const search = form.querySelector('[name="search"]');
+    const exportMenu = document.getElementById('student-export');
+    const focusKey = 'student-filter-focus:' + location.pathname;
+    let timer, composing = false, submitting = false;
+    try {
+        const saved = JSON.parse(sessionStorage.getItem(focusKey) || 'null');
+        sessionStorage.removeItem(focusKey);
+        if (saved && saved.value === search.value) {
+            search.focus({preventScroll: true});
+            search.setSelectionRange(saved.start, saved.end);
+        }
+    } catch (e) {}
+    function applyFilters() {
+        clearTimeout(timer);
+        if (submitting) return;
+        if (form.requestSubmit) form.requestSubmit(); else form.submit();
+    }
+    function scheduleSearch() {
+        clearTimeout(timer);
+        if (!composing) timer = setTimeout(applyFilters, 450);
+    }
+    form.addEventListener('submit', function (event) {
+        clearTimeout(timer);
+        if (submitting) {event.preventDefault(); return;}
+        submitting = true;
+        if (document.activeElement === search) {
+            try {sessionStorage.setItem(focusKey, JSON.stringify({value: search.value, start: search.selectionStart, end: search.selectionEnd}));} catch (e) {}
+        }
+    });
+    form.addEventListener('change', function (event) {if (event.target.matches('select')) applyFilters();});
+    search.addEventListener('input', scheduleSearch);
+    search.addEventListener('compositionstart', function () {composing = true; clearTimeout(timer);});
+    search.addEventListener('compositionend', function () {composing = false; scheduleSearch();});
+    exportMenu.addEventListener('toggle', function () {
+        if (!exportMenu.open) return;
+        exportMenu.querySelectorAll('a').forEach(function (link) {
+            const url = new URL(link.href);
+            new FormData(form).forEach(function (value, key) {url.searchParams.set(key, value);});
+            link.href = url.toString();
+        });
+    });
+    document.addEventListener('click', function (event) {if (!exportMenu.contains(event.target)) exportMenu.open = false;});
+    exportMenu.addEventListener('keydown', function (event) {if (event.key === 'Escape') {exportMenu.open = false; exportMenu.querySelector('summary').focus();}});
+    exportMenu.querySelectorAll('a').forEach(function (link) {link.addEventListener('click', function () {exportMenu.open = false;});});
+})();
+</script>
 <div class="card" style="padding: 0; overflow: hidden;">
     <div class="table-responsive">
-        <table class="table">
+        <table class="table student-table" data-paginate="10">
             <thead>
                 <tr>
                     <th>Học viên</th>
                     <th>Email</th>
                     <th>Khóa học</th>
-                    <th>Ngày tham gia</th>
-                    <th style="width: 200px;">Tiến độ hoàn thành</th>
-                    <th>Đánh giá</th>
+                    <th>@SortHeader("Ngày tham gia", "date", "Mới nhất trước", "Cũ nhất trước")</th>
+                    <th style="width: 200px;">@SortHeader("Tiến độ hoàn thành", "progress", "Cao → thấp", "Thấp → cao")</th>
+                    <th>@SortHeader("Đánh giá", "rating", "Nhiều sao → ít sao", "Ít sao → nhiều sao")</th>
+                    <th>@SortHeader("Quiz", "quiz", "Điểm cao → thấp", "Điểm thấp → cao")</th>
+                    <th>Chứng chỉ</th>
                 </tr>
             </thead>
             <tbody>
@@ -83,20 +208,25 @@ var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
                                     <span style="color: var(--text-muted); font-size: 13px;">Chưa đánh giá</span>
                                 }
                             </td>
+                            <td class="student-quiz-cell">
+                                <div class="student-quiz-result"><span class="student-quiz-status @(item.QuizStatus == "Đã đạt" ? "is-passed" : item.QuizStatus == "Chưa đạt" ? "is-failed" : item.QuizStatus == "Đang làm" ? "is-working" : "")">@item.QuizStatus</span>@if (item.QuizScore.HasValue) {<strong class="student-quiz-score">@item.QuizScore.Value.ToString("0.##")<small>/10</small></strong>}
+                                <a class="student-quiz-detail" href="@Url.Action("History", "Quiz", new { area = "Instructor", courseId = item.MaKhoaHoc, studentId = item.MaHocVien })" title="Xem chi tiết quiz" aria-label="Xem chi tiết quiz của @item.HoTen"><i class="bi bi-eye" aria-hidden="true"></i></a></div>
+                            </td>
+                            <td>@item.CertificateStatus</td>
                         </tr>
                     }
                 }
                 else
                 {
                     <tr>
-                        <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 48px 24px;">
-                            <div style="width: 52px; height: 52px; border-radius: 50%; background: var(--bg-canvas); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: var(--text-muted); font-size: 24px;">
-                                <i class="bi bi-people-fill"></i>
+                        <td colspan="8" style="text-align: center; color: var(--text-secondary); padding: 48px 24px;">
+                            <div class="student-empty-icon">
+                                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0112 0v2M16 5a3 3 0 010 6M18 14a5 5 0 013 4v2"/></svg>
                             </div>
                             <p class="body-1" style="font-weight: 600; color: var(--text-heading); margin-bottom: 4px;">
-                                Khóa học hiện tại chưa có học viên nào ghi danh
+                                @(string.IsNullOrWhiteSpace(ViewBag.Search as string) && string.IsNullOrEmpty(ViewBag.Status as string) ? "Chưa có học viên ghi danh" : "Không tìm thấy học viên phù hợp")
                             </p>
-                            <span class="caption">Khi có học viên mua và tham gia khóa học, thông tin học tập sẽ hiển thị tại đây.</span>
+                            <span class="caption">@(string.IsNullOrWhiteSpace(ViewBag.Search as string) && string.IsNullOrEmpty(ViewBag.Status as string) ? "Học viên và tiến độ học tập sẽ xuất hiện tại đây khi có lượt ghi danh." : "Thử đổi từ khóa hoặc chọn tất cả khóa học để tìm lại.")</span>
                         </td>
                     </tr>
                 }

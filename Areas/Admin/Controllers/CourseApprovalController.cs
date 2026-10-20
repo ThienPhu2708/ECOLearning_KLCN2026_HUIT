@@ -12,7 +12,9 @@ namespace ECOLearning.Areas.Admin.Controllers
         private QL_HETHONG_CUNGCAP_KHOAHOCEntities1 db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1();
 
         // GET: Admin/CourseApproval/Index/KH... (UC15: Kiểm duyệt khóa học)
-        public ActionResult Index(string id, string statusFilter = null, string search = "")
+        // Bộ lọc thêm: category (danh mục), fromDate/toDate (ngày gửi duyệt, yyyy-MM-dd), sort = newest | oldest
+        public ActionResult Index(string id, string statusFilter = null, string search = "",
+                                  string category = "", DateTime? fromDate = null, DateTime? toDate = null, string sort = "newest")
         {
             var query = db.KhoaHoc.AsQueryable();
 
@@ -56,6 +58,12 @@ namespace ECOLearning.Areas.Admin.Controllers
                 query = query.Where(k => k.tenKhoaHoc.ToLower().Contains(s) 
                                       || k.maKhoaHoc.ToLower().Contains(s)
                                       || (k.NguoiDung != null && k.NguoiDung.hoTen.ToLower().Contains(s)));
+            }
+
+            // Filter by category
+            if (!string.IsNullOrWhiteSpace(category))
+            {
+                query = query.Where(k => k.maDanhMuc == category);
             }
 
             var rawCourses = query.OrderByDescending(k => k.maKhoaHoc).ToList();
@@ -104,6 +112,37 @@ namespace ECOLearning.Areas.Admin.Controllers
                 };
             }).ToList();
 
+            // Filter by submitted date range (ngày gửi duyệt). Khóa học chưa từng gửi duyệt bị loại khi có lọc ngày.
+            if (fromDate.HasValue)
+            {
+                model = model.Where(m => m.NgayGui.HasValue && m.NgayGui.Value.Date >= fromDate.Value.Date).ToList();
+            }
+            if (toDate.HasValue)
+            {
+                model = model.Where(m => m.NgayGui.HasValue && m.NgayGui.Value.Date <= toDate.Value.Date).ToList();
+            }
+
+            // Sort by submitted date (khóa học chưa có ngày gửi luôn ở cuối); khóa học được chọn qua id luôn ở đầu
+            sort = string.Equals(sort, "oldest", StringComparison.OrdinalIgnoreCase) ? "oldest" : "newest";
+            model = (sort == "oldest"
+                    ? model.OrderBy(m => m.NgayGui.HasValue ? 0 : 1).ThenBy(m => m.NgayGui)
+                    : model.OrderBy(m => m.NgayGui.HasValue ? 0 : 1).ThenByDescending(m => m.NgayGui))
+                .ToList();
+            if (targetCourse != null)
+            {
+                var target = model.FirstOrDefault(m => string.Equals(m.MaKhoaHoc, targetCourse.maKhoaHoc, StringComparison.OrdinalIgnoreCase));
+                if (target != null)
+                {
+                    model.Remove(target);
+                    model.Insert(0, target);
+                }
+            }
+
+            ViewBag.Categories = db.DanhMuc.OrderBy(c => c.tenDanhMuc).ToList();
+            ViewBag.Category = category ?? "";
+            ViewBag.FromDate = fromDate.HasValue ? fromDate.Value.ToString("yyyy-MM-dd") : "";
+            ViewBag.ToDate = toDate.HasValue ? toDate.Value.ToString("yyyy-MM-dd") : "";
+            ViewBag.Sort = sort;
             ViewBag.StatusFilter = statusFilter;
             ViewBag.Search = search;
             ViewBag.PendingCount = pendingCount;
@@ -196,6 +235,51 @@ namespace ECOLearning.Areas.Admin.Controllers
                 }
             }
 
+            // Bài học không phân chương (maChuong == null)
+            var unchapteredLessons = db.BaiHoc
+                .Where(b => b.maChuong == null && b.maBaiHoc.StartsWith(k.maKhoaHoc + "_"))
+                .OrderBy(b => b.thuTu)
+                .ToList();
+
+            if (unchapteredLessons.Any())
+            {
+                var chDetail = new ChuongHocDetail
+                {
+                    MaChuong = "no_chapter",
+                    TenChuong = "Bài học độc lập (Không phân chương)"
+                };
+
+                foreach (var bh in unchapteredLessons)
+                {
+                    var bhDetail = new BaiHocDetail
+                    {
+                        MaBaiHoc = bh.maBaiHoc,
+                        TenBaiHoc = bh.tenBaiHoc,
+                        VideoUrl = bh.duongDanVideo,
+                        ThoiLuong = bh.thoiLuong,
+                        CoXemThu = bh.choXemThu
+                    };
+
+                    if (bh.TaiNguyen != null)
+                    {
+                        foreach (var tn in bh.TaiNguyen)
+                        {
+                            bhDetail.TaiNguyens.Add(new TaiNguyenDetail
+                            {
+                                MaTaiNguyen = tn.maTaiNguyen,
+                                TenTaiNguyen = tn.tenTaiNguyen,
+                                FileUrl = tn.duongDan,
+                                LoaiFile = tn.loaiTaiNguyen
+                            });
+                        }
+                    }
+
+                    chDetail.BaiHocs.Add(bhDetail);
+                }
+
+                detail.ChuongHocs.Add(chDetail);
+            }
+
             return Json(new { success = true, data = detail }, JsonRequestBehavior.AllowGet);
         }
 
@@ -214,6 +298,18 @@ namespace ECOLearning.Areas.Admin.Controllers
                 if (k == null)
                 {
                     return Json(new { success = false, message = "Không tìm thấy khóa học mã " + id });
+                }
+
+                // Kiểm tra lại nội dung trước khi xuất bản: tài nguyên có thể bị xóa sau khi giáo viên gửi duyệt
+                var thieu = new ECOLearning.Services.CourseContentService(db, Server.MapPath).KiemTraKhoaHoc(k.maKhoaHoc);
+                if (thieu.Any())
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        message = "Chưa thể xuất bản: " + ECOLearning.Services.CourseContentService.TomTat(thieu)
+                            + " Hãy từ chối kèm lý do để giáo viên bổ sung."
+                    });
                 }
 
                 // Cập nhật trạng thái khóa học thành "Đã xuất bản"

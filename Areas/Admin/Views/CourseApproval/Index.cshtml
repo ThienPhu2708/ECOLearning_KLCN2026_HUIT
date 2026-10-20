@@ -3,6 +3,12 @@
     ViewBag.Title = "Kiểm Duyệt Khóa Học";
     string currentStatus = ViewBag.StatusFilter as string ?? "Pending";
     string searchKeyword = ViewBag.Search as string ?? "";
+    string selectedCategory = ViewBag.Category as string ?? "";
+    string fromDate = ViewBag.FromDate as string ?? "";
+    string toDate = ViewBag.ToDate as string ?? "";
+    string sort = ViewBag.Sort as string ?? "newest";
+    var categories = ViewBag.Categories as List<ECOLearning.Models.DanhMuc> ?? new List<ECOLearning.Models.DanhMuc>();
+    bool hasExtraFilter = selectedCategory != "" || fromDate != "" || toDate != "" || sort != "newest";
 }
 
 <style>
@@ -53,37 +59,71 @@
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
         <!-- Status Filter Tabs -->
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin", statusFilter = "Pending", search = searchKeyword })" 
+            <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin", statusFilter = "Pending", search = searchKeyword, category = selectedCategory, fromDate = fromDate, toDate = toDate, sort = sort })"
                class="btn btn-sm @(currentStatus.Equals("Pending", StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-outline")" style="font-weight: 600;">
                 Chờ duyệt <span class="badge badge-warning" style="margin-left: 6px;">@ViewBag.PendingCount</span>
             </a>
-            <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin", statusFilter = "Approved", search = searchKeyword })" 
+            <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin", statusFilter = "Approved", search = searchKeyword, category = selectedCategory, fromDate = fromDate, toDate = toDate, sort = sort })"
                class="btn btn-sm @(currentStatus.Equals("Approved", StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-outline")" style="font-weight: 600;">
                 Đã xuất bản <span class="badge badge-success" style="margin-left: 6px;">@ViewBag.ApprovedCount</span>
             </a>
-            <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin", statusFilter = "Rejected", search = searchKeyword })" 
+            <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin", statusFilter = "Rejected", search = searchKeyword, category = selectedCategory, fromDate = fromDate, toDate = toDate, sort = sort })"
                class="btn btn-sm @(currentStatus.Equals("Rejected", StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-outline")" style="font-weight: 600;">
                 Cần sửa đổi <span class="badge badge-danger" style="margin-left: 6px;">@ViewBag.RejectedCount</span>
             </a>
-            <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin", statusFilter = "All", search = searchKeyword })" 
+            <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin", statusFilter = "All", search = searchKeyword, category = selectedCategory, fromDate = fromDate, toDate = toDate, sort = sort })"
                class="btn btn-sm @(currentStatus.Equals("All", StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-outline")" style="font-weight: 600;">
                 Tất cả <span class="badge badge-secondary" style="margin-left: 6px;">@ViewBag.AllCount</span>
             </a>
         </div>
 
-        <!-- Search input form -->
-        <form method="get" action="@Url.Action("Index", "CourseApproval", new { area = "Admin" })" style="display: flex; gap: 8px; align-items: center;">
-            <input type="hidden" name="statusFilter" value="@currentStatus" />
-            <input type="text" name="search" value="@searchKeyword" class="form-control form-control-sm" placeholder="Tìm theo tên khóa học hoặc giáo viên..." style="width: 280px;">
-            <button type="submit" class="btn btn-secondary btn-sm">Tìm kiếm</button>
-        </form>
     </div>
+
+    <!-- Tìm kiếm + lọc danh mục / ngày gửi + sắp xếp -->
+    <form method="get" action="@Url.Action("Index", "CourseApproval", new { area = "Admin" })"
+          style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-color);">
+        <input type="hidden" name="statusFilter" value="@currentStatus" />
+        <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 220px;">
+            <label class="caption" style="font-weight: 600;">Tìm kiếm</label>
+            <input type="text" name="search" value="@searchKeyword" class="form-control" placeholder="Tên khóa học, mã hoặc giáo viên..." style="height: 38px;">
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+            <label class="caption" style="font-weight: 600;">Danh mục</label>
+            <select name="category" class="form-control" style="height: 38px; width: 200px;">
+                <option value="">Tất cả danh mục</option>
+                @foreach (var c in categories)
+                {
+                    <option value="@c.maDanhMuc" @(c.maDanhMuc == selectedCategory ? "selected" : "")>@c.tenDanhMuc</option>
+                }
+            </select>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+            <label class="caption" style="font-weight: 600;">Gửi từ ngày</label>
+            <input type="date" name="fromDate" value="@fromDate" class="form-control" style="height: 38px; width: 160px;">
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+            <label class="caption" style="font-weight: 600;">Đến ngày</label>
+            <input type="date" name="toDate" value="@toDate" class="form-control" style="height: 38px; width: 160px;">
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+            <label class="caption" style="font-weight: 600;">Sắp xếp</label>
+            <select name="sort" class="form-control" style="height: 38px; width: 170px;">
+                <option value="newest" @(sort == "newest" ? "selected" : "")>Ngày gửi mới nhất</option>
+                <option value="oldest" @(sort == "oldest" ? "selected" : "")>Ngày gửi cũ nhất</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm" style="height: 38px;">Lọc</button>
+        @if (hasExtraFilter || searchKeyword != "")
+        {
+            <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin", statusFilter = currentStatus })" class="btn btn-secondary btn-sm" style="height: 38px; display: inline-flex; align-items: center;">Bỏ lọc</a>
+        }
+    </form>
 </div>
 
 <!-- PENDING COURSES TABLE (UC15) -->
 <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 30px;">
     <div class="table-responsive">
-        <table class="table">
+        <table class="table" data-paginate="10">
             <thead>
                 <tr>
                     <th>Tên Khóa Học</th>
@@ -150,12 +190,6 @@
         </table>
     </div>
 
-    <!-- PAGINATION CONTAINER -->
-    <div class="pagination-container" style="padding: 16px 20px;">
-        <div class="pagination-info">
-            Hiển thị <strong>@(Model != null ? Model.Count() : 0)</strong> khóa học
-        </div>
-    </div>
 </div>
 
 <!-- MODAL: DETAILED APPROVAL REVIEW (UC15) -->
@@ -237,13 +271,13 @@
                 </div>
                 <div style="font-size: 13px; color: #334155; line-height: 1.6;">
                     <h4 style="font-size: 14px; margin-bottom: 6px; color: #0F172A;">Mô tả ngắn:</h4>
-                    <p id="overview-short-desc" style="background: #F8FAFC; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px;"></p>
+                    <p id="overview-short-desc" style="background: #F8FAFC; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; white-space: pre-line;"></p>
                     
                     <h4 style="font-size: 14px; margin-bottom: 6px; color: #0F172A;">Mục tiêu đầu ra:</h4>
-                    <p id="overview-outcomes" style="background: #F8FAFC; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px;"></p>
+                    <p id="overview-outcomes" style="background: #F8FAFC; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; white-space: pre-line;"></p>
 
                     <h4 style="font-size: 14px; margin-bottom: 6px; color: #0F172A;">Mô tả chi tiết:</h4>
-                    <div id="overview-full-desc" style="background: #F8FAFC; padding: 12px 16px; border-radius: 8px; max-height: 160px; overflow-y: auto;"></div>
+                    <div id="overview-full-desc" style="background: #F8FAFC; padding: 12px 16px; border-radius: 8px; max-height: 160px; overflow-y: auto; white-space: pre-line;"></div>
                 </div>
             </div>
         </div>

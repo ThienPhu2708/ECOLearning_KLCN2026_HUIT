@@ -1,142 +1,185 @@
-@model List<ECOLearning.Areas.Instructor.Models.InstructorCourseItem>
+﻿@model List<ECOLearning.Areas.Instructor.Models.InstructorCourseItem>
 @{
     ViewBag.Title = "Quản Lý Khóa Học";
+
+    int totalAll       = Model != null ? Model.Count : 0;
+    int totalDraft     = Model != null ? Model.Count(x => x.TrangThai == "BanNhap"  || x.TrangThai == "Bản nháp") : 0;
+    int totalPending   = Model != null ? Model.Count(x => x.TrangThai == "ChoDuyet" || x.TrangThai == "Chờ duyệt") : 0;
+    int totalPublished = Model != null ? Model.Count(x => x.TrangThai == "DaDuyet"  || x.TrangThai == "Đã xuất bản" || x.TrangThai == "Đã duyệt") : 0;
+    int totalRejected  = Model != null ? Model.Count(x => x.TrangThai == "TuChoi"   || x.TrangThai == "Từ chối" || x.TrangThai == "Cần sửa đổi") : 0;
+    int totalViolation = Model != null ? Model.Count(x => x.TrangThai == "Tạm khóa" || x.TrangThai == "Khóa vĩnh viễn") : 0;
 }
 
 @if (TempData["SuccessMessage"] != null)
 {
-    <div style="padding: 12px 16px; background: #ECFDF5; border: 1px solid #10B981; color: #065F46; border-radius: var(--radius-xl); margin-bottom: 20px; font-size: 14px; font-weight: 600;">
-        <i class="bi bi-check-circle-fill me-1"></i> @TempData["SuccessMessage"]
+    <div style="padding: 12px 16px; background: #ECFDF5; border: 1px solid #10B981; color: #065F46; border-radius: 12px; margin-bottom: 20px; font-size: 14px; font-weight: 600;">
+        ✓ @TempData["SuccessMessage"]
     </div>
 }
 @if (TempData["ErrorMessage"] != null)
 {
-    <div style="padding: 12px 16px; background: #FEF2F2; border: 1px solid #EF4444; color: #991B1B; border-radius: var(--radius-xl); margin-bottom: 20px; font-size: 14px; font-weight: 600;">
-        <i class="bi bi-x-circle-fill me-1"></i> @TempData["ErrorMessage"]
+    <div style="padding: 12px 16px; background: #FEF2F2; border: 1px solid #EF4444; color: #991B1B; border-radius: 12px; margin-bottom: 20px; font-size: 14px; font-weight: 600;">
+        ✕ @TempData["ErrorMessage"]
     </div>
 }
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-    <div>
-        <h1 class="h2" style="margin-top: 6px;">Danh Sách Khóa Học Của Bạn</h1>
-        <p class="body-2" style="color: var(--text-secondary);">Quản lý nội dung, xuất bản khóa học và theo dõi số lượng học viên</p>
-    </div>
-    <div>
-        <a href="@Url.Action("Create", "Course", new { area = "Instructor" })" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i> Tạo khóa học mới
-        </a>
-    </div>
-</div>
-
-<!-- FILTER & SEARCH BAR -->
+<!-- FILTER TABS + SEARCH -->
 <div class="card" style="margin-bottom: 24px; padding: 16px 20px;">
-    <form method="get" action="@Url.Action("Index", "Course", new { area = "Instructor" })" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-        <div style="display: flex; gap: 12px; align-items: center; flex: 1; min-width: 280px;">
-            <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Tìm kiếm theo tên khóa học hoặc mã..." style="max-width: 360px;">
-            <select name="status" class="form-control" style="max-width: 180px;">
-                <option value="">Tất cả trạng thái</option>
-                <option value="Bản nháp" @(ViewBag.Status == "Bản nháp" ? "selected" : "")>Bản nháp</option>
-                <option value="Chờ duyệt" @(ViewBag.Status == "Chờ duyệt" ? "selected" : "")>Chờ duyệt</option>
-                <option value="Đã xuất bản" @(ViewBag.Status == "Đã xuất bản" ? "selected" : "")>Đã xuất bản</option>
-                <option value="Cần sửa đổi" @(ViewBag.Status == "Cần sửa đổi" ? "selected" : "")>Cần sửa đổi</option>
-            </select>
-            <button type="submit" class="btn btn-secondary">Lọc</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <!-- Tab filter buttons -->
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-sm filter-btn" data-filter="all">Tất cả (@totalAll)</button>
+            <button class="btn btn-secondary btn-sm filter-btn" data-filter="draft">Bản nháp (@totalDraft)</button>
+            <button class="btn btn-secondary btn-sm filter-btn" data-filter="pending">Chờ duyệt (@totalPending)</button>
+            <button class="btn btn-secondary btn-sm filter-btn" data-filter="published">Đã xuất bản (@totalPublished)</button>
+            @if (totalRejected > 0)
+            {
+                <button class="btn btn-secondary btn-sm filter-btn" data-filter="rejected">Cần sửa (@totalRejected)</button>
+            }
+            @if (totalViolation > 0)
+            {
+                <button class="btn btn-secondary btn-sm filter-btn" data-filter="violation" style="color: #C2410C;">Vi phạm (@totalViolation)</button>
+            }
         </div>
-        <div>
-            <span class="caption" style="font-weight: 600; color: var(--text-secondary);">Tổng số: <strong>@(Model != null ? Model.Count : 0)</strong> khóa học</span>
+        <!-- Search -->
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto;">
+        <div style="width: 200px;">
+            <input type="text" id="course-search" class="form-control"
+                   style="height: 38px; font-size: 13px;"
+                   placeholder="Tìm tên khóa học..." />
         </div>
-    </form>
+            <a href="@Url.Action("Create", "Course", new { area = "Instructor" })" class="btn btn-primary btn-sm" style="height:38px;white-space:nowrap;">+ Tạo khóa học mới</a>
+        </div>
+    </div>
 </div>
 
-<!-- COURSE TABLE (UC9) -->
+<!-- COURSES TABLE -->
 <div class="card" style="padding: 0; overflow: hidden;">
     <div class="table-responsive">
-        <table class="table">
+        <table class="table" data-paginate="10">
             <thead>
                 <tr>
-                    <th style="width: 80px;">Ảnh bìa</th>
+                    <th style="width: 80px;">Ảnh</th>
                     <th>Tên khóa học</th>
                     <th>Danh mục</th>
                     <th>Giá bán</th>
-                    <th>Số học viên</th>
-                    <th>Số bài học</th>
+                    <th>Học viên</th>
                     <th>Trạng thái</th>
-                    <th style="text-align: Center;">Thao tác</th>
+                    <th>Thao tác</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="course-table-body">
                 @if (Model != null && Model.Any())
                 {
                     foreach (var item in Model)
                     {
-                        <tr>
+                        string filterKey = "draft";
+                        string badgeClass = "badge-secondary";
+                        string badgeText = "Bản nháp";
+
+                        if (item.TrangThai == "DaDuyet" || item.TrangThai == "Đã xuất bản" || item.TrangThai == "Đã duyệt")
+                        { filterKey = "published"; badgeClass = "badge-success"; badgeText = "Đã xuất bản"; }
+                        else if (item.TrangThai == "ChoDuyet" || item.TrangThai == "Chờ duyệt")
+                        { filterKey = "pending"; badgeClass = "badge-warning"; badgeText = "Chờ duyệt"; }
+                        else if (item.TrangThai == "TuChoi" || item.TrangThai == "Từ chối" || item.TrangThai == "Cần sửa đổi")
+                        { filterKey = "rejected"; badgeClass = "badge-danger"; badgeText = "Cần sửa đổi"; }
+                        else if (item.TrangThai == "Tạm khóa")
+                        { filterKey = "violation"; badgeClass = "badge-warning"; badgeText = "Tạm khóa (vi phạm)"; }
+                        else if (item.TrangThai == "Khóa vĩnh viễn")
+                        { filterKey = "violation"; badgeClass = "badge-danger"; badgeText = "Khóa vĩnh viễn"; }
+
+                        decimal displayPrice = item.GiaKhuyenMai.HasValue && item.GiaKhuyenMai.Value > 0
+                            ? item.GiaKhuyenMai.Value : item.GiaBan;
+
+                        <tr data-filter="@filterKey">
                             <td>
-                                <img src="@item.AnhBia" alt="@item.TenKhoaHoc" style="width: 60px; height: 40px; border-radius: 8px; object-fit: cover;" />
-                            </td>
-                            <td>
-                                <strong style="color: var(--text-heading); display: block;">@item.TenKhoaHoc</strong>
-                                <span class="caption" style="color: var(--text-muted);">Mã: @item.MaKhoaHoc</span>
-                            </td>
-                            <td><span class="badge badge-secondary">@item.TenDanhMuc</span></td>
-                            <td>
-                                <strong style="color: #0D9488;">@item.GiaBan.ToString("#,##0 đ")</strong>
-                                @if (item.GiaKhuyenMai.HasValue && item.GiaKhuyenMai > 0)
-                                {
-                                    <div style="font-size: 11px; text-decoration: line-through; color: var(--text-muted);">
-                                        @item.GiaKhuyenMai.Value.ToString("#,##0 đ")
-                                    </div>
-                                }
-                            </td>
-                            <td><strong>@item.SoHocVien</strong> học viên</td>
-                            <td>
-                                <a href="@Url.Action("Index", "Curriculum", new { area = "Instructor", courseId = item.MaKhoaHoc })" style="color: var(--primary); text-decoration: none; font-weight: 600;">
-                                    @item.SoBaiHoc bài học <i class="bi bi-pencil-square ms-1"></i>
+                                <a href="@Url.Action("Details", "Course", new { area = "Instructor", id = item.MaKhoaHoc })">
+                                    <img src="@(string.IsNullOrEmpty(item.AnhBia) ? "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=120&auto=format&fit=crop&q=80" : item.AnhBia)"
+                                         alt="@item.TenKhoaHoc"
+                                         style="width: 60px; height: 38px; border-radius: 6px; object-fit: cover;" />
                                 </a>
                             </td>
-                            <td>
-                                @if (item.TrangThai == "Đã xuất bản")
-                                {
-                                    <span class="badge badge-success">Đã xuất bản</span>
-                                }
-                                else if (item.TrangThai == "Chờ duyệt")
-                                {
-                                    <span class="badge badge-warning">Chờ duyệt</span>
-                                }
-                                else if (item.TrangThai == "Cần sửa đổi")
-                                {
-                                    <span class="badge badge-danger">Cần sửa đổi</span>
-                                    if (!string.IsNullOrEmpty(item.LyDoTuChoi))
+                            <td class="cell-wrap">
+                                <a href="@Url.Action("Details", "Course", new { area = "Instructor", id = item.MaKhoaHoc })" style="text-decoration: none;">
+                                    <strong style="color: var(--text-heading); display: block; max-width: 260px;">@item.TenKhoaHoc</strong>
+                                </a>
+                                <div class="caption" style="color: var(--text-muted); margin-top: 4px;">
+                                    @if (filterKey == "published")
                                     {
-                                        <div style="font-size: 11px; color: #DC2626; margin-top: 4px; max-width: 180px; background: #FEF2F2; padding: 4px 6px; border-radius: 6px; border: 1px solid #FCA5A5;">
-                                            <i class="bi bi-chat-left-dots-fill me-1"></i> Lý do: @item.LyDoTuChoi
-                                        </div>
+                                        <text>@item.SoBaiHoc bài học</text>
                                     }
-                                }
-                                else
-                                {
-                                    <span class="badge badge-secondary">Bản nháp</span>
-                                }
-                            </td>
-                            <td style="text-align: right;">
-                                <div style="display: inline-flex; gap: 6px;">
-                                    <a href="@Url.Action("Index", "Curriculum", new { area = "Instructor", courseId = item.MaKhoaHoc })" class="btn btn-sm btn-outline" title="Quản lý đề cương">
-                                        Đề cương
-                                    </a>
-                                    <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = item.MaKhoaHoc })" class="btn btn-sm btn-secondary" title="Sửa khóa học">
-                                        Sửa
-                                    </a>
-                                    @if (item.TrangThai == "Bản nháp" || item.TrangThai == "Cần sửa đổi")
+                                    else if (filterKey == "pending")
                                     {
-                                        using (Html.BeginForm("SubmitForApproval", "Course", new { area = "Instructor", id = item.MaKhoaHoc }, FormMethod.Post, new { style = "display: inline;", onsubmit = "return confirm('Bạn có chắc chắn muốn gửi kiểm duyệt khóa học này không?');" }))
+                                        <text>Đang đợi Admin duyệt</text>
+                                    }
+                                    else if (filterKey == "draft")
+                                    {
+                                        <text>Chưa gửi duyệt</text>
+                                        if (!item.CoVideo)
                                         {
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-primary">Gửi duyệt</button>
+                                            <text> • Cần bổ sung video</text>
                                         }
                                     }
-                                    @using (Html.BeginForm("Delete", "Course", new { area = "Instructor", id = item.MaKhoaHoc }, FormMethod.Post, new { style = "display: inline;", onsubmit = "return confirm('Bạn có chắc chắn muốn xóa khóa học này?');" }))
+                                    else if (filterKey == "rejected")
                                     {
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+                                        <span style="color: #DC2626;">Bị từ chối: @item.LyDoTuChoi</span>
+                                    }
+                                    else if (filterKey == "violation")
+                                    {
+                                        <a href="@Url.Action("Index", "Violation", new { area = "Instructor", id = item.MaKhoaHoc })" style="color: #C2410C; font-weight: 600; text-decoration: none;">
+                                            <i class="bi bi-flag-fill"></i> @(item.TrangThai == "Tạm khóa" ? "Bị báo cáo vi phạm — xử lý ngay" : "Xem lý do khóa")
+                                        </a>
+                                    }
+                                </div>
+                            </td>
+                            <td><span class="badge badge-primary">@item.TenDanhMuc</span></td>
+                            <td>
+                                @{
+                                    if (displayPrice == 0)
+                                    {
+                                        <span class="badge badge-success">Miễn phí</span>
+                                    }
+                                    else
+                                    {
+                                        <strong>@displayPrice.ToString("#,##0 đ")</strong>
+                                        if (item.GiaKhuyenMai.HasValue && item.GiaKhuyenMai.Value > 0 && item.GiaBan > item.GiaKhuyenMai.Value)
+                                        {
+                                            <div style="font-size: 11px; text-decoration: line-through; color: var(--text-muted);">@item.GiaBan.ToString("#,##0 đ")</div>
+                                        }
+                                    }
+                                }
+                            </td>
+                            <td>@item.SoHocVien học viên</td>
+                            <td><span class="badge @badgeClass">@badgeText</span></td>
+                            <td>
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-start;">
+                                    <a href="@Url.Action("Details", "Course", new { area = "Instructor", id = item.MaKhoaHoc })" class="btn btn-primary btn-sm" style="width: 36px; padding: 0;" title="Chi tiết">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    
+                                    @if (filterKey == "violation")
+                                    {
+                                        <a href="@Url.Action("Index", "Violation", new { area = "Instructor", id = item.MaKhoaHoc })" class="btn btn-sm" style="width: 36px; padding: 0; background: #FFF7ED; color: #C2410C; border: 1px solid #FDBA74;" title="Xử lý vi phạm">
+                                            <i class="bi bi-flag-fill"></i>
+                                        </a>
+                                    }
+                                    @if (filterKey == "draft" || filterKey == "rejected" || item.TrangThai == "Tạm khóa")
+                                    {
+                                    <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = item.MaKhoaHoc })" class="btn btn-secondary btn-sm" style="width: 36px; padding: 0;" title="Sửa khóa học">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+
+                                    }
+
+                                    @if (filterKey == "pending")
+                                    {
+                                        using (Html.BeginForm("CancelApproval", "Course", new { area = "Instructor", id = item.MaKhoaHoc }, FormMethod.Post, new { style = "display:inline;" }))
+                                        {
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline btn-sm" style="width:36px;padding:0;" title="Hủy yêu cầu duyệt" aria-label="Hủy yêu cầu duyệt" onclick="return instructorConfirmSubmit(this, 'Hủy yêu cầu duyệt và đưa khóa học về bản nháp?')">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        }
                                     }
                                 </div>
                             </td>
@@ -146,8 +189,9 @@
                 else
                 {
                     <tr>
-                        <td colspan="8" style="text-align: center; color: var(--text-secondary); padding: 32px;">
-                            Bạn chưa có khóa học nào hoặc không có kết quả phù hợp với bộ lọc.
+                        <td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 48px 32px;">
+                            <p class="body-2" style="margin-bottom: 12px;">Bạn chưa có khóa học nào.</p>
+                            <a href="@Url.Action("Create", "Course", new { area = "Instructor" })" class="btn btn-primary">Tạo khóa học đầu tiên</a>
                         </td>
                     </tr>
                 }
@@ -155,3 +199,46 @@
         </table>
     </div>
 </div>
+
+@section Scripts {
+<script>
+    // ── Tab filter ────────────────────────────────────────────────────
+    document.querySelectorAll('.filter-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            // Active tab
+            document.querySelectorAll('.filter-btn').forEach(function (b) {
+                b.classList.remove('btn-primary');
+                b.classList.add('btn-secondary');
+            });
+            this.classList.remove('btn-secondary');
+            this.classList.add('btn-primary');
+
+            var filter = this.getAttribute('data-filter');
+            document.querySelectorAll('#course-table-body tr').forEach(function (row) {
+                if (filter === 'all' || row.getAttribute('data-filter') === filter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    // ── Search realtime ──────────────────────────────────────────────
+    document.getElementById('course-search').addEventListener('input', function () {
+        var q = this.value.toLowerCase();
+        document.querySelectorAll('#course-table-body tr').forEach(function (row) {
+            row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+        });
+        // Reset tab active nếu đang search
+        if (q.length > 0) {
+            document.querySelectorAll('.filter-btn').forEach(function (b) {
+                b.classList.remove('btn-primary');
+                b.classList.add('btn-secondary');
+            });
+        }
+    });
+</script>
+}
+
+

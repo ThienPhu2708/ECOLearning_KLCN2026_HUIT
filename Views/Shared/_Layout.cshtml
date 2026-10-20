@@ -5,18 +5,47 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>@(ViewBag.Title != null ? ViewBag.Title + " | " : "")E-Learning - Nền tảng Đào tạo Trực tuyến</title>
 
-        <!-- Google Fonts Preconnect & Stylesheet (Plus Jakarta Sans & Be Vietnam Pro chuẩn 100% tiếng Việt) -->
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+        <!-- Google Fonts (Plus Jakarta Sans & Be Vietnam Pro) - Tự lưu trữ cục bộ, không phụ thuộc CDN -->
+        <link rel="stylesheet" href="@Url.Content("~/assets/vendor/google-fonts/fonts.local.css")" />
 
-        <!-- Bootstrap Icons -->
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+        <!-- Bootstrap Icons - Tự lưu trữ cục bộ, không phụ thuộc CDN -->
+        <link rel="stylesheet" href="@Url.Content("~/assets/vendor/bootstrap-icons/bootstrap-icons.min.css")" />
 
         <!-- Design System CSS (Cache Busting v=2.0) -->
         <link rel="stylesheet" href="@Url.Content("~/assets/css/variables.css?v=2.0")" />
         <link rel="stylesheet" href="@Url.Content("~/assets/css/base.css?v=2.0")" />
-        <link rel="stylesheet" href="@Url.Content("~/assets/css/components.css?v=2.1")" />
+        <link rel="stylesheet" href="@Url.Content("~/assets/css/components.css?v=2.9")" />
+        <link rel="stylesheet" href="@Url.Content("~/assets/css/coupon.css?v=1.4")" />
+        <link rel="stylesheet" href="@Url.Content("~/assets/css/search.css?v=1.0")" />
+        <link rel="stylesheet" href="@Url.Content("~/assets/css/pagination.css?v=1.0")" />
+
+        <!-- Skeleton Screen cho thẻ khóa học: hiện khung xương tới khi ảnh bìa tải xong (tối đa 2,5 giây).
+             Chạy trong <head> để khung xương xuất hiện ngay lần vẽ đầu tiên, không nháy nội dung thật. -->
+        <script>
+            (function () {
+                var root = document.documentElement;
+                root.classList.add('js-course-img', 'js-skeleton');
+
+                function markLoaded(img) {
+                    if (!img.closest || !img.closest('.course-thumb')) return;
+                    img.classList.add('is-loaded');
+                    var card = img.closest('.course-card');
+                    if (card) card.classList.add('is-ready');
+                }
+
+                // Sự kiện load/error của ảnh không nổi bọt, bắt ở pha capture trên document
+                document.addEventListener('load', function (e) { if (e.target.tagName === 'IMG') markLoaded(e.target); }, true);
+                document.addEventListener('error', function (e) { if (e.target.tagName === 'IMG') markLoaded(e.target); }, true);
+
+                document.addEventListener('DOMContentLoaded', function () {
+                    document.querySelectorAll('.course-thumb img').forEach(function (img) {
+                        if (img.complete && img.naturalWidth > 0) markLoaded(img);
+                    });
+                    // Mạng chậm / ảnh lazy ngoài màn hình: sau 2,5 giây vẫn hiện nội dung, ảnh tự hiện khi tải xong
+                    setTimeout(function () { root.classList.remove('js-skeleton'); }, 2500);
+                });
+            })();
+        </script>
 
         <style>
             .btn-nav-portal {
@@ -66,34 +95,46 @@
                         <span class="logo-text">E-Learning<span>.</span></span>
                     </a>
                     <nav class="nav-links">
-                        <a href="@Url.Action("Index", "Home", new { area = "" })" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")">Trang chủ</a>
-                        <a href="#" class="nav-link">Khám phá</a>
-                        <a href="@Url.Action("MyCourses", "Learning", new { area = "" })" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Learning" ? "active" : "")">Khóa học của tôi</a>
+                        @if (User.Identity.IsAuthenticated || Session["UserId"] != null)
+                        {
+                            <a href="@Url.Action("Index", "Home", new { area = "" })" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")">Trang chủ</a>
+                            <div class="explore-menu">
+                                <a href="@Url.Action("Index", "Course", new { area = "" })" class="nav-link explore-trigger @(ViewContext.RouteData.Values["controller"]?.ToString() == "Course" ? "active" : "")">Khám phá <i class="bi bi-chevron-down"></i></a>
+                                @Html.Action("ExploreMenu", "Navigation", new { area = "" })
+                            </div>
+                            <div class="explore-menu" id="mycourses-menu">
+                                <a href="@Url.Action("MyCourses", "Learning", new { area = "" })" class="nav-link explore-trigger @(ViewContext.RouteData.Values["controller"]?.ToString() == "Learning" ? "active" : "")">Khóa học của tôi <i class="bi bi-chevron-down"></i></a>
+                                @Html.Action("MyCoursesMenu", "Navigation", new { area = "" })
+                            </div>
+                        }
+                        else
+                        {
+                            <a href="@Url.Action("Index", "Home", new { area = "" })" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")">Trang chủ</a>
+                            <a href="@Url.Action("Login", "Account", new { area = "", mode = "login" })" class="nav-link">Đăng nhập</a>
+                            <a href="@Url.Action("Login", "Account", new { area = "", mode = "register" })" class="nav-link">Đăng ký</a>
+                        }
                     </nav>
                 </div>
-
-                <!-- Search Bar -->
-                <div class="header-search">
-                    <form action="@Url.Action("Index", "Course", new { area = "" })" method="get" style="display: flex; align-items: center; width: 100%;">
-                        <i class="bi bi-search search-icon" style="font-size: 16px;"></i>
-                        <input type="text" name="search" placeholder="Tìm kiếm khóa học, kỹ năng hoặc giảng viên..." value="@Request.QueryString["search"]" />
-                    </form>
-                </div>
-
+                    <!-- Search Bar -->
+                    <div class="header-search">
+                        @* Mở cho cả khách: /tim-kiem (SearchController). Gợi ý khi gõ: assets/js/search-suggest.js *@
+                        <form action="@Url.Action("Index", "Search", new { area = "" })" method="get" role="search" style="display: flex; align-items: center; width: 100%;">
+                            <i class="bi bi-search search-icon" style="font-size: 16px;"></i>
+                            <input type="search" name="q" maxlength="100" aria-label="Tìm kiếm khóa học" placeholder="Tìm kiếm khóa học, kỹ năng hoặc giảng viên..." value="@(Request.Unvalidated.QueryString["q"] ?? Request.Unvalidated.QueryString["search"])" />
+                        </form>
+                    </div>
                 <!-- Header Actions -->
                 <div class="header-actions">
-                    @{
-                    var cartList = Session["Cart"] as List<ECOLearning.ViewModels.CartItemViewModel>;
-                    int cartBadgeCount = cartList != null ? cartList.Count : 0;
-                }
-                <!-- Giỏ hàng -->
-                <a href="@Url.Action("Index", "Cart", new { area = "" })" class="btn btn-icon btn-secondary" title="Giỏ hàng" style="position: relative; display: inline-flex; align-items: center; justify-content: center;">
-                    <i class="bi bi-cart3" style="font-size: 18px;"></i>
-                    <span id="header-cart-badge" style="position: absolute; top: -4px; right: -4px; background: #434CE8; color: #FFFFFF; font-size: 10px; font-weight: 800; width: 18px; height: 18px; border-radius: 50%; display: @(cartBadgeCount > 0 ? "flex" : "none"); align-items: center; justify-content: center; border: 2px solid #FFFFFF;">@(cartBadgeCount > 0 ? cartBadgeCount.ToString() : "")</span>
-                </a>
-
                 @if (User.Identity.IsAuthenticated || Session["UserId"] != null)
                 {
+                    var cartList = Session["Cart"] as List<ECOLearning.ViewModels.CartItemViewModel>;
+                    int cartBadgeCount = cartList != null ? cartList.Count : 0;
+                    <!-- Giỏ hàng -->
+                    <a href="@Url.Action("Index", "Cart", new { area = "" })" class="btn btn-icon btn-secondary" title="Giỏ hàng" style="position: relative; display: inline-flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-cart3" style="font-size: 18px;"></i>
+                        <span id="header-cart-badge" style="position: absolute; top: -4px; right: -4px; background: #434CE8; color: #FFFFFF; font-size: 10px; font-weight: 800; width: 18px; height: 18px; border-radius: 50%; display: @(cartBadgeCount > 0 ? "flex" : "none"); align-items: center; justify-content: center; border: 2px solid #FFFFFF;">@(cartBadgeCount > 0 ? cartBadgeCount.ToString() : "")</span>
+                    </a>
+
                     string userRole = Session["Role"]?.ToString() ?? "HocVien";
                     string userName = Session["FullName"]?.ToString() ?? User.Identity.Name;
                     string userAvatar = Session["Avatar"]?.ToString() ?? "assets/images/avatars/avatar_default.jpg";
@@ -128,12 +169,6 @@
                                 Giáo viên
                             </a>
                         }
-                        else if (teacherApp != null && teacherApp.Status == "Approved")
-                        {
-                            <a href="@Url.Action("Index", "Dashboard", new { area = "Instructor" })" class="btn-nav-portal" title="Kênh giảng viên">
-                                Giáo viên
-                            </a>
-                        }
                         else
                         {
                             <a href="@Url.Action("Register", "TeacherApplication", new { area = "Instructor" })" class="btn-nav-portal" title="Đăng ký làm giáo viên">
@@ -162,7 +197,9 @@
                 }
                 else
                 {
-                    <a href="@Url.Action("Login", "Account", new { area = "" })" class="btn btn-primary btn-sm" style="background: #434CE8; color: #fff; font-weight: 600; border-radius: 10px;">Đăng ký / Đăng nhập</a>
+                    <a href="@Url.Action("Login", "Account", new { area = "", mode = "login" })" class="btn btn-primary btn-sm" style="background: #434CE8; color: #fff; font-weight: 700; border-radius: 10px; padding: 9px 20px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(67, 76, 232, 0.25); text-decoration: none;">
+                        <i class="bi"></i> Đăng ký/ Đăng nhập
+                    </a>
                 }
             </div>
         </div>
@@ -272,12 +309,20 @@
         </div>
     </div>
 
+    @{
+        string vaiTroMaGiamGia = Session["Role"]?.ToString();
+    }
+    @if (Session["UserId"] != null && (vaiTroMaGiamGia == "HocVien" || vaiTroMaGiamGia == "GiaoVien"))
+    {
+        @Html.Partial("_CouponCollectModal")
+    }
+
     <!-- Toast Notifications Container -->
-    <div id="toast-container" class="toast-container"></div>
+    <div id="toast-container" class="toast-container" style="position: fixed; top: 24px; right: 24px; z-index: 99999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; max-width: 420px; width: calc(100% - 48px);"></div>
 
     <!-- Core Scripts -->
     <script src="@Url.Content("~/Scripts/jquery-3.7.0.min.js")"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="@Url.Content("~/Scripts/bootstrap.bundle.min.js")"></script>
     <script src="@Url.Content("~/assets/js/app.js?v=3.0")"></script>
     <script>
         function updateHeaderCartBadge(count) {
@@ -293,7 +338,17 @@
 }
 }
 window.updateHeaderCartBadge = updateHeaderCartBadge;
+window.FAVORITE_TOGGLE_URL = '@Url.Action("Toggle", "Favorite", new { area = "" })';
+window.FAVORITE_STATE_URL = '@Url.Action("State", "Favorite", new { area = "" })';
+window.MYCOURSES_MENU_URL = '@Url.Action("MyCoursesMenuPanel", "Navigation", new { area = "" })';
+window.COUPON_COLLECT_URL = '@Url.Action("Collect", "Coupon", new { area = "" })';
+window.COUPON_LOGIN_URL = '@Url.Action("Login", "Account", new { area = "" })';
+window.SEARCH_SUGGEST_URL = '@Url.Action("Suggest", "Search", new { area = "" })';
 </script>
+<script src="@Url.Content("~/assets/js/explore-menu.js?v=1.1")"></script>
+<script src="@Url.Content("~/assets/js/favorite.js?v=1.2")"></script>
+<script src="@Url.Content("~/assets/js/coupon-wallet.js?v=1.0")"></script>
+<script src="@Url.Content("~/assets/js/search-suggest.js?v=1.1")"></script>
 @RenderSection("scripts", required: false)
 </body>
 </html>

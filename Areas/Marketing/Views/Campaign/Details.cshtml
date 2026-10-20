@@ -1,0 +1,82 @@
+@model ECOLearning.ViewModels.ChienDichItem
+@{
+    ViewBag.Title = "Chi tiết chiến dịch";
+    var chuongTrinh = ViewBag.ChuongTrinh as List<ECOLearning.ViewModels.ChuongTrinhKhuyenMai> ?? new List<ECOLearning.ViewModels.ChuongTrinhKhuyenMai>();
+    var now = DateTime.Now;
+    string tt = Model.TrangThaiHienThi(now);
+}
+
+<div class="mk-page-head">
+    <div>
+        <a href="@Url.Action("Index", "Campaign")" class="mk-muted" style="text-decoration: none;"><i class="bi bi-arrow-left"></i> Danh sách chiến dịch</a>
+        <h1 class="h2">@Model.TenChienDich</h1>
+        <p>
+            @if (tt == "Đang chạy") { <span class="badge badge-success">Đang chạy</span> }
+            else if (tt == "Chưa bắt đầu") { <span class="badge badge-info">Chưa bắt đầu</span> }
+            else { <span class="badge badge-secondary">Đã kết thúc</span> }
+            <span class="mk-muted">@Model.NgayBatDau.ToString("dd/MM/yyyy") – @Model.NgayKetThuc.ToString("dd/MM/yyyy")</span>
+        </p>
+    </div>
+    @if (Model.TrangThaiLuu != "KetThuc")
+    {
+        <div class="mk-actions">
+            <a href="@Url.Action("Edit", "Campaign", new { id = Model.MaChienDich })" class="btn btn-outline"><i class="bi bi-pencil me-1"></i> Sửa</a>
+            <a href="@Url.Action("Create", "Promotion", new { chienDich = Model.MaChienDich })" class="btn btn-outline"><i class="bi bi-plus-lg me-1"></i> Thêm chương trình</a>
+            @using (Html.BeginForm("End", "Campaign", new { id = Model.MaChienDich }, FormMethod.Post, new { onsubmit = "return confirm('Kết thúc chiến dịch? Các chương trình khuyến mãi và giao dịch cũ được giữ nguyên.');" }))
+            {
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-danger">Kết thúc chiến dịch</button>
+            }
+        </div>
+    }
+</div>
+
+@Html.Partial("_Flash")
+
+<div class="mk-stats">
+    <div class="card mk-stat"><div class="mk-stat-label">Chương trình</div><div class="mk-stat-value">@Model.SoChuongTrinh</div></div>
+    <div class="card mk-stat"><div class="mk-stat-label">Lượt dùng ưu đãi</div><div class="mk-stat-value">@Model.SoLuotDung</div></div>
+    <div class="card mk-stat"><div class="mk-stat-label">Đơn hàng thành công</div><div class="mk-stat-value">@Model.SoDonHang</div></div>
+    <div class="card mk-stat"><div class="mk-stat-label">Tổng tiền giảm</div><div class="mk-stat-value">@Model.TienGiam.ToString("N0") đ</div></div>
+    <div class="card mk-stat"><div class="mk-stat-label">Doanh thu sau giảm</div><div class="mk-stat-value">@Model.DoanhThuSauGiam.ToString("N0") đ</div></div>
+</div>
+
+<div class="mk-form">
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 18px 22px 6px;"><h2 style="font-size: 15px; font-weight: 800; margin: 0;">Chương trình khuyến mãi liên quan</h2></div>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr><th>Chương trình</th><th>Ưu đãi</th><th style="text-align: right;">Lượt dùng</th><th style="text-align: right;">Doanh thu sau giảm</th><th>Trạng thái</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in chuongTrinh)
+                    {
+                        <tr>
+                            <td><a href="@Url.Action("Details", "Promotion", new { id = p.MaKhuyenMai })" style="font-weight: 700;">@p.TenKhuyenMai</a> <span class="mk-code" style="font-size: 11.5px;">@p.MaCode</span></td>
+                            <td>@p.MoTaUuDai</td>
+                            <td style="text-align: right;">@p.SoLuotDaDung</td>
+                            <td style="text-align: right;">@p.DoanhThuSauGiam.ToString("N0") đ</td>
+                            <td>@p.TrangThaiHienThi(now)</td>
+                        </tr>
+                    }
+                    @if (!chuongTrinh.Any())
+                    {
+                        <tr><td colspan="5" class="mk-empty"><i class="bi bi-tag"></i>Chưa gắn chương trình khuyến mãi nào.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card mk-section">
+        <h2>Thông tin</h2>
+        <dl class="mk-dl" style="grid-template-columns: 110px minmax(0, 1fr);">
+            <dt>Mục tiêu</dt><dd>@(Model.MucTieu ?? "—")</dd>
+            <dt>Đối tượng</dt><dd>@(Model.DoiTuong ?? "—")</dd>
+            <dt>Nội dung</dt><dd style="white-space: pre-line;">@(Model.NoiDung ?? "—")</dd>
+            <dt>Người tạo</dt><dd>@Model.NguoiTao</dd>
+            <dt>Ngày tạo</dt><dd>@Model.NgayTao.ToString("dd/MM/yyyy HH:mm")</dd>
+        </dl>
+    </div>
+</div>

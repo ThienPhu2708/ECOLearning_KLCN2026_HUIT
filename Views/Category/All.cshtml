@@ -1,0 +1,251 @@
+@model ECOLearning.ViewModels.TatCaLinhVucViewModel
+@*
+    Trang /danh-muc (CategoryController.All): mọi lĩnh vực đang hoạt động dạng thẻ, bấm thẻ sang /danh-muc/{slug}.
+    Mở từ nút "Tất cả các lĩnh vực" ở mục "Khám phá theo lĩnh vực" trên trang chủ. Số liệu đếm từ CSDL.
+*@
+@{
+    ViewBag.Title = "Tất cả lĩnh vực";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+<style>
+    .lv-hero {
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        color: #FFFFFF;
+        padding: 36px 0 40px;
+    }
+
+    .lv-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 14px;
+        font-size: 13.5px;
+        color: #94A3B8;
+    }
+
+    .lv-breadcrumb a {
+        color: #A5B4FC;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .lv-breadcrumb a:hover {
+        color: #FFFFFF;
+    }
+
+    .lv-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
+    }
+
+    /* Thẻ lĩnh vực: ảnh minh họa (Admin tải lên) ở trên, khung 16:9 cố định, ảnh khác tỉ lệ được cắt vừa khung */
+    .lv-card {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: #FFFFFF;
+        border: 1px solid var(--border-color, #E2E8F0);
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        text-decoration: none;
+        color: inherit;
+        transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .lv-card:hover {
+        border-color: var(--primary, #434CE8);
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(67, 76, 232, 0.12);
+    }
+
+    .lv-media {
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .lv-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        display: block;
+        transition: transform 0.35s ease;
+    }
+
+    .lv-card:hover .lv-media img {
+        transform: scale(1.05);
+    }
+
+    /* Danh mục chưa có ảnh: nền màu kèm chữ cái đầu tên lĩnh vực */
+    .lv-media-initial {
+        font-size: 44px;
+        font-weight: 800;
+        opacity: 0.85;
+    }
+
+    .lv-body {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        flex: 1;
+        padding: 18px 20px 20px;
+    }
+
+    .lv-name {
+        margin: 0;
+        font-size: 16.5px;
+        font-weight: 700;
+        line-height: 1.35;
+        color: var(--text-heading, #0F172A);
+    }
+
+    .lv-count {
+        margin-top: 2px;
+        font-size: 13px;
+        color: var(--text-secondary, #64748B);
+    }
+
+    .lv-desc {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--text-body, #334155);
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .lv-foot {
+        margin-top: auto;
+        padding-top: 14px;
+        border-top: 1px solid #F1F5F9;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 13px;
+        color: var(--text-secondary, #64748B);
+    }
+
+    .lv-stats {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .lv-stats span {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .lv-go {
+        font-weight: 700;
+        color: var(--primary, #434CE8);
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .lv-card.is-empty .lv-go {
+        color: var(--text-muted, #94A3B8);
+        font-weight: 600;
+    }
+
+    @@media (max-width: 1000px) {
+        .lv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @@media (max-width: 640px) {
+        .lv-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+        .lv-body { padding: 16px 18px 18px; }
+    }
+</style>
+}
+
+<section class="lv-hero">
+    <div class="safe-container">
+        <nav class="lv-breadcrumb" aria-label="Breadcrumb">
+            <a href="@Url.Action("Index", "Home", new { area = "" })">Trang chủ</a>
+            <i class="bi bi-chevron-right" style="font-size: 11px;"></i>
+            <span style="color: #E2E8F0;">Tất cả lĩnh vực</span>
+        </nav>
+        <span class="caption" style="text-transform: uppercase; color: #A5B4FC; font-weight: 700; letter-spacing: 0.05em;">Danh mục đào tạo</span>
+        <h1 style="font-size: 32px; font-weight: 800; margin: 6px 0 10px; color: #FFFFFF;">Tất cả lĩnh vực</h1>
+        <p style="font-size: 15.5px; color: #CBD5E1; max-width: 760px; line-height: 1.6; margin: 0 0 14px;">
+            Chọn một lĩnh vực để xem các khóa học đang mở trong lĩnh vực đó.
+        </p>
+        <div style="font-size: 14px; color: #94A3B8;">
+            <strong style="color: #FFFFFF;">@Model.Items.Count</strong> lĩnh vực
+            <span style="margin: 0 6px;">•</span>
+            <strong style="color: #FFFFFF;">@Model.TongSoKhoaHoc</strong> khóa học đang mở
+        </div>
+    </div>
+</section>
+
+<main style="padding: 32px 0 80px; background: var(--bg-canvas, #F8FAFC); min-height: 60vh;">
+    <div class="safe-container">
+        @if (Model.Items.Count > 0)
+        {
+            <div class="lv-grid">
+                @foreach (var lv in Model.Items)
+                {
+                    bool coKhoa = lv.SoKhoaHoc > 0;
+                    <a class="lv-card @(coKhoa ? "" : "is-empty")" href="@Url.Action("Index", "Category", new { area = "", slug = lv.Slug })" title="Xem lĩnh vực @lv.Ten">
+                        @if (!string.IsNullOrEmpty(lv.AnhMinhHoa))
+                        {
+                            <div class="lv-media"><img src="@Url.Content("~" + lv.AnhMinhHoa)" alt="@lv.Ten" loading="lazy" /></div>
+                        }
+                        else
+                        {
+                            <div class="lv-media" style="background: @lv.Icon.Bg; color: @lv.Icon.Color;" aria-hidden="true"><span class="lv-media-initial">@lv.Ten.Substring(0, 1)</span></div>
+                        }
+                        <div class="lv-body">
+                            <div style="min-width: 0;">
+                                <h2 class="lv-name">@lv.Ten</h2>
+                                <div class="lv-count">@(coKhoa ? lv.SoKhoaHoc + " khóa học" : "Chưa có khóa học")</div>
+                            </div>
+
+                        @if (!string.IsNullOrWhiteSpace(lv.MoTa))
+                        {
+                            <p class="lv-desc">@lv.MoTa</p>
+                        }
+
+                        <div class="lv-foot">
+                            <div class="lv-stats">
+                                @if (lv.SoGiangVien > 0)
+                                {
+                                    <span><i class="bi bi-person-video3"></i> @lv.SoGiangVien giảng viên</span>
+                                }
+                                @if (lv.SoHocVien > 0)
+                                {
+                                    <span><i class="bi bi-people"></i> @lv.SoHocVien học viên</span>
+                                }
+                            </div>
+                            <span class="lv-go">@(coKhoa ? "Xem khóa học" : "Xem lĩnh vực") <i class="bi bi-arrow-right"></i></span>
+                        </div>
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+        else
+        {
+            <div style="text-align: center; padding: 56px 20px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--border-color, #E2E8F0);">
+                <i class="bi bi-grid" style="font-size: 36px; color: #94A3B8; display: block; margin-bottom: 10px;"></i>
+                <h3 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 6px;">Chưa có lĩnh vực nào</h3>
+                <p style="font-size: 14px; color: #64748B; margin-bottom: 18px;">Hệ thống chưa mở lĩnh vực đào tạo nào. Bạn có thể xem toàn bộ khóa học.</p>
+                <a href="@Url.Action("Index", "Course", new { area = "" })" class="btn btn-primary btn-sm" style="text-decoration: none; border-radius: 10px; padding: 10px 22px;">Xem tất cả khóa học</a>
+            </div>
+        }
+    </div>
+</main>

@@ -41,5 +41,6 @@ cd ECOLearning_KLCN2026_HUIT
 
 ---
 
-## 📁 4. Tài Liệu Cấu Trúc Hệ Thống
-Vui lòng xem chi tiết cấu trúc thư mục và mô tả chức năng từng file tại [CauTrucHeThong.md](CauTrucHeThong.md).
+## 📁 4. Tài Liệu Cấu Trúc & Tóm Tắt Dự Án
+- Xem chi tiết cấu trúc thư mục và mô tả chức năng từng file tại [CauTrucHeThong.md](CauTrucHeThong.md).
+- Xem tóm tắt toàn bộ dự án, các tính năng và nhật ký tiến độ thực hiện tại [TomTatDuAn.md](TomTatDuAn.md).

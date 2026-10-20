@@ -1,0 +1,99 @@
+@model ECOLearning.ViewModels.CampaignFormViewModel
+@{
+    bool laSua = Model.LaChinhSua;
+    ViewBag.Title = laSua ? "Sửa chiến dịch" : "Tạo chiến dịch";
+    var chon = new HashSet<string>(Model.ChuongTrinh ?? new List<string>());
+    var now = DateTime.Now;
+    Func<string, MvcHtmlString> loi = key =>
+        ViewData.ModelState.ContainsKey(key) && ViewData.ModelState[key].Errors.Count > 0
+            ? new MvcHtmlString("<div class=\"mk-error\">" + System.Web.HttpUtility.HtmlEncode(ViewData.ModelState[key].Errors[0].ErrorMessage) + "</div>")
+            : MvcHtmlString.Empty;
+}
+
+<div class="mk-page-head">
+    <div>
+        <a href="@(laSua ? Url.Action("Details", "Campaign", new { id = Model.MaChienDich }) : Url.Action("Index", "Campaign"))" class="mk-muted" style="text-decoration: none;"><i class="bi bi-arrow-left"></i> Quay lại</a>
+        <h1 class="h2">@(laSua ? "Sửa chiến dịch" : "Tạo chiến dịch Marketing")</h1>
+        <p>Các trường có dấu <span style="color: #DC2626;">*</span> là bắt buộc.</p>
+    </div>
+</div>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="mk-flash mk-flash-error" role="alert">
+        <span><i class="bi bi-exclamation-triangle-fill me-1"></i> Dữ liệu chưa hợp lệ, vui lòng kiểm tra các trường được đánh dấu.
+            @if (ViewData.ModelState.ContainsKey("") && ViewData.ModelState[""].Errors.Count > 0) { @ViewData.ModelState[""].Errors[0].ErrorMessage }</span>
+    </div>
+}
+
+@using (Html.BeginForm(laSua ? "Edit" : "Create", "Campaign", laSua ? new { id = Model.MaChienDich } : null, FormMethod.Post, new { novalidate = "novalidate" }))
+{
+    @Html.AntiForgeryToken()
+    <div class="mk-form">
+        <div>
+            <div class="card mk-section">
+                <h2>Thông tin chiến dịch</h2>
+                <div class="form-group">
+                    <label class="form-label" for="TenChienDich">Tên chiến dịch <span style="color: #DC2626;">*</span></label>
+                    <input type="text" id="TenChienDich" name="TenChienDich" class="form-control" maxlength="150" value="@Model.TenChienDich" placeholder="VD: Mùa tựu trường 2026" />
+                    @loi("TenChienDich")
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="MucTieu">Mục tiêu</label>
+                    <input type="text" id="MucTieu" name="MucTieu" class="form-control" maxlength="500" value="@Model.MucTieu" placeholder="VD: Tăng 20% học viên mới nhóm Lập trình" />
+                    @loi("MucTieu")
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="DoiTuong">Đối tượng hướng đến</label>
+                    <input type="text" id="DoiTuong" name="DoiTuong" class="form-control" maxlength="255" value="@Model.DoiTuong" placeholder="VD: Sinh viên năm nhất, người mới học lập trình" />
+                    @loi("DoiTuong")
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="NoiDung">Nội dung / kênh triển khai</label>
+                    <textarea id="NoiDung" name="NoiDung" class="form-control" rows="5" maxlength="2000">@Model.NoiDung</textarea>
+                    @loi("NoiDung")
+                </div>
+            </div>
+
+            <div class="card mk-section">
+                <h2>Chương trình khuyến mãi liên quan</h2>
+                <p class="mk-hint" style="margin-top: -6px;">Chỉ hiện chương trình chưa kết thúc và chưa thuộc chiến dịch khác. Bỏ chọn chỉ gỡ liên kết, không xóa chương trình.</p>
+                <div class="mk-course-list">
+                    @foreach (var p in Model.ChuongTrinhLuaChon)
+                    {
+                        <label class="mk-course-item">
+                            <input type="checkbox" name="ChuongTrinh" value="@p.MaKhuyenMai" @(chon.Contains(p.MaKhuyenMai) ? "checked" : "") />
+                            <span>@p.TenKhuyenMai <span class="mk-code" style="font-size: 11.5px;">@p.MaCode</span>
+                                <small>@p.MoTaUuDai · @p.NgayBatDau.ToString("dd/MM/yyyy") – @p.NgayKetThuc.ToString("dd/MM/yyyy") · @p.TrangThaiHienThi(now)</small></span>
+                        </label>
+                    }
+                    @if (!Model.ChuongTrinhLuaChon.Any())
+                    {
+                        <div class="mk-muted" style="padding: 10px;">Chưa có chương trình nào có thể gắn. <a href="@Url.Action("Create", "Promotion")">Tạo chương trình khuyến mãi</a></div>
+                    }
+                </div>
+                @loi("ChuongTrinh")
+            </div>
+        </div>
+
+        <div>
+            <div class="card mk-section">
+                <h2>Thời gian</h2>
+                <div class="form-group">
+                    <label class="form-label" for="NgayBatDau">Ngày bắt đầu <span style="color: #DC2626;">*</span></label>
+                    <input type="date" id="NgayBatDau" name="NgayBatDau" class="form-control" value="@(Model.NgayBatDau?.ToString("yyyy-MM-dd"))" />
+                    @loi("NgayBatDau")
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="NgayKetThuc">Ngày kết thúc <span style="color: #DC2626;">*</span></label>
+                    <input type="date" id="NgayKetThuc" name="NgayKetThuc" class="form-control" value="@(Model.NgayKetThuc?.ToString("yyyy-MM-dd"))" />
+                    @loi("NgayKetThuc")
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <a href="@(laSua ? Url.Action("Details", "Campaign", new { id = Model.MaChienDich }) : Url.Action("Index", "Campaign"))" class="btn btn-outline">Hủy</a>
+                <button type="submit" class="btn mk-btn-accent">@(laSua ? "Lưu thay đổi" : "Tạo chiến dịch")</button>
+            </div>
+        </div>
+    </div>
+}

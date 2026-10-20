@@ -7,6 +7,7 @@
 }
 
 @section styles {
+    <link rel="stylesheet" href="@Url.Content("~/assets/css/bank-picker.css?v=1.0")" />
     <style>
         .profile-header-banner {
             height: 160px;
@@ -64,10 +65,28 @@
             grid-column: span 6;
         }
 
-        @@media (max-width: 768px) {
-            .col-6 {
-                grid-column: span 12;
-            }
+        .tab-btn {
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 15px;
+            color: #64748B;
+            border: none;
+            background: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tab-btn:hover {
+            color: #434CE8;
+        }
+
+        .tab-btn.active {
+            color: #434CE8 !important;
+            border-bottom-color: #434CE8 !important;
         }
     </style>
 }
@@ -94,12 +113,18 @@
                 </div>
 
                 <!-- Tab Navigation -->
-                <div class="tab-nav" style="display: flex; gap: 8px; border-bottom: 2px solid #F1F5F9; margin-bottom: 30px;">
-                    <button class="tab-btn active" id="tab-btn-info" data-tab="tab-info" onclick="switchProfileTab('info')" style="padding: 12px 20px; font-weight: 600; font-size: 15px; color: #434CE8; border: none; background: none; border-bottom: 3px solid #434CE8; cursor: pointer;">
-                        Cập nhật thông tin cá nhân
+                <div class="tab-nav" style="display: flex; gap: 8px; border-bottom: 2px solid #F1F5F9; margin-bottom: 30px; flex-wrap: wrap;">
+                    <button class="tab-btn active" id="tab-btn-info" data-tab="tab-info" onclick="switchProfileTab('info')">
+                        <i class="bi bi-person-circle"></i> Cập nhật thông tin cá nhân
                     </button>
-                    <button class="tab-btn" id="tab-btn-password" data-tab="tab-password" onclick="switchProfileTab('password')" style="padding: 12px 20px; font-weight: 600; font-size: 15px; color: #64748B; border: none; background: none; border-bottom: 3px solid transparent; cursor: pointer;">
-                        Đổi mật khẩu bảo vệ
+                    @if (Model.IsTeacher)
+                    {
+                        <button class="tab-btn" id="tab-btn-teacher" data-tab="tab-teacher" onclick="switchProfileTab('teacher')">
+                            <i class="bi bi-mortarboard-fill"></i> Hồ sơ giáo viên
+                        </button>
+                    }
+                    <button class="tab-btn" id="tab-btn-password" data-tab="tab-password" onclick="switchProfileTab('password')">
+                        <i class="bi bi-shield-lock-fill"></i> Đổi mật khẩu bảo vệ
                     </button>
                 </div>
 
@@ -138,7 +163,7 @@
                         <div class="form-group" style="margin-bottom: 20px;">
                             <label class="form-label">Email tài khoản</label>
                             <input type="email" class="form-control" value="@Model.Email" disabled style="background-color: var(--bg-canvas, #F8FAFC); cursor: not-allowed; color: #64748B;">
-                            <span class="caption" style="display: block; font-size: 13px; color: #64748B; margin-top: 6px;">Email này được dùng cho các thông báo giao dịch và cấp chứng chỉ</span>
+                            <span class="caption" style="display: block; font-size: 13px; color: #64748B; margin-top: 6px;">Email tài khoản dùng cho các thông báo giao dịch và cấp quyền</span>
                         </div>
 
                         <div style="display: flex; gap: 12px; margin-top: 30px;">
@@ -148,7 +173,109 @@
                     </form>
                 </div>
 
-                <!-- TAB 2: ĐỔI MẬT KHẨU BẢO VỆ -->
+                <!-- TAB 2: HỒ SƠ GIÁO VIÊN (DÀNH RIÊNG CHO GIẢNG VIÊN) -->
+                @if (Model.IsTeacher)
+                {
+                    <div id="tab-teacher" class="tab-content" style="display: none;">
+                        <div style="max-width: 760px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 18px; padding: 32px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; border-bottom: 1px solid #F1F5F9; padding-bottom: 16px;">
+                                <div>
+                                    <h3 style="font-size: 18px; font-weight: 700; color: #0F172A; margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px;">
+                                        <i class="bi bi-mortarboard-fill" style="color: #434CE8; font-size: 22px;"></i> Hồ sơ giáo viên
+                                    </h3>
+                                    <p style="font-size: 13px; color: #64748B; margin: 0;">Thông tin năng lực chuyên môn và tài khoản chi trả thù lao giảng dạy</p>
+                                </div>
+                            </div>
+
+                            <form id="form-teacher-profile" onsubmit="event.preventDefault(); handleSaveTeacherProfile();">
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label class="form-label" for="teacher-specialization">Chuyên môn giảng dạy <span class="required" style="color: #EF4444;">*</span></label>
+                                    <input type="text" id="teacher-specialization" class="form-control" value="@Model.Specialization" placeholder="VD: Lập trình Web FullStack, AI & Machine Learning, Data Science..." required>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label class="form-label" for="teacher-experience">Kinh nghiệm & Giới thiệu năng lực <span class="required" style="color: #EF4444;">*</span></label>
+                                    <textarea id="teacher-experience" class="form-control" rows="4" placeholder="VD: Đã có 5+ năm kinh nghiệm giảng dạy và làm việc tại các công ty công nghệ..." style="resize: vertical;">@Model.BioExperience</textarea>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 24px;">
+                                    <label class="form-label">Chứng chỉ / Bằng cấp chuyên môn</label>
+                                    @if (!string.IsNullOrEmpty(Model.CertificateFilePath))
+                                    {
+                                        <div id="cert-preview-box" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; margin-bottom: 10px;">
+                                            <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                                                <i class="bi bi-file-earmark-check-fill" style="color: #434CE8; font-size: 22px;"></i>
+                                                <span id="current-cert-name" style="font-size: 13px; font-weight: 600; color: #1E293B; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">
+                                                    @(string.IsNullOrEmpty(Model.CertificateFileName) ? "Xem tệp chứng chỉ hiện tại" : Model.CertificateFileName)
+                                                </span>
+                                            </div>
+                                            <a id="current-cert-link" href="@Model.CertificateFilePath" target="_blank" class="btn btn-sm" style="background: #EEF2FF; color: #434CE8; font-weight: 600; font-size: 13px; padding: 6px 14px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                                                <i class="bi bi-box-arrow-up-right"></i> Xem tệp
+                                            </a>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div id="cert-preview-box" style="display: none; align-items: center; justify-content: space-between; padding: 12px 16px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; margin-bottom: 10px;">
+                                            <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                                                <i class="bi bi-file-earmark-check-fill" style="color: #434CE8; font-size: 22px;"></i>
+                                                <span id="current-cert-name" style="font-size: 13px; font-weight: 600; color: #1E293B;"></span>
+                                            </div>
+                                            <a id="current-cert-link" href="#" target="_blank" class="btn btn-sm" style="background: #EEF2FF; color: #434CE8; font-weight: 600; font-size: 13px; padding: 6px 14px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                                                <i class="bi bi-box-arrow-up-right"></i> Xem tệp
+                                            </a>
+                                        </div>
+                                    }
+                                    <input type="file" id="teacher-cert-file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="font-size: 13px;">
+                                    <span style="display: block; font-size: 12px; color: #64748B; margin-top: 6px;">Tải lên tệp mới nếu muốn thay đổi chứng chỉ (Hỗ trợ PDF, JPG, PNG, DOCX, tối đa 10MB)</span>
+                                </div>
+
+                                <div style="font-size: 15px; font-weight: 700; color: #1E293B; margin: 28px 0 16px; display: flex; align-items: center; gap: 8px; border-top: 1px solid #F1F5F9; padding-top: 20px;">
+                                    <i class="bi bi-credit-card-2-front-fill" style="color: #434CE8; font-size: 18px;"></i> Thông tin nhận thù lao giảng dạy
+                                </div>
+
+                                @{
+                                    // Tên ngân hàng cũ có thể gõ tự do: nhận ra ngân hàng trong danh mục để chọn sẵn, nhắc kiểm tra lại
+                                    var nganHangCu = ECOLearning.Services.BankDirectory.DoanNganHang(Model.BankName);
+                                }
+                                <div class="form-group" style="margin-bottom: 16px;">
+                                    <label class="form-label" for="teacher-bank-search">Ngân hàng thụ hưởng</label>
+                                    @Html.Partial("_BankPicker", new ECOLearning.ViewModels.BankPickerViewModel
+                                    {
+                                        Id = "teacher-bank-search",
+                                        Name = "bankCode",
+                                        SelectedCode = nganHangCu != null ? nganHangCu.Code : null,
+                                        InputClass = "form-control",
+                                        Note = ECOLearning.Services.BankDirectory.GhiChuTenCu(Model.BankName, nganHangCu),
+                                        NextFieldId = "teacher-account-number"
+                                    })
+                                    <span style="display: block; font-size: 12px; color: #64748B; margin-top: 6px;">Chọn trong danh sách ngân hàng (không nhập tay) để tránh sai sót khi chuyển thù lao.</span>
+                                </div>
+
+                                <div class="grid-12" style="margin-bottom: 24px;">
+                                    <div class="col-6">
+                                        <label class="form-label" for="teacher-account-number">Số tài khoản</label>
+                                        <input type="text" id="teacher-account-number" class="form-control" value="@Model.AccountNumber" placeholder="VD: 0123456789" inputmode="numeric" autocomplete="off" maxlength="19" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                                        <span style="display: block; font-size: 12px; color: #64748B; margin-top: 6px;">Chỉ gồm chữ số (6–19 số).</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label" for="teacher-account-name">Tên chủ tài khoản</label>
+                                        <input type="text" id="teacher-account-name" class="form-control" value="@Model.AccountName" placeholder="VD: NGUYEN VAN A" autocomplete="off" maxlength="100" onblur="this.value = BankPicker.tenChuTaiKhoan(this.value)">
+                                        <span style="display: block; font-size: 12px; color: #64748B; margin-top: 6px;">In hoa, không dấu, đúng như trên ứng dụng ngân hàng.</span>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; gap: 12px; margin-top: 30px;">
+                                    <button type="submit" id="btn-save-teacher" class="btn btn-primary" style="background: #434CE8; color: #fff; padding: 12px 28px; border-radius: 12px; font-weight: 700; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                                        <i class="bi bi-check2-circle" style="font-size: 18px;"></i> Cập nhật hồ sơ giáo viên
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                }
+
+                <!-- TAB 3: ĐỔI MẬT KHẨU BẢO VỆ -->
                 <div id="tab-password" class="tab-content" style="display: none;">
                     <form id="form-change-password" onsubmit="handleChangePassword(event)" style="max-width: 500px;">
                         <div class="form-group" style="margin-bottom: 20px;">
@@ -186,31 +313,125 @@
 </main>
 
 @section scripts {
+    <script src="@Url.Content("~/assets/js/bank-picker.js?v=1.0")"></script>
     <script>
         // Switch Profile Tabs
         function switchProfileTab(tabName) {
             const tabInfoBtn = document.getElementById('tab-btn-info');
+            const tabTeacherBtn = document.getElementById('tab-btn-teacher');
             const tabPassBtn = document.getElementById('tab-btn-password');
             const tabInfoContent = document.getElementById('tab-info');
+            const tabTeacherContent = document.getElementById('tab-teacher');
             const tabPassContent = document.getElementById('tab-password');
 
+            // Reset tab button active class
+            if (tabInfoBtn) tabInfoBtn.classList.remove('active');
+            if (tabTeacherBtn) tabTeacherBtn.classList.remove('active');
+            if (tabPassBtn) tabPassBtn.classList.remove('active');
+
+            // Hide all tab contents
+            if (tabInfoContent) tabInfoContent.style.display = 'none';
+            if (tabTeacherContent) tabTeacherContent.style.display = 'none';
+            if (tabPassContent) tabPassContent.style.display = 'none';
+
+            // Show selected tab content and highlight button
             if (tabName === 'info') {
-                tabInfoBtn.style.color = '#434CE8';
-                tabInfoBtn.style.borderBottomColor = '#434CE8';
-                tabPassBtn.style.color = '#64748B';
-                tabPassBtn.style.borderBottomColor = 'transparent';
-
-                tabInfoContent.style.display = 'block';
-                tabPassContent.style.display = 'none';
-            } else {
-                tabPassBtn.style.color = '#434CE8';
-                tabPassBtn.style.borderBottomColor = '#434CE8';
-                tabInfoBtn.style.color = '#64748B';
-                tabInfoBtn.style.borderBottomColor = 'transparent';
-
-                tabPassContent.style.display = 'block';
-                tabInfoContent.style.display = 'none';
+                if (tabInfoBtn) tabInfoBtn.classList.add('active');
+                if (tabInfoContent) tabInfoContent.style.display = 'block';
+            } else if (tabName === 'teacher') {
+                if (tabTeacherBtn) tabTeacherBtn.classList.add('active');
+                if (tabTeacherContent) tabTeacherContent.style.display = 'block';
+            } else if (tabName === 'password') {
+                if (tabPassBtn) tabPassBtn.classList.add('active');
+                if (tabPassContent) tabPassContent.style.display = 'block';
             }
+        }
+
+        // AJAX Update Teacher Profile
+        function handleSaveTeacherProfile() {
+            const specialization = document.getElementById('teacher-specialization') ? document.getElementById('teacher-specialization').value.trim() : '';
+            const bioExperience = document.getElementById('teacher-experience') ? document.getElementById('teacher-experience').value.trim() : '';
+            // Ngân hàng chỉ chọn trong danh mục (assets/js/bank-picker.js); số TK chỉ gồm chữ số; tên chủ TK in hoa không dấu
+            const bankPicker = BankPicker.get(document.getElementById('teacher-bank-search'));
+            const bankCode = bankPicker ? bankPicker.value() : '';
+            const accountNumberEl = document.getElementById('teacher-account-number');
+            const accountNameEl = document.getElementById('teacher-account-name');
+            const accountNumber = accountNumberEl ? BankPicker.chiSo(accountNumberEl.value) : '';
+            if (accountNameEl) accountNameEl.value = BankPicker.tenChuTaiKhoan(accountNameEl.value);
+            const accountName = accountNameEl ? accountNameEl.value : '';
+            const certInput = document.getElementById('teacher-cert-file');
+
+            if (!specialization) {
+                showToast('Vui lòng nhập chuyên môn giảng dạy!', 'error');
+                if (document.getElementById('teacher-specialization')) document.getElementById('teacher-specialization').focus();
+                return;
+            }
+            if (bankPicker && !bankPicker.validate()) {
+                showToast('Vui lòng chọn ngân hàng thụ hưởng trong danh sách!', 'error');
+                return;
+            }
+            if (accountNumber.length < 6 || accountNumber.length > 19) {
+                showToast('Số tài khoản chỉ gồm chữ số, dài từ 6 đến 19 số!', 'error');
+                if (accountNumberEl) accountNumberEl.focus();
+                return;
+            }
+            if (accountName.length < 2) {
+                showToast('Vui lòng nhập tên chủ tài khoản (in hoa, không dấu)!', 'error');
+                if (accountNameEl) accountNameEl.focus();
+                return;
+            }
+
+            const btn = document.getElementById('btn-save-teacher');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Đang lưu...';
+            }
+
+            const formData = new FormData();
+            formData.append('specialization', specialization);
+            formData.append('bioExperience', bioExperience);
+            formData.append('bankCode', bankCode);
+            formData.append('accountNumber', accountNumber);
+            formData.append('accountName', accountName);
+
+            if (certInput && certInput.files && certInput.files[0]) {
+                formData.append('certificateFile', certInput.files[0]);
+            }
+
+            $.ajax({
+                url: '@Url.Action("UpdateTeacherProfile", "Profile")',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function (res) {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="bi bi-check2-circle" style="font-size: 18px;"></i> Cập nhật hồ sơ giáo viên';
+                    }
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                        if (res.certificateUrl) {
+                            const certBox = document.getElementById('cert-preview-box');
+                            const certName = document.getElementById('current-cert-name');
+                            const certLink = document.getElementById('current-cert-link');
+                            if (certName) certName.innerText = res.certificateName || 'Tệp chứng chỉ mới';
+                            if (certLink) certLink.href = res.certificateUrl;
+                            if (certBox) certBox.style.display = 'flex';
+                            if (certInput) certInput.value = '';
+                        }
+                    } else {
+                        showToast(res.message, 'error');
+                    }
+                },
+                error: function () {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="bi bi-check2-circle" style="font-size: 18px;"></i> Cập nhật hồ sơ giáo viên';
+                    }
+                    showToast('Lỗi kết nối máy chủ khi lưu hồ sơ giáo viên!', 'error');
+                }
+            });
         }
 
         // AJAX Avatar File Upload

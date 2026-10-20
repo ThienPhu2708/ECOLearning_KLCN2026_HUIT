@@ -1,0 +1,194 @@
+@model List<ECOLearning.Areas.Admin.Controllers.PhieuChiAdmin>
+@*
+    Chi trả doanh thu giáo viên (Admin/PayoutRequest) - chế độ thử nghiệm: duyệt "Chuyển khoản thử nghiệm" hoặc từ chối kèm lý do.
+*@
+@{
+    ViewBag.Title = "Chi trả giáo viên";
+    string status = ViewBag.Status as string ?? "cho";
+    bool daKhoiTao = ViewBag.DaKhoiTao as bool? ?? false;
+    var dem = ViewBag.Dem as Dictionary<string, ECOLearning.Areas.Admin.Controllers.PayoutRequestController.DemTrangThai>
+              ?? new Dictionary<string, ECOLearning.Areas.Admin.Controllers.PayoutRequestController.DemTrangThai>();
+    Func<string, int> soLuong = t => dem.ContainsKey(t) ? dem[t].SoLuong : 0;
+    Func<string, decimal> tongTien = t => dem.ContainsKey(t) ? (dem[t].TongTien ?? 0) : 0;
+}
+
+<style>
+    .po-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .po-stat { padding: 18px 20px; }
+    .po-stat span { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+    .po-stat strong { display: block; font-size: 24px; font-weight: 800; margin: 6px 0 2px; color: var(--text-heading); }
+    .po-stat small { color: var(--text-muted); }
+    .po-note { margin-bottom: 16px; padding: 10px 14px; border-radius: 12px; background: #FEF3C7; color: #92400E; font-size: 13.5px; }
+    .po-bank { font-size: 13px; font-weight: 600; color: var(--text-heading); }
+    .po-sub { font-size: 12.5px; color: var(--text-muted); }
+    .po-actions { display: flex; flex-direction: column; gap: 6px; min-width: 110px; }
+    .po-actions .btn { white-space: nowrap; }
+    .po-code { font-size: 12px; }
+    .po-table th, .po-table td { padding: 12px 10px; }
+    .po-table td { vertical-align: middle; }
+    .po-table td.po-wrap { white-space: normal !important; }
+    .po-table .po-code { word-break: break-all; display: inline-block; max-width: 120px; }
+    .po-table .po-sub { word-break: break-word; }
+    .po-table td:nth-child(2) { max-width: 210px; }
+    .po-table td:nth-child(5) { max-width: 240px; }
+    @@media (max-width: 900px) { .po-stats { grid-template-columns: 1fr; } }
+</style>
+
+<div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
+    <div>
+        <h1 class="h2" style="margin-top: 6px;">Chi Trả Doanh Thu Giáo Viên</h1>
+        <p class="body-2" style="color: var(--text-secondary);">Duyệt yêu cầu rút tiền của giáo viên (80% doanh thu thực thu các khóa học)</p>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div style="padding: 12px 16px; background: #ECFDF5; border: 1px solid #10B981; color: #065F46; border-radius: 12px; margin-bottom: 16px; font-size: 14px; font-weight: 600;"><i class="bi bi-check-circle-fill me-1"></i> @TempData["SuccessMessage"]</div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div style="padding: 12px 16px; background: #FEF2F2; border: 1px solid #EF4444; color: #991B1B; border-radius: 12px; margin-bottom: 16px; font-size: 14px; font-weight: 600;"><i class="bi bi-x-circle-fill me-1"></i> @TempData["ErrorMessage"]</div>
+}
+
+@if (!daKhoiTao)
+{
+    <div class="card" style="padding: 24px;">Cần chạy <code>Database/Migrations/014_ThanhToan_ThuNghiem.sql</code> để dùng chức năng chi trả.</div>
+}
+else
+{
+    <div class="po-note"><i class="bi bi-info-circle me-1"></i> Chế độ <strong>thử nghiệm</strong>: "Chuyển khoản thử nghiệm" chỉ ghi nhận đã chi và sinh mã giao dịch, không chuyển tiền thật vào tài khoản giáo viên.</div>
+
+    <div class="po-stats">
+        <div class="card po-stat"><span>Đang chờ duyệt</span><strong style="color: #D97706;">@tongTien("Chờ duyệt").ToString("#,##0 đ")</strong><small>@soLuong("Chờ duyệt") yêu cầu</small></div>
+        <div class="card po-stat"><span>Đã chi trả</span><strong style="color: #059669;">@tongTien("Đã thanh toán").ToString("#,##0 đ")</strong><small>@soLuong("Đã thanh toán") phiếu chi</small></div>
+        <div class="card po-stat"><span>Đã từ chối</span><strong>@tongTien("Từ chối").ToString("#,##0 đ")</strong><small>@soLuong("Từ chối") yêu cầu</small></div>
+    </div>
+
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+        <a href="@Url.Action("Index", new { status = "cho" })" class="btn btn-sm @(status == "cho" ? "btn-primary" : "btn-secondary")">Chờ duyệt (@soLuong("Chờ duyệt"))</a>
+        <a href="@Url.Action("Index", new { status = "da-chi" })" class="btn btn-sm @(status == "da-chi" ? "btn-primary" : "btn-secondary")">Đã chi trả (@soLuong("Đã thanh toán"))</a>
+        <a href="@Url.Action("Index", new { status = "tu-choi" })" class="btn btn-sm @(status == "tu-choi" ? "btn-primary" : "btn-secondary")">Từ chối (@soLuong("Từ chối"))</a>
+        <a href="@Url.Action("Index", new { status = "tat-ca" })" class="btn btn-sm @(status == "tat-ca" ? "btn-primary" : "btn-secondary")">Tất cả</a>
+    </div>
+
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="table-responsive">
+            <table class="table po-table">
+                <thead>
+                    <tr>
+                        <th>Mã phiếu / Ngày yêu cầu</th>
+                        <th>Giáo viên</th>
+                        <th>Số tiền</th>
+                        <th>Tài khoản nhận</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Count == 0)
+                    {
+                        <tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 28px;">Không có yêu cầu nào.</td></tr>
+                    }
+                    @foreach (var p in Model)
+                    {
+                        <tr>
+                            <td><code class="po-code">@p.MaPhieuChi</code><div class="po-sub">@(p.NgayYeuCau.HasValue ? p.NgayYeuCau.Value.ToString("dd/MM/yyyy HH:mm") : "")</div></td>
+                            <td class="po-wrap"><strong>@p.TenGiaoVien</strong><div class="po-sub">@p.Email</div></td>
+                            <td><strong>@p.SoTien.ToString("#,##0 đ")</strong>@if (p.ThucNhan != p.SoTien) { <div class="po-sub">Thực nhận @p.ThucNhan.ToString("#,##0 đ")</div> }</td>
+                            <td class="po-wrap"><div class="po-bank">@p.NganHang</div><div class="po-sub">@p.SoTaiKhoan</div><div class="po-sub">@p.TenChuTaiKhoan</div></td>
+                            <td class="po-wrap">
+                                @if (p.TrangThai == "Đã thanh toán")
+                                {
+                                    <span class="badge badge-success">Đã chi trả</span>
+                                    <div class="po-sub">Mã GD @p.MaGiaoDichChi</div>
+                                }
+                                else if (p.TrangThai == "Từ chối")
+                                {
+                                    <span class="badge badge-danger">Từ chối</span>
+                                    <div class="po-sub" style="max-width: 220px;">@p.LyDoTuChoi</div>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-warning">Chờ duyệt</span>
+                                }
+                                @if (p.NgayXuLy.HasValue)
+                                {
+                                    <div class="po-sub">@p.NgayXuLy.Value.ToString("dd/MM/yyyy HH:mm")@(string.IsNullOrEmpty(p.NguoiXuLy) ? "" : " · " + p.NguoiXuLy)</div>
+                                }
+                            </td>
+                            <td>
+                                @if (p.TrangThai == "Chờ duyệt")
+                                {
+                                    <div class="po-actions">
+                                        <button type="button" class="btn btn-primary btn-sm" onclick="duyetPhieu('@p.MaPhieuChi', '@HttpUtility.JavaScriptStringEncode(p.TenGiaoVien)', '@p.SoTien.ToString("#,##0")')"title="Chuyển khoản thử nghiệm: ghi nhận đã chi, không chuyển tiền thật">Duyệt chi</button>
+                                        <button type="button" class="btn btn-outline btn-sm" onclick="tuChoiPhieu('@p.MaPhieuChi')">Từ chối</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="po-sub">Đã xử lý</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    using (Html.BeginForm("Approve", "PayoutRequest", new { area = "Admin" }, FormMethod.Post, new { id = "po-approve-form" }))
+    {
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" />
+        <input type="hidden" name="status" value="@status" />
+    }
+    using (Html.BeginForm("Reject", "PayoutRequest", new { area = "Admin" }, FormMethod.Post, new { id = "po-reject-form" }))
+    {
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" />
+        <input type="hidden" name="lyDo" />
+        <input type="hidden" name="status" value="@status" />
+    }
+}
+
+@section Scripts {
+    <script>
+        function duyetPhieu(id, ten, soTien) {
+            Swal.fire({
+                icon: 'question',
+                title: 'Chuyển khoản thử nghiệm?',
+                html: 'Ghi nhận đã chi <strong>' + soTien + ' đ</strong> cho giáo viên <strong>' + ten + '</strong> (phiếu ' + id + ').<br><small>Chế độ thử nghiệm: không chuyển tiền thật.</small>',
+                showCancelButton: true,
+                confirmButtonText: 'Xác nhận chi trả',
+                cancelButtonText: 'Hủy'
+            }).then(function (r) {
+                if (!r.isConfirmed) return;
+                var f = document.getElementById('po-approve-form');
+                f.querySelector('[name=id]').value = id;
+                f.submit();
+            });
+        }
+
+        function tuChoiPhieu(id) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Từ chối yêu cầu ' + id + '?',
+                input: 'textarea',
+                inputLabel: 'Lý do (giáo viên sẽ thấy)',
+                inputPlaceholder: 'Ví dụ: Tên chủ tài khoản không khớp với hồ sơ giáo viên',
+                inputAttributes: { maxlength: 500 },
+                showCancelButton: true,
+                confirmButtonText: 'Từ chối',
+                confirmButtonColor: '#EF4444',
+                cancelButtonText: 'Hủy',
+                inputValidator: function (v) { if (!v || v.trim().length < 5) return 'Nhập lý do (ít nhất 5 ký tự)'; }
+            }).then(function (r) {
+                if (!r.isConfirmed) return;
+                var f = document.getElementById('po-reject-form');
+                f.querySelector('[name=id]').value = id;
+                f.querySelector('[name=lyDo]').value = r.value.trim();
+                f.submit();
+            });
+        }
+    </script>
+}

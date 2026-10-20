@@ -1,0 +1,82 @@
+/* Thanh phân trang dùng chung (Views/Shared/_Pagination.cshtml) */
+.pg {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 32px;
+}
+
+.pg-item {
+    min-width: 40px;
+    height: 40px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color, #E2E8F0);
+    background: #FFFFFF;
+    color: var(--text-body, #334155);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+a.pg-item:hover {
+    border-color: var(--primary, #434CE8);
+    color: var(--primary, #434CE8);
+}
+
+.pg-item.is-current {
+    background: var(--primary, #434CE8);
+    border-color: var(--primary, #434CE8);
+    color: #FFFFFF;
+}
+
+.pg-item.is-disabled {
+    color: #CBD5E1;
+    cursor: not-allowed;
+}
+
+.pg-gap {
+    min-width: 24px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-muted, #94A3B8);
+}
+
+.pg-step i {
+    font-size: 13px;
+}
+
+.pg-summary {
+    margin: 10px 0 0;
+    text-align: center;
+    font-size: 13.5px;
+    color: var(--text-secondary, #64748B);
+}
+
+.pg-summary strong {
+    color: var(--text-heading, #0F172A);
+}
+
+@media (max-width: 640px) {
+    .pg {
+        gap: 4px;
+    }
+
+    .pg-item {
+        min-width: 36px;
+        height: 36px;
+        padding: 0 8px;
+    }
+
+    .pg-step-text {
+        display: none;
+    }
+}

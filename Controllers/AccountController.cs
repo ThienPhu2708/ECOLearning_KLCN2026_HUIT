@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
@@ -157,6 +158,32 @@ namespace ECOLearning.Controllers
         [HttpPost]
         public JsonResult SendOtp(string fullName, string email)
         {
+            if (string.IsNullOrWhiteSpace(fullName))
+            {
+                return Json(new { success = false, message = "Vui lòng nhập Họ và tên!" });
+            }
+
+            string trimmedName = fullName.Trim();
+            bool hasDigit = trimmedName.Any(char.IsDigit);
+            bool hasSpecial = trimmedName.Any(ch => !char.IsLetter(ch) && !char.IsWhiteSpace(ch));
+
+            if (hasDigit && hasSpecial)
+            {
+                return Json(new { success = false, message = "Họ và tên chỉ được chứa chữ cái, không được chứa chữ số và ký tự đặc biệt!" });
+            }
+            if (hasDigit)
+            {
+                return Json(new { success = false, message = "Họ và tên không được chứa chữ số (0-9)!" });
+            }
+            if (hasSpecial)
+            {
+                return Json(new { success = false, message = "Họ và tên không được chứa ký tự đặc biệt!" });
+            }
+            if (trimmedName.Length < 2)
+            {
+                return Json(new { success = false, message = "Họ và tên phải có tối thiểu 2 ký tự!" });
+            }
+
             if (string.IsNullOrWhiteSpace(email))
             {
                 return Json(new { success = false, message = "Email không được để trống!" });
@@ -201,11 +228,11 @@ namespace ECOLearning.Controllers
 
             if (mailResult.Success)
             {
-                return Json(new { success = true, message = "Mã xác thực OTP (6 số) đã được gửi đến email " + email + ". Mã có hiệu lực trong 5 phút." });
+                return Json(new { success = true, message = "Mã xác thực OTP đã được gửi đến email " + email + ". Vui lòng kiểm tra hộp thư (kể cả mục Thư rác/Spam)." });
             }
             else
             {
-                return Json(new { success = true, message = "Đã khởi tạo OTP (SMTP chưa cấu hình trong Web.config, mã thử nghiệm: " + otpCode + ")" });
+                return Json(new { success = false, message = "Không thể gửi email OTP: " + mailResult.Message + ". Vui lòng thử lại sau!" });
             }
         }
 
@@ -267,6 +294,30 @@ namespace ECOLearning.Controllers
                 return Json(new { success = false, message = "Thông tin đăng ký không đầy đủ!" });
             }
 
+            if (string.IsNullOrWhiteSpace(fullName))
+            {
+                fullName = Session["Register_FullName"] as string;
+            }
+
+            if (!string.IsNullOrWhiteSpace(fullName))
+            {
+                string trimmedName = fullName.Trim();
+                bool hasDigit = trimmedName.Any(char.IsDigit);
+                bool hasSpecial = trimmedName.Any(ch => !char.IsLetter(ch) && !char.IsWhiteSpace(ch));
+                if (hasDigit && hasSpecial)
+                {
+                    return Json(new { success = false, message = "Họ và tên chỉ được chứa chữ cái, không được chứa chữ số và ký tự đặc biệt!" });
+                }
+                if (hasDigit)
+                {
+                    return Json(new { success = false, message = "Họ và tên không được chứa chữ số (0-9)!" });
+                }
+                if (hasSpecial)
+                {
+                    return Json(new { success = false, message = "Họ và tên không được chứa ký tự đặc biệt!" });
+                }
+            }
+
             string lowerEmail = email.Trim().ToLower();
 
             // CHỐNG BYPASS OTP SERVER-SIDE: Bắt buộc kiểm tra cờ Session["Register_OtpVerified"]
@@ -278,10 +329,28 @@ namespace ECOLearning.Controllers
                 return Json(new { success = false, message = "Phiên xác thực OTP không hợp lệ hoặc chưa hoàn tất Bước 2! Vui lòng xác thực mã OTP trước khi tạo mật khẩu." });
             }
 
-            // OWASP ASVS v4.0: Kiểm tra mật khẩu tối thiểu 8 ký tự
-            if (password.Length < 8)
+            // OWASP ASVS v4.0 & Ràng buộc bảo mật mật khẩu (tối thiểu 8 ký tự, có in hoa, số và ký tự đặc biệt)
+            var missingRules = new List<string>();
+            if (string.IsNullOrEmpty(password) || password.Length < 8)
             {
-                return Json(new { success = false, message = "Mật khẩu phải chứa tối thiểu 8 ký tự!" });
+                missingRules.Add("tối thiểu 8 ký tự");
+            }
+            if (string.IsNullOrEmpty(password) || !password.Any(char.IsUpper))
+            {
+                missingRules.Add("chữ in hoa (A-Z)");
+            }
+            if (string.IsNullOrEmpty(password) || !password.Any(char.IsDigit))
+            {
+                missingRules.Add("chữ số (0-9)");
+            }
+            if (string.IsNullOrEmpty(password) || !password.Any(ch => !char.IsLetterOrDigit(ch)))
+            {
+                missingRules.Add("ký tự đặc biệt (!@#$%^&*...)");
+            }
+
+            if (missingRules.Any())
+            {
+                return Json(new { success = false, message = "Mật khẩu còn thiếu: " + string.Join(", ", missingRules) + "." });
             }
 
             // OWASP ASVS v4.0 Sec 2.4: Mã hóa mật khẩu an toàn với Salt (PBKDF2/HMAC-SHA256) trước khi ghi CSDL
@@ -293,10 +362,8 @@ namespace ECOLearning.Controllers
                 var spResult = db.sp_DangKyTaiKhoan(fullName, lowerEmail, hashedPassword, "HocVien", null, null, null).FirstOrDefault();
                 if (spResult != null && spResult.maNguoiDungMoi.HasValue && spResult.maNguoiDungMoi.Value > 0)
                 {
-                    int newUserId = Convert.ToInt32(spResult.maNguoiDungMoi.Value);
                     ClearRegisterSession();
-                    SetUserSessionAndAuthCookie(newUserId, fullName, lowerEmail, "HocVien", null, false);
-                    return Json(new { success = true, message = "Đăng ký tài khoản Học viên thành công!", redirectUrl = Url.Action("Index", "Home") });
+                    return Json(new { success = true, message = "Đăng ký tài khoản thành công! Vui lòng đăng nhập với mật khẩu vừa tạo." });
                 }
             }
             catch (Exception ex)
@@ -327,8 +394,7 @@ namespace ECOLearning.Controllers
                 db.SaveChanges();
 
                 ClearRegisterSession();
-                SetUserSessionAndAuthCookie(newStudent.maNguoiDung, newStudent.hoTen, newStudent.email, newStudent.vaiTro, newStudent.anhDaiDien, false);
-                return Json(new { success = true, message = "Đăng ký tài khoản Học viên thành công!", redirectUrl = Url.Action("Index", "Home") });
+                return Json(new { success = true, message = "Đăng ký tài khoản thành công! Vui lòng đăng nhập với mật khẩu vừa tạo." });
             }
             catch (Exception ex)
             {
@@ -379,21 +445,23 @@ namespace ECOLearning.Controllers
             DateTime expiryTime = DateTime.Now.AddMinutes(5);
 
             Session["Forgot_Email"] = lowerEmail;
+            Session["Forgot_FullName"] = fullName;
             Session["Forgot_OTP"] = otpCode;
             Session["Forgot_OTP_Expiry"] = expiryTime;
             Session["Forgot_OTP_Attempts"] = 0;
             Session["Forgot_OTP_Verified"] = false;
             Session["Forgot_OTP_Verified_Email"] = null;
 
-            var mailResult = EmailService.SendOtpEmail(lowerEmail, fullName, otpCode, "Mã OTP khôi phục mật khẩu - E-Learning");
+            // Gửi email OTP khôi phục mật khẩu thực tế
+            var mailResult = EmailService.SendForgotOtpEmail(lowerEmail, fullName, otpCode);
 
             if (mailResult.Success)
             {
-                return Json(new { success = true, message = "Mã xác thực khôi phục mật khẩu đã được gửi về email " + email + ". Mã có hiệu lực trong 5 phút." });
+                return Json(new { success = true, message = "Mã xác thực OTP đã được gửi về email " + email + ". Vui lòng kiểm tra hộp thư (kể cả mục Thư rác/Spam)." });
             }
             else
             {
-                return Json(new { success = true, message = "Đã gửi mã xác thực về Email " + email + " (SMTP chưa cấu hình, mã thử nghiệm: " + otpCode + ")" });
+                return Json(new { success = false, message = "Không thể gửi email xác thực OTP: " + mailResult.Message + ". Vui lòng thử lại sau!" });
             }
         }
 
@@ -463,9 +531,28 @@ namespace ECOLearning.Controllers
                 return Json(new { success = false, message = "Phiên xác thực OTP không hợp lệ! Vui lòng xác thực mã OTP trước khi đặt mật khẩu mới." });
             }
 
-            if (newPassword.Length < 8)
+            // Ràng buộc bảo mật mật khẩu mới (tối thiểu 8 ký tự, có in hoa, số và ký tự đặc biệt)
+            var missingRules = new List<string>();
+            if (string.IsNullOrEmpty(newPassword) || newPassword.Length < 8)
             {
-                return Json(new { success = false, message = "Mật khẩu mới tối thiểu phải 8 ký tự!" });
+                missingRules.Add("tối thiểu 8 ký tự");
+            }
+            if (string.IsNullOrEmpty(newPassword) || !newPassword.Any(char.IsUpper))
+            {
+                missingRules.Add("chữ in hoa (A-Z)");
+            }
+            if (string.IsNullOrEmpty(newPassword) || !newPassword.Any(char.IsDigit))
+            {
+                missingRules.Add("chữ số (0-9)");
+            }
+            if (string.IsNullOrEmpty(newPassword) || !newPassword.Any(ch => !char.IsLetterOrDigit(ch)))
+            {
+                missingRules.Add("ký tự đặc biệt (!@#$%^&*...)");
+            }
+
+            if (missingRules.Any())
+            {
+                return Json(new { success = false, message = "Mật khẩu mới còn thiếu: " + string.Join(", ", missingRules) + "." });
             }
 
             // Mã hóa mật khẩu mới trước khi cập nhật CSDL
@@ -486,13 +573,14 @@ namespace ECOLearning.Controllers
             }
 
             Session.Remove("Forgot_Email");
+            Session.Remove("Forgot_FullName");
             Session.Remove("Forgot_OTP");
             Session.Remove("Forgot_OTP_Expiry");
             Session.Remove("Forgot_OTP_Attempts");
             Session.Remove("Forgot_OTP_Verified");
             Session.Remove("Forgot_OTP_Verified_Email");
 
-            return Json(new { success = true, message = "Thiết lập mật khẩu mới thành công! Vui lòng đăng nhập lại." });
+            return Json(new { success = true, message = "Thiết lập mật khẩu mới thành công!" });
         }
 
         private void ClearRegisterSession()
@@ -508,13 +596,32 @@ namespace ECOLearning.Controllers
 
         // POST: Account/GoogleLogin (Xác thực ID Token từ Google API & Đăng nhập / Đăng ký)
         [HttpPost]
-        public JsonResult GoogleLogin(string idToken, string googleEmail, string googleName, string googleAvatar)
+        public JsonResult GoogleLogin(string idToken, string googleEmail, string googleName, string googleAvatar, string googleGivenName = null, string googleFamilyName = null)
         {
             string email = string.IsNullOrWhiteSpace(googleEmail) ? "hocvien.google@elearning.vn" : googleEmail.Trim().ToLower();
-            string name = string.IsNullOrWhiteSpace(googleName) ? "Học viên Google" : googleName.Trim();
+
+            // 1. Trích xuất họ và tên đầy đủ từ Google (Ưu tiên kết hợp Họ + Tên nếu có)
+            string givenName = (googleGivenName ?? "").Trim();
+            string familyName = (googleFamilyName ?? "").Trim();
+            string passedName = (googleName ?? "").Trim();
+
+            string name = "";
+            if (!string.IsNullOrWhiteSpace(familyName) && !string.IsNullOrWhiteSpace(givenName))
+            {
+                name = $"{familyName} {givenName}".Trim();
+            }
+            else if (!string.IsNullOrWhiteSpace(passedName))
+            {
+                name = passedName;
+            }
+            else if (!string.IsNullOrWhiteSpace(givenName))
+            {
+                name = givenName;
+            }
+
             string avatar = string.IsNullOrWhiteSpace(googleAvatar) ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" : googleAvatar.Trim();
 
-            // 1. BE xác thực ID Token trực tiếp với Google API Server (https://oauth2.googleapis.com/tokeninfo)
+            // 2. BE xác thực ID Token trực tiếp với Google API Server (https://oauth2.googleapis.com/tokeninfo)
             if (!string.IsNullOrWhiteSpace(idToken))
             {
                 var verifiedPayload = VerifyGoogleIdToken(idToken);
@@ -532,13 +639,19 @@ namespace ECOLearning.Controllers
                 }
             }
 
+            // Tuyệt đối không lấy tên tài khoản / tiền tố email làm họ tên
+            if (string.IsNullOrWhiteSpace(name) || name.Equals(email.Split('@')[0], StringComparison.OrdinalIgnoreCase))
+            {
+                name = "Học viên Google";
+            }
+
             try
             {
-                // 2. Tra cứu tài khoản trong CSDL SQL Server (NguoiDung)
+                // 3. Tra cứu tài khoản trong CSDL SQL Server (NguoiDung)
                 var user = db.NguoiDung.FirstOrDefault(u => u.email.ToLower() == email);
                 if (user == null)
                 {
-                    // Tạo mới bản ghi Học viên với mật khẩu băm an toàn
+                    // Tạo mới bản ghi Học viên với họ tên đầy đủ từ Google
                     user = new NguoiDung
                     {
                         hoTen = name,
@@ -559,18 +672,25 @@ namespace ECOLearning.Controllers
                         user.anhDaiDien = avatar;
                         isUpdated = true;
                     }
-                    if (!string.IsNullOrEmpty(name) && string.IsNullOrEmpty(user.hoTen))
+
+                    // CẬP NHẬT họ và tên đầy đủ từ Google vào csdl
+                    if (!string.IsNullOrWhiteSpace(name) && name != "Học viên Google")
                     {
-                        user.hoTen = name;
-                        isUpdated = true;
+                        // Cập nhật nếu tên trong DB khác tên Google, hoặc DB đang chứa tên tài khoản/email prefix
+                        if (user.hoTen != name || user.hoTen.Equals(email.Split('@')[0], StringComparison.OrdinalIgnoreCase) || user.hoTen.Equals("Học viên Google", StringComparison.OrdinalIgnoreCase))
+                        {
+                            user.hoTen = name;
+                            isUpdated = true;
+                        }
                     }
+
                     if (isUpdated)
                     {
                         db.SaveChanges();
                     }
                 }
 
-                // 3. Tạo Session và FormsAuthentication Cookie riêng của hệ thống
+                // 4. Tạo Session và FormsAuthentication Cookie riêng của hệ thống với họ tên đầy đủ
                 SetUserSessionAndAuthCookie(user.maNguoiDung, user.hoTen, user.email, user.vaiTro, user.anhDaiDien, false);
                 return Json(new { success = true, message = "Đăng nhập xác thực bằng tài khoản Google thành công!", redirectUrl = Url.Action("Index", "Home") });
             }
@@ -601,10 +721,20 @@ namespace ECOLearning.Controllers
 
                         if (dict != null && dict.ContainsKey("email"))
                         {
+                            string gName = dict.ContainsKey("name") ? dict["name"]?.ToString() : null;
+                            string gGiven = dict.ContainsKey("given_name") ? dict["given_name"]?.ToString() : null;
+                            string gFamily = dict.ContainsKey("family_name") ? dict["family_name"]?.ToString() : null;
+
+                            string finalName = gName;
+                            if (!string.IsNullOrWhiteSpace(gFamily) && !string.IsNullOrWhiteSpace(gGiven))
+                            {
+                                finalName = $"{gFamily.Trim()} {gGiven.Trim()}";
+                            }
+
                             return new GoogleTokenPayload
                             {
                                 Email = dict["email"]?.ToString(),
-                                Name = dict.ContainsKey("name") ? dict["name"]?.ToString() : null,
+                                Name = finalName,
                                 Picture = dict.ContainsKey("picture") ? dict["picture"]?.ToString() : null,
                                 Sub = dict.ContainsKey("sub") ? dict["sub"]?.ToString() : null
                             };
@@ -661,13 +791,7 @@ namespace ECOLearning.Controllers
             Session["Email"] = email;
             Session["Role"] = string.IsNullOrEmpty(role) ? "HocVien" : role;
             Session["Avatar"] = string.IsNullOrEmpty(avatar) ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" : avatar;
-            Session["User"] = new
-            {
-                UserId = userId,
-                FullName = fullName,
-                Email = email,
-                Role = role
-            };
+            Session["User"] = db.NguoiDung.Find(userId);
         }
 
         protected override void Dispose(bool disposing)

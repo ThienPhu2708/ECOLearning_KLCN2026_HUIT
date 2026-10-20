@@ -1,388 +1,1369 @@
-@{
-    ViewBag.Title = "Không Gian Học Tập | E-Learning Platform";
+﻿@{
+    ViewBag.Title = "Không Gian Học Tập";
     Layout = "~/Views/Shared/_Layout.cshtml";
 
     var course = ViewBag.Course as ECOLearning.Models.KhoaHoc;
     var chapters = ViewBag.Chapters as List<ECOLearning.Models.ChuongHoc> ?? new List<ECOLearning.Models.ChuongHoc>();
     var allLessons = ViewBag.AllLessons as List<ECOLearning.Models.BaiHoc> ?? new List<ECOLearning.Models.BaiHoc>();
+    var unchapteredLessons = ViewBag.UnchapteredLessons as List<ECOLearning.Models.BaiHoc> ?? new List<ECOLearning.Models.BaiHoc>();
     var activeLesson = ViewBag.ActiveLesson as ECOLearning.Models.BaiHoc;
     var completedLessonIds = ViewBag.CompletedLessonIds as List<string> ?? new List<string>();
+    var activeLessonDocuments = ViewBag.ActiveLessonDocuments as List<ECOLearning.Models.TaiNguyen> ?? new List<ECOLearning.Models.TaiNguyen>();
+    bool canReview = ViewBag.CanReview == true;
+    bool hasSubmittedReview = canReview && ViewBag.HasSubmittedReview == true;
+    bool canReportViolation = ViewBag.CanReportViolation == true;
 
     int totalCount = allLessons.Count;
     int completedCount = completedLessonIds.Count;
-    int percentCompleted = totalCount > 0 ? (int)((double)completedCount / totalCount * 100) : 0;
+    int percentCompleted = totalCount > 0 ? (int)Math.Floor((double)completedCount / totalCount * 100) : 0;
+    if (percentCompleted > 100) { percentCompleted = 100; }
 
     int activeIndex = allLessons.FindIndex(b => b.maBaiHoc == (activeLesson != null ? activeLesson.maBaiHoc : ""));
     var prevLesson = activeIndex > 0 ? allLessons[activeIndex - 1] : null;
     var nextLesson = activeIndex >= 0 && activeIndex < totalCount - 1 ? allLessons[activeIndex + 1] : null;
+    bool isLastLesson = (activeIndex == totalCount - 1 && totalCount > 0);
+    bool isCurrentCompleted = activeLesson != null && completedLessonIds.Contains(activeLesson.maBaiHoc);
+    // Bài đầu tiên luôn mở; các bài sau cần bài trước hoàn thành
+    bool isLessonUnlocked = ViewBag.IsPreview == true || (activeIndex == 0) || isCurrentCompleted ||
+        (activeIndex > 0 && completedLessonIds.Contains(allLessons[activeIndex - 1].maBaiHoc));
+
+    // Duration formatting
+    int activeDurationSec = activeLesson != null ? (activeLesson.thoiLuong ?? 0) : 0;
+    if (activeDurationSec <= 0) { activeDurationSec = 22 * 60; }
+    int curMin = activeDurationSec / 60;
+    int curSec = activeDurationSec % 60;
+    string formattedLessonDuration = string.Format("{0:D2}:{1:D2}", curMin, curSec);
+
+    // YouTube ID extraction
+    string ytId = "";
+    if (activeLesson != null && !string.IsNullOrEmpty(activeLesson.duongDanVideo))
+    {
+        string vidUrl = activeLesson.duongDanVideo.Trim();
+        var ytMatch = System.Text.RegularExpressions.Regex.Match(vidUrl, @"(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^""&?\/\s]{11})", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (ytMatch.Success) { ytId = ytMatch.Groups[1].Value; }
+        else if (System.Text.RegularExpressions.Regex.IsMatch(vidUrl, @"^[a-zA-Z0-9_-]{11}$")) { ytId = vidUrl; }
+    }
+
+    // Video nội bộ: phát qua VideoStream/Play (không dùng Session) để hỗ trợ HTTP Range Request đúng chuẩn
+    // (static file trên IIS Express không phục vụ đúng Range, gây hiện tượng có tiếng nhưng hình đứng)
+    const string localVideoPrefix = "/assets/uploads/videos/";
+    string activeVideoSrc = "";
+    if (activeLesson != null && !string.IsNullOrEmpty(activeLesson.duongDanVideo))
+    {
+        activeVideoSrc = activeLesson.duongDanVideo.StartsWith(localVideoPrefix)
+            ? Url.Action("Play", "VideoStream", new { file = activeLesson.duongDanVideo.Substring(localVideoPrefix.Length) })
+            : activeLesson.duongDanVideo;
+    }
 }
 
 @section styles {
     <style>
         body {
-            background-color: #0F172A !important;
-            color: #E2E8F0;
+            background-color: #0B0F19 !important;
+            color: #E2E8F0 !important;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
         }
 
-        .navbar-main, footer {
-            display: none !important; /* Standalone Learning Workspace */
+        .main-header, footer {
+            display: none !important;
         }
 
-        .study-workspace-header {
-            background: #1E293B;
-            border-bottom: 1px solid #334155;
-            padding: 12px 24px;
+        .learning-header {
+            height: 64px;
+            background: #111827;
+            border-bottom: 1px solid #1F2937;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            padding: 0 24px;
             position: sticky;
             top: 0;
-            z-index: 1000;
+            z-index: 50;
         }
 
-        .btn-back-course {
-            color: #94A3B8;
-            text-decoration: none;
-            font-size: 14px;
+        .learning-layout {
+            display: flex;
+            height: calc(100vh - 64px);
+        }
+
+        .video-main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #000;
+            overflow-y: auto;
+        }
+
+        .player-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #030712;
             display: flex;
             align-items: center;
-            gap: 8px;
-            transition: color 0.2s;
-        }
-
-        .btn-back-course:hover {
-            color: #FFFFFF;
-        }
-
-        .study-video-wrapper {
-            position: relative;
-            background: #000000;
-            border-radius: 16px;
+            justify-content: center;
             overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            margin-bottom: 24px;
         }
 
-        .study-video-player {
-            width: 100%;
-            max-height: 520px;
-            outline: none;
-            display: block;
-        }
-
-        .study-sidebar {
-            background: #1E293B;
-            border: 1px solid #334155;
-            border-radius: 16px;
-            height: calc(100vh - 110px);
-            overflow-y: auto;
-            position: sticky;
-            top: 80px;
-        }
-
-        .study-sidebar-header {
+        .video-sim-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
             padding: 20px;
-            border-bottom: 1px solid #334155;
-            background: #0F172A;
-            border-top-left-radius: 16px;
-            border-top-right-radius: 16px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, transparent 40%, transparent 60%, rgba(0, 0, 0, 0.6) 100%);
+            pointer-events: none;
+            z-index: 10;
         }
 
-        .study-chapter-title {
-            background: #1E293B;
-            padding: 14px 18px;
-            font-size: 14px;
-            font-weight: 700;
-            color: #F8FAFC;
-            border-bottom: 1px solid #334155;
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            color: #fff;
+        }
+
+        .player-btn {
+            background: none;
+            border: none;
+            color: #fff;
             cursor: pointer;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: color 0.15s;
+            padding: 0;
         }
 
-        .study-lesson-link {
+        .player-btn:hover {
+            color: #434CE8;
+        }
+
+        .seek-bar-wrap {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 999px;
+            cursor: pointer;
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .seek-bar-fill {
+            height: 100%;
+            width: 45%;
+            background: #434CE8;
+            border-radius: 999px;
+            position: relative;
+            transition: width 0.1s linear;
+        }
+
+        .seek-bar-fill::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+        }
+
+        .curriculum-sidebar {
+            width: 380px;
+            background: #111827;
+            border-left: 1px solid #1F2937;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .curriculum-header {
+            padding: 20px;
+            border-bottom: 1px solid #1F2937;
+        }
+
+        .curriculum-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .sidebar-section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #9CA3AF;
+            text-transform: uppercase;
+            margin: 16px 0 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar-section-title:first-child {
+            margin-top: 4px;
+        }
+
+        .lesson-item {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 12px 20px;
-            color: #94A3B8;
-            text-decoration: none;
-            font-size: 13.5px;
-            border-bottom: 1px solid #334155;
-            transition: all 0.2s;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s;
+            margin-bottom: 6px;
+            color: #D1D5DB;
         }
 
-        .study-lesson-link:hover {
-            background: #334155;
+        .lesson-item:hover {
+            background: #1F2937;
+        }
+
+        .lesson-item.active {
+            background: rgba(67, 76, 232, 0.2);
+            border-left: 3px solid #434CE8;
             color: #FFFFFF;
         }
 
-        .study-lesson-link.active {
-            background: rgba(67, 76, 232, 0.2);
-            color: #818CF8;
-            font-weight: 600;
-            border-left: 4px solid #6366F1;
+        .check-icon {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 800;
+            border: 1.5px solid #4B5563;
+            color: transparent;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
         }
 
-        .study-lesson-link.completed .lesson-icon-status {
-            color: #10B981;
+        .check-icon.completed {
+            background: #10B981;
+            border-color: #10B981;
+            color: #fff;
         }
 
-        .progress-bar-glow {
-            background: linear-gradient(90deg, #6366F1, #38BDF8);
-            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        /* Cảnh báo tua nhanh */
+        .seek-warning-toast {
+            position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px);
+            background: #1E293B; color: #E2E8F0;
+            border: 1px solid #475569;
+            padding: 13px 22px; border-radius: 12px; font-weight: 600; font-size: 13.5px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.45); z-index: 9999;
+            display: flex; align-items: center; gap: 10px;
+            opacity: 0; transition: all 0.3s ease; pointer-events: none;
+        }
+        .seek-warning-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* Thông báo bài khoá */
+        .locked-lesson-toast {
+            position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px);
+            background: #1E293B; color: #E2E8F0;
+            border: 1px solid #475569;
+            padding: 13px 22px; border-radius: 12px; font-weight: 600; font-size: 13.5px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.45); z-index: 9999;
+            display: flex; align-items: center; gap: 10px;
+            opacity: 0; transition: all 0.3s ease; pointer-events: none;
+        }
+        .locked-lesson-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        .lesson-item.locked { cursor: not-allowed; opacity: 0.5; }
+        .lesson-item.locked:hover { background: rgba(239,68,68,0.08); }
+        .check-icon.locked-icon { background: #374151; border-color: #4B5563; color: #9CA3AF; font-size: 11px; }
+
+        /* Bảng ghi chú */
+        .notes-panel {
+            position: fixed; bottom: 24px; right: 400px;
+            width: 360px; max-height: 480px; background: #1E293B;
+            border: 1px solid #334155; border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5); z-index: 200;
+            display: none; flex-direction: column; overflow: hidden;
+        }
+        .notes-panel.open { display: flex; }
+        .notes-header { padding: 14px 18px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+        .notes-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
+        .notes-footer { padding: 12px 16px; border-top: 1px solid #334155; display: flex; flex-direction: column; gap: 8px; }
+        .note-item { padding: 10px 12px; background: #0F172A; border-radius: 10px; border-left: 3px solid #434CE8; margin-bottom: 8px; cursor: pointer; transition: background 0.15s; }
+        .note-item:hover { background: rgba(67,76,232,0.12); }
+        .note-timestamp { font-size: 11px; font-weight: 700; color: #434CE8; margin-bottom: 4px; }
+        .note-text { font-size: 13px; color: #CBD5E1; line-height: 18px; }
+
+        /* Locked overlay on video */
+        .locked-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; gap: 16px; }
+
+        /* Star Rating Widget */
+        .star-box span { font-size: 28px; color: #CBD5E1; transition: color 0.15s ease; cursor: pointer; user-select: none; }
+
+        /* Thanh trượt âm lượng */
+        .volume-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 80px;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.25);
+            outline: none;
+            cursor: pointer;
+        }
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+        }
+        .volume-slider::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border: none;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
         }
     </style>
 }
-
-<div class="study-workspace-header">
-    <div class="d-flex align-items-center gap-3">
-        <a href="@Url.Action("Details", "Course", new { id = course != null ? course.maKhoaHoc : "" })" class="btn-back-course">
-            <i class="bi bi-arrow-left fs-5"></i> Quay lại chi tiết khóa học
-        </a>
-        <div class="vr bg-secondary opacity-50 mx-2" style="height: 24px;"></div>
-        <h6 class="fw-bold text-white mb-0 text-truncate" style="max-width: 500px;">
-            @(course != null ? course.tenKhoaHoc : "Không gian học tập")
-        </h6>
+<!-- Locked Lesson Toast -->
+<div id="locked-lesson-toast" class="locked-lesson-toast">
+    <i class="bi bi-lock-fill" style="font-size:16px;"></i>
+    <span id="locked-lesson-msg">Bạn cần hoàn thành bài trước để mở khoá bài này!</span>
+</div>
+<!-- Notes Panel -->
+<div class="notes-panel" id="notes-panel">
+    <div class="notes-header">
+        <span style="font-weight:700; color:#fff; font-size:14px;"><i class="bi bi-journal-text me-1"></i> Ghi chú bài học</span>
+        <button onclick="toggleNotesPanel()" style="background:none; border:none; color:#9CA3AF; cursor:pointer; font-size:16px; line-height:1;" title="Đóng"><i class="bi bi-x-lg"></i></button>
     </div>
-
-    <div class="d-flex align-items-center gap-3" style="min-width: 260px;">
-        <div class="flex-grow-1">
-            <div class="d-flex justify-content-between fs-6 text-slate-300 mb-1">
-                <span class="small text-light opacity-75">Tiến độ khóa học</span>
-                <span class="small fw-bold text-indigo-400">@completedCount / @totalCount (@percentCompleted%)</span>
-            </div>
-            <div class="progress bg-slate-700" style="height: 8px; border-radius: 999px;">
-                <div class="progress-bar progress-bar-glow" role="progressbar" style="width: @percentCompleted%;" aria-valuenow="@percentCompleted" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
+    <div class="notes-body" id="notes-list">
+        <div id="notes-empty" style="text-align:center; padding:24px; color:#6B7280; font-size:13px;">
+            Chưa có ghi chú nào. Nhấn nút bên dưới để thêm ghi chú tại mốc thời gian hiện tại.
         </div>
+    </div>
+    <div class="notes-footer">
+        <textarea id="note-input" placeholder="Nhập nội dung ghi chú..." rows="3"
+            style="background:#0F172A; border:1px solid #334155; color:#fff; border-radius:8px; padding:8px 12px; resize:none; font-size:13px; font-family:inherit; width:100%; box-sizing:border-box;"></textarea>
+        <button onclick="saveNote()" style="background:#434CE8; color:#fff; border:none; border-radius:8px; padding:9px; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <i class="bi bi-pin-angle-fill"></i> Lưu ghi chú tại mốc hiện tại
+        </button>
     </div>
 </div>
 
-<div class="container-fluid py-4 px-lg-5">
-    <div class="row g-4">
-        <!-- Main Video Area (Left) -->
-        <div class="col-lg-8">
-            @if (activeLesson != null)
+<!-- Header -->
+<header class="learning-header">
+    <div id="learning-antiforgery" hidden>@Html.AntiForgeryToken()</div>
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <a href="@Url.Action("MyCourses", "Learning")" class="btn btn-secondary btn-sm"
+           style="background: #1F2937; color: #fff; border: 1px solid #374151; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="bi bi-arrow-left"></i> Khóa học của tôi
+        </a>
+        <span style="font-weight: 700; font-size: 15px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 520px;">
+            @(course != null ? course.tenKhoaHoc : "Không gian học tập")
+        </span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 20px;">
+    @if (course != null && ViewBag.IsPreview != true)
+    {
+        <a class="btn btn-primary btn-sm" href="@Url.Action("Index", "Quiz", new { courseId = course.maKhoaHoc })">Quiz &amp; Chứng chỉ</a>
+    }
+    else if (ViewBag.IsPreview == true)
+    {
+        <span style="color:#FBBF24;font-size:12px;">Xem trước · Không ghi nhận tiến độ</span>
+    }
+
+        <!-- Overall Progress -->
+        <div style="display: flex; align-items: center; gap: 12px; width: 220px;">
+            <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                    <span style="color: #9CA3AF;">Tiến độ toàn khóa</span>
+                    <strong style="color: #10B981;" id="header-progress-text">@percentCompleted% (@completedCount/@totalCount bài)</strong>
+                </div>
+                <div style="background: #374151; height: 6px; border-radius: 999px; overflow: hidden;">
+                    <div id="header-progress-bar" style="width: @percentCompleted%; background: #10B981; height: 100%; border-radius: 999px; transition: width 0.3s ease;"></div>
+                </div>
+            </div>
+        </div>
+
+        @if (canReportViolation)
+        {
+            <button type="button" onclick="openViolationReport()" title="Báo cáo nội dung không phù hợp hoặc sai sót"
+                    style="background: #1F2937; color: #FCA5A5; border: 1px solid #7F1D1D; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="bi bi-flag-fill"></i> Báo cáo vi phạm
+            </button>
+        }
+
+        <!-- Rating Button (Chỉ mở khi hoàn thành 100% bài giảng) -->
+        @if (hasSubmittedReview)
+        {
+            <button class="btn btn-secondary btn-sm" id="btn-rating-header" onclick="handleRatingButtonClick()"
+                    style="background: #1F2937; color: #fff; border: 1px solid #374151; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 600; opacity: 0.8; cursor: pointer; display:inline-flex; align-items:center; gap:5px;">
+                <i class="bi bi-check-circle-fill" style="color:#10B981;"></i> Đã đánh giá
+            </button>
+        }
+        else if (!canReview)
+        {
+            <button class="btn btn-secondary btn-sm" disabled title="Hoàn thành bài học và đạt quiz để đánh giá" style="opacity:.6;font-size:13px;"><i class="bi bi-lock" aria-hidden="true"></i> Chưa thể đánh giá</button>
+        }
+        else
+        {
+            <button class="btn btn-primary btn-sm" id="btn-rating-header" onclick="handleRatingButtonClick()"
+                    style="background: #434CE8; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; display:inline-flex; align-items:center; gap:5px;">
+                <i class="bi bi-star-fill"></i> Đánh giá khóa học
+            </button>
+        }
+    </div>
+</header>
+
+<!-- Workspace -->
+<div class="learning-layout">
+
+    <!-- Video Player Main Stage -->
+    <div class="video-main-area">
+        <div class="player-container" id="player-container">
+            @if (!isLessonUnlocked)
             {
-                <div class="study-video-wrapper">
-                    @if (!string.IsNullOrEmpty(activeLesson.duongDanVideo))
+                <div class="locked-overlay">
+                    <i class="bi bi-lock-fill" style="font-size:52px; color:#94A3B8;"></i>
+                    <div style="color:#fff; font-weight:700; font-size:20px; text-align:center;">Bài học chưa được mở khoá</div>
+                    <div style="color:#94A3B8; font-size:14px; text-align:center; max-width:340px; line-height:22px;">
+                        Bạn cần hoàn thành bài học trước đó (xem ≥ 80%) để mở khoá bài này.
+                    </div>
+                    @if (prevLesson != null)
                     {
-                        string vidUrl = activeLesson.duongDanVideo.Trim();
-                        string ytId = "";
-                        var ytMatch = System.Text.RegularExpressions.Regex.Match(vidUrl, @"(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^""&?\/\s]{11})", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                        if (ytMatch.Success)
-                        {
-                            ytId = ytMatch.Groups[1].Value;
-                        }
-                        else if (System.Text.RegularExpressions.Regex.IsMatch(vidUrl, @"^[a-zA-Z0-9_-]{11}$"))
-                        {
-                            ytId = vidUrl;
-                        }
-
-                        if (!string.IsNullOrEmpty(ytId))
-                        {
-                            <div style="width: 100%; aspect-ratio: 16/9; max-height: 520px; background: #000;">
-                                <iframe id="studyYoutubeIframe"
-                                        src="https://www.youtube-nocookie.com/embed/@(ytId)?autoplay=1&rel=0&modestbranding=1&enablejsapi=1"
-                                        style="width: 100%; height: 100%; border: none; display: block;"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                        allowfullscreen></iframe>
-                            </div>
-                        }
-                        else
-                        {
-                            <video id="studyPlayer" controls controlsList="nodownload" class="study-video-player" poster="@(course != null ? course.anhBia : "")">
-                                <source id="videoSource" src="@activeLesson.duongDanVideo" type="video/mp4" />
-                                Trình duyệt không hỗ trợ HTML5 Video.
-                            </video>
-                        }
-                    }
-                    else
-                    {
-                        <div class="p-5 text-center text-white my-4">
-                            <i class="bi bi-camera-video-off fs-1 text-secondary mb-3 d-block"></i>
-                            <h4 class="fw-bold text-white mb-2">Video đang trong quá trình phát triển</h4>
-                            <p class="text-secondary small mb-0">Nội dung video cho bài học thử nghiệm này hiện chưa cập nhật.</p>
-                        </div>
+                        <a href="@Url.Action("Study", "Learning", new { courseId = course.maKhoaHoc, lessonId = prevLesson.maBaiHoc })"
+                           style="background:#434CE8; color:#fff; border-radius:10px; padding:12px 28px; font-weight:700; font-size:14px; text-decoration:none; display:inline-flex; align-items:center; gap:8px; margin-top:8px;">
+                            <i class="bi bi-arrow-left"></i> Quay lại bài trước
+                        </a>
                     }
                 </div>
-
-                <div class="card border-0 rounded-4 p-4 text-white" style="background: #1E293B; border: 1px solid #334155 !important;">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-                        <div>
-                            <span class="badge bg-indigo-500 text-white mb-2" style="background: #434CE8;">
-                                Bài @(activeIndex + 1) / @totalCount
-                            </span>
-                            <h4 class="fw-bold text-white mb-1">@activeLesson.tenBaiHoc</h4>
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            @if (prevLesson != null)
-                            {
-                                <a href="@Url.Action("Study", "Learning", new { courseId = course.maKhoaHoc, lessonId = prevLesson.maBaiHoc })" class="btn btn-outline-light rounded-3 px-3 py-2">
-                                    <i class="bi bi-chevron-left me-1"></i> Bài trước
-                                </a>
-                            }
-                            @if (nextLesson != null)
-                            {
-                                <a href="@Url.Action("Study", "Learning", new { courseId = course.maKhoaHoc, lessonId = nextLesson.maBaiHoc })" class="btn btn-primary rounded-3 px-4 py-2" style="background: #434CE8; border-color: #434CE8;">
-                                    Bài tiếp theo <i class="bi bi-chevron-right ms-1"></i>
-                                </a>
-                            }
-                        </div>
-                    </div>
-
-                    <hr class="border-secondary opacity-25 my-3" />
-
-                    <div class="d-flex gap-4">
-                        <div>
-                            <span class="text-secondary small d-block mb-1">Thời lượng bài học</span>
-                            <span class="fw-semibold text-light"><i class="bi bi-clock me-1 text-primary"></i> @((activeLesson.thoiLuong ?? 0) / 60) phút @((activeLesson.thoiLuong ?? 0) % 60) giây</span>
-                        </div>
-                        <div>
-                            <span class="text-secondary small d-block mb-1">Trạng thái bài học</span>
-                            @if (completedLessonIds.Contains(activeLesson.maBaiHoc))
-                            {
-                                <span class="badge bg-success text-white"><i class="bi bi-check-circle-fill me-1"></i> Đã hoàn thành</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-warning text-dark" id="statusBadgeCurrent"><i class="bi bi-play-circle me-1"></i> Đang xem</span>
-                            }
-                        </div>
-                    </div>
-                </div>
+            }
+            else if (!string.IsNullOrEmpty(ytId))
+            {
+                <iframe id="studyYoutubeIframe"
+                        src="https://www.youtube-nocookie.com/embed/@(ytId)?autoplay=1&enablejsapi=1&rel=0&modestbranding=1"
+                        style="width:100%; height:100%; border:none; display:block;"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowfullscreen></iframe>
+            }
+            else if (activeLesson != null && !string.IsNullOrEmpty(activeLesson.duongDanVideo))
+            {
+                <video id="studyPlayer" preload="none" class="w-100 h-100" style="object-fit:contain; background:#000;" poster="@(course != null ? course.anhBia : "")">
+                    <source data-src="@activeVideoSrc" type="video/mp4" />
+                    Trình duyệt không hỗ trợ xem video.
+                </video>
             }
             else
             {
-                <div class="alert alert-warning">Khóa học này chưa có bài học nào.</div>
+                <img id="mockVideoImage" src="@(!string.IsNullOrEmpty(course?.anhBia) ? course.anhBia : "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&auto=format&fit=crop&q=80")"
+                     style="width:100%; height:100%; object-fit:cover;" alt="@(activeLesson != null ? activeLesson.tenBaiHoc : "")" />
+            }
+
+            @if (isLessonUnlocked)
+            {
+                <!-- Interactive Player HUD -->
+                <div class="video-sim-overlay">
+                    <div style="display:flex; justify-content:space-between; align-items:center; pointer-events:auto;">
+                        <span style="background:#434CE8; color:#fff; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:600;">
+                            Đang phát: @(activeLesson != null ? activeLesson.tenBaiHoc : "Chưa chọn bài học") @(isLastLesson ? "(Bài cuối cùng)" : "")
+                        </span>
+                        <span style="color:#CBD5E1; font-size:12px;">Độ phân giải: 1080p HD</span>
+                    </div>
+                    <div style="pointer-events:auto;">
+                        <div class="seek-bar-wrap" onclick="seekVideo(event)" title="Nhấn để tua video">
+                            <div class="seek-bar-fill" id="player-seek-fill" style="width:@(isCurrentCompleted ? "100%" : "0%");"></div>
+                        </div>
+                        <div class="player-controls" style="justify-content:space-between;">
+                            <div style="display:flex; align-items:center; gap:16px;">
+                                <button class="player-btn" id="btn-play-toggle" onclick="togglePlay()" title="Phát / Tạm dừng">
+                                    <i id="play-icon-svg" class="bi bi-play-fill" style="font-size:20px;"></i>
+                                </button>
+                                <button class="player-btn" onclick="rewind10s()" title="Lùi lại 10 giây">
+                                    <i class="bi bi-arrow-counterclockwise" style="font-size:16px;"></i>
+                                    -10s
+                                </button>
+                                <span style="font-size:13px; font-variant-numeric:tabular-nums;" id="video-time-display">
+                                    @(isCurrentCompleted ? $"{formattedLessonDuration} / {formattedLessonDuration} (100%)" : $"00:00 / {formattedLessonDuration} (0%)")
+                                </span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:16px;">
+                                <div class="volume-control" style="display:flex; align-items:center; gap:8px;">
+                                    <button class="player-btn" id="btn-volume-toggle" onclick="toggleMute()" title="Tắt / Bật tiếng">
+                                        <i id="volume-icon" class="bi bi-volume-up-fill" style="font-size:17px;"></i>
+                                    </button>
+                                    <input type="range" id="volume-slider" min="0" max="100" value="100"
+                                           oninput="changeVolume(this.value)" title="Âm lượng" class="volume-slider" />
+                                </div>
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <span style="font-size:12px; color:#9CA3AF;">Tốc độ:</span>
+                                    <select class="form-control" id="speed-select" onchange="changeSpeed(this.value)"
+                                            style="width:75px; height:32px; padding:0 8px; font-size:12px; background:#1F2937; color:#fff; border:1px solid #374151; border-radius:6px;">
+                                        <option value="0.75">0.75x</option>
+                                        <option value="1" selected>1.0x</option>
+                                        <option value="1.25">1.25x</option>
+                                        <option value="1.5">1.5x</option>
+                                        <option value="2">2.0x</option>
+                                    </select>
+                                </div>
+                                <button class="player-btn" onclick="toggleFullscreen()" title="Toàn màn hình">
+                                    <i class="bi bi-arrows-fullscreen" style="font-size:16px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             }
         </div>
 
-        <!-- Curriculum Sidebar (Right) -->
-        <div class="col-lg-4">
-            <div class="study-sidebar">
-                <div class="study-sidebar-header">
-                    <h6 class="fw-bold text-white mb-1"><i class="bi bi-list-stars me-2 text-primary"></i> Nội dung khóa học</h6>
-                    <small class="text-secondary">@chapters.Count chương • @allLessons.Count bài học</small>
-                </div>
-
-                @if (chapters.Count > 0)
-                {
-                    int chapIndex = 1;
-                    foreach (var chap in chapters)
+        <!-- Video Description & Discussion -->
+        <div style="padding: 24px; background: #0F172A; flex: 1;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 8px;">
+                <h2 class="h3" style="color: #fff; margin: 0; font-size: 20px; font-weight: 700;" id="current-lesson-title">
+                    @(activeLesson != null ? activeLesson.tenBaiHoc : "Chưa chọn bài học")
+                </h2>
+                <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                    @if (prevLesson != null)
                     {
-                        var lessons = chap.BaiHoc != null ? chap.BaiHoc.OrderBy(b => b.thuTu).ToList() : new List<ECOLearning.Models.BaiHoc>();
+                        <a href="@Url.Action("Study", "Learning", new { courseId = course.maKhoaHoc, lessonId = prevLesson.maBaiHoc })"
+                           class="btn btn-secondary btn-sm" style="background: #1F2937; color: #fff; border: 1px solid #374151; text-decoration: none; border-radius: 8px; padding: 6px 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="bi bi-arrow-left"></i> Bài trước
+                        </a>
+                    }
+                    @if (nextLesson != null)
+                    {
+                        bool nextUnlocked2 = ViewBag.IsPreview == true || isCurrentCompleted || completedLessonIds.Contains(nextLesson.maBaiHoc);
+                        <a href="@(nextUnlocked2 ? Url.Action("Study", "Learning", new { courseId = course.maKhoaHoc, lessonId = nextLesson.maBaiHoc }) : "#")"
+                           onclick="@(!nextUnlocked2 ? "showLockedToast('Hoàn thành bài hiện tại trước để mở bài tiếp theo!'); return false;" : "")"
+                           class="btn btn-primary btn-sm" style="background:@(nextUnlocked2 ? "#434CE8" : "#374151"); color:#fff; border:none; text-decoration:none; border-radius:8px; padding:6px 16px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                            Bài tiếp theo <i class="bi bi-arrow-right"></i>
+                        </a>
+                    }
+                </div>
+            </div>
 
-                        <div class="study-chapter-group">
-                            <div class="study-chapter-title" data-bs-toggle="collapse" data-bs-target="#collapseChapSide_@chapIndex">
-                                <span>@chap.tenChuong</span>
-                                <i class="bi bi-chevron-down text-secondary"></i>
-                            </div>
+            <p class="body-2" style="color: #94A3B8; line-height: 24px; margin-bottom: 20px;" id="current-lesson-desc">
+                @(isLastLesson
+                    ? "Bài học tổng kết và hoàn tất các cổng thanh toán thực tế. Bạn cần xem đạt từ 80% thời lượng bài học cuối cùng này (và hoàn thành tất cả các bài trước) để mở khóa đánh giá khóa học!"
+                    : $"Nội dung chi tiết bài giảng: {activeLesson?.tenBaiHoc}. Thời lượng bài học: {formattedLessonDuration}. Bạn cần xem tối thiểu 80% thời lượng để hệ thống ghi nhận hoàn thành bài học.")
+            </p>
 
-                            <div id="collapseChapSide_@chapIndex" class="collapse show">
-                                @foreach (var les in lessons)
-                                {
-                                    bool isActive = activeLesson != null && les.maBaiHoc == activeLesson.maBaiHoc;
-                                    bool isCompleted = completedLessonIds.Contains(les.maBaiHoc);
-                                    int lesMin = (les.thoiLuong ?? 0) / 60;
-                                    int lesSec = (les.thoiLuong ?? 0) % 60;
-                                    string durationStr = string.Format("{0:D2}:{1:D2}", lesMin, lesSec);
-
-                                    <a href="@Url.Action("Study", "Learning", new { courseId = course.maKhoaHoc, lessonId = les.maBaiHoc })"
-                                       class="study-lesson-link @(isActive ? "active" : "") @(isCompleted ? "completed" : "")">
-                                        <div class="d-flex align-items-center gap-2 text-truncate me-2">
-                                            @if (isCompleted)
-                                            {
-                                                <i class="bi bi-check-circle-fill lesson-icon-status fs-6"></i>
-                                            }
-                                            else if (isActive)
-                                            {
-                                                <i class="bi bi-play-circle-fill text-primary fs-6"></i>
-                                            }
-                                            else
-                                            {
-                                                <i class="bi bi-play-circle text-secondary fs-6"></i>
-                                            }
-                                            <span class="text-truncate">@les.tenBaiHoc</span>
-                                        </div>
-                                        <span class="small text-secondary text-nowrap">@durationStr</span>
-                                    </a>
-                                }
-                            </div>
-                        </div>
-                        chapIndex++;
+            <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                @if (activeLessonDocuments.Count > 0)
+                {
+                    foreach (var doc in activeLessonDocuments)
+                    {
+                        <a href="@doc.duongDan" target="_blank" download
+                           style="background:#1E293B; color:#fff; border:1px solid #334155; border-radius:8px; padding:8px 16px; font-size:13.5px; font-weight:500; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                            <i class="bi bi-file-earmark-arrow-down"></i> @(string.IsNullOrEmpty(doc.tenTaiNguyen) ? "Tải tài liệu" : doc.tenTaiNguyen)
+                        </a>
                     }
                 }
+                else
+                {
+                    <button disabled
+                            style="background:#1E293B; color:#6B7280; border:1px solid #1E293B; border-radius:8px; padding:8px 16px; font-size:13.5px; font-weight:500; cursor:not-allowed; display:inline-flex; align-items:center; gap:6px;"
+                            title="Hiện tại chưa có tài liệu được đính kèm">
+                        <i class="bi bi-file-earmark-x"></i> Tải tài liệu
+                    </button>
+                }
+                <button style="background:#1E293B; color:#fff; border:1px solid #334155; border-radius:8px; padding:8px 16px; font-size:13.5px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:6px;" onclick="toggleNotesPanel()">
+                    <i class="bi bi-journal-text"></i> Ghi chú bài học
+                </button>
             </div>
+            @if (activeLessonDocuments.Count == 0)
+            {
+                <div style="margin-top:10px; font-size:12.5px; color:#6B7280; display:flex; align-items:center; gap:6px;">
+                    <i class="bi bi-info-circle"></i><span>Hiện tại chưa có tài liệu được đính kèm cho bài học này.</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- RIGHT: CURRICULUM ACCORDION -->
+    <aside class="curriculum-sidebar">
+        <div class="curriculum-header">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0;">Nội dung khóa học</h3>
+            </div>
+            <span class="caption" style="color: #9CA3AF;">@(chapters.Count > 0 ? $"{chapters.Count} phần • " : "")@totalCount bài học • Tích xanh tự động đạt &ge; 80%</span>
+        </div>
+
+        <div class="curriculum-scroll" id="lessons-sidebar-container">
+            @{
+                int gIdx = 0;
+                if (unchapteredLessons != null && unchapteredLessons.Count > 0)
+                {
+                    <div class="sidebar-section-title">@(chapters.Count > 0 ? "Bài học độc lập" : "Danh sách bài học")</div>
+                    foreach (var les in unchapteredLessons)
+                    {
+                        bool isCur2  = (activeLesson != null && les.maBaiHoc == activeLesson.maBaiHoc);
+                        bool isDone2 = completedLessonIds.Contains(les.maBaiHoc);
+                        int m2 = (les.thoiLuong ?? 0) / 60, s2 = (les.thoiLuong ?? 0) % 60;
+                        string dStr2 = string.Format("{0:D2}:{1:D2}", m2, s2);
+                        bool isLast2 = (allLessons.Count > 0 && les.maBaiHoc == allLessons.Last().maBaiHoc);
+                        bool lesOpen  = ViewBag.IsPreview == true || gIdx == 0 || isDone2 || (gIdx > 0 && completedLessonIds.Contains(allLessons[gIdx - 1].maBaiHoc));
+                        gIdx++;
+                        <div class="lesson-item @(isCur2 ? "active" : "") @(!lesOpen ? "locked" : "")"
+                             id="lesson-item-@les.maBaiHoc"
+                             onclick="navigateToLesson('@les.maBaiHoc', @(lesOpen ? "true" : "false"))">
+                            <div class="check-icon @(isDone2 ? "completed" : (!lesOpen ? "locked-icon" : ""))" id="check-icon-@les.maBaiHoc">
+                                @Html.Raw(isDone2 ? "<i class=\"bi bi-check-lg\"></i>" : (!lesOpen ? "<i class=\"bi bi-lock-fill\"></i>" : ""))
+                            </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-size:13px; font-weight:500; line-height:18px; color:@(isCur2 ? "#fff" : "#D1D5DB"); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@les.tenBaiHoc</div>
+                                <div style="color:#9CA3AF; margin-top:2px; font-size:12px;">
+                                    @dStr2 @(isLast2 ? Html.Raw("• <span style=\"color:#F59E0B; font-weight:600;\">Bài cuối</span>") : Html.Raw(""))
+                                    @(!lesOpen ? Html.Raw(" • <span style=\"color:#9CA3AF; font-weight:600;\"><i class=\"bi bi-lock-fill\"></i> Chưa mở</span>") : Html.Raw(""))
+                                </div>
+                            </div>
+                            <span id="lesson-status-@les.maBaiHoc" style="font-size:11px; color:#10B981; font-weight:600; display:@(isDone2 ? "inline" : "none");">Xong</span>
+                        </div>
+                    }
+                }
+                if (chapters.Count > 0)
+                {
+                    foreach (var chap in chapters)
+                    {
+                        var chapLessons2 = chap.BaiHoc != null ? chap.BaiHoc.OrderBy(b => b.thuTu).ToList() : new List<ECOLearning.Models.BaiHoc>();
+                        <div class="sidebar-section-title">@chap.tenChuong</div>
+                        foreach (var les in chapLessons2)
+                        {
+                            bool isCur2  = (activeLesson != null && les.maBaiHoc == activeLesson.maBaiHoc);
+                            bool isDone2 = completedLessonIds.Contains(les.maBaiHoc);
+                            int m2 = (les.thoiLuong ?? 0) / 60, s2 = (les.thoiLuong ?? 0) % 60;
+                            string dStr2 = string.Format("{0:D2}:{1:D2}", m2, s2);
+                            bool isLast2 = (allLessons.Count > 0 && les.maBaiHoc == allLessons.Last().maBaiHoc);
+                            bool lesOpen  = ViewBag.IsPreview == true || gIdx == 0 || isDone2 || (gIdx > 0 && completedLessonIds.Contains(allLessons[gIdx - 1].maBaiHoc));
+                            gIdx++;
+                            <div class="lesson-item @(isCur2 ? "active" : "") @(!lesOpen ? "locked" : "")"
+                                 id="lesson-item-@les.maBaiHoc"
+                                 onclick="navigateToLesson('@les.maBaiHoc', @(lesOpen ? "true" : "false"))">
+                                <div class="check-icon @(isDone2 ? "completed" : (!lesOpen ? "locked-icon" : ""))" id="check-icon-@les.maBaiHoc">
+                                    @Html.Raw(isDone2 ? "<i class=\"bi bi-check-lg\"></i>" : (!lesOpen ? "<i class=\"bi bi-lock-fill\"></i>" : ""))
+                                </div>
+                                <div style="flex:1; min-width:0;">
+                                    <div style="font-size:13px; font-weight:500; line-height:18px; color:@(isCur2 ? "#fff" : "#D1D5DB"); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@les.tenBaiHoc</div>
+                                    <div style="color:#9CA3AF; margin-top:2px; font-size:12px;">
+                                        @dStr2 @(isLast2 ? Html.Raw("• <span style=\"color:#F59E0B; font-weight:600;\">Bài cuối</span>") : Html.Raw(""))
+                                        @(!lesOpen ? Html.Raw(" • <span style=\"color:#9CA3AF; font-weight:600;\"><i class=\"bi bi-lock-fill\"></i> Chưa mở</span>") : Html.Raw(""))
+                                    </div>
+                                </div>
+                                <span id="lesson-status-@les.maBaiHoc" style="font-size:11px; color:#10B981; font-weight:600; display:@(isDone2 ? "inline" : "none");">Xong</span>
+                            </div>
+                        }
+                    }
+                }
+            }
+        </div>
+    </aside>
+
+</div>
+
+@if (canReportViolation)
+{
+    <!-- MODAL: BÁO CÁO VI PHẠM KHÓA HỌC -->
+    <div class="modal-overlay" id="violation-modal">
+        <div class="modal-container" style="background: #1E293B; color: #fff; border: 1px solid #334155; border-radius: 16px; width: 100%; max-width: 520px; overflow: hidden;">
+            <div class="modal-header" style="border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; padding: 18px 24px;">
+                <h3 class="h3" style="color: #fff; margin: 0; font-size: 18px; font-weight: 700;"><i class="bi bi-flag-fill" style="color: #F87171;"></i> Báo cáo vi phạm khóa học</h3>
+                <button class="btn btn-secondary btn-sm" style="background: #334155; color: #fff; border: none; cursor: pointer; border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;"
+                        data-modal-close><i class="bi bi-x-lg"></i></button>
+            </div>
+            <form id="violation-form" onsubmit="submitViolationReport(event)">
+                @Html.AntiForgeryToken()
+                <div class="modal-body" style="padding: 24px;">
+                    <p style="color: #CBD5E1; font-size: 13.5px; margin-bottom: 16px;">Báo cáo sẽ được gửi tới quản trị viên xem xét. Vui lòng mô tả cụ thể nội dung không phù hợp hoặc sai sót.</p>
+                    @if (activeLesson != null)
+                    {
+                        <p style="color: #CBD5E1; font-size: 13px; margin-bottom: 14px;"><i class="bi bi-play-circle"></i> Bài học được báo cáo: <strong style="color: #fff;">@activeLesson.tenBaiHoc</strong></p>
+                    }
+                    <label style="display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 6px;">Loại vi phạm <span style="color: #F87171;">*</span></label>
+                    <select id="violation-type" required
+                            style="background: #0F172A; border: 1px solid #334155; color: #fff; border-radius: 8px; padding: 9px 12px; width: 100%; margin-bottom: 14px; font-size: 14px;">
+                        <option value="">-- Chọn loại vi phạm --</option>
+                        @foreach (var t in ECOLearning.Services.ViolationReportService.ViolationTypes)
+                        {
+                            <option value="@t">@t</option>
+                        }
+                    </select>
+                    <label style="display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 6px;">Mô tả chi tiết <span style="color: #F87171;">*</span></label>
+                    <textarea id="violation-desc" maxlength="2000" required
+                              style="background: #0F172A; border: 1px solid #334155; color: #fff; border-radius: 8px; padding: 10px 14px; width: 100%; min-height: 110px; resize: vertical; font-family: inherit; font-size: 14px;"
+                              placeholder="Ví dụ: Video bài này có thông tin sai về..., tài liệu không mở được..."></textarea>
+                    <div id="violation-error" style="display: none; color: #F87171; font-size: 13px; margin-top: 8px;"></div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid #334155; display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px;">
+                    <button type="button" class="btn btn-secondary" style="background: #334155; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 14px; cursor: pointer;" data-modal-close>Hủy</button>
+                    <button type="submit" id="violation-submit" style="background: #DC2626; color: #fff; border: none; border-radius: 8px; padding: 8px 20px; font-weight: 600; font-size: 14px; cursor: pointer;">Gửi báo cáo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<!-- COURSE REVIEW MODAL (Chỉ hiện khi hoàn thành 100% khóa học và đạt >= 80% video cuối) -->
+<div class="modal-overlay" id="rating-modal">
+    <div class="modal-container" style="background: #1E293B; color: #fff; border: 1px solid #334155; border-radius: 16px; width: 100%; max-width: 520px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+        <div class="modal-header" style="border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; padding: 18px 24px;">
+            <h3 class="h3" style="color: #fff; margin: 0; font-size: 18px; font-weight: 700;">Đánh giá khóa học</h3>
+            <button class="btn btn-secondary btn-sm" style="background: #334155; color: #fff; border: none; cursor: pointer; border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;"
+                    data-modal-close><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+            <div class="alert alert-success"
+                 style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34D399; margin-bottom: 16px; padding: 10px 14px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 8px;">
+                <i class="bi bi-trophy-fill" style="font-size: 16px;"></i>
+                <span>Chúc mừng bạn đã xem và hoàn thành tất cả video bài giảng của khóa học!</span>
+            </div>
+            <p class="body-2" style="color: #CBD5E1; margin-bottom: 16px; font-size: 14px; line-height: 20px;">
+                Hãy để lại đánh giá trải nghiệm học tập của bạn để giúp cộng đồng và giảng viên hoàn thiện chất lượng khóa học:
+            </p>
+
+            <!-- Star Rating Widget -->
+            <div style="margin-bottom: 20px; text-align: center;">
+                <div id="star-rating-box" class="star-box" style="display: flex; justify-content: center; gap: 8px; margin-bottom: 8px;"></div>
+                <div id="star-selected-text" class="caption" style="color: #F59E0B; font-weight: 700; font-size: 14px;">Chưa chọn số sao</div>
+                <div id="star-error" class="form-feedback-error" style="display: none; color: #EF4444; font-size: 12px; margin-top: 4px;">Vui lòng chọn số sao để đánh giá khóa học!</div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label class="form-label" style="color: #fff; font-size: 13.5px; font-weight: 600; display: block; margin-bottom: 6px;">Cảm nhận của bạn về khóa học (Tùy chọn):</label>
+                <textarea id="review-comment" class="form-control"
+                          style="background: #0F172A; border: 1px solid #334155; color: #fff; border-radius: 8px; padding: 10px 14px; width: 100%; min-height: 90px; resize: vertical; font-family: inherit; font-size: 14px;"
+                          placeholder="Nội dung bài giảng thế nào? Giảng viên hướng dẫn có dễ hiểu không?..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer" style="border-top: 1px solid #334155; display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px;">
+            <button class="btn btn-secondary" style="background: #334155; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 14px; cursor: pointer;" data-modal-close>Để sau</button>
+            <button class="btn btn-primary" onclick="submitReview()" style="background: #434CE8; color: #fff; border: none; border-radius: 8px; padding: 8px 20px; font-weight: 600; font-size: 14px; cursor: pointer;">Gửi đánh giá</button>
         </div>
     </div>
 </div>
 
 @section scripts {
     <script>
-        var currentLessonId = '@(activeLesson != null ? activeLesson.maBaiHoc : "")';
+        // ==================== BÁO CÁO VI PHẠM ====================
+        function openViolationReport() {
+            document.getElementById('violation-error').style.display = 'none';
+            openModal('violation-modal');
+        }
+
+        function submitViolationReport(e) {
+            e.preventDefault();
+            var form = document.getElementById('violation-form');
+            var err = document.getElementById('violation-error');
+            var btn = document.getElementById('violation-submit');
+            var type = document.getElementById('violation-type').value;
+            var desc = document.getElementById('violation-desc').value.trim();
+
+            err.style.display = 'none';
+            if (!type) { err.textContent = 'Vui lòng chọn loại vi phạm!'; err.style.display = 'block'; return; }
+            if (desc.length < 10) { err.textContent = 'Vui lòng mô tả tối thiểu 10 ký tự!'; err.style.display = 'block'; return; }
+
+            btn.disabled = true;
+            $.ajax({
+                url: '@Url.Action("Create", "ViolationReport", new { area = "" })',
+                type: 'POST',
+                data: {
+                    __RequestVerificationToken: form.querySelector('input[name="__RequestVerificationToken"]').value,
+                    courseId: '@(course != null ? course.maKhoaHoc : "")',
+                    maBaiHoc: '@(activeLesson != null ? activeLesson.maBaiHoc : "")',
+                    loaiViPham: type,
+                    moTa: desc
+                },
+                success: function (res) {
+                    if (res.success) {
+                        closeModal('violation-modal');
+                        form.reset();
+                        if (typeof showToast === 'function') showToast(res.message, 'success'); else alert(res.message);
+                    } else {
+                        err.textContent = res.message;
+                        err.style.display = 'block';
+                    }
+                },
+                error: function () {
+                    err.textContent = 'Có lỗi xảy ra, vui lòng thử lại!';
+                    err.style.display = 'block';
+                },
+                complete: function () { btn.disabled = false; }
+            });
+        }
+
+        // ==================== BIẾN TOÀN CỤC ====================
         var currentCourseId = '@(course != null ? course.maKhoaHoc : "")';
-        var hasSavedProgress = false;
+        var currentLessonId = '@(activeLesson != null ? activeLesson.maBaiHoc : "")';
+        var isCurrentLastLesson = @(isLastLesson ? "true" : "false");
+        var activeLessonDurationSec = @activeDurationSec;
+        var formattedDurationStr = '@formattedLessonDuration';
+        var nextLessonUrl   = '@(nextLesson != null ? Url.Action("Study", "Learning", new { courseId = course.maKhoaHoc, lessonId = nextLesson.maBaiHoc }) : "")';
+        var nextLessonTitle = '@Html.Raw(HttpUtility.JavaScriptStringEncode(nextLesson != null ? nextLesson.tenBaiHoc : ""))';
+        var isAutoAdvancing = false;
+        var selectedRating  = 5;
+        var isPlaying       = true;
+        var hasPromptedRating  = false;
+        var canReview = @(canReview ? "true" : "false");
+        var hasSubmittedReview = @(hasSubmittedReview ? "true" : "false");
+        var hasSavedProgress   = @(isCurrentCompleted ? "true" : "false");
 
+        // Lưu vị trí xem: định kỳ khi đang phát, khi tạm dừng, khi chuyển bài và khi rời trang (LearningController.UpdateProgress)
+        var isPreviewMode     = @(ViewBag.IsPreview == true ? "true" : "false");
+        var resumeAtSec       = @((ViewBag.ResumeSeconds as int?) ?? 0);
+        var SAVE_INTERVAL_MS  = 15000;
+        var lastSavedPosition = -1;
+        var lastSavedAt       = 0;
+
+        // Chống tua nhanh: chỉ tua được tới đoạn đã xem (bài đã hoàn thành thì tua tự do)
+        var allowFreeSeek   = hasSavedProgress;
+        var lastTrackedTime = resumeAtSec;
+        var seekWarnTimer   = null;
+        var SEEK_THRESHOLD  = 10; // giây
+
+        // Ghi chú
+        var notesKey = 'eco_notes_' + currentCourseId + '_' + currentLessonId;
+
+        // Danh sách bài học
+        var courseLessons = [
+            @foreach (var l in allLessons)
+            {
+                bool isDone = completedLessonIds.Contains(l.maBaiHoc);
+                bool isCur  = activeLesson != null && l.maBaiHoc == activeLesson.maBaiHoc;
+                int m = (l.thoiLuong ?? 0) / 60, s = (l.thoiLuong ?? 0) % 60;
+                string dur = string.Format("{0:D2}:{1:D2}", m, s);
+                @: { id: '@l.maBaiHoc', title: '@Html.Raw(HttpUtility.JavaScriptStringEncode(l.tenBaiHoc))', duration: '@dur', isCompleted: @(isDone ? "true" : "false"), isCurrent: @(isCur ? "true" : "false") },
+            }
+        ];
+
+        // ==================== KHỞI TẠO ====================
         document.addEventListener('DOMContentLoaded', function () {
-            var player = document.getElementById('studyPlayer');
-            var ytIframe = document.getElementById('studyYoutubeIframe');
+            initStarRatingWidget();
+            loadNotes();
 
-            if (ytIframe && currentLessonId) {
-                // Tự động ghi nhận tiến độ xem bài giảng YouTube sau 15 giây
+            var player  = document.getElementById('studyPlayer');
+            var ytFrame = document.getElementById('studyYoutubeIframe');
+
+            if (player) {
+                initVolumeControl(player);
+
+                // Start media after the document load has finished so buffering a
+                // long lesson does not keep the browser tab loading indicator active.
+                function startLessonVideo() {
+                    var source = player.querySelector('source[data-src]');
+                    if (source) {
+                        source.src = source.getAttribute('data-src');
+                        source.removeAttribute('data-src');
+                        player.load();
+                    }
+                    player.play().catch(function (e) {
+                        console.log('Autoplay prevented:', e);
+                        isPlaying = false;
+                        updatePlayIcon(false);
+                    });
+                }
+                if (document.readyState === 'complete') setTimeout(startLessonVideo, 0);
+                else window.addEventListener('load', function () {setTimeout(startLessonVideo, 0);}, {once: true});
+
+                player.addEventListener('play',  function () { isPlaying = true;  updatePlayIcon(true); });
+                player.addEventListener('pause', function () { isPlaying = false; updatePlayIcon(false); });
+
+                // TIMEUPDATE: cập nhật UI + phát hiện tua nhanh
+                player.addEventListener('timeupdate', function () {
+                    if (!player.duration || player.duration <= 0) return;
+                    var cur     = player.currentTime;
+                    var dur     = player.duration;
+                    var percent = (cur / dur) * 100;
+                    updatePlayerTimeDisplay(cur, dur, percent);
+
+                    var delta = cur - lastTrackedTime;
+                    if (!allowFreeSeek && delta > SEEK_THRESHOLD && delta < dur * 0.9) {
+                        // Phát hiện tua nhanh — kéo về vị trí thực
+                        player.currentTime = lastTrackedTime;
+                        showSeekWarning();
+                        showToast('Video đang được tua quá nhanh — đã hoàn nguyên về vị trí xem thực tế!', 'error');
+                        return;
+                    }
+                    if (cur > lastTrackedTime) lastTrackedTime = cur;
+
+                    if (percent >= 79.5 && !hasSavedProgress) {
+                        hasSavedProgress = true;
+                        trigger80PercentReached(cur, dur, false);
+                    } else if (!player.paused && Date.now() - lastSavedAt >= SAVE_INTERVAL_MS) {
+                        saveCurrentPosition(false);
+                    }
+                });
+
+                // Mở lại bài đang xem dở: tua tới vị trí đã lưu (gần hết bài thì xem lại từ đầu)
+                player.addEventListener('loadedmetadata', function () {
+                    if (resumeAtSec > 3 && player.duration && resumeAtSec < player.duration - 5) {
+                        player.currentTime = resumeAtSec;
+                        lastTrackedTime = Math.max(lastTrackedTime, resumeAtSec);
+                        showToast('Tiếp tục từ ' + formatSec(resumeAtSec) + ' lần học trước', 'info');
+                    }
+                }, { once: true });
+
+                player.addEventListener('pause', function () {
+                    if (!player.ended) saveCurrentPosition(false);
+                });
+
+                // Rời trang (đóng tab, bấm Back, chuyển trang, ẩn tab trên điện thoại): gửi bằng sendBeacon để không bị hủy giữa chừng
+                window.addEventListener('pagehide', function () { saveCurrentPosition(true); });
+                document.addEventListener('visibilitychange', function () {
+                    if (document.visibilityState === 'hidden') saveCurrentPosition(true);
+                });
+
+                player.addEventListener('ended', function () {
+                    hasSavedProgress = true;
+                    trigger80PercentReached(player.duration, player.duration, true);
+                });
+
+                var container = document.getElementById('player-container');
+                if (container) {
+                    container.addEventListener('click', function (e) {
+                        if (e.target.closest('.player-controls') || e.target.closest('.seek-bar-wrap') ||
+                            e.target.closest('button') || e.target.closest('select') || e.target.closest('a')) return;
+                        togglePlay();
+                    });
+                }
+            } else if (ytFrame) {
                 setTimeout(function () {
                     if (!hasSavedProgress) {
                         hasSavedProgress = true;
-                        sendProgressToDatabase(100, 100);
+                        trigger80PercentReached(activeLessonDurationSec * 0.82, activeLessonDurationSec, false);
                     }
-                }, 15000);
+                }, 20000);
             }
-
-            if (!player || !currentLessonId) return;
-
-            // Auto-play video
-            player.play().catch(function (e) {
-                console.log("Autoplay prevented by browser:", e);
-            });
-
-            // Monitor video progress and send AJAX to DB when 80% watched or ended
-            player.addEventListener('timeupdate', function () {
-                if (player.duration > 0) {
-                    var percent = (player.currentTime / player.duration) * 100;
-                    if (percent >= 80 && !hasSavedProgress) {
-                        hasSavedProgress = true;
-                        sendProgressToDatabase(player.currentTime, player.duration);
-                    }
-                }
-            });
-
-            player.addEventListener('ended', function () {
-                sendProgressToDatabase(player.duration, player.duration);
-            });
         });
 
-        function sendProgressToDatabase(watched, total) {
-            $.ajax({
-                url: '/Learning/UpdateProgress',
-                type: 'POST',
-                data: {
-                    courseId: currentCourseId,
-                    lessonId: currentLessonId,
-                    durationWatched: watched,
-                    totalDuration: total
-                },
-                success: function (res) {
-                    if (res && res.completed) {
-                        var badge = document.getElementById('statusBadgeCurrent');
-                        if (badge) {
-                            badge.className = 'badge bg-success text-white';
-                            badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Đã hoàn thành';
-                        }
-                    }
+        // ==================== ĐIỀU HƯỚNG BÀI HỌC ====================
+        function navigateToLesson(lessonId, isUnlocked) {
+            if (isUnlocked === false || isUnlocked === 'false') {
+                showLockedToast('Bạn cần hoàn thành bài học trước để mở khoá bài này!');
+                return;
+            }
+            var url = '@Url.Action("Study", "Learning")';
+            saveCurrentPosition(true);
+            window.location.href = url + '?courseId=' + encodeURIComponent(currentCourseId) + '&lessonId=' + encodeURIComponent(lessonId);
+        }
+
+        // ==================== TOAST CẢNH BÁO ====================
+        function showSeekWarning() {
+            var toast = document.getElementById('seek-warning-toast');
+            if (!toast) return;
+            toast.classList.add('show');
+            if (seekWarnTimer) clearTimeout(seekWarnTimer);
+            seekWarnTimer = setTimeout(function () { toast.classList.remove('show'); }, 2800);
+        }
+
+        function showLockedToast(msg) {
+            var toast = document.getElementById('locked-lesson-toast');
+            var msgEl = document.getElementById('locked-lesson-msg');
+            if (!toast) return;
+            if (msgEl && msg) msgEl.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(function () { toast.classList.remove('show'); }, 3000);
+        }
+
+        // ==================== GHI CHÚ ====================
+        function getNotes() {
+            try { return JSON.parse(localStorage.getItem(notesKey) || '[]'); }
+            catch (e) { return []; }
+        }
+        function saveNotes(arr) { localStorage.setItem(notesKey, JSON.stringify(arr)); }
+        function formatSec(sec) {
+            var m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+            return (m < 10 ? '0':'') + m + ':' + (s < 10 ? '0':'') + s;
+        }
+        function escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        function loadNotes() {
+            var notes = getNotes();
+            var list  = document.getElementById('notes-list');
+            var empty = document.getElementById('notes-empty');
+            if (!list) return;
+            list.querySelectorAll('.note-item').forEach(function (el) { el.remove(); });
+            if (notes.length === 0) { if (empty) empty.style.display = 'block'; return; }
+            if (empty) empty.style.display = 'none';
+            notes.forEach(function (n, idx) {
+                var item = document.createElement('div');
+                item.className = 'note-item';
+                item.innerHTML =
+                    '<div style="display:flex; justify-content:space-between; align-items:center;">'+
+                        '<div class="note-timestamp"><i class="bi bi-clock"></i> ' + formatSec(n.time) + '</div>'+
+                        '<button onclick="deleteNote(' + idx + ')" style="background:none; border:none; color:#9CA3AF; cursor:pointer; font-size:13px; padding:0; display:flex; align-items:center;" title="Xoá"><i class="bi bi-x-lg"></i></button>'+
+                    '</div>'+
+                    '<div class="note-text">' + escHtml(n.text) + '</div>';
+                item.addEventListener('click', function (e) {
+                    if (e.target.tagName === 'BUTTON') return;
+                    jumpToNoteTime(n.time);
+                });
+                list.appendChild(item);
+            });
+        }
+
+        function saveNote() {
+            var input = document.getElementById('note-input');
+            if (!input || !input.value.trim()) { showToast('Vui lòng nhập nội dung ghi chú!', 'warning'); return; }
+            var player = document.getElementById('studyPlayer');
+            var time   = player ? player.currentTime : 0;
+            var notes  = getNotes();
+            notes.push({ time: time, text: input.value.trim(), createdAt: new Date().toISOString() });
+            notes.sort(function (a, b) { return a.time - b.time; });
+            saveNotes(notes);
+            input.value = '';
+            loadNotes();
+            showToast('Da luu ghi chu tai moc ' + formatSec(time), 'success');
+        }
+
+        function deleteNote(idx) {
+            var notes = getNotes(); notes.splice(idx, 1); saveNotes(notes); loadNotes();
+            showToast('Đã xóa ghi chú', 'info');
+        }
+
+        function jumpToNoteTime(time) {
+            var player = document.getElementById('studyPlayer');
+            if (player) {
+                lastTrackedTime = time;
+                player.currentTime = time;
+                if (player.paused) player.play();
+                showToast('Phat tu moc ghi chu: ' + formatSec(time), 'info');
+            } else {
+                showToast('Tính năng này chỉ khả dụng với video MP4 nội bộ', 'warning');
+            }
+        }
+
+        function toggleNotesPanel() {
+            var panel = document.getElementById('notes-panel');
+            if (!panel) return;
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) loadNotes();
+        }
+
+        // ==================== UI HELPERS ====================
+        function updatePlayIcon(playing) {
+            var icon = document.getElementById('play-icon-svg');
+            if (!icon) return;
+            icon.className = playing ? 'bi bi-pause-fill' : 'bi bi-play-fill';
+        }
+
+        function initStarRatingWidget() {
+            var box = document.getElementById('star-rating-box');
+            if (!box) return;
+            box.innerHTML = '';
+            for (var i = 1; i <= 5; i++) {
+                var s = document.createElement('span');
+                s.innerHTML = '<i class="bi bi-star-fill"></i>';
+                s.setAttribute('data-star', i);
+                s.addEventListener('mouseenter', (function (v) { return function () { highlightStars(v); }; })(i));
+                s.addEventListener('mouseleave', function () { highlightStars(selectedRating); });
+                s.addEventListener('click', (function (v) {
+                    return function () {
+                        selectedRating = v; highlightStars(v);
+                        var txt = document.getElementById('star-selected-text');
+                        if (txt) txt.innerText = v + ' sao - ' + getStarDesc(v);
+                        var err = document.getElementById('star-error');
+                        if (err) err.style.display = 'none';
+                    };
+                })(i));
+                box.appendChild(s);
+            }
+            highlightStars(5);
+            var txt = document.getElementById('star-selected-text');
+            if (txt) txt.innerText = '5 sao - Rất hài lòng xuất sắc';
+        }
+
+        function highlightStars(count) {
+            document.querySelectorAll('#star-rating-box span').forEach(function (s, idx) {
+                s.style.color = idx < count ? '#F59E0B' : '#CBD5E1';
+            });
+        }
+        function getStarDesc(v) { return { 1:'Kém', 2:'Tạm được', 3:'Bình thường', 4:'Hài lòng', 5:'Rất hài lòng xuất sắc' }[v] || ''; }
+
+        function allLessonsCompleted() { return courseLessons.length > 0 && courseLessons.every(function (l) { return l.isCompleted; }); }
+        function getCompletedCount()   { return courseLessons.filter(function (l) { return l.isCompleted; }).length; }
+
+        function updateCourseProgressUI() {
+            var total = courseLessons.length, completed = getCompletedCount();
+            var percent = total > 0 ? Math.floor((completed / total) * 100) : 0;
+            if (percent > 100) percent = 100;
+            var textEl = document.getElementById('header-progress-text');
+            var barEl  = document.getElementById('header-progress-bar');
+            if (textEl) textEl.innerText = percent + '% (' + completed + '/' + total + ' bài)';
+            if (barEl)  barEl.style.width = percent + '%';
+        }
+
+        function updatePlayerTimeDisplay(cur, dur, percent) {
+            var fill = document.getElementById('player-seek-fill');
+            if (fill) fill.style.width = Math.min(percent, 100) + '%';
+            var timeEl = document.getElementById('video-time-display');
+            if (timeEl) {
+                var cMin = Math.floor(cur / 60), cSec = Math.floor(cur % 60);
+                var tMin = Math.floor(dur / 60), tSec = Math.floor(dur % 60);
+                var cStr = (cMin<10?'0':'') + cMin + ':' + (cSec<10?'0':'') + cSec;
+                var tStr = (tMin<10?'0':'') + tMin + ':' + (tSec<10?'0':'') + tSec;
+                timeEl.innerText = cStr + ' / ' + tStr + ' (' + Math.round(percent) + '%)';
+            }
+        }
+
+        // ==================== ĐIỀU KHIỂN VIDEO ====================
+        function seekVideo(e) {
+            var rect    = e.currentTarget.getBoundingClientRect();
+            var clickX  = e.clientX - rect.left;
+            var percent = Math.min(Math.max(Math.round((clickX / rect.width) * 100), 0), 100);
+            var fill    = document.getElementById('player-seek-fill');
+
+            var player = document.getElementById('studyPlayer');
+            if (player && player.duration > 0) {
+                var target = (percent / 100) * player.duration;
+                var delta  = target - lastTrackedTime;
+                if (!allowFreeSeek && delta > SEEK_THRESHOLD) {
+                    showSeekWarning();
+                    showToast('Video đang tua quá nhanh', 'error');
+                    var realPct = (lastTrackedTime / player.duration) * 100;
+                    if (fill) fill.style.width = realPct + '%';
+                    return;
                 }
+                player.currentTime = target;
+                lastTrackedTime = target;
+            } else {
+                if (fill) fill.style.width = percent + '%';
+            }
+
+            if (percent >= 79.5 && !hasSavedProgress) {
+                hasSavedProgress = true;
+                trigger80PercentReached(player ? player.currentTime : activeLessonDurationSec * 0.82,
+                                        player ? player.duration  : activeLessonDurationSec, false);
+            }
+        }
+
+        function togglePlay() {
+            var player = document.getElementById('studyPlayer');
+            if (player) {
+                if (player.paused) { player.play(); isPlaying = true; }
+                else { player.pause(); isPlaying = false; }
+            } else {
+                isPlaying = !isPlaying;
+                updatePlayIcon(!isPlaying);
+                showToast(isPlaying ? 'Tiếp tục phát video' : 'Tạm dừng video', 'info');
+            }
+        }
+
+        function rewind10s() {
+            var player = document.getElementById('studyPlayer');
+            if (player) {
+                var newTime = Math.max(0, player.currentTime - 10);
+                lastTrackedTime = Math.min(lastTrackedTime, newTime);
+                player.currentTime = newTime;
+            }
+            showToast('Đã tua lại 10 giây', 'info');
+        }
+
+        function changeSpeed(val) {
+            var player = document.getElementById('studyPlayer');
+            if (player) player.playbackRate = parseFloat(val);
+            showToast('Đã đổi tốc độ phát sang ' + val + 'x', 'info');
+        }
+
+        // ==================== ÂM LƯỢNG ====================
+        function initVolumeControl(player) {
+            var saved = parseInt(localStorage.getItem('eco_player_volume'), 10);
+            var startVolume = (!isNaN(saved) && saved >= 0 && saved <= 100) ? saved : 100;
+            player.volume = startVolume / 100;
+            var slider = document.getElementById('volume-slider');
+            if (slider) slider.value = startVolume;
+            updateVolumeIcon(startVolume, player.muted);
+        }
+
+        function changeVolume(val) {
+            var player = document.getElementById('studyPlayer');
+            var vol = Math.min(100, Math.max(0, parseInt(val, 10) || 0));
+            if (player) {
+                player.volume = vol / 100;
+                player.muted = vol === 0;
+            }
+            localStorage.setItem('eco_player_volume', vol);
+            updateVolumeIcon(vol, player ? player.muted : vol === 0);
+        }
+
+        function toggleMute() {
+            var player = document.getElementById('studyPlayer');
+            var slider = document.getElementById('volume-slider');
+            if (!player) return;
+
+            player.muted = !player.muted;
+
+            if (player.muted) {
+                updateVolumeIcon(0, true);
+            } else {
+                var restoreVol = parseInt(slider ? slider.value : 100, 10) || 100;
+                if (restoreVol === 0) {
+                    restoreVol = 100;
+                    if (slider) slider.value = 100;
+                    player.volume = 1;
+                    localStorage.setItem('eco_player_volume', 100);
+                }
+                updateVolumeIcon(restoreVol, false);
+            }
+        }
+
+        function updateVolumeIcon(vol, muted) {
+            var icon = document.getElementById('volume-icon');
+            if (!icon) return;
+            if (muted || vol === 0) {
+                icon.className = 'bi bi-volume-mute-fill';
+            } else if (vol < 50) {
+                icon.className = 'bi bi-volume-down-fill';
+            } else {
+                icon.className = 'bi bi-volume-up-fill';
+            }
+        }
+
+        function toggleFullscreen() {
+            var container = document.getElementById('player-container');
+            if (!document.fullscreenElement) {
+                if (container && container.requestFullscreen) container.requestFullscreen();
+                else document.documentElement.requestFullscreen();
+            } else { document.exitFullscreen(); }
+        }
+
+        // ==================== TIẾN ĐỘ & ĐÁNH GIÁ ====================
+        function trigger80PercentReached(watchedSec, totalSec, autoAdvance) {
+            var curItem = courseLessons.find(function (l) { return l.id === currentLessonId; });
+            if (curItem) curItem.isCompleted = true;
+
+            var checkIcon = document.getElementById('check-icon-' + currentLessonId);
+            if (checkIcon) { checkIcon.className = 'check-icon completed'; checkIcon.innerHTML = '<i class="bi bi-check-lg"></i>'; }
+            var statusBadge = document.getElementById('lesson-status-' + currentLessonId);
+            if (statusBadge) statusBadge.style.display = 'inline';
+
+            updateCourseProgressUI();
+            sendProgressToDatabase(watchedSec, totalSec);
+
+            if (autoAdvance) {
+                if (isAutoAdvancing) return;
+                isAutoAdvancing = true;
+                if (nextLessonUrl && !isCurrentLastLesson) {
+                    showToast('Hoàn thành bài học! Chuyển sang: "' + (nextLessonTitle || 'Bài tiếp theo') + '" sau 1.5 giây...', 'success');
+                    setTimeout(function () { window.location.href = nextLessonUrl; }, 1500);
+                    return;
+                } else if (isCurrentLastLesson) {
+                    showToast('Chúc mừng hoàn thành bài học cuối cùng!', 'success');
+                    if (canReview && allLessonsCompleted() && !hasSubmittedReview) {
+                        setTimeout(function () { openModal('rating-modal'); }, 1000);
+                    }
+                    return;
+                }
+            } else {
+                showToast('Đạt ≥ 80% — Đã hoàn thành bài học và lưu tiến độ!', 'success');
+            }
+
+            if (isCurrentLastLesson && allLessonsCompleted()) {
+                if (canReview && !hasPromptedRating && !hasSubmittedReview) {
+                    hasPromptedRating = true;
+                    setTimeout(function () {
+                        openModal('rating-modal');
+                        showToast('Hoàn thành 100% khóa học! Mời bạn đánh giá.', 'success');
+                    }, 1200);
+                }
+            } else if (isCurrentLastLesson && !allLessonsCompleted()) {
+                var c = getCompletedCount(), t = courseLessons.length;
+                showToast('Cần hoàn thành tất cả bài học (' + c + '/' + t + ' bài) để đánh giá khóa học!', 'warning');
+            }
+        }
+
+        var progressUrl = '@Url.Action("UpdateProgress", "Learning")';
+
+        function progressPayload(watched, total) {
+            var fd = new FormData();
+            fd.append('__RequestVerificationToken', document.querySelector('#learning-antiforgery input').value);
+            fd.append('courseId', currentCourseId);
+            fd.append('lessonId', currentLessonId);
+            fd.append('durationWatched', Math.round(watched));
+            fd.append('totalDuration', Math.round(total));
+            return fd;
+        }
+
+        function sendProgressToDatabase(watched, total, useBeacon) {
+            if (isPreviewMode) return;
+            if (!currentLessonId || !currentCourseId || !(total > 0)) return;
+            lastSavedAt = Date.now();
+            lastSavedPosition = Math.round(watched);
+            var body = progressPayload(watched, total);
+            // Khi rời trang, request thường bị trình duyệt hủy; sendBeacon / keepalive vẫn được gửi đi
+            if (useBeacon && navigator.sendBeacon && navigator.sendBeacon(progressUrl, body)) return;
+            fetch(progressUrl, { method: 'POST', body: body, credentials: 'same-origin', keepalive: !!useBeacon,
+                                 headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { if (!r.ok) console.error('UpdateProgress error:', r.status); })
+                .catch(function (err) { console.error('UpdateProgress error:', err); });
+        }
+
+        // Lưu vị trí đang xem (không đánh dấu hoàn thành ở phía trình duyệt; máy chủ tự xét >= 80%)
+        function saveCurrentPosition(useBeacon) {
+            var player = document.getElementById('studyPlayer');
+            if (!player || !player.duration || player.duration <= 0) return;
+            var pos = Math.round(player.currentTime);
+            if (pos === lastSavedPosition || pos < 1) return;
+            sendProgressToDatabase(pos, player.duration, useBeacon);
+        }
+
+        function handleRatingButtonClick() {
+            if (!canReview) { showToast('Hoàn thành tất cả bài học và đạt quiz cuối khóa để đánh giá.', 'warning'); return; }
+            if (hasSubmittedReview) { showToast('Bạn đã gửi đánh giá rồi. Cảm ơn bạn!', 'info'); return; }
+            if (!allLessonsCompleted()) {
+                var c = getCompletedCount(), t = courseLessons.length;
+                showToast('Chưa thể đánh giá: Cần hoàn thành tất cả video (' + c + '/' + t + ' bài)!', 'warning');
+                return;
+            }
+            openModal('rating-modal');
+        }
+
+        function resetDemoProgress() {
+            if (!confirm('Bạn có muốn đặt lại toàn bộ tiến độ khóa học để kiểm thử lại từ đầu?')) return;
+            $.ajax({
+                url: '@Url.Action("ResetProgress", "Learning")', type: 'POST',
+                data: { __RequestVerificationToken: document.querySelector('#learning-antiforgery input').value, courseId: currentCourseId },
+                success: function () { window.location.reload(); },
+                error:   function () { window.location.reload(); }
+            });
+        }
+
+        function submitReview() {
+            if (!selectedRating || selectedRating < 1 || selectedRating > 5) {
+                var err = document.getElementById('star-error');
+                if (err) err.style.display = 'block';
+                return;
+            }
+            var comment = document.getElementById('review-comment') ? document.getElementById('review-comment').value : '';
+            $.ajax({
+                url: '/Review/SubmitReview', type: 'POST',
+                data: { __RequestVerificationToken: document.querySelector('#learning-antiforgery input').value, courseId: currentCourseId, rating: selectedRating, comment: comment },
+                success: function (res) {
+                    if (res && res.success) {
+                        hasSubmittedReview = true;
+                        closeModal('rating-modal');
+                        var headerBtn = document.getElementById('btn-rating-header');
+                        if (headerBtn) {
+                            headerBtn.innerHTML = '<i class="bi bi-check-circle-fill" style="color:#10B981;"></i> Đã đánh giá';
+                            headerBtn.className = 'btn btn-secondary btn-sm';
+                            headerBtn.style.background = '#1F2937';
+                            headerBtn.style.borderColor = '#374151';
+                            headerBtn.style.opacity = '0.8';
+                        }
+                        showToast('Cảm ơn bạn đã đánh giá khóa học! Đã ghi nhận thành công.', 'success');
+                    } else {
+                        showToast(res.message || 'Lỗi khi gửi đánh giá', 'error');
+                    }
+                },
+                error: function () { showToast('Lỗi đường truyền khi gửi đánh giá!', 'error'); }
             });
         }
     </script>

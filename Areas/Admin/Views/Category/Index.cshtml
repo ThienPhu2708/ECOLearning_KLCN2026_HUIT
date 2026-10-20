@@ -1,9 +1,83 @@
 @model IEnumerable<ECOLearning.Areas.Admin.Models.CategoryViewModel>
 @{
     ViewBag.Title = "Quản lý Danh mục Khóa học";
+    string search = ViewBag.Search as string ?? "";
+    string status = ViewBag.Status as string ?? "all";
+    int page = ViewBag.Page;
+    int totalPages = ViewBag.TotalPages;
+    int totalItems = ViewBag.TotalItems;
+    int pageSize = ViewBag.PageSize;
+    int activeCount = ViewBag.ActiveCount;
+    int inactiveCount = ViewBag.InactiveCount;
+    int fromItem = totalItems == 0 ? 0 : (page - 1) * pageSize + 1;
+    int toItem = Math.Min(page * pageSize, totalItems);
+    bool anhInstalled = ViewBag.AnhInstalled as bool? ?? false;
 }
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px;">
+<style>
+    /* Ảnh minh họa danh mục: khung 16:10 giống thẻ "Khám phá theo lĩnh vực" ở trang chủ */
+    .cat-thumb {
+        width: 80px;
+        aspect-ratio: 16 / 10;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #F1F5F9;
+        border: 1px solid #E2E8F0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94A3B8;
+        font-size: 18px;
+    }
+
+    .cat-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .cat-img-picker {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    /* Ảnh đã chọn / ảnh hiện tại: khung 16:10 giống thẻ trang chủ, chỉ hiện khi có ảnh */
+    .cat-img-preview {
+        flex: 0 0 200px;
+        aspect-ratio: 16 / 10;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #E2E8F0;
+        background: #F8FAFC;
+    }
+
+    .cat-img-preview[hidden] {
+        display: none;
+    }
+
+    .cat-img-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .cat-img-hint {
+        margin: 0;
+        font-size: 12.5px;
+        line-height: 1.55;
+        color: #64748B;
+    }
+
+    @@media (max-width: 560px) {
+        .cat-img-picker { flex-direction: column; }
+        .cat-img-preview { flex-basis: auto; width: 100%; }
+    }
+</style>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 12px;">
     <div>
         <h1 class="h2" style="margin-top: 6px;">Quản Lý Danh Mục Khóa Học</h1>
         <p class="body-2" style="color: var(--text-secondary);">Thiết lập các nhóm chuyên ngành đào tạo và phân loại sản phẩm giáo dục</p>
@@ -13,18 +87,36 @@
     </button>
 </div>
 
+<!-- FILTER BAR: trạng thái + tìm kiếm -->
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a href="@Url.Action("Index", new { search = search, status = "all" })"
+           class="btn btn-sm @(status == "all" ? "btn-primary" : "btn-secondary")">Tất cả (@(activeCount + inactiveCount))</a>
+        <a href="@Url.Action("Index", new { search = search, status = "active" })"
+           class="btn btn-sm @(status == "active" ? "btn-primary" : "btn-secondary")">Đang hoạt động (@activeCount)</a>
+        <a href="@Url.Action("Index", new { search = search, status = "inactive" })"
+           class="btn btn-sm @(status == "inactive" ? "btn-primary" : "btn-secondary")">Tạm ngưng (@inactiveCount)</a>
+    </div>
+    <form method="get" action="@Url.Action("Index")" style="display: flex; gap: 8px;">
+        <input type="hidden" name="status" value="@status" />
+        <input type="text" name="search" value="@search" class="form-control" placeholder="Tìm theo mã hoặc tên danh mục..." style="min-width: 260px;" />
+        <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-search"></i></button>
+    </form>
+</div>
+
 <!-- CATEGORIES TABLE (UC14) -->
 <div class="card" style="padding: 0; overflow: hidden;">
     <div class="table-responsive">
         <table class="table">
             <thead>
                 <tr>
-                    <th style="width: 140px;">Mã danh mục</th>
+                    <th style="width: 120px;">Mã danh mục</th>
+                    <th style="width: 104px;">Ảnh</th>
                     <th>Tên Danh Mục</th>
                     <th>Mô Tả Phân Loại</th>
-                    <th>Số Khóa Học Trực Thuộc</th>
+                    <th>Số Khóa Học</th>
                     <th>Trạng Thái</th>
-                    <th style="width: 180px;">Thao Tác</th>
+                    <th style="width: 260px;">Thao Tác</th>
                 </tr>
             </thead>
             <tbody id="category-table-body">
@@ -34,8 +126,20 @@
                     {
                         <tr data-cat-id="@item.MaDanhMuc" data-count="@item.SoKhoaHoc">
                             <td><code>@item.MaDanhMuc</code></td>
+                            <td>
+                                <div class="cat-thumb" title="@(string.IsNullOrEmpty(item.AnhMinhHoa) ? "Chưa có ảnh minh họa" : "Ảnh minh họa")">
+                                    @if (!string.IsNullOrEmpty(item.AnhMinhHoa))
+                                    {
+                                        <img src="@Url.Content("~" + item.AnhMinhHoa)" alt="@item.TenDanhMuc" loading="lazy" />
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-image" aria-hidden="true"></i>
+                                    }
+                                </div>
+                            </td>
                             <td><strong>@item.TenDanhMuc</strong></td>
-                            <td>@(string.IsNullOrEmpty(item.MoTa) ? "Chưa có mô tả" : item.MoTa)</td>
+                            <td class="cell-wrap">@(string.IsNullOrEmpty(item.MoTa) ? "Chưa có mô tả" : item.MoTa)</td>
                             <td>
                                 @if (item.SoKhoaHoc > 0)
                                 {
@@ -47,25 +151,43 @@
                                 }
                             </td>
                             <td>
-                                @if (item.SoKhoaHoc > 0)
+                                @if (item.TrangThai)
                                 {
-                                    <span class="badge badge-success">Hoạt động</span>
+                                    <span class="badge badge-success">Đang hoạt động</span>
                                 }
                                 else
                                 {
-                                    <span class="badge badge-warning">Chưa có khóa</span>
+                                    <span class="badge badge-warning">Tạm ngưng</span>
                                 }
                             </td>
                             <td>
-                                <div style="display: flex; gap: 8px;">
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                                     <button class="btn btn-secondary btn-sm"
-                                            onclick="editCategory('@item.MaDanhMuc', '@JavaScriptEncode(item.TenDanhMuc)', '@JavaScriptEncode(item.MoTa)')">
+                                            onclick="editCategory('@item.MaDanhMuc', '@JavaScriptEncode(item.TenDanhMuc)', '@JavaScriptEncode(item.MoTa)', '@JavaScriptEncode(string.IsNullOrEmpty(item.AnhMinhHoa) ? "" : Url.Content("~" + item.AnhMinhHoa))')">
                                         Sửa
                                     </button>
-                                    <button class="btn btn-danger btn-sm"
-                                            onclick="attemptDeleteCategory('@item.MaDanhMuc', '@JavaScriptEncode(item.TenDanhMuc)', @item.SoKhoaHoc, this)">
-                                        Xóa
-                                    </button>
+                                    @if (item.TrangThai)
+                                    {
+                                        <button class="btn btn-outline btn-sm"
+                                                onclick="setCategoryStatus('@item.MaDanhMuc', '@JavaScriptEncode(item.TenDanhMuc)', false, @item.SoKhoaHoc)">
+                                            Tạm ngưng
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-success btn-sm"
+                                                onclick="setCategoryStatus('@item.MaDanhMuc', '@JavaScriptEncode(item.TenDanhMuc)', true, @item.SoKhoaHoc)">
+                                            Kích hoạt lại
+                                        </button>
+                                    }
+                                    @* Chỉ cho xóa danh mục chưa có khóa học; danh mục đã có khóa học dùng Tạm ngưng *@
+                                    @if (item.SoKhoaHoc == 0)
+                                    {
+                                        <button class="btn btn-danger btn-sm"
+                                                onclick="deleteCategory('@item.MaDanhMuc', '@JavaScriptEncode(item.TenDanhMuc)')">
+                                            Xóa
+                                        </button>
+                                    }
                                 </div>
                             </td>
                         </tr>
@@ -74,8 +196,8 @@
                 else
                 {
                     <tr>
-                        <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 24px;">
-                            Chưa có danh mục nào trong cơ sở dữ liệu.
+                        <td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 24px;">
+                            @(string.IsNullOrWhiteSpace(search) && status == "all" ? "Chưa có danh mục nào trong cơ sở dữ liệu." : "Không tìm thấy danh mục phù hợp.")
                         </td>
                     </tr>
                 }
@@ -83,15 +205,24 @@
         </table>
     </div>
 
-    <!-- PAGINATION CONTAINER -->
+    <!-- PAGINATION -->
     <div class="pagination-container">
         <div class="pagination-info">
-            Hiển thị <strong>1 - @Model.Count()</strong> trên tổng số <strong>@Model.Count()</strong> danh mục
+            Hiển thị <strong>@fromItem - @toItem</strong> trên tổng số <strong>@totalItems</strong> danh mục
         </div>
         <ul class="pagination">
-            <li class="page-item disabled"><button class="page-link"><i class="bi bi-chevron-left me-1"></i> Trước</button></li>
-            <li class="page-item active"><button class="page-link">1</button></li>
-            <li class="page-item disabled"><button class="page-link">Sau <i class="bi bi-chevron-right ms-1"></i></button></li>
+            <li class="page-item @(page <= 1 ? "disabled" : "")">
+                <a class="page-link" href="@(page <= 1 ? "javascript:void(0)" : Url.Action("Index", new { search = search, status = status, page = page - 1 }))"><i class="bi bi-chevron-left me-1"></i> Trước</a>
+            </li>
+            @for (int p = 1; p <= totalPages; p++)
+            {
+                <li class="page-item @(p == page ? "active" : "")">
+                    <a class="page-link" href="@Url.Action("Index", new { search = search, status = status, page = p })">@p</a>
+                </li>
+            }
+            <li class="page-item @(page >= totalPages ? "disabled" : "")">
+                <a class="page-link" href="@(page >= totalPages ? "javascript:void(0)" : Url.Action("Index", new { search = search, status = status, page = page + 1 }))">Sau <i class="bi bi-chevron-right ms-1"></i></a>
+            </li>
         </ul>
     </div>
 </div>
@@ -110,17 +241,32 @@
 
                 <div class="form-group">
                     <label class="form-label">Tên danh mục <span class="required">*</span></label>
-                    <input type="text" id="cat-name-input" class="form-control" placeholder="Ví dụ: Khoa học Dữ liệu & AI" required>
-                    <!-- Error feedback duplicate check compliant with UC14 -->
-                    <div id="cat-name-error" class="form-feedback-error" style="display: none; color: var(--status-danger); margin-top: 6px; font-size: 13px;">
-                        <i class="bi bi-exclamation-circle-fill me-1"></i> Tên danh mục đã tồn tại trên hệ thống! Vui lòng đặt tên khác.
-                    </div>
+                    <input type="text" id="cat-name-input" class="form-control" maxlength="100" placeholder="Ví dụ: Khoa học Dữ liệu & AI" required>
+                    <div id="cat-name-error" class="form-feedback-error" style="display: none; color: var(--status-danger); margin-top: 6px; font-size: 13px;"></div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Mô tả phân loại</label>
-                    <textarea id="cat-desc-input" class="form-control" rows="3"
+                    <textarea id="cat-desc-input" class="form-control" rows="3" maxlength="500"
                               placeholder="Mô tả phạm vi và nhóm kỹ năng của danh mục này..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="cat-img-input">Ảnh minh họa</label>
+                    @if (anhInstalled)
+                    {
+                        <div class="cat-img-picker">
+                            <div class="cat-img-preview" id="cat-img-preview" hidden>
+                                <img id="cat-img-tag" alt="Xem trước ảnh minh họa" />
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" id="cat-img-pick"><i class="bi bi-upload me-1"></i> Chọn ảnh</button>
+                            <input type="file" id="cat-img-input" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden />
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="cat-img-hint">Cần chạy <code>Database/Migrations/012_DanhMuc_AnhMinhHoa.sql</code> để thêm ảnh minh họa cho danh mục.</p>
+                    }
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
@@ -142,101 +288,183 @@
 
 @section Scripts {
     <script>
-        let currentEditId = '';
+        function getToken() {
+            return document.querySelector('input[name="__RequestVerificationToken"]').value;
+        }
+
+        function showModal(id) {
+            if (window.openModal) openModal(id);
+            else document.getElementById(id).classList.add('active');
+        }
+
+        function hideModal(id) {
+            if (window.closeModal) closeModal(id);
+            else document.getElementById(id).classList.remove('active');
+        }
+
+        // ===== Ảnh minh họa: nút "Chọn ảnh"; có ảnh thì xem trước đúng khung thẻ trang chủ (không chọn ảnh mới thì giữ ảnh cũ) =====
+        const MAX_IMG_MB = @(ECOLearning.Services.CategoryImageService.DungLuongToiDaMB);
+        const imgState = { file: null, original: '', objectUrl: null };
+        const imgInput = document.getElementById('cat-img-input');
+        const imgPreview = document.getElementById('cat-img-preview');
+
+        function renderImage(src) {
+            if (!imgPreview) return;
+            const tag = document.getElementById('cat-img-tag');
+            if (src) tag.src = src; else tag.removeAttribute('src');
+            imgPreview.hidden = !src;
+        }
+
+        function resetImage(originalUrl) {
+            if (imgState.objectUrl) URL.revokeObjectURL(imgState.objectUrl);
+            imgState.file = null; imgState.objectUrl = null;
+            imgState.original = originalUrl || '';
+            if (imgInput) imgInput.value = '';
+            renderImage(imgState.original);
+        }
+
+        function showFormError(message) {
+            const err = document.getElementById('cat-name-error');
+            err.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i> ' + message;
+            err.style.display = 'block';
+        }
+
+        function pickImage(file) {
+            if (!file) return;
+            const okType = /^image\/(jpeg|png|webp)$/.test(file.type) || /\.(jpe?g|png|webp)$/i.test(file.name);
+            if (!okType) { showFormError('Chỉ nhận ảnh JPG, PNG hoặc WEBP.'); return; }
+            if (file.size > MAX_IMG_MB * 1024 * 1024) { showFormError('Ảnh tối đa ' + MAX_IMG_MB + ' MB.'); return; }
+            document.getElementById('cat-name-error').style.display = 'none';
+            if (imgState.objectUrl) URL.revokeObjectURL(imgState.objectUrl);
+            imgState.file = file;
+            imgState.objectUrl = URL.createObjectURL(file);
+            renderImage(imgState.objectUrl);
+        }
+
+        if (imgPreview) {
+            document.getElementById('cat-img-pick').addEventListener('click', () => imgInput.click());
+            imgInput.addEventListener('change', () => pickImage(imgInput.files[0]));
+        }
 
         function openAddCategoryModal() {
-            currentEditId = '';
             document.getElementById('cat-id-input').value = '';
             document.getElementById('modal-cat-title').innerText = 'Thêm Danh Mục Khóa Học Mới';
             document.getElementById('cat-name-input').value = '';
             document.getElementById('cat-desc-input').value = '';
             document.getElementById('cat-name-error').style.display = 'none';
-            if (window.openModal) openModal('category-modal');
-            else document.getElementById('category-modal').classList.add('active');
+            resetImage('');
+            showModal('category-modal');
         }
 
-        function editCategory(id, name, desc) {
-            currentEditId = id;
+        function editCategory(id, name, desc, imageUrl) {
             document.getElementById('cat-id-input').value = id;
             document.getElementById('modal-cat-title').innerText = `Chỉnh sửa Danh Mục: ${id}`;
             document.getElementById('cat-name-input').value = name;
             document.getElementById('cat-desc-input').value = desc || '';
             document.getElementById('cat-name-error').style.display = 'none';
-            if (window.openModal) openModal('category-modal');
-            else document.getElementById('category-modal').classList.add('active');
+            resetImage(imageUrl);
+            showModal('category-modal');
         }
 
         function handleSaveCategory(e) {
             e.preventDefault();
             const id = document.getElementById('cat-id-input').value;
-            const val = document.getElementById('cat-name-input').value.trim();
-            const desc = document.getElementById('cat-desc-input').value.trim();
             const err = document.getElementById('cat-name-error');
-            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-
+            const btn = document.getElementById('btn-submit-cat');
             const url = id ? '@Url.Action("Edit", "Category", new { area = "Admin" })' : '@Url.Action("Create", "Category", new { area = "Admin" })';
-            const data = {
-                __RequestVerificationToken: token,
-                id: id,
-                tenDanhMuc: val,
-                moTa: desc
-            };
 
+            // Gửi multipart (FormData) để kèm file ảnh
+            const form = new FormData();
+            form.append('__RequestVerificationToken', getToken());
+            form.append('id', id);
+            form.append('tenDanhMuc', document.getElementById('cat-name-input').value.trim());
+            form.append('moTa', document.getElementById('cat-desc-input').value.trim());
+            if (imgState.file) form.append('anhMinhHoa', imgState.file, imgState.file.name);
+
+            btn.disabled = true;
             $.ajax({
                 url: url,
                 type: 'POST',
-                data: data,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                data: form,
+                processData: false,
+                contentType: false,
                 success: function (res) {
                     if (res.success) {
                         err.style.display = 'none';
-                        if (window.closeModal) closeModal('category-modal');
-                        else document.getElementById('category-modal').classList.remove('active');
-
+                        hideModal('category-modal');
                         if (window.showToast) showToast(res.message, 'success');
                         setTimeout(() => window.location.reload(), 600);
                     } else {
+                        if (res.requireLogin) { window.location.reload(); return; }
                         err.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i> ' + res.message;
                         err.style.display = 'block';
-                        if (window.showToast) showToast('Lỗi: ' + res.message, 'error');
                     }
                 },
                 error: function () {
                     err.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i> Có lỗi xảy ra trong quá trình xử lý!';
                     err.style.display = 'block';
+                },
+                complete: function () { btn.disabled = false; }
+            });
+        }
+
+        function postAction(url, data) {
+            data.__RequestVerificationToken = getToken();
+            $.ajax({
+                url: url,
+                type: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                data: data,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({ icon: 'success', title: 'Thành công', text: res.message, timer: 1500, showConfirmButton: false })
+                            .then(() => window.location.reload());
+                    } else {
+                        if (res.requireLogin) { window.location.reload(); return; }
+                        Swal.fire({ icon: 'error', title: 'Không thực hiện được', text: res.message });
+                    }
+                },
+                error: function () {
+                    Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Lỗi kết nối máy chủ, vui lòng thử lại!' });
                 }
             });
         }
 
-        function attemptDeleteCategory(id, name, courseCount, btn) {
-            if (courseCount > 0) {
-                alert(`[CẢNH BÁO QUY TRÌNH UC14]\nKhông thể xóa danh mục "${name}"!\nDanh mục này hiện đang có ${courseCount} khóa học trực thuộc đang sử dụng.`);
-                if (window.showToast) showToast(`Không thể xóa danh mục đang có ${courseCount} khóa học sử dụng!`, 'error');
-                return;
-            }
+        function setCategoryStatus(id, name, active, courseCount) {
+            const text = active
+                ? `Danh mục "${name}" sẽ hiển thị lại trong bộ lọc của học viên và trong danh sách chọn khi giáo viên tạo khóa học.`
+                : `Danh mục "${name}" sẽ bị ẩn khỏi bộ lọc của học viên và danh sách chọn khi giáo viên tạo khóa học.`
+                  + (courseCount > 0 ? ` ${courseCount} khóa học hiện có vẫn hoạt động bình thường.` : '');
 
-            if (confirm(`Bạn có chắc chắn muốn xóa danh mục "${name}" (Mã: ${id})?`)) {
-                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-                $.ajax({
-                    url: '@Url.Action("Delete", "Category", new { area = "Admin" })',
-                    type: 'POST',
-                    data: {
-                        __RequestVerificationToken: token,
-                        id: id
-                    },
-                    success: function (res) {
-                        if (res.success) {
-                            if (window.showToast) showToast(res.message, 'success');
-                            btn.closest('tr').remove();
-                        } else {
-                            alert(`[CẢNH BÁO QUY TRÌNH UC14]\n${res.message}`);
-                            if (window.showToast) showToast(res.message, 'error');
-                        }
-                    },
-                    error: function () {
-                        if (window.showToast) showToast('Lỗi kết nối CSDL khi xóa!', 'error');
-                    }
-                });
-            }
+            Swal.fire({
+                icon: active ? 'question' : 'warning',
+                title: active ? 'Kích hoạt lại danh mục?' : 'Tạm ngưng danh mục?',
+                text: text,
+                showCancelButton: true,
+                confirmButtonText: active ? 'Kích hoạt lại' : 'Tạm ngưng',
+                cancelButtonText: 'Hủy'
+            }).then(result => {
+                if (result.isConfirmed) {
+                    postAction('@Url.Action("SetStatus", "Category", new { area = "Admin" })', { id: id, active: active });
+                }
+            });
+        }
+
+        function deleteCategory(id, name) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Xóa danh mục?',
+                text: `Danh mục "${name}" (Mã: ${id}) chưa có khóa học nào và sẽ bị xóa vĩnh viễn.`,
+                showCancelButton: true,
+                confirmButtonText: 'Xóa',
+                confirmButtonColor: '#EF4444',
+                cancelButtonText: 'Hủy'
+            }).then(result => {
+                if (result.isConfirmed) {
+                    postAction('@Url.Action("Delete", "Category", new { area = "Admin" })', { id: id });
+                }
+            });
         }
     </script>
 }

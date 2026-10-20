@@ -1,0 +1,57 @@
+@{
+    ViewBag.Title = "Về E-Learning";
+}
+
+<section style="padding: 64px 0 80px; background: #FFFFFF;">
+    <div class="safe-container" style="max-width: 900px;">
+        <div style="text-align: center; margin-bottom: 48px;">
+            <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background-color: var(--primary-light, #EEF2FF); color: var(--primary, #434CE8); border: 1px solid #C7D2FE; font-size: 13px; font-weight: 700; border-radius: 9999px; margin-bottom: 20px;">
+                <i class="bi bi-mortarboard-fill"></i> VỀ CHÚNG TÔI
+            </div>
+            <h1 style="font-size: 36px; font-weight: 800; color: var(--text-heading, #0F172A); margin-bottom: 16px;">
+                Nền tảng Đào tạo Trực tuyến E-Learning
+            </h1>
+            <p style="font-size: 16px; color: var(--text-secondary, #64748B); line-height: 26px; max-width: 680px; margin: 0 auto;">
+                E-Learning là nền tảng đào tạo trực tuyến kết nối học viên với các giảng viên chất lượng, cung cấp khóa học
+                thực chiến trong nhiều lĩnh vực: Công nghệ thông tin, Thiết kế, Kinh doanh & Marketing.
+            </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 56px;">
+            <div style="background: var(--bg-canvas, #F8FAFC); border: 1px solid var(--border-color, #E2E8F0); border-radius: 16px; padding: 28px 20px; text-align: center;">
+                <div style="width: 48px; height: 48px; border-radius: 12px; background: #EEF2FF; color: #434CE8; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 22px;">
+                    <i class="bi bi-play-btn-fill"></i>
+                </div>
+                <div style="font-weight: 700; color: var(--text-heading, #0F172A); margin-bottom: 6px;">Học theo tiến độ riêng</div>
+                <div style="font-size: 13.5px; color: var(--text-secondary, #64748B); line-height: 20px;">Video bài giảng xem mọi lúc, tự động lưu tiến độ và tiếp tục đúng chỗ đang học.</div>
+            </div>
+            <div style="background: var(--bg-canvas, #F8FAFC); border: 1px solid var(--border-color, #E2E8F0); border-radius: 16px; padding: 28px 20px; text-align: center;">
+                <div style="width: 48px; height: 48px; border-radius: 12px; background: #ECFDF5; color: #10B981; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 22px;">
+                    <i class="bi bi-patch-check-fill"></i>
+                </div>
+                <div style="font-weight: 700; color: var(--text-heading, #0F172A); margin-bottom: 6px;">Giảng viên được kiểm duyệt</div>
+                <div style="font-size: 13.5px; color: var(--text-secondary, #64748B); line-height: 20px;">Hồ sơ và khóa học đều được đội ngũ quản trị xét duyệt trước khi công khai.</div>
+            </div>
+            <div style="background: var(--bg-canvas, #F8FAFC); border: 1px solid var(--border-color, #E2E8F0); border-radius: 16px; padding: 28px 20px; text-align: center;">
+                <div style="width: 48px; height: 48px; border-radius: 12px; background: #FFF7ED; color: #EA580C; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 22px;">
+                    <i class="bi bi-award-fill"></i>
+                </div>
+                <div style="font-weight: 700; color: var(--text-heading, #0F172A); margin-bottom: 6px;">Chứng chỉ hoàn thành</div>
+                <div style="font-size: 13.5px; color: var(--text-secondary, #64748B); line-height: 20px;">Nhận chứng chỉ số khi hoàn thành 100% nội dung khóa học đã đăng ký.</div>
+            </div>
+        </div>
+
+        <div style="background: var(--bg-canvas, #F8FAFC); border-radius: 24px; padding: 40px; text-align: center;">
+            <h2 style="font-size: 22px; font-weight: 700; color: var(--text-heading, #0F172A); margin-bottom: 12px;">Bạn muốn tìm hiểu thêm?</h2>
+            <p style="font-size: 14px; color: var(--text-secondary, #64748B); margin-bottom: 24px;">Khám phá thư viện khóa học hoặc liên hệ với đội ngũ hỗ trợ của chúng tôi.</p>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                <a href="@Url.Action("Index", "Course")" style="background: var(--primary, #434CE8); color: #fff; font-weight: 700; border-radius: 10px; padding: 12px 24px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="bi bi-search"></i> Khám phá khóa học
+                </a>
+                <a href="@Url.Action("Contact", "Home")" style="background: #fff; color: var(--text-heading, #0F172A); font-weight: 700; border-radius: 10px; padding: 12px 24px; text-decoration: none; border: 1px solid var(--border-color, #E2E8F0); display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="bi bi-envelope"></i> Liên hệ chúng tôi
+                </a>
+            </div>
+        </div>
+    </div>
+</section>

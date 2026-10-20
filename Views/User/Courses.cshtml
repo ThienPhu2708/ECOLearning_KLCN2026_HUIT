@@ -1,0 +1,125 @@
+@model ECOLearning.ViewModels.InstructorProfileViewModel
+@*
+    Tất cả khóa học của một giáo viên (nút "Xem tất cả" ở trang hồ sơ giáo viên khi có hơn 5 khóa).
+*@
+@{
+    ViewBag.Title = "Khóa học của " + Model.HoTen;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    string defaultAvatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80";
+    string avatarUrl = string.IsNullOrEmpty(Model.AnhDaiDien) ? defaultAvatar : Model.AnhDaiDien;
+    if (!avatarUrl.StartsWith("http") && !avatarUrl.StartsWith("/"))
+    {
+        avatarUrl = Url.Content("~/" + avatarUrl);
+    }
+    string sort = ViewBag.Sort as string ?? "mac-dinh";
+    var sortOptions = new[]
+    {
+        new { Value = "mac-dinh", Text = "Mặc định" },
+        new { Value = "danh-gia", Text = "Đánh giá cao nhất" },
+        new { Value = "hoc-vien", Text = "Nhiều học viên nhất" },
+        new { Value = "gia-tang", Text = "Giá thấp đến cao" }
+    };
+}
+
+@section styles {
+<style>
+    .teacher-courses-header {
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        color: #FFFFFF;
+        padding: 28px 0 32px;
+    }
+
+    .teacher-courses-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 18px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: #A5B4FC;
+        text-decoration: none;
+    }
+
+    .teacher-courses-back:hover {
+        color: #FFFFFF;
+    }
+
+    .teacher-courses-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+    }
+
+    @@media (max-width: 1200px) {
+        .teacher-courses-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @@media (max-width: 900px) {
+        .teacher-courses-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @@media (max-width: 560px) {
+        .teacher-courses-grid { grid-template-columns: 1fr; }
+    }
+</style>
+}
+
+<section class="teacher-courses-header">
+    <div class="safe-container">
+        <a class="teacher-courses-back" href="@Url.Action("Index", "User", new { id = Model.MaNguoiDung })">
+            <i class="bi bi-arrow-left"></i> Hồ sơ giáo viên
+        </a>
+        <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
+            <img src="@avatarUrl" alt="@Model.HoTen" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255, 255, 255, 0.2);" />
+            <div style="min-width: 0;">
+                <h1 style="font-size: 26px; font-weight: 800; margin: 0 0 4px 0; color: #FFFFFF;">Khóa học của @Model.HoTen</h1>
+                <div style="font-size: 14px; color: #CBD5E1;">
+                    <i class="bi bi-briefcase-fill me-1" style="color: #818CF8;"></i>@Model.ChuyenMon
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div style="background: #F8FAFC; padding: 32px 0 80px;">
+    <div class="safe-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;">
+            <div style="font-size: 15px; color: #475569;">
+                <strong style="color: #0F172A;">@Model.TongSoKhoaHoc</strong> khóa học
+                <span style="margin: 0 6px;">•</span>
+                <strong style="color: #0F172A;">@Model.TongSoHocVien.ToString("N0")</strong> học viên
+            </div>
+            @if (Model.DanhSachKhoaHoc.Count > 1)
+            {
+                <form method="get" action="@Url.Action("Courses", "User", new { id = Model.MaNguoiDung })" style="display: flex; align-items: center; gap: 8px; margin: 0;">
+                    <label for="sort" style="font-size: 13.5px; color: #64748B; font-weight: 600;">Sắp xếp:</label>
+                    <select id="sort" name="sort" onchange="this.form.submit()" style="height: 38px; padding: 0 12px; border: 1px solid #E2E8F0; border-radius: 10px; background: #FFFFFF; font: inherit; font-size: 13.5px; color: #0F172A; cursor: pointer;">
+                        @foreach (var o in sortOptions)
+                        {
+                            <option value="@o.Value" @(o.Value == sort ? "selected" : "")>@o.Text</option>
+                        }
+                    </select>
+                    <noscript><button type="submit" class="btn btn-outline btn-sm">Áp dụng</button></noscript>
+                </form>
+            }
+        </div>
+
+        @if (Model.DanhSachKhoaHoc.Count > 0)
+        {
+            <div class="teacher-courses-grid">
+                @foreach (var item in Model.DanhSachKhoaHoc)
+                {
+                    @Html.Partial("_TeacherCourseCard", item)
+                }
+            </div>
+        }
+        else
+        {
+            <div style="text-align: center; padding: 48px 20px; color: #64748B; background: #FFFFFF; border: 1px dashed #E2E8F0; border-radius: 16px;">
+                <i class="bi bi-inbox" style="font-size: 32px; color: #94A3B8; display: block; margin-bottom: 10px;"></i>
+                <div style="font-size: 15px; font-weight: 600; color: #0F172A;">Chưa có khóa học nào được xuất bản</div>
+                <div style="font-size: 13px; margin-top: 4px;">Giáo viên đang chuẩn bị các bài giảng mới nhất cho học viên.</div>
+            </div>
+        }
+    </div>
+</div>

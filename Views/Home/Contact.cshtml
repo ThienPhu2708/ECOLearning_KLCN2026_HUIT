@@ -1,0 +1,121 @@
+@{
+    ViewBag.Title = "Liên hệ hỗ trợ";
+}
+
+<section style="padding: 64px 0 80px; background: #FFFFFF;">
+    <div class="safe-container" style="max-width: 900px;">
+        <div style="text-align: center; margin-bottom: 40px;">
+            <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background-color: var(--primary-light, #EEF2FF); color: var(--primary, #434CE8); border: 1px solid #C7D2FE; font-size: 13px; font-weight: 700; border-radius: 9999px; margin-bottom: 20px;">
+                <i class="bi bi-headset"></i> LIÊN HỆ HỖ TRỢ
+            </div>
+            <h1 style="font-size: 32px; font-weight: 800; color: var(--text-heading, #0F172A); margin-bottom: 12px;">
+                Chúng tôi luôn sẵn sàng hỗ trợ bạn
+            </h1>
+            <p style="font-size: 15px; color: var(--text-secondary, #64748B);">
+                Gửi câu hỏi hoặc phản hồi cho đội ngũ E-Learning — chúng tôi sẽ phản hồi qua email sớm nhất có thể.
+            </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 32px; align-items: start;">
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div style="background: var(--bg-canvas, #F8FAFC); border: 1px solid var(--border-color, #E2E8F0); border-radius: 16px; padding: 20px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+                        <div style="width: 36px; height: 36px; border-radius: 10px; background: #EEF2FF; color: #434CE8; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-envelope-fill"></i>
+                        </div>
+                        <strong style="color: var(--text-heading, #0F172A); font-size: 14px;">Email hỗ trợ</strong>
+                    </div>
+                    <div style="font-size: 13.5px; color: var(--text-secondary, #64748B); padding-left: 48px;">Phản hồi trong vòng 24 giờ làm việc</div>
+                </div>
+                <div style="background: var(--bg-canvas, #F8FAFC); border: 1px solid var(--border-color, #E2E8F0); border-radius: 16px; padding: 20px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+                        <div style="width: 36px; height: 36px; border-radius: 10px; background: #ECFDF5; color: #10B981; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-clock-fill"></i>
+                        </div>
+                        <strong style="color: var(--text-heading, #0F172A); font-size: 14px;">Giờ làm việc</strong>
+                    </div>
+                    <div style="font-size: 13.5px; color: var(--text-secondary, #64748B); padding-left: 48px;">Thứ 2 - Thứ 6, 8:00 - 17:30</div>
+                </div>
+                <div style="background: var(--bg-canvas, #F8FAFC); border: 1px solid var(--border-color, #E2E8F0); border-radius: 16px; padding: 20px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+                        <div style="width: 36px; height: 36px; border-radius: 10px; background: #FFF7ED; color: #EA580C; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-question-circle-fill"></i>
+                        </div>
+                        <strong style="color: var(--text-heading, #0F172A); font-size: 14px;">Câu hỏi thường gặp</strong>
+                    </div>
+                    <div style="font-size: 13.5px; color: var(--text-secondary, #64748B); padding-left: 48px;">Vấn đề về khóa học, thanh toán, tài khoản — hãy mô tả cụ thể trong form để được hỗ trợ nhanh nhất.</div>
+                </div>
+            </div>
+
+            <form id="contact-form" style="background: var(--bg-canvas, #F8FAFC); border-radius: 20px; padding: 28px;">
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-heading, #0F172A); margin-bottom: 6px;">Họ và tên</label>
+                    <input type="text" id="contact-fullname" required placeholder="Nhập họ và tên của bạn"
+                           style="width: 100%; box-sizing: border-box; height: 44px; padding: 0 14px; border: 1px solid var(--border-color, #E2E8F0); border-radius: 10px; font-size: 14px; background: #fff;" />
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-heading, #0F172A); margin-bottom: 6px;">Email liên hệ</label>
+                    <input type="email" id="contact-email" required placeholder="ban@email.com"
+                           style="width: 100%; box-sizing: border-box; height: 44px; padding: 0 14px; border: 1px solid var(--border-color, #E2E8F0); border-radius: 10px; font-size: 14px; background: #fff;" />
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-heading, #0F172A); margin-bottom: 6px;">Tiêu đề</label>
+                    <input type="text" id="contact-subject" placeholder="VD: Hỏi về khóa học Lập trình C#"
+                           style="width: 100%; box-sizing: border-box; height: 44px; padding: 0 14px; border: 1px solid var(--border-color, #E2E8F0); border-radius: 10px; font-size: 14px; background: #fff;" />
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-heading, #0F172A); margin-bottom: 6px;">Nội dung</label>
+                    <textarea id="contact-content" required rows="5" placeholder="Mô tả nội dung bạn cần hỗ trợ..."
+                              style="width: 100%; box-sizing: border-box; padding: 12px 14px; border: 1px solid var(--border-color, #E2E8F0); border-radius: 10px; font-size: 14px; background: #fff; resize: vertical; font-family: inherit;"></textarea>
+                </div>
+                <button type="submit" id="btn-contact-submit"
+                        style="width: 100%; height: 48px; background: var(--primary, #434CE8); color: #fff; border: none; border-radius: 10px; font-weight: 700; font-size: 14.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="bi bi-send-fill"></i> Gửi liên hệ
+                </button>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section scripts {
+    <script>
+        document.getElementById('contact-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            var btn = document.getElementById('btn-contact-submit');
+            var fullName = document.getElementById('contact-fullname').value.trim();
+            var email = document.getElementById('contact-email').value.trim();
+            var subject = document.getElementById('contact-subject').value.trim();
+            var content = document.getElementById('contact-content').value.trim();
+
+            if (!fullName || !email || !content) {
+                showToast('Vui lòng nhập đầy đủ Họ tên, Email và Nội dung liên hệ!', 'warning');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang gửi...';
+
+            $.ajax({
+                url: '@Url.Action("ContactSubmit", "Home")',
+                type: 'POST',
+                data: { fullName: fullName, email: email, subject: subject, content: content },
+                success: function (res) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-send-fill"></i> Gửi liên hệ';
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                        document.getElementById('contact-form').reset();
+                    } else {
+                        showToast(res.message, 'error');
+                    }
+                },
+                error: function () {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-send-fill"></i> Gửi liên hệ';
+                    showToast('Có lỗi xảy ra khi gửi liên hệ. Vui lòng thử lại!', 'error');
+                }
+            });
+        });
+    </script>
+}

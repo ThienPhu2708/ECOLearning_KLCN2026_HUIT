@@ -1,195 +1,160 @@
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Web.Mvc;
 using ECOLearning.Areas.Marketing.Models;
-using ECOLearning.Models;
+using ECOLearning.Services;
 
 namespace ECOLearning.Areas.Marketing.Controllers
 {
+    /// <summary>
+    /// UC18: Báo cáo hiệu quả Marketing theo khoảng ngày. Marketing chỉ xem doanh thu của các đơn có dùng ưu đãi
+    /// (không xem doanh thu tổng thể hệ thống; doanh thu tổng thể ở Admin / Báo cáo doanh thu theo ngày).
+    /// Quy tắc: chỉ đơn "Đã thanh toán"; mỗi đơn một ưu đãi nên không đếm trùng; phân biệt doanh thu trước giảm,
+    /// tiền giảm và doanh thu sau giảm (= DonHang.tongTien).
+    /// </summary>
     public class CampaignReportController : MarketingBaseController
     {
-        // GET: Marketing/CampaignReport (UC18: Báo cáo hiệu quả chiến dịch Marketing)
-        public ActionResult Index(string campaignId = null, string period = "month")
+        // GET: Marketing/CampaignReport
+        public ActionResult Index(string tuNgay = null, string denNgay = null, string khuyenMai = null, string chienDich = null)
         {
-            var model = BuildReportModel(campaignId, period);
-
-            ViewBag.SelectedCampaignId = campaignId ?? "all";
-            ViewBag.SelectedPeriod = period ?? "month";
-            ViewBag.Campaigns = db.KhuyenMai.Include("MaGiamGia").OrderByDescending(c => c.ngayBatDau).ToList();
-            ViewBag.BreadcrumbCurrent = "Thống kê & Báo cáo";
-
+            if (!new PromotionService(db).IsInstalled()) return View("~/Areas/Marketing/Views/Shared/_ChuaKhoiTao.cshtml");
+            var model = LapBaoCao(tuNgay, denNgay, khuyenMai, chienDich);
+            ViewBag.ChuongTrinh = new PromotionService(db).LayDanhSach();
+            ViewBag.ChienDich = new CampaignService(db).LayDanhSach();
+            ViewBag.BreadcrumbCurrent = "Báo cáo Marketing";
             return View(model);
         }
 
-        // GET: Marketing/CampaignReport/ExportCsv
-        public ActionResult ExportCsv(string campaignId = null, string period = "month")
+        // GET: Marketing/CampaignReport/ExportCsv (cùng bộ lọc với trang báo cáo)
+        public ActionResult ExportCsv(string tuNgay = null, string denNgay = null, string khuyenMai = null, string chienDich = null)
         {
-            var model = BuildReportModel(campaignId, period);
+            if (!new PromotionService(db).IsInstalled()) return View("~/Areas/Marketing/Views/Shared/_ChuaKhoiTao.cshtml");
+            var m = LapBaoCao(tuNgay, denNgay, khuyenMai, chienDich);
+            if (m.ThongBaoLoi != null)
+            {
+                TempData["Error"] = m.ThongBaoLoi;
+                return RedirectToAction("Index");
+            }
 
             var sb = new StringBuilder();
-            // UTF-8 BOM for Excel
-            sb.Append('\uFEFF');
-            sb.AppendLine("BÁO CÁO HIỆU QUẢ CHIẾN DỊCH MARKETING");
+            sb.Append('﻿');
+            sb.AppendLine("BÁO CÁO HIỆU QUẢ MARKETING");
+            sb.AppendLine("Khoảng thời gian: " + m.TuNgay.ToString("dd/MM/yyyy") + " - " + m.DenNgay.ToString("dd/MM/yyyy"));
             sb.AppendLine("Thời gian xuất: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
-            sb.AppendLine("Kỳ thống kê: " + (period == "7days" ? "7 ngày qua" : (period == "year" ? "Năm nay" : "Tháng này")));
             sb.AppendLine();
-            sb.AppendLine("Tên Chương Trình,Mã Coupon,Mức Ưu Đãi (%),Số Lượt Dùng,Tổng Chiết Khấu (VNĐ),Doanh Thu Ròng (VNĐ),Tỷ Lệ Chuyển Đổi (%),Trạng Thái");
-
-            foreach (var r in model.ReportRows)
+            sb.AppendLine("Chương trình,Mã coupon,Chiến dịch,Ưu đãi,Trạng thái,Lượt dùng,Doanh thu trước giảm (VNĐ),Tiền giảm (VNĐ),Doanh thu sau giảm (VNĐ)");
+            foreach (var r in m.Rows)
             {
-                sb.AppendLine(string.Format("\"{0}\",\"{1}\",{2},{3},{4},{5},{6}%,\"{7}\"",
-                    r.TenChienDich.Replace("\"", "\"\""),
-                    r.MaCode,
-                    r.MucGiam,
-                    r.SoLuotDung,
-                    r.TienGiamTru.ToString("F0"),
-                    r.DoanhThuRong.ToString("F0"),
-                    r.TyLeChuyenDoi.ToString("F1"),
-                    r.TrangThai
-                ));
+                sb.AppendLine(string.Join(",", Csv(r.TenKhuyenMai), Csv(r.MaCode), Csv(r.TenChienDich), Csv(r.MoTaUuDai), Csv(r.TrangThai),
+                    r.SoLuotDung, r.DoanhThuTruocGiam.ToString("F0"), r.TienGiam.ToString("F0"), r.DoanhThuSauGiam.ToString("F0")));
             }
-
             sb.AppendLine();
-            sb.AppendLine(string.Format("Tổng cộng,,,{0},{1},{2},{3}%,",
-                model.TotalUsed,
-                model.TotalDiscountGiven.ToString("F0"),
-                model.TotalDrivenRevenue.ToString("F0"),
-                model.AvgConversionRate.ToString("F1")
-            ));
+            sb.AppendLine(string.Join(",", "Tổng cộng", "", "", "", "", m.SoLuotDung,
+                m.DoanhThuTruocGiam.ToString("F0"), m.TienGiam.ToString("F0"), m.DoanhThuSauGiam.ToString("F0")));
 
-            byte[] buffer = Encoding.UTF8.GetBytes(sb.ToString());
-            string fileName = "BaoCaoMarketing_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".csv";
-            return File(buffer, "text/csv; charset=utf-8", fileName);
+            string fileName = "BaoCaoMarketing_" + m.TuNgay.ToString("yyyyMMdd") + "_" + m.DenNgay.ToString("yyyyMMdd") + ".csv";
+            return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv; charset=utf-8", fileName);
         }
 
-        private CampaignReportViewModel BuildReportModel(string campaignId, string period)
+        private static string Csv(string s)
         {
-            var model = new CampaignReportViewModel
+            return "\"" + (s ?? "").Replace("\"", "\"\"") + "\"";
+        }
+
+        private MarketingReportViewModel LapBaoCao(string tuNgay, string denNgay, string khuyenMai, string chienDich)
+        {
+            var today = DateTime.Today;
+            var model = new MarketingReportViewModel
             {
-                SelectedCampaignId = campaignId ?? "all",
-                Period = period ?? "month"
+                TuNgay = DocNgay(tuNgay) ?? new DateTime(today.Year, today.Month, 1),
+                DenNgay = DocNgay(denNgay) ?? today,
+                MaKhuyenMai = string.IsNullOrEmpty(khuyenMai) ? null : khuyenMai,
+                MaChienDich = string.IsNullOrEmpty(chienDich) ? null : chienDich
             };
-
-            DateTime now = DateTime.Now;
-            DateTime startDate;
-
-            switch (period?.ToLower())
+            if (model.DenNgay < model.TuNgay)
             {
-                case "7days":
-                    startDate = now.AddDays(-7);
-                    break;
-                case "year":
-                    startDate = new DateTime(now.Year, 1, 1);
-                    break;
-                case "month":
-                default:
-                    startDate = now.AddMonths(-1);
-                    break;
+                model.ThongBaoLoi = "Ngày bắt đầu không được lớn hơn ngày kết thúc.";
+                return model;
             }
 
-            var campaigns = db.KhuyenMai.Include("MaGiamGia").ToList();
-            if (!string.IsNullOrEmpty(campaignId) && campaignId != "all")
+            var promotions = new PromotionService(db);
+            var now = DateTime.Now;
+            var chuongTrinh = promotions.LayDanhSach(tuNgay: model.TuNgay, denNgay: model.DenNgay, maChienDich: model.MaChienDich);
+            if (model.MaKhuyenMai != null) chuongTrinh = chuongTrinh.Where(p => p.MaKhuyenMai == model.MaKhuyenMai).ToList();
+
+            // Lượt dùng trong khoảng ngày (trọn ngày kết thúc), chỉ đơn đã thanh toán
+            var thamSo = new List<SqlParameter>
             {
-                campaigns = campaigns.Where(c => 
-                    c.maKhuyenMai == campaignId || 
-                    c.MaGiamGia.Any(m => m.maCode.Equals(campaignId, StringComparison.OrdinalIgnoreCase))
-                ).ToList();
+                new SqlParameter("@tu", model.TuNgay),
+                new SqlParameter("@denSau", model.DenNgay.AddDays(1))
+            };
+            string loc = "";
+            if (model.MaKhuyenMai != null) { loc += " AND s.maKhuyenMai = @km"; thamSo.Add(new SqlParameter("@km", model.MaKhuyenMai)); }
+            if (model.MaChienDich != null) { loc += " AND km.maChienDich = @cd"; thamSo.Add(new SqlParameter("@cd", model.MaChienDich)); }
+            var luot = db.Database.SqlQuery<MarketingUsageRow>(@"
+                SELECT s.maKhuyenMai AS MaKhuyenMai, s.ngaySuDung AS NgaySuDung, s.tienGiam AS TienGiam, d.tongTien AS TongDonHang
+                FROM dbo.SuDungUuDai s
+                INNER JOIN dbo.DonHang d ON d.maDonHang = s.maDonHang AND d.trangThai = N'Đã thanh toán'
+                INNER JOIN dbo.KhuyenMai km ON km.maKhuyenMai = s.maKhuyenMai
+                WHERE s.ngaySuDung >= @tu AND s.ngaySuDung < @denSau" + loc, thamSo.ToArray()).ToList();
+
+            // Chương trình có lượt dùng trong kỳ nhưng thời gian áp dụng nằm ngoài khoảng lọc vẫn phải có trong bảng
+            foreach (var ma in luot.Select(l => l.MaKhuyenMai).Distinct().Where(ma => chuongTrinh.All(p => p.MaKhuyenMai != ma)))
+            {
+                var p = promotions.LayTheoMa(ma);
+                if (p != null) chuongTrinh.Add(p);
             }
 
-            var allOrders = db.DonHang.ToList();
-            var periodOrders = allOrders
-                .Where(d => (!d.ngayDat.HasValue || d.ngayDat.Value >= startDate) && !string.IsNullOrEmpty(d.maGiamGia))
-                .ToList();
-
-            foreach (var c in campaigns)
+            var theoChuongTrinh = luot.GroupBy(l => l.MaKhuyenMai).ToDictionary(g => g.Key, g => g.ToList());
+            foreach (var p in chuongTrinh)
             {
-                var mgg = c.MaGiamGia.FirstOrDefault();
-                string code = mgg != null ? mgg.maCode : c.maKhuyenMai;
-
-                var matchedOrders = periodOrders.Where(d => 
-                    (mgg != null && (d.maGiamGia == mgg.maGiamGia1 || d.maGiamGia == mgg.maCode)) ||
-                    d.maGiamGia == c.maKhuyenMai
-                ).ToList();
-
-                int usedCount = matchedOrders.Count;
-                decimal drivenRevenue = matchedOrders.Sum(d => d.tongTien);
-
-                // Ước tính số tiền chiết khấu giảm giá
-                decimal discountGiven = 0;
-                if (c.mucUuDai > 0 && c.mucUuDai < 100)
+                List<MarketingUsageRow> ds;
+                theoChuongTrinh.TryGetValue(p.MaKhuyenMai, out ds);
+                ds = ds ?? new List<MarketingUsageRow>();
+                model.Rows.Add(new MarketingReportRow
                 {
-                    discountGiven = drivenRevenue * (decimal)(c.mucUuDai / (100.0 - c.mucUuDai));
-                }
-                else if (mgg != null && mgg.giaTriGiam > 0)
-                {
-                    discountGiven = usedCount * mgg.giaTriGiam;
-                }
-
-                // Trạng thái
-                string statusText = "Đang chạy";
-                if (c.ngayKetThuc < now) statusText = "Đã kết thúc";
-                else if (mgg != null && mgg.trangThai == false) statusText = "Tạm ngưng";
-                else if (c.ngayBatDau > now) statusText = "Chưa bắt đầu";
-
-                // Tỷ lệ chuyển đổi (60% - 85% tiêu chuẩn theo lượt áp dụng / hoàn tất)
-                double convRate = 65.0 + (usedCount % 20);
-                if (convRate > 92.0) convRate = 88.5;
-
-                model.ReportRows.Add(new CampaignReportRowItem
-                {
-                    TenChienDich = c.tenKhuyenMai,
-                    MaCode = code,
-                    MucGiam = c.mucUuDai,
-                    SoLuotDung = usedCount,
-                    TienGiamTru = discountGiven,
-                    DoanhThuRong = drivenRevenue,
-                    TyLeChuyenDoi = convRate,
-                    TrangThai = statusText
+                    MaKhuyenMai = p.MaKhuyenMai,
+                    TenKhuyenMai = p.TenKhuyenMai,
+                    MaCode = p.MaCode,
+                    TenChienDich = p.TenChienDich,
+                    MoTaUuDai = p.MoTaUuDai,
+                    TrangThai = p.TrangThaiHienThi(now),
+                    SoLuotDung = ds.Count,
+                    TienGiam = ds.Sum(l => l.TienGiam),
+                    DoanhThuSauGiam = ds.Sum(l => l.TongDonHang),
+                    DoanhThuTruocGiam = ds.Sum(l => l.TongDonHang + l.TienGiam)
                 });
             }
+            model.Rows = model.Rows.OrderByDescending(r => r.SoLuotDung).ThenBy(r => r.TenKhuyenMai).ToList();
 
-            model.TotalUsed = model.ReportRows.Sum(r => r.SoLuotDung);
-            model.TotalDiscountGiven = model.ReportRows.Sum(r => r.TienGiamTru);
-            model.TotalDrivenRevenue = model.ReportRows.Sum(r => r.DoanhThuRong);
-            model.AvgConversionRate = model.ReportRows.Any() ? model.ReportRows.Average(r => r.TyLeChuyenDoi) : 68.4;
+            model.SoChuongTrinh = model.Rows.Count;
+            model.SoLuotDung = luot.Count;
+            model.SoDonHang = luot.Count; // mỗi đơn chỉ áp dụng một ưu đãi
+            model.TienGiam = luot.Sum(l => l.TienGiam);
+            model.DoanhThuSauGiam = luot.Sum(l => l.TongDonHang);
+            model.DoanhThuTruocGiam = model.DoanhThuSauGiam + model.TienGiam;
 
-            // Xây dựng dữ liệu biểu đồ xu hướng theo ngày/thời điểm
-            if (period == "7days")
+            // Biểu đồ lượt dùng: theo ngày, hoặc theo tháng khi khoảng dài
+            model.ChartTheoThang = (model.DenNgay - model.TuNgay).TotalDays > 62;
+            if (model.ChartTheoThang)
             {
-                for (int i = 6; i >= 0; i--)
+                for (var t = new DateTime(model.TuNgay.Year, model.TuNgay.Month, 1); t <= model.DenNgay; t = t.AddMonths(1))
                 {
-                    var dt = now.AddDays(-i);
-                    model.ChartLabels.Add(dt.ToString("dd/MM"));
-                    int cnt = periodOrders.Count(d => d.ngayDat.HasValue && d.ngayDat.Value.Date == dt.Date);
-                    model.ChartData.Add(cnt > 0 ? cnt : (10 + (i * 3)));
+                    model.ChartLabels.Add(t.ToString("MM/yyyy"));
+                    model.ChartData.Add(luot.Count(l => l.NgaySuDung.Year == t.Year && l.NgaySuDung.Month == t.Month));
                 }
             }
             else
             {
-                // Mốc 10 điểm trong tháng
-                string[] dayMarks = new string[] { "Ngày 1", "Ngày 3", "Ngày 6", "Ngày 9", "Ngày 12", "Ngày 15", "Ngày 18", "Ngày 21", "Ngày 24", "Ngày 27", "Ngày 30" };
-                model.ChartLabels.AddRange(dayMarks);
-                int[] demoData = new int[] { 420, 580, 510, 690, 850, 780, 920, 1100, 1050, 1280, 1420 };
-                
-                // Nếu có orders thật, lấy phân bổ thật
-                if (model.TotalUsed > 0)
+                for (var d = model.TuNgay; d <= model.DenNgay; d = d.AddDays(1))
                 {
-                    var chunked = new List<int>();
-                    int step = Math.Max(1, model.TotalUsed / 11);
-                    for (int i = 0; i < 11; i++)
-                    {
-                        chunked.Add(Math.Min(model.TotalUsed, (i + 1) * step));
-                    }
-                    model.ChartData = chunked;
-                }
-                else
-                {
-                    model.ChartData = demoData.ToList();
+                    model.ChartLabels.Add(d.ToString("dd/MM"));
+                    model.ChartData.Add(luot.Count(l => l.NgaySuDung.Date == d));
                 }
             }
-
             return model;
         }
     }

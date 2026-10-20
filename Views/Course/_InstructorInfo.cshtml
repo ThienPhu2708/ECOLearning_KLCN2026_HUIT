@@ -1,0 +1,67 @@
+@model ECOLearning.ViewModels.GiangVienKhoaHocViewModel
+@* Mục "Giảng viên" ở trang chi tiết khóa học: số liệu tính từ CSDL (Services/InstructorProfileService.cs, cùng cách tính với trang /User).
+   Chuyên môn / tiểu sử chỉ hiện khi giáo viên đã khai (DangKyGiaoVien), không điền câu mặc định.
+   "Các khóa học khác của …" ẩn khi giáo viên chỉ có một khóa đang bán. *@
+@{
+    var gv = Model.HoSo;
+    string hoSoUrl = Url.Action("Index", "User", new { id = gv.MaNguoiDung });
+    string anh = gv.AnhDaiDien;
+    bool coAnh = !string.IsNullOrEmpty(anh) && !anh.Contains("avatar_default");
+    string anhSrc = !coAnh ? null : (anh.StartsWith("http") || anh.StartsWith("/") ? anh : Url.Content("~/" + anh));
+    var tenTach = (gv.HoTen ?? "GV").Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+    string chuCai = tenTach.Length > 0 ? tenTach[tenTach.Length - 1].Substring(0, 1).ToUpper() : "G";
+}
+<section class="gv-section" aria-labelledby="gv-title">
+    <h2 id="gv-title" class="gv-heading">Giáo viên</h2>
+    <a class="gv-name" href="@hoSoUrl" target="_blank" rel="noopener">@gv.HoTen</a>
+    @if (!string.IsNullOrWhiteSpace(gv.ChuyenMon))
+    {
+        <div class="gv-job">@gv.ChuyenMon</div>
+    }
+    <div class="gv-profile">
+        @if (anhSrc != null)
+        {
+            <img class="gv-avatar" src="@anhSrc" alt="@gv.HoTen" loading="lazy" />
+        }
+        else
+        {
+            <div class="gv-avatar gv-avatar-text" aria-hidden="true">@chuCai</div>
+        }
+        <ul class="gv-stats">
+            <li><i class="bi bi-star-fill"></i> @(gv.TongLuotDanhGia > 0 ? gv.DiemDanhGiaTrungBinh.ToString("0.0") + " xếp hạng giảng viên" : "Chưa có xếp hạng")</li>
+            <li><i class="bi bi-award"></i> @gv.TongLuotDanhGia.ToString("N0") đánh giá</li>
+            <li><i class="bi bi-people"></i> @gv.TongSoHocVien.ToString("N0") học viên</li>
+            <li><i class="bi bi-play-circle"></i> @gv.TongSoKhoaHoc.ToString("N0") khóa học</li>
+        </ul>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(gv.KinhNghiem))
+    {
+        <div class="gv-bio" id="gv-bio">@gv.KinhNghiem</div>
+        <button type="button" class="gv-more" aria-controls="gv-bio" aria-expanded="false" hidden>
+            <span>Hiện thêm</span> <i class="bi bi-chevron-down"></i>
+        </button>
+    }
+</section>
+
+@if (Model.KhoaKhac.Count > 0)
+{
+    <section class="gv-courses" aria-labelledby="gv-courses-title">
+        <h2 id="gv-courses-title" class="gv-heading">Các khóa học khác của <a href="@hoSoUrl" target="_blank" rel="noopener">@gv.HoTen</a></h2>
+        <div class="gv-course-grid">
+            @foreach (var k in Model.KhoaKhac.Take(ECOLearning.ViewModels.GiangVienKhoaHocViewModel.SoKhoaKhacHienThi))
+            {
+                @Html.Partial("_CourseCard", new ECOLearning.ViewModels.CourseCardViewModel
+                {
+                    Course = k.Course,
+                    SoHocVien = k.SoHocVien,
+                    SoDanhGia = k.SoDanhGia,
+                    DiemDanhGia = k.DiemDanhGia
+                })
+            }
+        </div>
+        @if (Model.KhoaKhac.Count > ECOLearning.ViewModels.GiangVienKhoaHocViewModel.SoKhoaKhacHienThi)
+        {
+            <a class="gv-all" href="@Url.Action("Courses", "User", new { id = gv.MaNguoiDung })">Xem tất cả @Model.KhoaKhac.Count khóa học khác <i class="bi bi-arrow-right"></i></a>
+        }
+    </section>
+}

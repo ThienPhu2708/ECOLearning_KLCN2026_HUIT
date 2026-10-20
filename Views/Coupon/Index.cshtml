@@ -1,0 +1,106 @@
+@model ECOLearning.ViewModels.ViMaGiamGiaViewModel
+@{
+    ViewBag.Title = "Mã giảm giá của tôi";
+    string linkDung = Model.GioHangCoKhoaHoc ? Url.Action("Index", "Cart") : Url.Action("Index", "Course");
+    var tabs = new[]
+    {
+        new { Key = "codung", Ten = "Có thể dùng", So = Model.CoTheDung.Count },
+        new { Key = "dadung", Ten = "Đã dùng", So = Model.DaDung.Count },
+        new { Key = "hethan", Ten = "Hết hiệu lực", So = Model.HetHieuLuc.Count },
+        new { Key = "thuthap", Ten = "Thu thập thêm", So = Model.CoTheThuThap.Count }
+    };
+}
+
+<main class="cpn-page">
+    <div class="safe-container">
+        <div class="cpn-page-head">
+            <div>
+                <h1>Mã giảm giá của tôi</h1>
+                <p>Mã đã lưu dùng được ở bước thanh toán: mở mục <strong>Mã khuyến mãi</strong> trong giỏ hàng và chọn Áp dụng. Mã đã lưu không thể xóa.</p>
+            </div>
+        </div>
+
+        <nav class="cpn-tabs" aria-label="Lọc mã giảm giá">
+            @foreach (var t in tabs)
+            {
+                <a class="cpn-tab @(Model.Tab == t.Key ? "is-active" : "")" href="@Url.Action("Index", "Coupon", new { tab = t.Key })" @(Model.Tab == t.Key ? "aria-current=page" : "")>
+                    @t.Ten<span class="cpn-tab-count">@t.So</span>
+                </a>
+            }
+        </nav>
+
+        @if (Model.Tab == "thuthap")
+        {
+            if (Model.CoTheThuThap.Count == 0)
+            {
+                <div class="cpn-empty"><i class="bi bi-ticket-perforated"></i>Hiện chưa có mã khuyến mãi mới. Bạn đã lưu hết các mã đang có.</div>
+            }
+            else
+            {
+                <div class="cpn-grid">
+                    @foreach (var m in Model.CoTheThuThap)
+                    {
+                        @Html.Partial("_CouponTicket", new ECOLearning.ViewModels.TheMaGiamGiaModel { Ma = m })
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            var ds = Model.Tab == "dadung" ? Model.DaDung : Model.Tab == "hethan" ? Model.HetHieuLuc : Model.CoTheDung;
+            if (ds.Count == 0)
+            {
+                <div class="cpn-empty">
+                    <i class="bi bi-ticket-perforated"></i>
+                    @if (Model.Tab == "codung")
+                    {
+                        <span>Bạn chưa có mã nào dùng được.</span>
+                        if (Model.CoTheThuThap.Count > 0)
+                        {
+                            <span> <a href="@Url.Action("Index", "Coupon", new { tab = "thuthap" })">Thu thập @Model.CoTheThuThap.Count mã đang có</a></span>
+                        }
+                    }
+                    else if (Model.Tab == "dadung")
+                    {
+                        <span>Bạn chưa dùng mã nào.</span>
+                    }
+                    else
+                    {
+                        <span>Không có mã hết hiệu lực.</span>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="cpn-grid">
+                    @foreach (var v in ds)
+                    {
+                        string nhan = null;
+                        string dongPhu = null;
+                        if (v.TrangThai == "CoTheDung")
+                        {
+                            if (v.LuotCuaToi > 0) { dongPhu = "Đã dùng " + v.LuotCuaToi + "/" + v.GioiHanMoiHocVien + " lượt"; }
+                        }
+                        else if (v.TrangThai == "SapDienRa")
+                        {
+                            nhan = "Dùng được từ " + v.Ma.NgayBatDau.ToString("dd/MM/yyyy");
+                        }
+                        else
+                        {
+                            nhan = v.NhanTrangThai;
+                        }
+                        @Html.Partial("_CouponTicket", new ECOLearning.ViewModels.TheMaGiamGiaModel
+                        {
+                            Ma = v.Ma,
+                            NhanTrangThai = nhan,
+                            DongPhu = dongPhu,
+                            LamMo = v.TrangThai == "DaDung" || v.TrangThai == "HetHieuLuc",
+                            LinkDungNgay = v.TrangThai == "CoTheDung" ? linkDung : null,
+                            HienNutLuu = false
+                        })
+                    }
+                </div>
+            }
+        }
+    </div>
+</main>

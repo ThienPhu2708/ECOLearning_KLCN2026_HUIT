@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
     <head>
         <meta charset="UTF-8">
@@ -6,13 +6,16 @@
         <title>@ViewBag.Title | E-Learning Giáo Viên</title>
         <link rel="stylesheet" href="~/assets/css/variables.css">
         <link rel="stylesheet" href="~/assets/css/base.css">
-        <link rel="stylesheet" href="~/assets/css/components.css">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+        <link rel="stylesheet" href="~/assets/css/components.css?v=2">
+        <link rel="stylesheet" href="~/assets/css/dashboard-tables.css?v=4">
+        <link rel="stylesheet" href="~/assets/vendor/bootstrap-icons/bootstrap-icons.min.css" />
+    <style>.dashboard-topbar { height: var(--header-height); padding: 0 32px; margin-bottom: 0; }</style>
     </head>
     <body>
+        <button type="button" id="teacher-menu-backdrop" aria-label="Đóng menu điều hướng" hidden onclick="toggleTeacherMenu(false)"></button>
         <div class="dashboard-layout">
             <!-- SIDEBAR -->
-            <aside class="dashboard-sidebar">
+            <aside class="dashboard-sidebar" id="teacher-sidebar">
                 <div class="sidebar-logo">
                     <a href="@Url.Action("Index", "Dashboard", new { area = "Instructor" })" class="brand-logo">
                         <div class="logo-icon" style="width: 34px; height: 34px; background: #0D9488;">
@@ -27,6 +30,8 @@
 
                 @{
                 string currentCtrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Dashboard";
+                string currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "Index";
+                bool quizResults = currentCtrl == "Quiz" && (currentAction == "Results" || currentAction == "History" || currentAction == "Review");
             }
 
             <nav class="sidebar-menu">
@@ -39,13 +44,13 @@
                     </svg>
                     Dashboard tổng quan
                 </a>
-                <a href="@Url.Action("Index", "Course", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Course" ? "active" : "")">
+                <a href="@Url.Action("Index", "Course", new { area = "Instructor" })" class="sidebar-item @((currentCtrl == "Course" || currentCtrl == "Curriculum") ? "active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                     </svg>
                     Quản lý khóa học
                 </a>
-                <a href="@Url.Action("Index", "Curriculum", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Curriculum" ? "active" : "")">
+                <a href="@Url.Action("Index", "Resource", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Resource" ? "active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
@@ -54,7 +59,8 @@
                     </svg>
                     Thư viện tài nguyên
                 </a>
-                <a href="@Url.Action("Index", "Student", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Student" ? "active" : "")">
+                <a href="@Url.Action("Index", "Quiz", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Quiz" && !quizResults ? "active" : "")"><i class="bi bi-question-circle" aria-hidden="true"></i> Ngân hàng câu hỏi &amp; Quiz</a>
+                <a href="@Url.Action("Index", "Student", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Student" || quizResults ? "active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                         <circle cx="9" cy="7" r="4"></circle>
@@ -81,28 +87,49 @@
             </nav>
 
             <div class="sidebar-footer">
+                <a href="@Url.Action("Index", "Home", new { area = "" })" class="btn btn-outline btn-sm" style="width: 100%; margin-bottom: 10px;">Quay lại trang web</a>
                 <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; cursor: pointer;" onclick="confirmInstructorLogout()">Đăng xuất</button>
             </div>
         </aside>
 
         <!-- MAIN -->
-        <main class="dashboard-main">
+        <main class="dashboard-main" style="padding: 0;">
             <!-- TOP NAVIGATION BAR -->
             <header class="dashboard-topbar">
+                <button type="button" id="teacher-menu-toggle" class="btn btn-outline btn-sm" aria-label="Mở menu điều hướng" aria-controls="teacher-sidebar" aria-expanded="false" onclick="toggleTeacherMenu(true)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
                 <nav class="breadcrumb-nav">
                     <a href="@Url.Action("Index", "Dashboard", new { area = "Instructor" })">Giáo viên</a>
+                    @if (ViewBag.ShowCourseBreadcrumb == true || string.Equals(ViewContext.RouteData.Values["controller"] as string, "Curriculum", StringComparison.OrdinalIgnoreCase) || (string.Equals(ViewContext.RouteData.Values["controller"] as string, "Course", StringComparison.OrdinalIgnoreCase) && (string.Equals(ViewContext.RouteData.Values["action"] as string, "Create", StringComparison.OrdinalIgnoreCase) || string.Equals(ViewContext.RouteData.Values["action"] as string, "Edit", StringComparison.OrdinalIgnoreCase))))
+                    {
+                        <span class="separator">/</span>
+                        <a href="@Url.Action("Index", "Course", new { area = "Instructor" })">Quản lí khóa học</a>
+                    }
+                    @if (ViewBag.BreadcrumbCourseName != null && ViewBag.BreadcrumbCourseId != null)
+                    {
+                        <span class="separator">/</span>
+                        <a href="@Url.Action("Details", "Course", new { area = "Instructor", id = (string)ViewBag.BreadcrumbCourseId })">@ViewBag.BreadcrumbCourseName</a>
+                    }
+                    @if (ViewBag.ShowQuestionBankBreadcrumb == true)
+                    {
+                        <span class="separator">/</span>
+                        <a href="@Url.Action("Index", "Quiz", new { area = "Instructor", courseId = ViewBag.QuestionBankCourseId })">Ngân hàng câu hỏi</a>
+                    }
+                    @if (ViewBag.ShowStudentBreadcrumb == true)
+                    {
+                        <span class="separator">/</span>
+                        <a href="@Url.Action("Index", "Student", new { area = "Instructor", courseId = ViewBag.CourseId })">Quản lý học viên</a>
+                    }
                     @if (ViewBag.BreadcrumbCurrent != null)
                     {
                         <span class="separator">/</span>
                         <span class="current">@ViewBag.BreadcrumbCurrent</span>
                     }
                 </nav>
-                <div class="topbar-actions">
-                    <a href="@Url.Action("Index", "Home", new { area = "" })" class="btn btn-outline btn-sm">Về Trang chủ</a>
-                </div>
             </header>
 
-            @RenderBody()
+            <div style="padding: 32px;">
+                @RenderBody()
+            </div>
         </main>
     </div>
 
@@ -131,6 +158,7 @@
     <script src="~/Scripts/jquery-3.7.0.min.js"></script>
     <script src="~/assets/js/charts.js"></script>
     <script src="~/assets/js/app.js"></script>
+    <script src="~/assets/js/table-pagination.js?v=1"></script>
     <script>
         function confirmInstructorLogout() {
         const modal = document.getElementById('instructor-logout-modal');
@@ -146,9 +174,7 @@
 }
 else
 {
-    if (confirm('Bạn có chắc chắn muốn đăng xuất khỏi phiên làm việc Giảng viên không?')) {
-    window.location.href = '@Url.Action("Logout", "Account", new { area = "" })';
-}
+    instructorDialog('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất?', function() { window.location.href = '@Url.Action("Logout", "Account", new { area = "" })'; });
 }
 }
 
@@ -166,6 +192,127 @@ else
 }
 }
 </script>
+<dialog id="instructor-action-dialog" aria-labelledby="instructor-action-title">
+    <div style="padding:24px;">
+        <h3 class="h3" id="instructor-action-title" style="margin:0 0 12px;"></h3>
+        <p id="instructor-action-message" style="font-size:14px;line-height:1.6;color:var(--text-secondary);margin:0;"></p>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:24px;">
+            <button type="button" id="instructor-action-cancel" class="btn btn-secondary" onclick="document.getElementById('instructor-action-dialog').close()">Hủy</button>
+            <button type="button" id="instructor-action-accept" class="btn btn-primary">Xác nhận</button>
+        </div>
+    </div>
+</dialog>
+<style>
+#instructor-action-dialog { position:fixed;inset:0;margin:auto;padding:0;width:440px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow:auto;border:1px solid var(--border-color);border-radius:18px;background:var(--bg-surface);box-shadow:0 24px 64px rgba(15,23,42,.2); }
+#instructor-action-dialog::backdrop { background:rgba(15,23,42,.45); }
+</style>
+<script>
+function instructorDialog(title, message, action) {
+    var dialog = document.getElementById('instructor-action-dialog');
+    document.getElementById('instructor-action-title').textContent = title;
+    document.getElementById('instructor-action-message').textContent = message;
+    document.getElementById('instructor-action-cancel').hidden = !action;
+    var accept = document.getElementById('instructor-action-accept');
+    accept.textContent = action ? 'Xác nhận' : 'Đóng';
+    accept.onclick = function() { dialog.close(); if (action) action(); };
+    dialog.showModal();
+}
+function instructorNotice(message) { instructorDialog('Thông báo', message); }
+function instructorConfirmSubmit(button, message) {
+    var form = button.form;
+    if (!form) return false;
+    instructorDialog('Xác nhận thao tác', message, function() { form.requestSubmit(button); });
+    return false;
+}
+</script>
+
+<style>
+.teacher-select { position:relative;display:inline-block;vertical-align:middle;min-width:0; }
+.teacher-select > select { position:absolute !important;inset:0;width:100% !important;height:100%;opacity:0;pointer-events:none; }
+.teacher-select-button { width:100%;min-height:38px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 16px;background:#fff;border:1px solid var(--border-color);border-radius:12px;color:var(--text-heading);font:inherit;font-size:14px;text-align:left;cursor:pointer; }
+.teacher-select-button span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.teacher-select-button:focus-visible,.teacher-select-button[aria-expanded="true"] { outline:2px solid #c7c9ff;outline-offset:2px;border-color:var(--primary); }
+.teacher-select-button:disabled { opacity:.55;cursor:default; }
+.teacher-select-menu { position:fixed;z-index:10000;padding:6px;background:#fff;border:1px solid var(--border-color);border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,.12);max-height:280px;overflow:auto; }
+.teacher-select-option { display:block;width:100%;border:0;border-radius:7px;padding:11px 10px;background:transparent;color:var(--text-heading);font:inherit;font-size:13px;text-align:left;cursor:pointer; }
+.teacher-select-option:hover,.teacher-select-option:focus-visible { background:#f3f4fc;outline:none; }
+.teacher-select-option[aria-selected="true"] { background:#eef0ff;color:var(--primary);font-weight:600; }
+.teacher-select-option:disabled { opacity:.45;cursor:default; }
+</style>
+<script>
+(function() {
+    var opened = null;
+    function closeMenu() { if (opened) { opened.menu.remove(); opened.button.setAttribute('aria-expanded', 'false'); opened = null; } }
+    function enhance(select) {
+        if (select.multiple || select.size > 1 || select.dataset.teacherSelect) return;
+        select.dataset.teacherSelect = 'true';
+        var wrapper = document.createElement('span'); wrapper.className = 'teacher-select';
+        wrapper.style.width = select.style.width || '100%'; wrapper.style.maxWidth = select.style.maxWidth || '';
+        select.parentNode.insertBefore(wrapper, select); wrapper.appendChild(select);
+        var button = document.createElement('button'); button.type = 'button'; button.className = 'teacher-select-button';
+        button.setAttribute('aria-haspopup', 'listbox'); button.setAttribute('aria-expanded', 'false');
+        button.innerHTML = '<span></span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+        wrapper.appendChild(button);
+        function sync() { button.firstChild.textContent = select.selectedIndex >= 0 ? select.options[select.selectedIndex].text : ''; button.disabled = select.disabled; button.setAttribute('aria-label', select.getAttribute('aria-label') || button.firstChild.textContent); }
+        select.addEventListener('change', sync); select.addEventListener('focus', function() { button.focus(); });
+        new MutationObserver(sync).observe(select, {childList:true,subtree:true,attributes:true});
+        button.addEventListener('click', function() {
+            var wasOpen = opened && opened.button === button; closeMenu(); if (wasOpen) return;
+            var menu = document.createElement('div'); menu.className = 'teacher-select-menu'; menu.setAttribute('role', 'listbox');
+            Array.from(select.options).forEach(function(option, index) {
+                var item = document.createElement('button'); item.type = 'button'; item.className = 'teacher-select-option'; item.textContent = option.text; item.disabled = option.disabled; item.setAttribute('role', 'option'); item.setAttribute('aria-selected', index === select.selectedIndex ? 'true' : 'false');
+                item.addEventListener('click', function() { select.selectedIndex = index; sync(); closeMenu(); button.focus(); select.dispatchEvent(new Event('change', {bubbles:true})); }); menu.appendChild(item);
+            });
+            (select.closest('dialog') || document.body).appendChild(menu);
+            var rect = button.getBoundingClientRect(); menu.style.width = rect.width + 'px'; menu.style.left = Math.min(rect.left, window.innerWidth - rect.width - 8) + 'px';
+            menu.style.top = (rect.bottom + 5) + 'px';
+            if (rect.bottom + 5 + menu.offsetHeight > window.innerHeight) menu.style.top = Math.max(8, rect.top - menu.offsetHeight - 5) + 'px';
+            button.setAttribute('aria-expanded', 'true'); opened = {button:button,menu:menu};
+            var active = menu.querySelector('[aria-selected="true"]') || menu.querySelector('button:not(:disabled)'); if (active) active.focus();
+            menu.addEventListener('keydown', function(event) {
+                var items = Array.from(menu.querySelectorAll('button:not(:disabled)')), index = items.indexOf(document.activeElement);
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); items[(index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus(); }
+                if (event.key === 'Escape') { event.preventDefault(); closeMenu(); button.focus(); }
+                if (event.key === 'Tab') closeMenu();
+            });
+        }); sync();
+    }
+    function scan() { document.querySelectorAll('select:not([data-teacher-select])').forEach(enhance); }
+    document.addEventListener('click', function(event) { if (opened && !opened.menu.contains(event.target) && !opened.button.contains(event.target)) closeMenu(); });
+    window.addEventListener('resize', closeMenu); document.addEventListener('scroll', function(event) { if (opened && !opened.menu.contains(event.target)) closeMenu(); }, true);
+    document.addEventListener('reset', function() { setTimeout(function() { document.querySelectorAll('.teacher-select select').forEach(function(select) { select.dispatchEvent(new Event('change')); }); }, 0); });
+    scan(); new MutationObserver(scan).observe(document.body, {childList:true,subtree:true});
+})();
+</script>
+
+<style>
+#teacher-menu-toggle { display:none; }
+#teacher-menu-backdrop { position:fixed;inset:0;border:0;background:rgba(15,23,42,.4);z-index:100; }
+#teacher-menu-backdrop[hidden] { display:none; }
+@@media(max-width:992px) {
+    #teacher-menu-toggle { display:inline-flex;flex-shrink:0;width:40px;height:40px;padding:0; }
+    .dashboard-topbar { gap:14px;padding:0 20px;justify-content:flex-start; }
+    .breadcrumb-nav { min-width:0;flex-wrap:wrap; }
+    #teacher-sidebar { z-index:101;max-width:calc(100vw - 56px); }
+    #teacher-sidebar .sidebar-menu { overflow-y:auto;min-height:0; }
+}
+</style>
+<script>
+var teacherMenuPreviousFocus;
+function toggleTeacherMenu(open) {
+    var sidebar = document.getElementById('teacher-sidebar');
+    sidebar.classList.toggle('active', open);
+    document.getElementById('teacher-menu-backdrop').hidden = !open;
+    document.getElementById('teacher-menu-toggle').setAttribute('aria-expanded', String(open));
+    document.body.style.overflow = open ? 'hidden' : '';
+    if (open) { teacherMenuPreviousFocus = document.activeElement; sidebar.querySelector('a').focus(); }
+    else if (teacherMenuPreviousFocus) { teacherMenuPreviousFocus.focus(); teacherMenuPreviousFocus = null; }
+}
+document.addEventListener('keydown', function(event) { if (event.key === 'Escape' && document.getElementById('teacher-sidebar').classList.contains('active')) toggleTeacherMenu(false); });
+window.addEventListener('resize', function() { if (window.innerWidth > 992 && document.getElementById('teacher-sidebar').classList.contains('active')) toggleTeacherMenu(false); });
+</script>
 @RenderSection("Scripts", required: false)
 </body>
 </html>
+
+

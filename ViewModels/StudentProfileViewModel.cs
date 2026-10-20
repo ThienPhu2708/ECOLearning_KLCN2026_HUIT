@@ -47,5 +47,32 @@ namespace ECOLearning.ViewModels
         [Display(Name = "Xác nhận mật khẩu mới")]
         [Compare("NewPassword", ErrorMessage = "Xác nhận mật khẩu mới không khớp")]
         public string ConfirmPassword { get; set; }
+
+        // Thông tin hồ sơ giáo viên (dành riêng cho vai trò GiaoVien)
+        public bool IsTeacher { get; set; }
+        public string ApplicationId { get; set; }
+
+        [Display(Name = "Chuyên môn giảng dạy")]
+        public string Specialization { get; set; }
+
+        [Display(Name = "Kinh nghiệm & Giới thiệu")]
+        public string BioExperience { get; set; }
+
+        [Display(Name = "Ngân hàng")]
+        public string BankName { get; set; }
+
+        [Display(Name = "Số tài khoản")]
+        public string AccountNumber { get; set; }
+
+        [Display(Name = "Tên chủ tài khoản")]
+        public string AccountName { get; set; }
+
+        [Display(Name = "Tệp chứng chỉ")]
+        public string CertificateFilePath { get; set; }
+
+        [Display(Name = "Tên tệp chứng chỉ")]
+        public string CertificateFileName { get; set; }
+
+        public string TeacherStatus { get; set; }
     }
 }

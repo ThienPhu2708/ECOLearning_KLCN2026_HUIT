@@ -1,0 +1,250 @@
+@model ECOLearning.ViewModels.RecommendationPageViewModel
+@{
+    ViewBag.Title = "Khóa học gợi ý cho bạn";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    bool hopLe = Model.DaKhoiTao && string.IsNullOrEmpty(Model.ThongBaoLoi);
+    var interestPicker = ViewBag.InterestPicker as ECOLearning.ViewModels.InterestPickerViewModel;
+    // Gợi ý từ khóa mồi của lĩnh vực quan tâm (chưa có lịch sử học)
+    bool theoSoThich = hopLe && Model.LinhVucQuanTam.Count > 0;
+    // Lọc cộng tác chưa có dữ liệu (học viên mới / khóa đã xem chưa có khóa tương tự): chỉ có khóa phổ biến
+    bool chiPhoBien = hopLe && !theoSoThich && Model.Items.Count > 0 && Model.SoGoiYLocCongTac == 0;
+    // Không còn khóa nào để gợi ý: đã sở hữu mọi khóa đang mở bán
+    bool khongConKhoa = hopLe && Model.Items.Count == 0;
+}
+
+@section styles {
+    <style>
+        .recommend-hero {
+            padding: 48px 0 32px;
+            background: #FFFFFF;
+            border-bottom: 1px solid var(--border-color, #E2E8F0);
+        }
+
+        .recommend-hero-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .recommend-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: var(--primary-light, #EEF2FF);
+            color: var(--primary, #434CE8);
+            border-radius: var(--radius-full, 9999px);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .recommend-stats {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 24px;
+        }
+
+        .recommend-stat {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: var(--bg-canvas, #F8FAFC);
+            border: 1px solid var(--border-color, #E2E8F0);
+            border-radius: var(--radius-xl, 10px);
+            font-size: 13px;
+            color: var(--text-secondary, #475569);
+        }
+
+        .recommend-stat i {
+            color: var(--primary, #434CE8);
+        }
+
+        .recommend-stat strong {
+            color: var(--text-heading, #0F172A);
+        }
+
+        .recommend-notice {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 14px 18px;
+            border-radius: var(--radius-xl, 12px);
+            margin-bottom: 28px;
+            font-size: 14px;
+            line-height: 1.55;
+        }
+
+        .recommend-notice.info {
+            background: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            color: #1E3A8A;
+        }
+
+        .recommend-notice.warning {
+            background: #FFFBEB;
+            border: 1px solid #FDE68A;
+            color: #92400E;
+        }
+
+        .recommend-notice i {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .recommend-empty {
+            text-align: center;
+            padding: 48px 24px;
+            background: #FFFFFF;
+            border: 1px dashed var(--border-color, #E2E8F0);
+            border-radius: var(--radius-2xl, 16px);
+            color: var(--text-secondary, #64748B);
+        }
+
+        #btnRefreshRecommend.is-loading {
+            pointer-events: none;
+            opacity: 0.75;
+        }
+
+        #btnRefreshRecommend.is-loading i {
+            display: inline-block;
+            animation: recommend-spin 0.8s linear infinite;
+        }
+
+        @@keyframes recommend-spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+}
+
+<section class="recommend-hero">
+    <div class="safe-container">
+        <div class="recommend-hero-top">
+            <div style="max-width: 720px;">
+                <h1 class="h2" style="margin-bottom: 10px;">Khóa học gợi ý cho bạn</h1>
+                <p class="body-2" style="color: var(--text-secondary); margin: 0;">
+                    Hệ thống tìm những khóa học dựa sự tương tác của bạn
+                </p>
+            </div>
+            <a id="btnRefreshRecommend" href="@Url.Action("Index", "Recommendation")" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="bi bi-arrow-repeat"></i> <span>Làm mới gợi ý</span>
+            </a>
+        </div>
+
+        @if (hopLe && Model.SoKhoaDaTuongTac > 0)
+        {
+            <div class="recommend-stats">
+                <span class="recommend-stat"><i class="bi bi-journal-check"></i> Dựa trên <strong>@Model.SoKhoaDaTuongTac</strong> khóa học bạn đã tương tác</span>
+                <span class="recommend-stat"><i class="bi bi-diagram-3"></i> <strong>@Model.SoGoiYLocCongTac</strong> khóa học được gợi ý</span>
+                <!-- <span class="recommend-stat"><i class="bi bi-clock-history"></i> Tính lúc <strong>@Model.TinhLuc.ToString("HH:mm dd/MM/yyyy")</strong></span>
+                @if (Model.MaTranCapNhatLuc.HasValue)
+                {
+                    <span class="recommend-stat"><i class="bi bi-grid-3x3-gap"></i> Ma trận tương đồng cập nhật <strong>@Model.MaTranCapNhatLuc.Value.ToString("HH:mm dd/MM/yyyy")</strong></span>
+                } -->
+            </div>
+        }
+    </div>
+</section>
+
+<section style="padding: 40px 0 64px; background: var(--bg-canvas, #F8FAFC);">
+    <div class="safe-container">
+        @if (!Model.DaKhoiTao)
+        {
+            <div class="recommend-notice warning">
+                <i class="bi bi-exclamation-triangle"></i>
+                <div>Chức năng gợi ý chưa được khởi tạo. Quản trị viên cần chạy <strong>Database/Migrations/005_GoiY_LocCongTac.sql</strong>
+                    và job <strong>Recommender/build_recommendations.py</strong>.</div>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(Model.ThongBaoLoi))
+        {
+            <div class="recommend-notice warning">
+                <i class="bi bi-exclamation-triangle"></i>
+                <div>@Model.ThongBaoLoi</div>
+            </div>
+        }
+        else if (theoSoThich)
+        {
+            <div class="recommend-notice info">
+                <i class="bi bi-info-circle"></i>
+                <div>Gợi ý dựa trên lĩnh vực bạn quan tâm: <strong>@string.Join(", ", Model.LinhVucQuanTam.Select(l => l.TenDanhMuc))</strong>.
+                    Khi bạn xem hoặc học thêm khóa học, gợi ý sẽ dựa trên lịch sử học của bạn.
+                    @if (interestPicker != null)
+                    {
+                        <a href="#" data-open-interest style="font-weight: 600; margin-left: 4px;">Đổi lĩnh vực</a>
+                    }
+                </div>
+            </div>
+        }
+        else if (chiPhoBien)
+        {
+            <div class="recommend-notice info">
+                <i class="bi bi-info-circle"></i>
+                <div>
+                    @(Model.SoKhoaDaTuongTac == 0
+                        ? "Bạn chưa có lịch sử học tập, hệ thống đang hiển thị các khóa học được nhiều học viên quan tâm."
+                        : "Các khóa học bạn đã xem chưa có khóa học tương tự, hệ thống đang hiển thị các khóa học được nhiều học viên quan tâm.")
+                    @if (interestPicker != null)
+                    {
+                        <a href="#" data-open-interest style="font-weight: 600; margin-left: 4px;">Chọn lĩnh vực quan tâm</a>
+                    }
+                </div>
+            </div>
+        }
+        else if (Model.Items.Count > 0 && Model.SoGoiYLocCongTac < Model.Items.Count)
+        {
+            <div class="recommend-notice info">
+                <i class="bi bi-info-circle"></i>
+                <div>Hiện có <strong>@Model.SoGoiYLocCongTac</strong> khóa học phù hợp với lịch sử học của bạn; các khóa còn lại
+                    là khóa <strong>phổ biến</strong> được bổ sung thêm.</div>
+            </div>
+        }
+
+        @if (Model.Items.Count > 0)
+        {
+            <div class="grid-12">
+                @foreach (var item in Model.Items)
+                {
+                    <div class="col-4">
+                        @Html.Partial("_RecommendedCourseCard", item)
+                    </div>
+                }
+            </div>
+        }
+        else if (khongConKhoa)
+        {
+            <div class="recommend-empty">
+                <i class="bi bi-check2-circle" style="font-size: 36px; color: #A5B4FC;"></i>
+                <p style="margin: 12px 0 6px; font-size: 16px; font-weight: 700; color: var(--text-heading, #0F172A);">Bạn đã đăng ký tất cả khóa học hiện có.</p>
+                <p style="margin: 0 auto 18px; max-width: 520px; font-size: 14px;">Khi có khóa học mới, gợi ý sẽ xuất hiện tại đây.</p>
+                <a href="@Url.Action("MyCourses", "Learning")" class="btn btn-primary btn-sm" style="text-decoration: none;"><i class="bi bi-journal-bookmark me-1"></i> Vào Khóa học của tôi</a>
+            </div>
+        }
+    </div>
+</section>
+
+@if (interestPicker != null)
+{
+    @Html.Partial("_InterestPicker", interestPicker)
+}
+
+@section scripts {
+    <script>
+        (function () {
+            var btn = document.getElementById('btnRefreshRecommend');
+            if (!btn) return;
+            btn.addEventListener('click', function () {
+                btn.classList.add('is-loading');
+                btn.querySelector('span').textContent = 'Đang tính gợi ý...';
+            });
+        })();
+    </script>
+}

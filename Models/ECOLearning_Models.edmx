@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
   <!-- EF Runtime content -->
   <edmx:Runtime>
@@ -13,7 +13,7 @@
           <Property Name="tenBaiHoc" Type="nvarchar" MaxLength="200" Nullable="false" />
           <Property Name="thoiLuong" Type="int" />
           <Property Name="thuTu" Type="int" />
-          <Property Name="maChuong" Type="varchar" MaxLength="20" Nullable="false" />
+          <Property Name="maChuong" Type="varchar" MaxLength="20" />
           <Property Name="duongDanVideo" Type="varchar" MaxLength="500" />
           <Property Name="choXemThu" Type="bit" />
         </EntityType>
@@ -241,9 +241,7 @@
           <Property Name="maDonHang" Type="varchar" MaxLength="20" Nullable="false" />
         </EntityType>
         <Association Name="FK_BaiHoc_ChuongHoc">
-          <End Role="ChuongHoc" Type="Self.ChuongHoc" Multiplicity="1">
-            <OnDelete Action="Cascade" />
-          </End>
+          <End Role="ChuongHoc" Type="Self.ChuongHoc" Multiplicity="0..1" />
           <End Role="BaiHoc" Type="Self.BaiHoc" Multiplicity="*" />
           <ReferentialConstraint>
             <Principal Role="ChuongHoc">
@@ -1047,7 +1045,7 @@
           <Property Name="tenBaiHoc" Type="String" MaxLength="200" FixedLength="false" Unicode="true" Nullable="false" />
           <Property Name="thoiLuong" Type="Int32" />
           <Property Name="thuTu" Type="Int32" />
-          <Property Name="maChuong" Type="String" MaxLength="20" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="maChuong" Type="String" MaxLength="20" FixedLength="false" Unicode="false" />
           <Property Name="duongDanVideo" Type="String" MaxLength="500" FixedLength="false" Unicode="false" />
           <Property Name="choXemThu" Type="Boolean" />
           <NavigationProperty Name="ChuongHoc" Relationship="Self.FK_BaiHoc_ChuongHoc" FromRole="BaiHoc" ToRole="ChuongHoc" />
@@ -1321,9 +1319,7 @@
           <NavigationProperty Name="DonHang" Relationship="Self.FK_ThanhToan_DonHang" FromRole="ThanhToan" ToRole="DonHang" />
         </EntityType>
         <Association Name="FK_BaiHoc_ChuongHoc">
-          <End Role="ChuongHoc" Type="Self.ChuongHoc" Multiplicity="1">
-            <OnDelete Action="Cascade" />
-          </End>
+          <End Role="ChuongHoc" Type="Self.ChuongHoc" Multiplicity="0..1" />
           <End Role="BaiHoc" Type="Self.BaiHoc" Multiplicity="*" />
           <ReferentialConstraint>
             <Principal Role="ChuongHoc">

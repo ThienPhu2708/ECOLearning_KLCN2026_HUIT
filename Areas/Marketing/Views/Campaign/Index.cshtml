@@ -1,0 +1,96 @@
+@model List<ECOLearning.ViewModels.ChienDichItem>
+@{
+    ViewBag.Title = "Chiến dịch Marketing";
+    string currentStatus = ViewBag.CurrentStatus as string ?? "all";
+    string currentSearch = ViewBag.CurrentSearch as string ?? "";
+    string tuNgay = ViewBag.TuNgay as string;
+    string denNgay = ViewBag.DenNgay as string;
+    var now = DateTime.Now;
+}
+
+<div class="mk-page-head">
+    <div>
+        <h1 class="h2">Chiến dịch Marketing</h1>
+        <p>Theo dõi mục tiêu, thời gian và hiệu quả của từng chiến dịch; mỗi chiến dịch gắn được nhiều chương trình khuyến mãi.</p>
+    </div>
+    <a href="@Url.Action("Create", "Campaign")" class="btn mk-btn-accent"><i class="bi bi-plus-lg me-1"></i> Tạo chiến dịch</a>
+</div>
+
+@Html.Partial("_Flash")
+
+<form method="get" action="@Url.Action("Index", "Campaign")" class="card mk-filter">
+    <div class="mk-field" style="flex: 1; min-width: 200px;">
+        <label for="search">Tên hoặc mục tiêu</label>
+        <input type="text" id="search" name="search" class="form-control" value="@currentSearch" />
+    </div>
+    <div class="mk-field">
+        <label for="status">Trạng thái</label>
+        <select id="status" name="status" class="form-control">
+            @foreach (var s in new[] { "all", "Đang chạy", "Chưa bắt đầu", "Đã kết thúc" })
+            {
+                <option value="@(s == "all" ? "" : s)" @(currentStatus == s ? "selected" : "")>@(s == "all" ? "Tất cả" : s)</option>
+            }
+        </select>
+    </div>
+    <div class="mk-field">
+        <label for="tuNgay">Từ ngày</label>
+        <input type="date" id="tuNgay" name="tuNgay" class="form-control" value="@tuNgay" />
+    </div>
+    <div class="mk-field">
+        <label for="denNgay">Đến ngày</label>
+        <input type="date" id="denNgay" name="denNgay" class="form-control" value="@denNgay" />
+    </div>
+    <button type="submit" class="btn btn-secondary btn-sm" style="height: 38px;">Lọc</button>
+</form>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Chiến dịch</th>
+                    <th>Thời gian</th>
+                    <th style="text-align: right;">Chương trình</th>
+                    <th style="text-align: right;">Lượt dùng ưu đãi</th>
+                    <th style="text-align: right;">Doanh thu sau giảm</th>
+                    <th>Trạng thái</th>
+                    <th style="width: 150px;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model)
+                {
+                    string tt = c.TrangThaiHienThi(now);
+                    <tr>
+                        <td>
+                            <a href="@Url.Action("Details", "Campaign", new { id = c.MaChienDich })" style="font-weight: 700; color: var(--text-heading); text-decoration: none;">@c.TenChienDich</a>
+                            @if (!string.IsNullOrEmpty(c.MucTieu)) { <div class="mk-muted">@c.MucTieu</div> }
+                        </td>
+                        <td style="white-space: nowrap;">@c.NgayBatDau.ToString("dd/MM/yyyy") – @c.NgayKetThuc.ToString("dd/MM/yyyy")</td>
+                        <td style="text-align: right;">@c.SoChuongTrinh</td>
+                        <td style="text-align: right;">@c.SoLuotDung</td>
+                        <td style="text-align: right; font-weight: 700;">@c.DoanhThuSauGiam.ToString("N0") đ</td>
+                        <td>
+                            @if (tt == "Đang chạy") { <span class="badge badge-success">Đang chạy</span> }
+                            else if (tt == "Chưa bắt đầu") { <span class="badge badge-info">Chưa bắt đầu</span> }
+                            else { <span class="badge badge-secondary">Đã kết thúc</span> }
+                        </td>
+                        <td>
+                            <div class="mk-actions">
+                                <a href="@Url.Action("Details", "Campaign", new { id = c.MaChienDich })" class="btn btn-outline btn-sm">Chi tiết</a>
+                                @if (c.TrangThaiLuu != "KetThuc")
+                                {
+                                    <a href="@Url.Action("Edit", "Campaign", new { id = c.MaChienDich })" class="btn btn-outline btn-sm">Sửa</a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="7" class="mk-empty"><i class="bi bi-megaphone"></i>Chưa có chiến dịch nào phù hợp.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

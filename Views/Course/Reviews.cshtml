@@ -1,0 +1,154 @@
+@model ECOLearning.ViewModels.DanhSachDanhGiaViewModel
+@{
+    ViewBag.Title = "Đánh giá khóa học " + Model.TenKhoaHoc;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    string chiTietUrl = Url.Action("Details", "Course", new { id = Model.MaKhoaHoc });
+    Func<int?, string, string, int?, string> link = (sao, tk, sx, trang) => Url.Action("Reviews", "Course", new
+    {
+        id = Model.MaKhoaHoc,
+        sao = sao,
+        q = string.IsNullOrEmpty(tk) ? null : tk,
+        sapXep = sx == "moinhat" ? null : sx,
+        trang = trang.HasValue && trang.Value > 1 ? trang : null
+    });
+    var sortOptions = new[]
+    {
+        new { Value = "moinhat", Text = "Mới nhất" },
+        new { Value = "huuich", Text = "Hữu ích nhất" },
+        new { Value = "caonhat", Text = "Điểm cao nhất" },
+        new { Value = "thapnhat", Text = "Điểm thấp nhất" }
+    };
+}
+
+@section styles {
+    <link rel="stylesheet" href="@Url.Content("~/assets/css/course-reviews.css?v=1.1")" />
+}
+
+<main class="rv-page">
+    <div class="safe-container">
+        <a class="rv-back" href="@chiTietUrl"><i class="bi bi-arrow-left"></i> Quay lại khóa học</a>
+        <h1 class="rv-page-title">
+            <i class="bi bi-star-fill"></i> @Model.DiemTrungBinh.ToString("0.0") xếp hạng khóa học · @Model.TongSo.ToString("N0") đánh giá
+        </h1>
+        <p class="rv-page-sub">@Model.TenKhoaHoc</p>
+
+        <div class="rv-page-grid">
+            <aside class="rv-page-side">
+                <nav class="rv-filter" aria-label="Lọc theo số sao">
+                    @for (int s = 5; s >= 1; s--)
+                    {
+                        int pt = Model.PhanTramSao(s);
+                        bool dangLoc = Model.LocSao == s;
+                        <a class="rv-filter-row @(dangLoc ? "is-active" : "") @(Model.SoTheoSao[s] == 0 ? "is-empty" : "")"
+                           href="@(dangLoc ? link(null, Model.TuKhoa, Model.SapXep, null) : link(s, Model.TuKhoa, Model.SapXep, null))"
+                           aria-current="@(dangLoc ? "true" : "false")" title="@(dangLoc ? "Bỏ lọc" : "Chỉ xem đánh giá " + s + " sao")">
+                            <div class="rv-bar"><div style="width: @pt%;"></div></div>
+                            <span class="rv-stars" aria-hidden="true">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <i class="bi @(i <= s ? "bi-star-fill" : "bi-star")"></i>
+                                }
+                            </span>
+                            <span class="rv-filter-pct">@pt%</span>
+                            @if (dangLoc)
+                            {
+                                <i class="bi bi-x-lg" aria-label="Bỏ lọc"></i>
+                            }
+                        </a>
+                    }
+                </nav>
+
+                <form class="rv-search" method="get" action="@Url.Action("Reviews", "Course", new { id = Model.MaKhoaHoc })" role="search">
+                    @if (Model.LocSao.HasValue) { <input type="hidden" name="sao" value="@Model.LocSao" /> }
+                    @if (Model.SapXep != "moinhat") { <input type="hidden" name="sapXep" value="@Model.SapXep" /> }
+                    <input type="search" name="q" value="@Model.TuKhoa" maxlength="100" placeholder="Tìm kiếm đánh giá" aria-label="Tìm kiếm đánh giá" />
+                    <button type="submit" aria-label="Tìm"><i class="bi bi-search"></i></button>
+                </form>
+
+                <form class="rv-sort" method="get" action="@Url.Action("Reviews", "Course", new { id = Model.MaKhoaHoc })">
+                    @if (Model.LocSao.HasValue) { <input type="hidden" name="sao" value="@Model.LocSao" /> }
+                    @if (!string.IsNullOrEmpty(Model.TuKhoa)) { <input type="hidden" name="q" value="@Model.TuKhoa" /> }
+                    <label for="rv-sort">Sắp xếp</label>
+                    <select id="rv-sort" name="sapXep" onchange="this.form.submit()">
+                        @foreach (var o in sortOptions)
+                        {
+                            <option value="@o.Value" @(o.Value == Model.SapXep ? "selected" : "")>@o.Text</option>
+                        }
+                    </select>
+                    <noscript><button type="submit">Áp dụng</button></noscript>
+                </form>
+            </aside>
+
+            <div class="rv-root" id="danh-gia"
+                 data-login-url="@Url.Action("Login", "Account", new { mode = "login", returnUrl = Request.RawUrl })"
+                 data-helpful-url="@Url.Action("Helpful", "Review")"
+                 data-reply-url="@Url.Action("Reply", "Review")"
+                 data-delete-reply-url="@Url.Action("DeleteReply", "Review")">
+                @Html.AntiForgeryToken()
+                @if (Model.LocSao.HasValue || !string.IsNullOrEmpty(Model.TuKhoa))
+                {
+                    <div class="rv-filter-note">
+                        @Model.SoKetQua đánh giá
+                        @(Model.LocSao.HasValue ? Model.LocSao + " sao" : "")
+                        @if (!string.IsNullOrEmpty(Model.TuKhoa))
+                        {
+                            <span>có chứa “@Model.TuKhoa”</span>
+                        }
+                        · <a href="@link(null, null, Model.SapXep, null)">Bỏ lọc</a>
+                    </div>
+                }
+                @if (Model.Items.Count == 0)
+                {
+                    <div class="rv-empty">
+                        <strong>@(Model.TongSo == 0 ? "Chưa có nhận xét nào" : "Không có đánh giá phù hợp")</strong>
+                        <p>@(Model.TongSo == 0 ? "Khóa học này hiện chưa có nhận xét nào từ học viên." : "Thử bỏ bộ lọc số sao hoặc đổi từ khóa tìm kiếm.")</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="rv-list">
+                        @foreach (var r in Model.Items)
+                        {
+                            @Html.Partial("_ReviewItem", new ECOLearning.ViewModels.DanhGiaItemModel { Item = r, DanhSach = Model })
+                        }
+                    </div>
+                    if (Model.SoTrang > 1)
+                    {
+                        <nav class="rv-pager" aria-label="Phân trang đánh giá">
+                            @if (Model.Trang > 1)
+                            {
+                                <a href="@link(Model.LocSao, Model.TuKhoa, Model.SapXep, Model.Trang - 1)" aria-label="Trang trước"><i class="bi bi-chevron-left"></i></a>
+                            }
+                            @for (int t = 1; t <= Model.SoTrang; t++)
+                            {
+                                if (t == 1 || t == Model.SoTrang || Math.Abs(t - Model.Trang) <= 1)
+                                {
+                                    if (t == Model.Trang)
+                                    {
+                                        <span class="is-current" aria-current="page">@t</span>
+                                    }
+                                    else
+                                    {
+                                        <a href="@link(Model.LocSao, Model.TuKhoa, Model.SapXep, t)">@t</a>
+                                    }
+                                }
+                                else if (t == 2 || t == Model.SoTrang - 1)
+                                {
+                                    <span class="is-gap">…</span>
+                                }
+                            }
+                            @if (Model.Trang < Model.SoTrang)
+                            {
+                                <a href="@link(Model.LocSao, Model.TuKhoa, Model.SapXep, Model.Trang + 1)" aria-label="Trang sau"><i class="bi bi-chevron-right"></i></a>
+                            }
+                        </nav>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</main>
+
+@section scripts {
+    <script src="@Url.Content("~/assets/js/course-reviews.js?v=1.0")"></script>
+}

@@ -1,28 +1,48 @@
-@model ECOLearning.Areas.Instructor.Models.InstructorAnalyticsViewModel
+﻿@model ECOLearning.Areas.Instructor.Models.InstructorAnalyticsViewModel
 @{
     ViewBag.Title = "Báo Cáo Thống Kê";
 }
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-    <div>
-        <h1 class="h2" style="margin-top: 6px;">Báo Cáo & Phân Tích Khóa Học</h1>
-        <p class="body-2" style="color: var(--text-secondary);">Tổng hợp doanh thu, lượt ghi danh và mức độ hài lòng của học viên (UC12)</p>
-    </div>
-    <div style="display: flex; gap: 10px;">
-        <a href="@Url.Action("ExportCsv", "Analytics", new { area = "Instructor", period = Model.Period })" class="btn btn-outline">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Xuất dữ liệu Excel / CSV
-        </a>
-    </div>
-</div>
-
+<style>
+#analytics-registration-chart svg { height:180px !important;width:100%; }
+.report-summary { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-bottom:24px; }
+.report-metric { padding:22px;border:1px solid var(--border-color);border-radius:14px;background:#eef0ff; }
+.report-metric:nth-child(2) { background:#edf9f3; } .report-metric:nth-child(3) { background:#eef6ff; } .report-metric:nth-child(4) { background:#fff7e9; }
+.report-metric strong { display:block;font-size:26px;margin-top:8px;color:var(--text-heading); }
+.course-performance { padding:0;overflow:hidden; }
+.course-performance-header { padding:24px;display:flex;align-items:center;justify-content:space-between;gap:16px; }
+.course-performance-header .caption { margin:6px 0 0; }
+.course-performance-count { padding:6px 12px;border-radius:999px;background:#eef0ff;color:#4338ca;font-size:12px;font-weight:600;white-space:nowrap; }
+.course-performance .table-responsive { border:0;border-top:1px solid var(--border-color);border-radius:0; }
+.course-performance-table { min-width:800px;margin:0; }
+.dashboard-main .course-performance-table.table th { padding:14px 20px;vertical-align:middle;text-transform:none;letter-spacing:0; }
+.dashboard-main .course-performance-table.table td { padding:20px; }
+.dashboard-main .course-performance-table.table .course-name { width:28%;min-width:220px;white-space:normal;overflow-wrap:anywhere; }
+.course-name a { color:var(--text-heading);font-weight:600;line-height:1.5; }
+.course-name a:hover { color:#4f46e5; }
+.course-name a:focus-visible { outline:2px solid #4f46e5;outline-offset:4px; }
+.course-performance-table .numeric { text-align:right;font-variant-numeric:tabular-nums; }
+.course-status { display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:12px;font-weight:600; }
+.course-status-published { background:#ecfdf5;color:#047857; }
+.course-status-pending { background:#fffbeb;color:#b45309; }
+.course-progress { display:flex;align-items:center;gap:10px;min-width:150px; }
+.course-progress progress { width:100px;height:6px;border:0;border-radius:999px;overflow:hidden;background:#e2e8f0;accent-color:#4f46e5; }
+.course-progress progress::-webkit-progress-bar { background:#e2e8f0;border-radius:999px; }
+.course-progress progress::-webkit-progress-value { background:#4f46e5;border-radius:999px; }
+.course-progress progress::-moz-progress-bar { background:#4f46e5;border-radius:999px; }
+.course-progress span { font-size:13px;font-variant-numeric:tabular-nums; }
+.course-progress-empty { color:var(--text-secondary);font-size:13px; }
+.course-performance .tp-pager[hidden] { display:none !important; }
+.course-performance .tp-pager { margin:0;border:0;border-top:1px solid var(--border-color);border-radius:0;padding:16px 24px; }
+@@media(max-width:600px) { .course-performance-header { padding:20px;align-items:flex-start;flex-direction:column;gap:12px; } }
+@@media(max-width:800px) { #analytics-registration-chart svg { height:180px !important;width:100%; }
+.report-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@@media(max-width:480px) { #analytics-registration-chart svg { height:180px !important;width:100%; }
+.report-summary { grid-template-columns:1fr; } }
+</style>
 <!-- PERIOD FILTER TABS -->
 <div class="card" style="margin-bottom: 24px; padding: 14px 20px;">
-    <div style="display: flex; align-items: center; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 12px;flex-wrap:wrap;">
         <span class="caption" style="font-weight: 700; color: var(--text-heading);">Khoảng thời gian:</span>
         <div style="display: flex; gap: 8px;">
             <a href="@Url.Action("Index", "Analytics", new { area = "Instructor", period = "week" })"
@@ -32,10 +52,17 @@
             <a href="@Url.Action("Index", "Analytics", new { area = "Instructor", period = "year" })"
                class="btn btn-sm @(Model.Period == "year" ? "btn-primary" : "btn-secondary")">Năm nay</a>
         </div>
+        <button type="button" class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="document.getElementById('report-export-preview').showModal()">Xem &amp; xuất báo cáo</button>
     </div>
 </div>
-
-<!-- CHARTS GRID (UC12) -->
+<div class="report-summary">
+    <div class="report-metric"><span class="caption">Doanh thu trong kỳ</span><strong>@Model.TotalRevenue.ToString("#,##0 đ")</strong></div>
+    <div class="report-metric"><span class="caption">Lượt ghi danh</span><strong>@Model.TotalRegistrations</strong></div>
+    <div class="report-metric"><span class="caption">Học viên trong kỳ</span><strong>@Model.TotalStudents</strong></div>
+    <div class="report-metric"><span class="caption">Nhận xét mới</span><strong>@Model.TotalReviews</strong></div>
+</div>
+<p class="caption" style="margin-bottom:12px;">@Model.StartDate.ToString("dd/MM/yyyy") – @Model.EndDate.ToString("dd/MM/yyyy")</p>
+<p class="caption" style="margin-bottom:16px;">@Model.TotalRegistrations lượt ghi danh trong kỳ · Doanh thu tính từ đơn hàng đã thanh toán</p>
 <div class="grid-12" style="margin-bottom: 32px;">
 
     <!-- REVENUE LINE CHART -->
@@ -62,15 +89,8 @@
 
             <!-- Average rating big display -->
             <div style="text-align: center; margin-bottom: 24px; padding: 16px; background: var(--bg-canvas, #F8FAFC); border-radius: var(--radius-xl);">
-                <div style="font-size: 42px; font-weight: 800; color: #F59E0B; line-height: 1;">@Model.AverageRating.ToString("0.0")</div>
-                <div style="color: #F59E0B; font-size: 18px; margin: 6px 0;">
-                    <i class="bi bi-star-fill"></i>
-                    <i class="bi bi-star-fill"></i>
-                    <i class="bi bi-star-fill"></i>
-                    <i class="bi bi-star-fill"></i>
-                    <i class="bi bi-star-fill"></i>
-                </div>
-                <span class="caption" style="color: var(--text-secondary);">Điểm trung bình toàn bộ khóa học</span>
+                <div style="font-size: 42px; font-weight: 800; color: #F59E0B; line-height: 1;">@(Model.TotalReviews > 0 ? Model.AverageRating.ToString("0.0") : "—")</div>
+                <span class="caption" style="display:block;margin-top:12px;color:var(--text-secondary);">@(Model.TotalReviews > 0 ? "Điểm trung bình trong kỳ" : "Chưa có đánh giá trong khoảng thời gian này")</span>
             </div>
 
             <!-- Star breakdown bars -->
@@ -82,7 +102,7 @@
                     <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
                         <span style="width: 45px; font-weight: 600; color: var(--text-heading);">@s sao</span>
                         <div style="flex: 1; height: 8px; background: var(--bg-canvas); border-radius: 9999px; overflow: hidden;">
-                            <div style="width: @pct%; height: 100%; background: #F59E0B; border-radius: 9999px;"></div>
+                            <div style="width: @(pct.ToString(System.Globalization.CultureInfo.InvariantCulture))%; height: 100%; background: #F59E0B; border-radius: 9999px;"></div>
                         </div>
                         <span style="width: 32px; text-align: right; color: var(--text-muted); font-size: 12px;">@cnt</span>
                     </div>
@@ -93,13 +113,94 @@
 
 </div>
 
+<div class="card" style="margin-bottom:24px;">
+    <h3 class="h3" style="margin-bottom:6px;">Xu hướng ghi danh</h3>
+    <p class="caption">Số lượt đăng ký khóa học trong khoảng thời gian đã chọn</p>
+    <div id="analytics-registration-chart"></div>
+</div>
+<div class="card course-performance">
+    <div class="course-performance-header"><div><h3 class="h3" id="course-performance-title">Hiệu quả từng khóa học</h3><p class="caption">Doanh thu, ghi danh và tiến độ hiện tại của học viên ghi danh trong kỳ</p></div><span class="course-performance-count">@Model.Courses.Count() khóa học</span></div>
+    <div class="table-responsive"><table class="table course-performance-table" data-paginate="10" aria-labelledby="course-performance-title"><thead><tr><th scope="col">Khóa học</th><th scope="col">Trạng thái</th><th scope="col" class="numeric">Doanh thu</th><th scope="col" class="numeric">Ghi danh</th><th scope="col" class="numeric">Nhận xét</th><th scope="col">Tiến độ trung bình</th></tr></thead><tbody>
+    @foreach (var course in Model.Courses)
+    {
+        var statusClass = course.Status == "Đã xuất bản" ? "course-status-published" : course.Status == "Chờ duyệt" ? "course-status-pending" : "";
+        <tr>
+            <td class="course-name"><a href="@Url.Action("Details", "Course", new { area = "Instructor", id = course.Id })">@course.Name</a></td>
+            <td><span class="course-status @statusClass">@course.Status</span></td>
+            <td class="numeric"><strong>@course.Revenue.ToString("#,##0 đ")</strong></td>
+            <td class="numeric">@course.Registrations</td>
+            <td class="numeric">@course.Reviews</td>
+            <td>
+                @if (course.AverageProgress.HasValue)
+                {
+                    <div class="course-progress"><progress max="100" value="@course.AverageProgress.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)" aria-label="Tiến độ trung bình của @course.Name"></progress><span>@course.AverageProgress.Value.ToString("0.#")%</span></div>
+                }
+                else
+                {
+                    <span class="course-progress-empty">Chưa có dữ liệu</span>
+                }
+            </td>
+        </tr>
+    }
+    @if (!Model.Courses.Any()) { <tr><td colspan="6" style="text-align:center;padding:32px;">Chưa có khóa học để thống kê.</td></tr> }
+    </tbody></table></div>
+</div>
+
+<style>
+#report-export-preview { position:fixed;inset:0;margin:auto;padding:0;width:1200px;max-width:calc(100vw - 32px);height:88vh;max-height:calc(100vh - 32px);border:0;border-radius:18px;background:#f1f5f9; }
+#report-export-preview::backdrop { background:rgba(15,23,42,.5); }
+.export-header { display:flex;align-items:center;justify-content:space-between;padding:18px 24px;background:white;border-bottom:1px solid var(--border-color); }
+.export-tools { display:flex;justify-content:flex-end;gap:8px;padding:12px 24px;background:white;border-bottom:1px solid var(--border-color); }
+.export-scroll { overflow:auto;height:calc(100% - 132px);padding:24px; }
+.export-paper { background:white;border:1px solid #dbe2ef;border-radius:4px;padding:36px;min-width:680px;color:#172033; }
+.export-paper table { width:100%;border-collapse:collapse;font-size:13px;margin-top:24px; }
+.export-paper th,.export-paper td { border:1px solid #9ba8bb;padding:10px;text-align:left; }
+.export-paper th { background:#eef3ff; }
+</style>
+<dialog id="report-export-preview" aria-labelledby="export-report-title">
+    <div class="export-header"><strong id="export-report-title">Báo cáo thống kê khóa học</strong><button type="button" class="btn btn-outline btn-sm" aria-label="Đóng báo cáo" onclick="document.getElementById('report-export-preview').close()">✕</button></div>
+    <div class="export-tools">
+        <button type="button" class="btn btn-primary btn-sm" onclick="printTeacherReport()">In</button>
+        <button type="button" class="btn btn-sm" style="background:#ed8330;color:white;" onclick="printTeacherReport()" title="Chọn Lưu dưới dạng PDF trong cửa sổ in">PDF</button>
+        <a class="btn btn-sm" style="background:#43a05c;color:white;" href="@Url.Action("ExportCsv", "Analytics", new { area = "Instructor", period = Model.Period })">Tải CSV</a>
+    </div>
+    <div class="export-scroll"><article id="teacher-report-paper" class="export-paper">
+        <div style="display:flex;justify-content:space-between;gap:24px;border-bottom:1px solid #172033;padding-bottom:20px;">
+            <div><strong>E-Learning</strong><p>Giảng viên: @Session["FullName"]</p></div>
+            <div style="text-align:right;"><h2 style="font-size:22px;margin:0 0 8px;">BÁO CÁO THỐNG KÊ KHÓA HỌC</h2><span>@Model.StartDate.ToString("dd/MM/yyyy") – @Model.EndDate.ToString("dd/MM/yyyy")</span></div>
+        </div>
+        <p style="margin-top:24px;">Đơn vị tiền tệ: VNĐ · Ngày xuất: @DateTime.Now.ToString("dd/MM/yyyy")</p>
+        <table><thead><tr><th>Doanh thu đã thanh toán</th><th>Lượt ghi danh</th><th>Học viên</th><th>Nhận xét</th></tr></thead><tbody><tr><td>@Model.TotalRevenue.ToString("#,##0")</td><td>@Model.TotalRegistrations</td><td>@Model.TotalStudents</td><td>@Model.TotalReviews</td></tr></tbody></table>
+        <h3 style="margin-top:28px;">Hiệu quả từng khóa học</h3>
+        <table><thead><tr><th>Khóa học</th><th>Doanh thu</th><th>Ghi danh</th><th>Nhận xét</th><th>Tiến độ học tập TB</th></tr></thead><tbody>
+        @foreach (var course in Model.Courses)
+        {
+            <tr><td>@course.Name</td><td>@course.Revenue.ToString("#,##0")</td><td>@course.Registrations</td><td>@course.Reviews</td><td>@(course.AverageProgress.HasValue ? course.AverageProgress.Value.ToString("0.#") + "%" : "—")</td></tr>
+        }
+        @if (!Model.Courses.Any()) { <tr><td colspan="5">Chưa có khóa học.</td></tr> }
+        </tbody></table>
+        <p style="font-size:12px;margin-top:24px;color:#64748b;">Số liệu thuộc các khóa học của giảng viên trong kỳ đã chọn. Doanh thu chỉ tính đơn đã thanh toán.</p>
+    </article></div>
+</dialog>
 @section Scripts {
 <script>
+    function printTeacherReport() {
+        var frame = document.createElement('iframe');
+        frame.style.cssText = 'position:fixed;width:0;height:0;border:0;';
+        document.body.appendChild(frame);
+        var doc = frame.contentDocument;
+        doc.open();
+        doc.write('<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>Báo cáo thống kê</title><style>body{font:14px Arial,sans-serif;color:#172033;padding:24px}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:20px}td,th{border:1px solid #9ba8bb;padding:9px;text-align:left}th{background:#eef3ff}tr{break-inside:avoid}h3{break-after:avoid}</style></head><body>' + document.getElementById('teacher-report-paper').innerHTML + '</body></html>');
+        doc.close();
+        frame.contentWindow.onafterprint = function() { frame.remove(); };
+        setTimeout(function() { frame.contentWindow.focus(); frame.contentWindow.print(); }, 150);
+    }
     document.addEventListener('DOMContentLoaded', () => {
         const revData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RevenueData));
         const chartLabels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartLabels));
 
         if (window.Charts && typeof Charts.renderLineChart === 'function') {
+            Charts.renderLineChart('analytics-registration-chart', { height:180, data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RegistrationData)), labels: chartLabels, color: '#4f46e5', fillColor: 'rgba(79,70,229,.08)' });
             Charts.renderLineChart('analytics-revenue-chart', {
                 data: revData,
                 labels: chartLabels,

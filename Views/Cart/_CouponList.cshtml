@@ -1,0 +1,70 @@
+@model ECOLearning.ViewModels.CartViewModel
+@* Danh sách mã trong hộp thoại "Chọn mã khuyến mãi" ở giỏ hàng: chỉ mã đã lưu trong "Mã giảm giá của tôi".
+   Mã đang dùng đứng đầu, rồi mã dùng được (giảm nhiều trước), mã chưa đủ điều kiện kèm lý do ở cuối. *@
+@{
+    var ds = (Model.AvailableCoupons ?? new List<ECOLearning.ViewModels.MaGiamGiaHienThi>())
+        .OrderByDescending(m => string.Equals(m.MaCode, Model.AppliedCouponCode, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+    bool gioTrong = Model.Items == null || Model.Items.Count == 0;
+    int soDungDuoc = gioTrong ? 0 : ds.Count(m => m.CoTheApDung);
+}
+<div class="cp-list" data-usable="@soDungDuoc">
+    @if (!Model.IsLoggedIn)
+    {
+        <div class="cp-empty">
+            <a href="@Url.Action("Login", "Account", new { returnUrl = Url.Action("Index", "Cart") })">Đăng nhập</a> để dùng mã đã lưu trong ví.
+            Bạn vẫn có thể nhập mã ở ô phía trên.
+        </div>
+    }
+    else if (ds.Count == 0)
+    {
+        <div class="cp-empty">
+            Ví của bạn chưa có mã nào dùng được lúc này.<br />
+            <a href="@Url.Action("Index", "Coupon", new { tab = "thuthap" })">Thu thập mã khuyến mãi</a> rồi quay lại để áp dụng.
+        </div>
+    }
+    else
+    {
+        foreach (var m in ds)
+        {
+            bool dangDung = string.Equals(m.MaCode, Model.AppliedCouponCode, StringComparison.OrdinalIgnoreCase);
+            bool dungDuoc = !gioTrong && m.CoTheApDung;
+            <div class="cp-item @(dangDung ? "is-applied" : "") @(!dungDuoc && !dangDung ? "is-disabled" : "")">
+                <div class="cp-item-value">
+                    @m.GiaTriNgan
+                    @if (!string.IsNullOrEmpty(m.GhiChuGiaTri))
+                    {
+                        <small>@m.GhiChuGiaTri</small>
+                    }
+                </div>
+                <div class="cp-item-body">
+                    <div class="cp-item-title">@m.MoTaUuDai</div>
+                    <div class="cp-item-name"><span class="cp-code">@m.MaCode</span> @m.TenKhuyenMai</div>
+                    <div class="cp-cond">@string.Join(" · ", m.DieuKien) · HSD @m.NgayKetThuc.ToString("dd/MM/yyyy")</div>
+                    @if (dungDuoc && m.TienGiam > 0)
+                    {
+                        <div class="cp-save">Giảm @m.TienGiam.ToString("N0") đ cho giỏ hàng này</div>
+                    }
+                    else if (gioTrong)
+                    {
+                        <div class="cp-reason">Thêm khóa học vào giỏ để dùng mã.</div>
+                    }
+                    else if (!m.CoTheApDung && !string.IsNullOrEmpty(m.LyDo))
+                    {
+                        <div class="cp-reason">@m.LyDo</div>
+                    }
+                </div>
+                <div class="cp-item-action">
+                    @if (dangDung)
+                    {
+                        <span class="cp-btn-applied"><i class="bi bi-check2"></i> Đang dùng</span>
+                    }
+                    else
+                    {
+                        <button type="button" class="cp-btn" data-code="@m.MaCode" onclick="applyCoupon(this.getAttribute('data-code'))" @(dungDuoc ? "" : "disabled")>Áp dụng</button>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>

@@ -1,0 +1,99 @@
+﻿@model List<ECOLearning.ViewModels.QuizQuestion>
+@{
+    ViewBag.Title = "Ngân hàng câu hỏi";
+    ViewBag.BreadcrumbCurrent = "Ngân hàng câu hỏi";
+    var courses = ViewBag.Courses as List<ECOLearning.Models.KhoaHoc> ?? new List<ECOLearning.Models.KhoaHoc>();
+    var config = ViewBag.Config as ECOLearning.ViewModels.QuizConfig;
+    string courseId = ViewBag.CourseId as string;
+    bool hasCourse = !string.IsNullOrEmpty(courseId), published = config != null && config.Published;
+    var active = Model.Where(q => q.Active).ToList();
+    var topics = Model.Select(q => q.Topic).Distinct().OrderBy(t => t).ToList();
+}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=7" />
+<div class="question-bank">
+    @if (TempData["QuizMessage"] != null) {<div class="qb-message" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i> @TempData["QuizMessage"]</div>}
+    <section class="qb-course-card qb-filter-card" aria-label="Chọn khóa học">
+        <div class="qb-course-icon"><i class="bi bi-journal-bookmark" aria-hidden="true"></i></div>
+        <form method="get" class="qb-course-form"><label for="qb-course">KHÓA HỌC ĐANG QUẢN LÝ</label><select id="qb-course" name="courseId" onchange="this.form.submit()"><option value="">Tất cả khóa học</option>@foreach (var c in courses) {<option value="@c.maKhoaHoc" selected="@(c.maKhoaHoc == courseId)">@c.tenKhoaHoc</option>}</select><noscript><button class="btn btn-primary">Chọn khóa học</button></noscript></form>
+        @if (hasCourse) {<a class="qb-text-link qb-students-link" href="@Url.Action("Index", "Student", new { courseId })">Quản lý học viên <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>}
+        <div class="qb-filters">
+                    <label class="qb-search"><i class="bi bi-search" aria-hidden="true"></i><span class="qb-sr-only">Tìm câu hỏi</span><input id="questionSearch" type="search" placeholder="Tìm nội dung câu hỏi…" autocomplete="off" /></label>
+                    <label><span class="qb-sr-only">Chủ đề</span><select id="topicFilter"><option value="">Tất cả chủ đề</option>@foreach (var topic in topics) {<option value="@topic">@topic</option>}</select></label>
+                    <label><span class="qb-sr-only">Mức độ</span><select id="levelFilter"><option value="">Mọi mức độ</option><option value="1">Dễ</option><option value="2">Trung bình</option><option value="3">Khó</option></select></label>
+                    <label><span class="qb-sr-only">Trạng thái</span><select id="questionStatus"><option value="">Mọi trạng thái</option><option value="active">Đang dùng</option><option value="archived">Đã ngừng</option></select></label>
+                </div>
+    </section>
+    @if (courses.Any())
+    {
+        <div class="qb-overview">
+            <section class="qb-metric"><div class="qb-metric-top"><span>Câu hỏi đang dùng</span><i class="bi bi-collection" aria-hidden="true"></i></div><strong>@active.Count</strong><div class="qb-level-counts"><span><b class="qb-dot qb-easy"></b> Dễ @active.Count(q => q.Difficulty == 1)</span><span><b class="qb-dot qb-medium"></b> Trung bình @active.Count(q => q.Difficulty == 2)</span><span><b class="qb-dot qb-hard"></b> Khó @active.Count(q => q.Difficulty == 3)</span></div></section>
+            <section class="qb-metric"><div class="qb-metric-top"><span>Chủ đề câu hỏi</span><i class="bi bi-grid" aria-hidden="true"></i></div><strong>@topics.Count</strong><p>Phân nhóm theo chương hoặc nội dung học.</p></section>
+            @if (hasCourse)
+            {
+            <section class="qb-metric qb-quiz-card"><div class="qb-metric-top"><span>Quiz cuối khóa</span><span class="qb-status @(published ? "is-open" : "is-draft")"><b class="qb-dot"></b>@(published ? "Đang mở" : "Chưa mở")</span></div><p>@(config == null ? "Thiết lập bài kiểm tra từ ngân hàng câu hỏi." : config.Total + " câu · " + config.Minutes + " phút · Đạt từ " + config.PassPercent + "%")</p><div class="qb-quiz-links"><a class="qb-text-link" href="@Url.Action("Configure", new { courseId })">Cấu hình quiz <i class="bi bi-arrow-right" aria-hidden="true"></i></a>@if (config != null) {<a class="qb-preview-link" href="@Url.Action("Preview", new { courseId })">Xem trước đề</a>}</div></section>
+            }
+            else
+            {
+                <section class="qb-metric"><div class="qb-metric-top"><span>Khóa học đang quản lý</span><i class="bi bi-journals" aria-hidden="true"></i></div><strong>@courses.Count</strong><p>Chọn một khóa học để thêm câu hỏi, nhập Excel hoặc cấu hình quiz.</p></section>
+            }
+        </div>
+        <section class="qb-panel" aria-label="Danh sách câu hỏi">
+            <div class="qb-panel-heading"><div><h2>Danh sách câu hỏi <span class="qb-count">@Model.Count</span></h2><p>Quản lý nội dung, đáp án và mức độ của từng câu.</p></div>@if (hasCourse) {<div class="qb-actions"><a class="btn btn-primary" href="@Url.Action("Edit", new { courseId })"><i class="bi bi-plus-lg" aria-hidden="true"></i> Tạo câu hỏi</a><a class="btn qb-secondary" href="@Url.Action("Import", new { courseId })"><i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> Nhập từ Excel</a></div>}</div>
+            @if (Model.Count > 0)
+            {
+                <div class="qb-table-wrap"><table class="qb-table"><thead><tr><th>Câu hỏi</th>@if (!hasCourse) {<th>Khóa học</th>}<th>Chủ đề</th><th>Mức độ</th><th>Trạng thái</th><th><span class="qb-sr-only">Thao tác</span></th></tr></thead><tbody>
+                @foreach (var q in Model)
+                {
+                    <tr data-question-row data-topic="@q.Topic" data-level="@q.Difficulty" data-status="@(q.Active ? "active" : "archived")">
+                        <td><div class="qb-question-cell"><span class="qb-question-icon"><i class="bi bi-question-circle" aria-hidden="true"></i></span><div><span class="qb-question-text">@q.Text</span><small>#@q.Id · 4 lựa chọn</small></div></div></td>
+                        @if (!hasCourse) {<td><a class="qb-text-link" href="@Url.Action("Index", new { courseId = q.CourseId })">@courses.First(c => c.maKhoaHoc == q.CourseId).tenKhoaHoc</a></td>}
+                        <td><span class="qb-topic">@q.Topic</span></td><td><span class="qb-difficulty level-@q.Difficulty">@q.Level</span></td><td><span class="qb-row-status @(q.Active ? "is-active" : "")"><b class="qb-dot"></b>@(q.Active ? "Đang dùng" : "Đã ngừng")</span></td>
+                        <td><div class="qb-row-actions">@if (q.Active) {<a class="qb-icon-button" href="@Url.Action("Edit", new { courseId = q.CourseId, id = q.Id })" aria-label="Sửa câu hỏi @q.Id" title="Sửa câu hỏi"><i class="bi bi-pencil" aria-hidden="true"></i></a><form method="post" action="@Url.Action("Archive")">@Html.AntiForgeryToken()<input type="hidden" name="courseId" value="@q.CourseId" /><input type="hidden" name="id" value="@q.Id" /><button class="qb-icon-button" aria-label="Ngừng dùng câu hỏi @q.Id" title="Ngừng dùng" onclick="return confirm('Ngừng dùng câu này? Đề cố định có câu này cần được cập nhật.')"><i class="bi bi-archive" aria-hidden="true"></i></button></form>}</div></td>
+                    </tr>
+                }
+                <tr id="questionNoResults" hidden><td colspan="@(hasCourse ? 5 : 6)"><div class="qb-no-results"><i class="bi bi-search" aria-hidden="true"></i><strong>Không tìm thấy câu hỏi phù hợp</strong><span>Thử từ khóa khác hoặc thay đổi bộ lọc.</span><button id="clearQuestionFilters" class="qb-text-link" type="button">Xóa bộ lọc</button></div></td></tr>
+                </tbody></table></div>
+                <footer class="qb-table-footer"><span id="questionResultCount" role="status">Hiển thị @Model.Count câu hỏi</span><span>Câu đã ngừng vẫn được giữ trong lịch sử bài thi.</span></footer>
+            }
+            else if (hasCourse)
+            {
+                <div class="qb-empty"><div class="qb-empty-art" aria-hidden="true"><span class="qb-art-back"></span><span class="qb-art-front"><i class="bi bi-question-lg"></i><b></b><b></b></span><span class="qb-art-spark"><i class="bi bi-plus-lg"></i></span></div><h3>Bắt đầu với câu hỏi đầu tiên</h3><p>Thêm từng câu hỏi hoặc nhập hàng loạt từ Excel.<br />Ngân hàng câu hỏi sẽ được dùng để tạo quiz cho khóa học này.</p><span class="qb-empty-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Mỗi câu gồm 4 lựa chọn và 1 đáp án đúng.</span></div>
+            }
+            else
+            {
+                <div class="qb-empty"><h3>Chưa có câu hỏi nào</h3><p>Chọn một khóa học phía trên để thêm câu hỏi hoặc nhập từ Excel.</p></div>
+            }
+        </section>
+        if (hasCourse && Model.Any())
+        {
+            <details class="qb-topic-manager"><summary><span><i class="bi bi-folder2" aria-hidden="true"></i> Quản lý chủ đề <span class="qb-count">@topics.Count</span></span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary><div class="qb-topic-body"><p>Tạo chủ đề mới khi thêm câu hỏi. Đổi tên sẽ áp dụng cho mọi câu thuộc chủ đề trong khóa này.</p>@using (Html.BeginForm("RenameTopic", "Quiz")) {@Html.AntiForgeryToken()<input type="hidden" name="courseId" value="@courseId" /><div class="qb-topic-form"><label>Chủ đề hiện tại<select name="oldTopic">@foreach (var group in Model.GroupBy(q => q.Topic)) {<option value="@group.Key">@group.Key (@group.Count() câu)</option>}</select></label><label>Tên mới<input name="newTopic" maxlength="120" placeholder="Nhập tên chủ đề" required /></label><button class="btn qb-secondary">Lưu tên chủ đề</button></div>}</div></details>
+        }
+    }
+    else
+    {
+        <section class="qb-panel qb-choose-empty"><span class="qb-choose-icon"><i class="bi bi-journal-bookmark" aria-hidden="true"></i></span><h2>@(courses.Any() ? "Chọn khóa học để bắt đầu" : "Bạn chưa có khóa học nào")</h2><p>@(courses.Any() ? "Chọn một khóa học phía trên để xem ngân hàng câu hỏi và thiết lập quiz." : "Tạo khóa học trước, sau đó xây dựng ngân hàng câu hỏi cho học viên.")</p>@if (!courses.Any()) {<a class="btn btn-primary" href="@Url.Action("Create", "Course")">Tạo khóa học</a>}</section>
+    }
+</div>
+<script>
+(function () {
+    const search = document.getElementById('questionSearch'); if (!search) return;
+    const topic = document.getElementById('topicFilter'), level = document.getElementById('levelFilter'), status = document.getElementById('questionStatus');
+    const rows = [...document.querySelectorAll('[data-question-row]')];
+    function filter() {
+        const term = search.value.trim().toLocaleLowerCase('vi'); let count = 0;
+        rows.forEach(function (row) {
+            const text = row.querySelector('.qb-question-text').textContent.toLocaleLowerCase('vi');
+            row.hidden = !!((term && !text.includes(term)) || (topic.value && row.dataset.topic !== topic.value) || (level.value && row.dataset.level !== level.value) || (status.value && row.dataset.status !== status.value));
+            if (!row.hidden) count++;
+        });
+        const empty = document.getElementById('questionNoResults');
+        if (empty) empty.hidden = count !== 0;
+        const result = document.getElementById('questionResultCount');
+        if (result) result.textContent = 'Hiển thị ' + count + ' trên ' + rows.length + ' câu hỏi';
+    }
+    search.addEventListener('input', filter);
+    [topic, level, status].forEach(function (input) { input.addEventListener('change', filter); });
+    const clear = document.getElementById('clearQuestionFilters');
+    if (clear) clear.addEventListener('click', function () {search.value = ''; [topic, level, status].forEach(function (input) {input.value = ''; input.dispatchEvent(new Event('change', {bubbles: true}));}); filter(); search.focus();});
+})();
+</script>

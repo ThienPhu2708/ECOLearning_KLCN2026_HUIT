@@ -1,0 +1,278 @@
+@model ECOLearning.ViewModels.CategoryPageViewModel
+@*
+    Trang danh mục /danh-muc/{slug}: MỘT view cho mọi danh mục, nội dung theo danh mục người dùng chọn
+    (CategoryController.Index). Lọc cấp độ / sắp xếp / trang qua query string (?level=...&sort=...&trang=...),
+    12 khóa mỗi trang (Views/Shared/_Pagination.cshtml).
+*@
+@{
+    ViewBag.Title = Model.TenDanhMuc;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var sortOptions = new[]
+    {
+        new { Value = "pho-bien", Text = "Phổ biến nhất" },
+        new { Value = "danh-gia", Text = "Đánh giá cao nhất" },
+        new { Value = "gia-tang", Text = "Giá: Thấp đến Cao" },
+        new { Value = "gia-giam", Text = "Giá: Cao đến Thấp" }
+    };
+    string sortParam = Model.SapXep == "pho-bien" ? null : Model.SapXep;
+}
+
+@section styles {
+<style>
+    .category-hero {
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        color: #FFFFFF;
+        padding: 36px 0 40px;
+    }
+
+    /* Ảnh minh họa danh mục (Admin tải lên): phủ nửa phải banner, đặt absolute nên banner giữ nguyên kích thước;
+       ảnh khác tỉ lệ được cắt vừa khung (object-fit: cover); dải mờ tối bên trái giữ chữ dễ đọc */
+    .category-hero.has-media {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .category-hero.has-media > .safe-container {
+        position: relative;
+        z-index: 1;
+    }
+
+    .category-hero-media {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 48%;
+        pointer-events: none;
+        /* Mép trái ảnh mờ dần vào nền banner (nền là dải màu nên không phủ bằng một màu cố định được) */
+        -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 55%);
+        mask-image: linear-gradient(90deg, transparent 0%, #000 55%);
+    }
+
+    .category-hero-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        display: block;
+    }
+
+    .category-hero-media::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.3);
+    }
+
+    .category-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 14px;
+        font-size: 13.5px;
+        color: #94A3B8;
+    }
+
+    .category-breadcrumb a {
+        color: #A5B4FC;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .category-breadcrumb a:hover {
+        color: #FFFFFF;
+    }
+
+    .level-tabs {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .level-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border-radius: 9999px;
+        border: 1px solid var(--border-color, #E2E8F0);
+        background: #FFFFFF;
+        color: var(--text-body, #334155);
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+    }
+
+    .level-tab:hover {
+        border-color: var(--primary, #434CE8);
+        color: var(--primary, #434CE8);
+    }
+
+    .level-tab.is-active {
+        background: var(--primary, #434CE8);
+        border-color: var(--primary, #434CE8);
+        color: #FFFFFF;
+    }
+
+    .level-tab .level-count {
+        font-size: 12px;
+        opacity: 0.75;
+    }
+
+    .category-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+    }
+
+    .other-category {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color, #E2E8F0);
+        background: #FFFFFF;
+        color: var(--text-heading, #0F172A);
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    }
+
+    .other-category:hover {
+        border-color: var(--primary, #434CE8);
+        color: var(--primary, #434CE8);
+        transform: translateY(-1px);
+    }
+
+    .other-category span {
+        font-size: 12px;
+        color: var(--text-muted, #94A3B8);
+        font-weight: 500;
+    }
+
+    @@media (max-width: 1100px) {
+        .category-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @@media (max-width: 640px) {
+        .category-grid { grid-template-columns: 1fr; }
+
+        /* Màn hình hẹp: ảnh làm nền cả banner, phủ tối đều để chữ đọc được */
+        .category-hero-media { width: 100%; -webkit-mask-image: none; mask-image: none; }
+        .category-hero-media::after { background: rgba(15, 23, 42, 0.78); }
+    }
+</style>
+}
+
+<section class="category-hero@(string.IsNullOrEmpty(Model.AnhMinhHoa) ? "" : " has-media")">
+    @if (!string.IsNullOrEmpty(Model.AnhMinhHoa))
+    {
+        <div class="category-hero-media" aria-hidden="true">
+            <img src="@Url.Content("~" + Model.AnhMinhHoa)" alt="" />
+        </div>
+    }
+    <div class="safe-container">
+        <nav class="category-breadcrumb" aria-label="Breadcrumb">
+            <a href="@Url.Action("Index", "Home", new { area = "" })">Trang chủ</a>
+            <i class="bi bi-chevron-right" style="font-size: 11px;"></i>
+            <a href="@Url.Action("All", "Category", new { area = "" })">Tất cả lĩnh vực</a>
+            <i class="bi bi-chevron-right" style="font-size: 11px;"></i>
+            <span style="color: #E2E8F0;">@Model.TenDanhMuc</span>
+        </nav>
+        <span class="caption" style="text-transform: uppercase; color: #A5B4FC; font-weight: 700; letter-spacing: 0.05em;">Danh mục đào tạo</span>
+        <h1 style="font-size: 32px; font-weight: 800; margin: 6px 0 10px; color: #FFFFFF;">@Model.TenDanhMuc</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.MoTa))
+        {
+            <p style="font-size: 15.5px; color: #CBD5E1; max-width: 760px; line-height: 1.6; margin: 0 0 14px;">@Model.MoTa</p>
+        }
+        <div style="font-size: 14px; color: #94A3B8;">
+            <strong style="color: #FFFFFF;">@Model.TongSoKhoaHoc</strong> khóa học đang mở
+            @if (Model.SoKhoaDaSoHuu > 0)
+            {
+                <span style="margin: 0 6px;">•</span>
+                <span>@Model.SoKhoaDaSoHuu khóa bạn đã sở hữu nằm ở <a href="@Url.Action("MyCourses", "Learning", new { area = "" })" style="color: #A5B4FC; font-weight: 600;">Khóa học của tôi</a></span>
+            }
+        </div>
+    </div>
+</section>
+
+<main style="padding: 32px 0 80px; background: var(--bg-canvas, #F8FAFC); min-height: 60vh;">
+    <div class="safe-container">
+
+        <!-- Lọc cấp độ + sắp xếp -->
+        <div id="ds-khoa-hoc" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; scroll-margin-top: 96px;">
+            <div class="level-tabs" aria-label="Lọc theo cấp độ">
+                <a class="level-tab @(string.IsNullOrEmpty(Model.CapDoDangChon) ? "is-active" : "")"
+                   href="@Url.Action("Index", "Category", new { area = "", slug = Model.Slug, sort = sortParam })">
+                    Tất cả <span class="level-count">@Model.TongSoKhoaHoc</span>
+                </a>
+                @foreach (var cd in Model.CapDo)
+                {
+                    bool active = string.Equals(cd.Slug, Model.CapDoDangChon, StringComparison.OrdinalIgnoreCase);
+                    <a class="level-tab @(active ? "is-active" : "")"
+                       href="@Url.Action("Index", "Category", new { area = "", slug = Model.Slug, level = cd.Slug, sort = sortParam })">
+                        @cd.Ten <span class="level-count">@cd.SoKhoaHoc</span>
+                    </a>
+                }
+            </div>
+
+            @if (Model.TongSoKhoaHoc > 1)
+            {
+                <form method="get" action="@Url.Action("Index", "Category", new { area = "", slug = Model.Slug })" style="display: flex; align-items: center; gap: 8px; margin: 0;">
+                    @if (!string.IsNullOrEmpty(Model.CapDoDangChon))
+                    {
+                        <input type="hidden" name="level" value="@Model.CapDoDangChon" />
+                    }
+                    <label for="sort" style="font-size: 13.5px; color: #64748B; font-weight: 600;">Sắp xếp:</label>
+                    <select id="sort" name="sort" onchange="this.form.submit()" style="height: 38px; padding: 0 12px; border: 1px solid #E2E8F0; border-radius: 10px; background: #FFFFFF; font: inherit; font-size: 13.5px; color: #0F172A; cursor: pointer;">
+                        @foreach (var o in sortOptions)
+                        {
+                            <option value="@o.Value" @(o.Value == Model.SapXep ? "selected" : "")>@o.Text</option>
+                        }
+                    </select>
+                    <noscript><button type="submit" class="btn btn-outline btn-sm">Áp dụng</button></noscript>
+                </form>
+            }
+        </div>
+
+        @if (Model.Items.Count > 0)
+        {
+            <div class="category-grid">
+                @foreach (var item in Model.Items)
+                {
+                    @Html.Partial("_CourseCard", item)
+                }
+            </div>
+            @Html.Partial("_Pagination", Model.PhanTrang)
+        }
+        else
+        {
+            <div style="text-align: center; padding: 56px 20px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--border-color, #E2E8F0);">
+                <i class="bi bi-inbox" style="font-size: 36px; color: #94A3B8; display: block; margin-bottom: 10px;"></i>
+                <h3 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 6px;">
+                    @(string.IsNullOrEmpty(Model.CapDoDangChon) ? "Chưa có khóa học mới trong danh mục này" : "Không có khóa học cấp độ " + Model.CapDoDangChon)
+                </h3>
+                <p style="font-size: 14px; color: #64748B; margin-bottom: 18px;">Bạn có thể xem các danh mục khác bên dưới hoặc toàn bộ khóa học.</p>
+                <a href="@Url.Action("Index", "Course", new { area = "" })" class="btn btn-primary btn-sm" style="text-decoration: none; border-radius: 10px; padding: 10px 22px;">Xem tất cả khóa học</a>
+            </div>
+        }
+
+        @if (Model.DanhMucKhac.Count > 0)
+        {
+            <div style="margin-top: 48px;">
+                <h2 style="font-size: 18px; font-weight: 800; color: #0F172A; margin-bottom: 14px;">Khám phá danh mục khác</h2>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    @foreach (var dm in Model.DanhMucKhac)
+                    {
+                        <a class="other-category" href="@Url.Action("Index", "Category", new { area = "", slug = dm.Slug })">
+                            @dm.Ten <span>@dm.SoKhoaHoc</span>
+                        </a>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</main>

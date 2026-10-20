@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="packages\EntityFramework.6.5.2\build\EntityFramework.props" Condition="Exists('packages\EntityFramework.6.5.2\build\EntityFramework.props')" />
   <Import Project="packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props" Condition="Exists('packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props')" />
@@ -65,6 +65,8 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Web.Abstractions" />
@@ -111,6 +113,15 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="PdfSharp-gdi, Version=1.50.5147.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>packages\PDFsharp-MigraDoc-gdi.1.50.5147\lib\net20\PdfSharp-gdi.dll</HintPath>
+    </Reference>
+    <Reference Include="MigraDoc.DocumentObjectModel-gdi, Version=1.50.5147.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>packages\PDFsharp-MigraDoc-gdi.1.50.5147\lib\net20\MigraDoc.DocumentObjectModel-gdi.dll</HintPath>
+    </Reference>
+    <Reference Include="MigraDoc.Rendering-gdi, Version=1.50.5147.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>packages\PDFsharp-MigraDoc-gdi.1.50.5147\lib\net20\MigraDoc.Rendering-gdi.dll</HintPath>
+    </Reference>
     <Reference Include="WebGrease">
       <Private>True</Private>
       <HintPath>packages\WebGrease.1.6.0\lib\WebGrease.dll</HintPath>
@@ -140,12 +151,14 @@
     <Compile Include="Areas\Admin\Controllers\CourseApprovalController.cs" />
     <Compile Include="Areas\Admin\Controllers\TeacherApprovalController.cs" />
     <Compile Include="Areas\Admin\Controllers\SystemReportController.cs" />
+    <Compile Include="Areas\Admin\Controllers\RevenueReportController.cs" />
     <Compile Include="Areas\Admin\Models\AdminViewModels.cs" />
     <Compile Include="Areas\Instructor\Controllers\InstructorBaseController.cs" />
     <Compile Include="Areas\Instructor\Controllers\TeacherApplicationController.cs" />
     <Compile Include="Areas\Instructor\Controllers\DashboardController.cs" />
     <Compile Include="Areas\Instructor\Controllers\CourseController.cs" />
     <Compile Include="Areas\Instructor\Controllers\CurriculumController.cs" />
+    <Compile Include="Areas\Instructor\Controllers\ResourceController.cs" />
     <Compile Include="Areas\Instructor\Controllers\StudentController.cs" />
     <Compile Include="Areas\Instructor\Controllers\AnalyticsController.cs" />
     <Compile Include="Areas\Instructor\Controllers\PayoutController.cs" />
@@ -153,8 +166,12 @@
     <Compile Include="Areas\Marketing\Controllers\MarketingBaseController.cs" />
     <Compile Include="Areas\Marketing\Controllers\DashboardController.cs" />
     <Compile Include="Areas\Marketing\Controllers\PromotionController.cs" />
+    <Compile Include="Areas\Marketing\Controllers\LoyaltyController.cs" />
+    <Compile Include="Areas\Marketing\Controllers\CampaignController.cs" />
+    <Compile Include="Areas\Marketing\Controllers\CoursePriceController.cs" />
     <Compile Include="Areas\Marketing\Controllers\CampaignReportController.cs" />
     <Compile Include="Areas\Marketing\Models\MarketingViewModels.cs" />
+    <Compile Include="Areas\Marketing\Models\MarketingReportModels.cs" />
     <Compile Include="Controllers\AccountController.cs" />
     <Compile Include="ViewModels\LoginViewModel.cs" />
     <Compile Include="ViewModels\RegisterViewModels.cs" />
@@ -162,16 +179,73 @@
     <Compile Include="ViewModels\StudentProfileViewModel.cs" />
     <Compile Include="ViewModels\CartItemViewModel.cs" />
     <Compile Include="ViewModels\CartViewModel.cs" />
+    <Compile Include="ViewModels\SearchViewModels.cs" />
+    <Compile Include="ViewModels\RelatedCourseViewModels.cs" />
+    <Compile Include="ViewModels\CourseReviewViewModels.cs" />
+    <Compile Include="ViewModels\TeacherRegisterViewModels.cs" />
+    <Compile Include="ViewModels\MyCoursesViewModel.cs" />
+    <Compile Include="ViewModels\RecommendationViewModels.cs" />
+    <Compile Include="ViewModels\FavoriteViewModels.cs" />
+    <Compile Include="ViewModels\InterestViewModels.cs" />
+    <Compile Include="ViewModels\PromotionModels.cs" />
+    <Compile Include="ViewModels\CampaignModels.cs" />
+    <Compile Include="ViewModels\CategoryPageViewModels.cs" />
+    <Compile Include="ViewModels\PhanTrangViewModel.cs" />
+    <Compile Include="ViewModels\ExploreMenuViewModels.cs" />
     <Compile Include="Services\EmailService.cs" />
     <Compile Include="Services\PasswordHasher.cs" />
     <Compile Include="Services\TeacherApplicationService.cs" />
     <Compile Include="Models\TeacherApplication.cs" />
+    <Compile Include="Services\CourseStatus.cs" />
+    <Compile Include="Services\ViolationReportService.cs" />
+    <Compile Include="Services\RecommendationService.cs" />
+    <Compile Include="Services\FavoriteService.cs" />
+    <Compile Include="Services\InterestService.cs" />
+    <Compile Include="Services\PromotionService.cs" />
+    <Compile Include="Services\PromotionService.ViMa.cs" />
+    <Compile Include="Services\SearchService.cs" />
+    <Compile Include="Services\SearchText.cs" />
+    <Compile Include="Services\RelatedCourseService.cs" />
+    <Compile Include="Services\InstructorProfileService.cs" />
+    <Compile Include="Services\CourseReviewService.cs" />
+    <Compile Include="Services\ReviewTime.cs" />
+    <Compile Include="Services\BankDirectory.cs" />
+    <Compile Include="Services\CategoryImageService.cs" />
+    <Compile Include="Services\VideoDuration.cs" />
+    <Compile Include="Services\PaymentService.cs" />
+    <Compile Include="Services\AdminPendingService.cs" />
+    <Compile Include="Services\VnPayService.cs" />
+    <Compile Include="Services\CampaignService.cs" />
+    <Compile Include="Services\RevenueService.cs" />
+    <Compile Include="Services\CourseContentService.cs" />
+    <Compile Include="Services\SlugHelper.cs" />
+    <Compile Include="Services\SystemReportPdfService.cs" />
+    <Compile Include="Models\ViolationReportModels.cs" />
+    <Compile Include="Areas\Admin\Controllers\ViolationReportController.cs" />
+    <Compile Include="Controllers\ViolationReportController.cs" />
+    <Compile Include="Controllers\RecommendationController.cs" />
+    <Compile Include="Controllers\NavigationController.cs" />
+    <Compile Include="Controllers\FavoriteController.cs" />
+    <Compile Include="Controllers\InterestController.cs" />
+    <Compile Include="Controllers\CouponController.cs" />
+    <Compile Include="Controllers\VideoStreamController.cs" />
+    <Compile Include="Areas\Admin\Controllers\PayoutRequestController.cs" />
+    <Compile Include="Controllers\SearchController.cs" />
+    <Compile Include="Controllers\CategoryController.cs" />
+    <Compile Include="Areas\Instructor\Controllers\ViolationController.cs" />
     <Compile Include="Controllers\ProfileController.cs" />
     <Compile Include="Controllers\CourseController.cs" />
     <Compile Include="Controllers\CartController.cs" />
     <Compile Include="Controllers\PaymentController.cs" />
     <Compile Include="Controllers\LearningController.cs" />
+    <Compile Include="ViewModels\QuizViewModels.cs" />
+    <Compile Include="Services\QuizService.cs" />
+    <Compile Include="Services\QuizExcel.cs" />
+    <Compile Include="Controllers\QuizController.cs" />
+    <Compile Include="Areas\Instructor\Controllers\QuizController.cs" />
     <Compile Include="Controllers\ReviewController.cs" />
+    <Compile Include="Controllers\UserController.cs" />
+    <Compile Include="ViewModels\InstructorProfileViewModel.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
@@ -385,6 +459,12 @@
     <Content Include="Views\Shared\_Layout.cshtml" />
     <Content Include="assets\css\base.css" />
     <Content Include="assets\css\components.css" />
+    <Content Include="assets\css\marketing.css" />
+    <Content Include="assets\css\coupon.css" />
+    <Content Include="assets\css\pagination.css" />
+    <Content Include="assets\css\search.css" />
+    <Content Include="assets\css\course-reviews.css" />
+    <Content Include="assets\css\bank-picker.css" />
     <Content Include="assets\css\variables.css" />
     <Content Include="assets\js\app.js" />
     <Content Include="assets\js\charts.js" />
@@ -394,19 +474,62 @@
     <Content Include="Views\Account\Register.cshtml" />
     <Content Include="Views\Profile\Index.cshtml" />
     <Content Include="Views\Cart\Index.cshtml" />
+    <Content Include="Views\Cart\_CouponList.cshtml" />
+    <Content Include="Views\Learning\MyCourses.cshtml" />
+    <Content Include="Views\Learning\Certificate.cshtml" />
+    <Content Include="assets\css\instructor-quiz.css" />
+    <Content Include="Views\Quiz\_Style.cshtml" />
+    <Content Include="Views\Quiz\Index.cshtml" />
+    <Content Include="Views\Quiz\Take.cshtml" />
+    <Content Include="Areas\Instructor\Views\Quiz\Configure.cshtml" />
+    <Content Include="Areas\Instructor\Views\Quiz\Edit.cshtml" />
+    <Content Include="Areas\Instructor\Views\Quiz\History.cshtml" />
+    <Content Include="Areas\Instructor\Views\Quiz\Import.cshtml" />
+    <Content Include="Areas\Instructor\Views\Quiz\ImportPreview.cshtml" />
+    <Content Include="Areas\Instructor\Views\Quiz\Index.cshtml" />
+    <Content Include="Areas\Instructor\Views\Quiz\Preview.cshtml" />
+    <Content Include="Areas\Instructor\Views\Student\_QuizSummary.cshtml" />
+    <Content Include="Database\Migrations\007_Quiz_ChungChi.sql" />
+    <Content Include="Views\Recommendation\Index.cshtml" />
+    <Content Include="Views\Shared\_RecommendedCourseCard.cshtml" />
+    <Content Include="Views\Shared\_ExploreMenu.cshtml" />
+    <Content Include="Views\Home\_HeroCarousel.cshtml" />
+    <Content Include="assets\images\banners\hero_section.jpg" />
+    <Content Include="assets\images\banners\banner_goi_y.jpg" />
+    <Content Include="assets\images\banners\banner_hoc_linh_hoat.jpg" />
+    <Content Include="assets\images\banners\banner_giang_vien.jpg" />
     <Content Include="Areas\Admin\Views\_ViewStart.cshtml" />
     <Content Include="Areas\Admin\Views\Shared\_LayoutAdmin.cshtml" />
     <Content Include="Areas\Admin\Views\Dashboard\Index.cshtml" />
     <Content Include="Areas\Admin\Views\Category\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\ViolationReport\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\ViolationReport\Detail.cshtml" />
+    <None Include="Database\Migrations\001_KhuyenNghi_ChoPhepGiaoVien.sql" />
+    <None Include="Database\Migrations\002_BaoCaoViPham.sql" />
+    <None Include="Database\Migrations\003_BaoCaoViPham_BaiHoc.sql" />
+    <None Include="Database\Migrations\004_XuLyViPham_TraoDoi.sql" />
+    <None Include="Database\Migrations\005_GoiY_LocCongTac.sql" />
+    <None Include="Database\Migrations\006_GoiY_GoiYLaiKhoaChiXem.sql" />
+    <None Include="Database\Migrations\007_GoiY_SoThichNguoiDung.sql" />
+    <None Include="Database\Migrations\008_Marketing_KhuyenMai.sql" />
+    <None Include="Database\Migrations\009_ViMaGiamGia.sql" />
+    <None Include="Database\Migrations\010_TimKiem.sql" />
+    <None Include="Database\Migrations\011_DanhGia_HuuIch_PhanHoi.sql" />
+    <Content Include="Areas\Instructor\Views\Violation\Index.cshtml" />
+    <Content Include="assets\css\dashboard-tables.css" />
+    <Content Include="assets\js\table-pagination.js" />
     <Content Include="Areas\Admin\Views\CourseApproval\Index.cshtml" />
     <Content Include="Areas\Admin\Views\SystemReport\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\RevenueReport\Index.cshtml" />
     <Content Include="Areas\Instructor\Views\_ViewStart.cshtml" />
     <Content Include="Areas\Instructor\Views\Shared\_LayoutInstructor.cshtml" />
     <Content Include="Areas\Instructor\Views\Dashboard\Index.cshtml" />
     <Content Include="Areas\Instructor\Views\Course\Index.cshtml" />
+    <Content Include="Areas\Instructor\Views\Course\Details.cshtml" />
     <Content Include="Areas\Instructor\Views\Course\Create.cshtml" />
     <Content Include="Areas\Instructor\Views\Course\Edit.cshtml" />
     <Content Include="Areas\Instructor\Views\Curriculum\Index.cshtml" />
+    <Content Include="Areas\Instructor\Views\Resource\Index.cshtml" />
     <Content Include="Areas\Instructor\Views\Student\Index.cshtml" />
     <Content Include="Areas\Instructor\Views\Analytics\Index.cshtml" />
     <Content Include="Areas\Instructor\Views\Payout\Index.cshtml" />
@@ -414,7 +537,53 @@
     <Content Include="Areas\Marketing\Views\Shared\_LayoutMarketing.cshtml" />
     <Content Include="Areas\Marketing\Views\Dashboard\Index.cshtml" />
     <Content Include="Areas\Marketing\Views\Promotion\Index.cshtml" />
+    <Content Include="Areas\Marketing\Views\Promotion\Form.cshtml" />
+    <Content Include="Areas\Marketing\Views\Promotion\Details.cshtml" />
+    <Content Include="Areas\Marketing\Views\Loyalty\Index.cshtml" />
+    <Content Include="Areas\Marketing\Views\Loyalty\Eligible.cshtml" />
+    <Content Include="Areas\Marketing\Views\Campaign\Index.cshtml" />
+    <Content Include="Areas\Marketing\Views\Campaign\Form.cshtml" />
+    <Content Include="Areas\Marketing\Views\Campaign\Details.cshtml" />
+    <Content Include="Areas\Marketing\Views\CoursePrice\Index.cshtml" />
+    <Content Include="Areas\Marketing\Views\Shared\_Flash.cshtml" />
+    <Content Include="Areas\Marketing\Views\Shared\_ChuaKhoiTao.cshtml" />
     <Content Include="Areas\Marketing\Views\CampaignReport\Index.cshtml" />
+    <Content Include="Views\User\Index.cshtml" />
+    <Content Include="Views\User\Courses.cshtml" />
+    <Content Include="Views\Learning\Favorites.cshtml" />
+    <Content Include="Views\Shared\_FavoriteButton.cshtml" />
+    <Content Include="Views\Shared\_InterestPicker.cshtml" />
+    <Content Include="Views\Shared\_CouponTicket.cshtml" />
+    <Content Include="Views\Shared\_Pagination.cshtml" />
+    <Content Include="Views\Category\All.cshtml" />
+    <Content Include="Views\Payment\Gateway.cshtml" />
+    <Content Include="Views\Payment\Result.cshtml" />
+    <Content Include="Views\Payment\History.cshtml" />
+    <None Include="Secrets.config.example" />
+    <Content Include="Areas\Admin\Views\PayoutRequest\Index.cshtml" />
+    <Content Include="Views\Shared\_BankPicker.cshtml" />
+    <Content Include="Views\Shared\_CouponCollectModal.cshtml" />
+    <Content Include="Views\Coupon\Index.cshtml" />
+    <Content Include="Views\Coupon\Details.cshtml" />
+    <Content Include="Views\Coupon\ChuaKhoiTao.cshtml" />
+    <Content Include="Views\Coupon\KhongHoTro.cshtml" />
+    <Content Include="Views\Search\Index.cshtml" />
+    <Content Include="Views\Course\_RelatedCourses.cshtml" />
+    <Content Include="Views\Course\_InstructorInfo.cshtml" />
+    <Content Include="Views\Course\_ReviewItem.cshtml" />
+    <Content Include="Views\Course\_ReviewSection.cshtml" />
+    <Content Include="Views\Course\Reviews.cshtml" />
+    <Content Include="Views\Shared\_CourseCard.cshtml" />
+    <Content Include="Views\Category\Index.cshtml" />
+    <Content Include="Views\Shared\_MyCoursesMenu.cshtml" />
+    <Content Include="assets\js\favorite.js" />
+    <Content Include="assets\js\coupon-wallet.js" />
+    <Content Include="assets\js\search-suggest.js" />
+    <Content Include="assets\js\course-reviews.js" />
+    <Content Include="assets\js\bank-picker.js" />
+    <Content Include="assets\js\explore-menu.js" />
+    <Content Include="Views\User\_TeacherCourseCard.cshtml" />
+
 
   </ItemGroup>
   <ItemGroup>

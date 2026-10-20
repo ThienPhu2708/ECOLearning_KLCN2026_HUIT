@@ -1,0 +1,89 @@
+@model ECOLearning.ViewModels.CourseCardViewModel
+@* Thẻ khóa học dùng chung (trang Course/Index, trang danh mục /danh-muc/{slug}). Bấm thẻ mở trang chi tiết ở tab mới. *@
+@{
+    var course = Model.Course;
+    string thumbUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
+    string teacherName = course.NguoiDung != null ? course.NguoiDung.hoTen : "ThS. Nguyễn Văn An";
+    string categoryName = course.DanhMuc != null ? course.DanhMuc.tenDanhMuc : "Lập trình Web & CNTT";
+    decimal actualPrice = Model.GiaHienTai;
+    decimal oldPrice = course.giaBan;
+    bool hasRatings = Model.SoDanhGia > 0;
+    bool isTopTrending = Model.SoHocVien >= 3;
+    bool isHighRated = hasRatings && Model.DiemDanhGia >= 4.5;
+    string detailUrl = Url.Action("Details", "Course", new { area = "", id = course.maKhoaHoc });
+}
+
+<div class="course-card" onclick="window.open('@detailUrl', '_blank', 'noopener')" style="cursor: pointer; height: 100%;">
+    <div class="course-thumb">
+        <img src="@thumbUrl" alt="@course.tenKhoaHoc" loading="lazy" decoding="async" />
+        @Html.Partial("_FavoriteButton", new ECOLearning.ViewModels.FavoriteButtonModel { CourseId = course.maKhoaHoc, TeacherId = course.maGiaoVien })
+        @if (isTopTrending)
+        {
+            <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;"><i class="bi bi-fire me-1"></i> Top Trending</span>
+        }
+        else if (isHighRated)
+        {
+            <span class="badge badge-success" style="position: absolute; top: 12px; left: 12px; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;"><i class="bi bi-star-fill me-1"></i> Đánh giá cao</span>
+        }
+    </div>
+    <div class="course-body">
+        <div class="course-category">
+            <span class="caption" style="color: var(--primary); font-weight: 700;">@categoryName</span>
+        </div>
+        <h4 class="course-title" title="@course.tenKhoaHoc" style="font-size: 15px; font-weight: 700;">@course.tenKhoaHoc</h4>
+        <div class="course-instructor">
+            <i class="bi bi-person me-1"></i>
+            @teacherName
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(course.mucTieuDauRa))
+        {
+            var cardOutcomes = course.mucTieuDauRa
+                .Split(new[] { "\r\n", "\r", "\n", ";", "," }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim().TrimStart('-', '•', '*').Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .Take(2)
+                .ToList();
+
+            if (cardOutcomes.Any())
+            {
+                <div class="course-card-outcomes" style="margin: 8px 0 10px 0; display: flex; flex-direction: column; gap: 4px; border-top: 1px dashed var(--border-color, #E2E8F0); padding-top: 8px;">
+                    @foreach (var oc in cardOutcomes)
+                    {
+                        <div style="font-size: 12px; color: var(--text-secondary, #64748B); display: flex; align-items: flex-start; gap: 6px; line-height: 1.4;">
+                            <i class="bi bi-check2 text-primary" style="font-size: 14px; flex-shrink: 0; margin-top: 1px;"></i>
+                            <span style="display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;" title="@oc">@oc</span>
+                        </div>
+                    }
+                </div>
+            }
+        }
+
+        <div class="course-rating">
+            @if (hasRatings)
+            {
+                <span class="rating-score">@Model.DiemDanhGia.ToString("0.00")</span>
+                <div class="stars" style="color: #F59E0B;"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
+                <span class="rating-count">(@Model.SoDanhGia)</span>
+            }
+            else
+            {
+                <span class="rating-score" style="color: var(--text-muted, #94A3B8); font-size: 13px; font-weight: 500;">Chưa có đánh giá</span>
+                <div class="stars" style="color: #CBD5E1; opacity: 0.7;"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
+            }
+        </div>
+
+        <div class="course-footer">
+            <div class="course-pricing">
+                <span class="price-current">@actualPrice.ToString("N0") đ</span>
+                @if (actualPrice < oldPrice)
+                {
+                    <span class="price-original">@oldPrice.ToString("N0") đ</span>
+                }
+            </div>
+            <a href="@detailUrl" target="_blank" rel="noopener" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: var(--radius-xl, 10px); font-weight: 600; text-decoration: none;">
+                Chi tiết
+            </a>
+        </div>
+    </div>
+</div>

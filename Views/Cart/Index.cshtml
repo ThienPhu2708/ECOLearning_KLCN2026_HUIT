@@ -57,6 +57,73 @@
             cursor: pointer;
         }
 
+        /* Phương thức chưa dùng được ở VNPay Sandbox: vẫn hiện, bấm vào thì báo lý do */
+        .payment-option.is-unavailable {
+            background: #F8FAFC;
+            border-style: dashed;
+            cursor: not-allowed;
+        }
+
+        .payment-option.is-unavailable:hover {
+            border-color: #CBD5E1;
+        }
+
+        .payment-option.is-unavailable .po-text {
+            opacity: .55;
+        }
+
+        .payment-option.is-unavailable input[type="radio"] {
+            cursor: not-allowed;
+        }
+
+        .mu-box {
+            max-width: 440px;
+            padding: 32px 28px 28px;
+            text-align: center;
+        }
+
+        .mu-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            background: #FEF3C7;
+            color: #B45309;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .mu-box h3 {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0F172A;
+            margin-bottom: 10px;
+        }
+
+        .mu-box p {
+            font-size: 14px;
+            color: #64748B;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .mu-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .mu-actions .btn {
+            height: 46px;
+            border-radius: 12px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+        }
+
         .grid-12 {
             display: grid;
             grid-template-columns: repeat(12, 1fr);
@@ -76,6 +143,69 @@
                 grid-column: span 12;
             }
         }
+
+        /* Mục quản lý mã khuyến mãi (chỉ mã trong ví "Mã giảm giá của tôi") */
+        .cp-manage-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .cp-manage-head .form-label { font-size: 13px; font-weight: 600; color: #0F172A; margin: 0; }
+        .cp-manage-link { font-size: 12.5px; font-weight: 600; color: #434CE8; text-decoration: none; }
+        .cp-manage-link:hover { text-decoration: underline; }
+        .cp-open { width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #FFFFFF; border: 1px dashed #A5B4FC; border-radius: 12px; cursor: pointer; text-align: left; font-size: 14px; font-weight: 600; color: #0F172A; transition: background .15s, border-color .15s; }
+        .cp-open:hover { background: #F5F7FF; border-color: #434CE8; }
+        .cp-open:focus-visible, .cp-text-btn:focus-visible, .cp-btn:focus-visible { outline: 2px solid #A5B4FC; outline-offset: 2px; }
+        .cp-open > .bi:first-child { color: #434CE8; font-size: 18px; }
+        .cp-open-label { flex: 1; min-width: 0; }
+        .cp-open-count { font-size: 12px; font-weight: 600; color: #434CE8; white-space: nowrap; }
+        .cp-open-count.is-zero { color: #94A3B8; }
+        .cp-open > .bi:last-child { color: #94A3B8; }
+        .cp-applied { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #F5F7FF; border: 1px solid #434CE8; border-radius: 12px; }
+        .cp-applied > .bi { color: #434CE8; font-size: 18px; }
+        .cp-applied-text { flex: 1; min-width: 0; font-size: 12.5px; color: #334155; line-height: 1.45; }
+        .cp-applied-text .cp-code { margin-right: 4px; }
+        .cp-text-btn { background: none; border: none; padding: 2px 4px; font-size: 12.5px; font-weight: 700; color: #434CE8; cursor: pointer; }
+        .cp-text-btn.is-danger { color: #64748B; }
+        .cp-text-btn:hover { text-decoration: underline; }
+        .cp-msg { font-size: 12px; font-weight: 600; margin-top: 8px; line-height: 1.45; }
+        .cp-msg.is-warning { color: #B45309; }
+
+        /* Hộp thoại chọn mã */
+        .cp-picker { max-width: 480px; width: calc(100% - 32px); max-height: calc(100vh - 64px); display: flex; flex-direction: column; padding: 0; border-radius: 20px; background: #FFFFFF; overflow: hidden; text-align: left; }
+        .cp-picker-head { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px 12px; }
+        .cp-picker-head h3 { font-size: 18px; font-weight: 800; color: #0F172A; margin: 0; }
+        .cp-picker-close { width: 34px; height: 34px; border-radius: 50%; border: none; background: #F1F5F9; color: #475569; cursor: pointer; font-size: 16px; }
+        .cp-picker-close:hover { background: #E2E8F0; }
+        .cp-picker-input { display: flex; gap: 8px; padding: 0 20px; }
+        .cp-picker-input input { flex: 1; text-transform: uppercase; font-weight: 700; letter-spacing: .5px; }
+        .cp-picker-input .btn { border-radius: 10px; padding: 0 16px; font-weight: 700; }
+        .cp-picker-error { display: none; padding: 8px 20px 0; font-size: 12.5px; font-weight: 600; color: #B91C1C; }
+        .cp-picker-sub { padding: 16px 20px 8px; font-size: 13px; font-weight: 700; color: #475569; }
+        .cp-picker-list { flex: 1; overflow-y: auto; padding: 0 20px 16px; }
+        .cp-picker-foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 20px; border-top: 1px solid #E2E8F0; font-size: 13px; }
+        .cp-picker-foot a { color: #434CE8; font-weight: 600; text-decoration: none; }
+        .cp-picker-foot a:hover { text-decoration: underline; }
+
+        /* Mã trong hộp thoại */
+        .cp-list { display: flex; flex-direction: column; gap: 10px; }
+        .cp-item { display: flex; gap: 12px; align-items: stretch; border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px; background: #FFFFFF; }
+        .cp-item.is-applied { border-color: #434CE8; background: #F5F7FF; }
+        .cp-item.is-disabled { background: #F8FAFC; }
+        .cp-item-value { flex: 0 0 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 10px; background: #EEF2FF; color: #434CE8; font-size: 18px; font-weight: 800; text-align: center; line-height: 1.1; padding: 6px 2px; }
+        .cp-item-value small { font-size: 10px; font-weight: 600; margin-top: 3px; }
+        .cp-item.is-disabled .cp-item-value { background: #F1F5F9; color: #94A3B8; }
+        .cp-item-body { flex: 1; min-width: 0; }
+        .cp-item-title { font-size: 13.5px; font-weight: 800; color: #0F172A; }
+        .cp-item.is-disabled .cp-item-title { color: #64748B; }
+        .cp-code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11.5px; font-weight: 700; letter-spacing: .5px; color: #434CE8; background: #FFFFFF; border: 1px dashed #A5B4FC; border-radius: 6px; padding: 1px 6px; }
+        .cp-item-name { font-size: 12px; color: #334155; margin-top: 3px; }
+        .cp-cond { font-size: 11.5px; color: #64748B; line-height: 1.45; margin-top: 2px; }
+        .cp-save { font-size: 12px; font-weight: 700; color: #434CE8; margin-top: 4px; }
+        .cp-reason { font-size: 11.5px; color: #B45309; margin-top: 4px; line-height: 1.45; }
+        .cp-item-action { display: flex; align-items: center; }
+        .cp-btn { border: none; background: #434CE8; color: #FFFFFF; font-size: 12.5px; font-weight: 700; border-radius: 8px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+        .cp-btn:hover { background: #3730C9; }
+        .cp-btn:disabled { background: #E2E8F0; color: #94A3B8; cursor: not-allowed; }
+        .cp-btn-applied { font-size: 12.5px; font-weight: 700; color: #434CE8; white-space: nowrap; }
+        .cp-empty { text-align: center; padding: 24px 12px; border: 1px dashed #CBD5E1; border-radius: 12px; font-size: 13.5px; color: #64748B; line-height: 1.6; }
+        .cp-empty a { color: #434CE8; font-weight: 700; }
     </style>
 }
 
@@ -146,30 +276,63 @@
                 <div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                     <h3 class="h3" style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 16px;">Chọn phương thức thanh toán</h3>
 
-                    <label class="payment-option selected" onclick="selectPayment(this)">
-                        <input type="radio" name="payment-method" value="MoMo/VNPay" checked />
-                        <div style="flex: 1;">
-                            <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Ví điện tử MoMo / VNPay (Khuyên dùng)</div>
-                            <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Quét mã QR qua app ngân hàng hoặc ví điện tử tức thời</div>
+                    @{
+                        // VNPay Sandbox (tài khoản test hiện tại) chỉ hoàn tất được thẻ ATM nội địa:
+                        // khóa ví / quét mã và thẻ quốc tế, mặc định thẻ ATM nội địa
+                        bool chuaHoTroVi = ECOLearning.Services.VnPayService.DangBat;
+                    }
+                    @if (chuaHoTroVi)
+                    {
+                        <div class="payment-option is-unavailable" role="button" tabindex="0" aria-disabled="true" onclick="showUnsupportedMethod('MoMo/VNPay')" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showUnsupportedMethod('MoMo/VNPay'); }">
+                            <input type="radio" value="MoMo/VNPay" disabled tabindex="-1" aria-hidden="true" />
+                            <div class="po-text" style="flex: 1;">
+                                <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Ví điện tử MoMo / VNPay</div>
+                                <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Quét mã QR qua app ngân hàng hoặc ví điện tử</div>
+                            </div>
+                            <span class="badge" style="background: #F1F5F9; color: #64748B; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; white-space: nowrap;"><i class="bi bi-lock-fill me-1"></i>Chưa hỗ trợ</span>
                         </div>
-                        <span class="badge" style="background: #ECFDF5; color: #10B981; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 9999px;">Nhanh & Tiện lợi</span>
-                    </label>
+                    }
+                    else
+                    {
+                        <label class="payment-option selected" onclick="selectPayment(this)">
+                            <input type="radio" name="payment-method" value="MoMo/VNPay" checked />
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Ví điện tử MoMo / VNPay (Khuyên dùng)</div>
+                                <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Quét mã QR qua app ngân hàng hoặc ví điện tử tức thời</div>
+                            </div>
+                            <span class="badge" style="background: #ECFDF5; color: #10B981; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 9999px;">Nhanh & Tiện lợi</span>
+                        </label>
+                    }
 
-                    <label class="payment-option" onclick="selectPayment(this)">
-                        <input type="radio" name="payment-method" value="Napas" />
+                    <label class="payment-option @(chuaHoTroVi ? "selected" : "")" onclick="selectPayment(this)">
+                        <input type="radio" name="payment-method" value="Napas" @(chuaHoTroVi ? "checked" : "") />
                         <div style="flex: 1;">
                             <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Thẻ ATM nội địa (Internet Banking Napas)</div>
                             <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Hỗ trợ tất cả ngân hàng tại Việt Nam (Vietcombank, Techcombank,...)</div>
                         </div>
                     </label>
 
-                    <label class="payment-option" onclick="selectPayment(this)">
-                        <input type="radio" name="payment-method" value="Visa/Mastercard" />
-                        <div style="flex: 1;">
-                            <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Thẻ Quốc Tế Visa / Mastercard / JCB</div>
-                            <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Thanh toán an toàn bảo mật chuẩn 3D-Secure quốc tế</div>
+                    @if (chuaHoTroVi)
+                    {
+                        <div class="payment-option is-unavailable" role="button" tabindex="0" aria-disabled="true" onclick="showUnsupportedMethod('Visa/Mastercard')" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showUnsupportedMethod('Visa/Mastercard'); }">
+                            <input type="radio" value="Visa/Mastercard" disabled tabindex="-1" aria-hidden="true" />
+                            <div class="po-text" style="flex: 1;">
+                                <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Thẻ Quốc Tế Visa / Mastercard / JCB</div>
+                                <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Thanh toán an toàn bảo mật chuẩn 3D-Secure quốc tế</div>
+                            </div>
+                            <span class="badge" style="background: #F1F5F9; color: #64748B; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; white-space: nowrap;"><i class="bi bi-lock-fill me-1"></i>Chưa hỗ trợ</span>
                         </div>
-                    </label>
+                    }
+                    else
+                    {
+                        <label class="payment-option" onclick="selectPayment(this)">
+                            <input type="radio" name="payment-method" value="Visa/Mastercard" />
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Thẻ Quốc Tế Visa / Mastercard / JCB</div>
+                                <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Thanh toán an toàn bảo mật chuẩn 3D-Secure quốc tế</div>
+                            </div>
+                        </label>
+                    }
                 </div>
 
             </div>
@@ -179,20 +342,35 @@
                 <aside class="card" style="position: sticky; top: 100px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                     <h3 class="h3" style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 20px;">Tóm tắt đơn hàng</h3>
 
-                    <!-- Coupon Input Block -->
-                    <div style="margin-bottom: 24px;">
-                        <label class="form-label" style="font-size: 13px; font-weight: 600; color: #0F172A; display: block; margin-bottom: 8px;">Mã khuyến mãi / Coupon</label>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="text" id="coupon-input" class="form-control" placeholder="Nhập mã (VD: CHAOMUNG2026)" value="@Model.AppliedCouponCode" style="text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
-                            <button type="button" class="btn btn-secondary btn-sm" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #475569; font-weight: 700; border-radius: 10px; padding: 0 16px; cursor: pointer;" onclick="applyCoupon()">Áp dụng</button>
+                    <!-- Quản lý mã khuyến mãi: chỉ mã đã lưu trong "Mã giảm giá của tôi", bấm mới mở danh sách để áp dụng -->
+                    @{
+                        bool daApMa = !string.IsNullOrEmpty(Model.AppliedCouponCode);
+                        int soMaDungDuoc = Model.Items.Count == 0 ? 0 : Model.AvailableCoupons.Count(c => c.CoTheApDung);
+                    }
+                    <div class="cp-manage" style="margin-bottom: 24px;">
+                        <div class="cp-manage-head">
+                            <span class="form-label">Mã khuyến mãi</span>
                         </div>
 
-                        <!-- Coupon Messages -->
-                        <div id="coupon-error" class="form-feedback-error" style="display: none; color: #EF4444; font-size: 12px; margin-top: 8px; font-weight: 600;">
-                            <i class="bi bi-x-circle-fill me-1"></i> Mã khuyến mãi không hợp lệ hoặc đã hết hạn!
+                        <div id="coupon-applied" class="cp-applied" style="display: @(daApMa ? "flex" : "none");">
+                            <i class="bi bi-ticket-perforated"></i>
+                            <div class="cp-applied-text">
+                                <span class="cp-code" id="coupon-applied-code">@Model.AppliedCouponCode</span>
+                                <span id="coupon-applied-msg">@(Model.DiscountAmount > 0 ? "Giảm " + Model.DiscountAmount.ToString("N0") + " đ" : "")</span>
+                            </div>
+                            <button type="button" class="cp-text-btn" onclick="openCouponPicker()">Đổi</button>
+                            <button type="button" class="cp-text-btn is-danger" onclick="removeCoupon()">Bỏ</button>
                         </div>
-                        <div id="coupon-success" style="color: #10B981; font-size: 12px; font-weight: 600; margin-top: 8px; display: @(string.IsNullOrEmpty(Model.AppliedCouponCode) ? "none" : "block");">
-                            <i class="bi bi-check-circle-fill me-1"></i> Đã áp dụng mã ưu đãi @Model.AppliedCouponCode!
+
+                        <button type="button" id="coupon-open-btn" class="cp-open" onclick="openCouponPicker()" aria-haspopup="dialog" style="display: @(daApMa ? "none" : "flex");">
+                            <i class="bi bi-ticket-perforated"></i>
+                            <span class="cp-open-label">Chọn hoặc nhập mã</span>
+                            <span id="coupon-usable-count" class="cp-open-count @(soMaDungDuoc == 0 ? "is-zero" : "")">@(soMaDungDuoc > 0 ? soMaDungDuoc + " mã dùng được" : "Chưa có mã dùng được")</span>
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+
+                        <div id="coupon-warning" class="cp-msg is-warning" role="status" style="display: @(ViewBag.CouponWarning != null ? "block" : "none");">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> <span>@ViewBag.CouponWarning</span>
                         </div>
                     </div>
 
@@ -219,7 +397,9 @@
                     </button>
 
                     <div class="caption" style="text-align: center; margin-top: 16px; color: #94A3B8; font-size: 12px; line-height: 1.5;">
-                        <i class="bi bi-shield-lock-fill me-1"></i> Bảo mật thanh toán 256-bit SSL. Bằng việc xác nhận, bạn đồng ý với Điều khoản dịch vụ E-Learning.
+                        <i class="bi bi-shield-lock-fill me-1"></i> Dữ liệu thanh toán được ký số HMAC-SHA512 và xác thực ở máy chủ. Bằng việc xác nhận, bạn đồng ý với Điều khoản dịch vụ E-Learning.
+                        <div style="margin-top: 8px; color: #92400E; background: #FEF3C7; border-radius: 8px; padding: 6px 10px;"><i class="bi bi-info-circle me-1"></i>Thanh toán đang ở chế độ <strong>thử nghiệm</strong>:
+                            @(ECOLearning.Services.VnPayService.DangBat ? "bạn sẽ được chuyển sang VNPay Sandbox (môi trường test của VNPay), dùng thẻ test, không trừ tiền thật." : "bạn sẽ được chuyển sang cổng thử nghiệm, không trừ tiền thật.")</div>
                     </div>
                 </aside>
             </div>
@@ -236,11 +416,46 @@
         </div>
         <h3 class="h2" style="font-size: 22px; font-weight: 800; color: #0F172A; margin-bottom: 10px;">Thanh toán Thành công!</h3>
         <p class="body-1" style="color: #64748B; font-size: 14px; margin-bottom: 24px; line-height: 1.6;">
-            Hệ thống đã gửi hóa đơn điện tử về email của bạn. Khóa học đã được tự động thêm vào hồ sơ học tập của bạn.
+            Đơn hàng đã được ghi nhận. Khóa học đã được tự động thêm vào hồ sơ học tập của bạn.
         </p>
         <div style="display: flex; gap: 12px; justify-content: center; flex-direction: column;">
             <a href="@Url.Action("Index", "Home")" class="btn btn-primary" style="height: 48px; background: #434CE8; color: #FFFFFF; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">Bắt đầu học ngay <i class="bi bi-arrow-right ms-1"></i></a>
             <a href="@Url.Action("Index", "Profile")" class="btn btn-secondary" style="height: 44px; background: #F1F5F9; color: #475569; border-radius: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">Xem Hồ sơ cá nhân</a>
+        </div>
+    </div>
+</div>
+
+<!-- THÔNG BÁO PHƯƠNG THỨC CHƯA HỖ TRỢ (VNPay Sandbox) -->
+<div class="modal-overlay" id="method-unsupported-modal" role="dialog" aria-modal="true" aria-labelledby="mu-title">
+    <div class="modal-container mu-box">
+        <div class="mu-icon"><i class="bi bi-qr-code-scan" id="mu-icon"></i></div>
+        <h3 id="mu-title">Phương thức chưa hỗ trợ</h3>
+        <p id="mu-reason"></p>
+        <p>Vui lòng chọn <strong>Thẻ ATM nội địa</strong> (dùng thẻ test, không trừ tiền thật).</p>
+        <div class="mu-actions">
+            <button type="button" class="btn btn-primary" style="background: #434CE8; color: #FFFFFF;" onclick="chooseMethod('Napas')">Dùng Thẻ ATM nội địa</button>
+            <button type="button" class="btn btn-secondary" style="background: #F1F5F9; color: #475569;" data-modal-close>Đóng</button>
+        </div>
+    </div>
+</div>
+
+<!-- HỘP THOẠI CHỌN MÃ KHUYẾN MÃI -->
+<div class="modal-overlay" id="coupon-picker-modal" role="dialog" aria-modal="true" aria-labelledby="cp-picker-title">
+    <div class="modal-container cp-picker">
+        <div class="cp-picker-head">
+            <h3 id="cp-picker-title">Chọn mã khuyến mãi</h3>
+            <button type="button" class="cp-picker-close" data-modal-close aria-label="Đóng"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="cp-picker-input">
+            <input type="text" id="coupon-input" class="form-control" placeholder="Nhập mã giảm giá" aria-label="Nhập mã giảm giá" autocomplete="off" />
+            <button type="button" class="btn btn-secondary" onclick="applyCoupon()">Áp dụng</button>
+        </div>
+        <div id="coupon-picker-error" class="cp-picker-error" role="alert"></div>
+        <div class="cp-picker-sub">Mã trong ví của bạn</div>
+        <div id="coupon-list-wrap" class="cp-picker-list">@Html.Partial("_CouponList", Model)</div>
+        <div class="cp-picker-foot">
+            <a href="@Url.Action("Index", "Coupon")">Quản lý mã giảm giá</a>
+            <a href="@Url.Action("Index", "Coupon", new { tab = "thuthap" })">Thu thập thêm mã <i class="bi bi-arrow-right"></i></a>
         </div>
     </div>
 </div>
@@ -252,6 +467,33 @@
             document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
             el.classList.add('selected');
             el.querySelector('input[type="radio"]').checked = true;
+        }
+
+        // Ví / quét mã và thẻ quốc tế chưa dùng được ở VNPay Sandbox: báo lý do, gợi ý thẻ ATM nội địa
+        const unsupportedMethods = {
+            'MoMo/VNPay': {
+                icon: 'bi bi-qr-code-scan',
+                html: '<strong>Ví điện tử MoMo / VNPay</strong> và <strong>quét mã VNPAY-QR</strong> chưa dùng được ở môi trường thử nghiệm VNPay Sandbox: '
+                    + 'app ngân hàng, ví điện tử thật không thanh toán được mã QR thử nghiệm.'
+            },
+            'Visa/Mastercard': {
+                icon: 'bi bi-credit-card-2-front',
+                html: '<strong>Thẻ quốc tế Visa / Mastercard / JCB</strong> chưa dùng được: tài khoản VNPay Sandbox của hệ thống '
+                    + 'chưa được VNPay mở kênh thanh toán thẻ quốc tế.'
+            }
+        };
+
+        function showUnsupportedMethod(method) {
+            const info = unsupportedMethods[method] || unsupportedMethods['MoMo/VNPay'];
+            document.getElementById('mu-icon').className = info.icon;
+            document.getElementById('mu-reason').innerHTML = info.html;
+            openModal('method-unsupported-modal');
+        }
+
+        function chooseMethod(value) {
+            const radio = document.querySelector('input[name="payment-method"][value="' + value + '"]');
+            if (radio) selectPayment(radio.closest('.payment-option'));
+            closeModal('method-unsupported-modal');
         }
 
         // Xóa khóa học khỏi giỏ hàng qua AJAX
@@ -276,6 +518,13 @@
 
                         showToast(res.message, 'info');
 
+                        // Bỏ khóa có thể làm mã không còn đủ điều kiện (phạm vi khóa học, đơn tối thiểu)
+                        if (res.couponRemoved) {
+                            setAppliedCoupon(null);
+                            showCouponWarning(res.couponMessage);
+                        }
+                        refreshCouponList();
+
                         if (res.cartCount === 0) {
                             document.getElementById('cart-items-container').innerHTML = `
                                 <div id="empty-cart-msg" style="text-align: center; padding: 40px 20px;">
@@ -293,43 +542,99 @@
             });
         }
 
-        // Áp dụng Mã Khuyến Mãi qua AJAX
-        function applyCoupon() {
-            const code = document.getElementById('coupon-input').value.trim();
-            const errEl = document.getElementById('coupon-error');
-            const succEl = document.getElementById('coupon-success');
+        // ===== Mã khuyến mãi: chỉ mã trong ví; số tiền giảm luôn do server tính =====
+        let appliedCouponCode = '@Model.AppliedCouponCode';
 
+        function showCouponWarning(msg) {
+            const el = document.getElementById('coupon-warning');
+            el.querySelector('span').innerText = msg || '';
+            el.style.display = msg ? 'block' : 'none';
+        }
+
+        function showPickerError(msg) {
+            const el = document.getElementById('coupon-picker-error');
+            el.innerText = msg || '';
+            el.style.display = msg ? 'block' : 'none';
+        }
+
+        // Hiện mã đang áp dụng (code = null: chưa áp mã)
+        function setAppliedCoupon(code, message) {
+            appliedCouponCode = code || '';
+            document.getElementById('coupon-applied').style.display = code ? 'flex' : 'none';
+            document.getElementById('coupon-open-btn').style.display = code ? 'none' : 'flex';
+            if (code) {
+                document.getElementById('coupon-applied-code').innerText = code;
+                document.getElementById('coupon-applied-msg').innerText = message || '';
+            }
+        }
+
+        function setTotals(discount, total) {
+            document.getElementById('discount-val').innerText = discount;
+            document.getElementById('total-val').innerText = total;
+        }
+
+        // Tải lại danh sách mã trong ví (trạng thái "Đang dùng", số tiền giảm, lý do) và số mã dùng được
+        function refreshCouponList() {
+            return $.get('@Url.Action("AvailableCoupons", "Cart")', function (html) {
+                const wrap = document.getElementById('coupon-list-wrap');
+                wrap.innerHTML = html.trim();
+                const list = wrap.querySelector('[data-usable]');
+                const n = list ? parseInt(list.getAttribute('data-usable') || '0') : 0;
+                const countEl = document.getElementById('coupon-usable-count');
+                countEl.innerText = n > 0 ? n + ' mã dùng được' : 'Chưa có mã dùng được';
+                countEl.classList.toggle('is-zero', n === 0);
+            });
+        }
+
+        function openCouponPicker() {
+            showPickerError('');
+            document.getElementById('coupon-input').value = '';
+            refreshCouponList();
+            openModal('coupon-picker-modal');
+            setTimeout(function () { document.getElementById('coupon-input').focus(); }, 50);
+        }
+
+        // Áp dụng mã: từ nút "Áp dụng" trong danh sách (code) hoặc ô nhập tay (mã kín)
+        function applyCoupon(code) {
+            code = (code || document.getElementById('coupon-input').value || '').trim();
             if (!code) {
-                errEl.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i> Vui lòng nhập mã khuyến mãi!';
-                errEl.style.display = 'block';
-                succEl.style.display = 'none';
+                showPickerError('Vui lòng nhập mã khuyến mãi.');
                 return;
             }
-
             $.ajax({
                 url: '@Url.Action("ApplyCoupon", "Cart")',
                 type: 'POST',
                 data: { couponCode: code },
                 success: function (res) {
                     if (res.success) {
-                        errEl.style.display = 'none';
-                        succEl.innerText = res.message;
-                        succEl.style.display = 'block';
-
-                        document.getElementById('discount-val').innerText = res.discount;
-                        document.getElementById('total-val').innerText = res.total;
-
-                        showToast(res.message, 'success');
+                        showPickerError('');
+                        showCouponWarning('');
+                        setTotals(res.discount, res.total);
+                        setAppliedCoupon(res.couponCode, 'Giảm ' + res.discount.replace(/^-\s*/, ''));
+                        closeModal('coupon-picker-modal');
+                        refreshCouponList();
                     } else {
-                        succEl.style.display = 'none';
-                        errEl.innerText = res.message;
-                        errEl.style.display = 'block';
-
-                        showToast(res.message, 'error');
+                        showPickerError(res.message);
                     }
                 },
                 error: function () {
-                    showToast('Lỗi kết nối khi kiểm tra mã khuyến mãi!', 'error');
+                    showPickerError('Lỗi kết nối khi kiểm tra mã khuyến mãi!');
+                }
+            });
+        }
+
+        function removeCoupon() {
+            $.ajax({
+                url: '@Url.Action("RemoveCoupon", "Cart")',
+                type: 'POST',
+                success: function (res) {
+                    setTotals(res.discount, res.total);
+                    setAppliedCoupon(null);
+                    showCouponWarning('');
+                    refreshCouponList();
+                },
+                error: function () {
+                    showToast('Không bỏ được mã, vui lòng thử lại!', 'error');
                 }
             });
         }
@@ -344,10 +649,10 @@
 
             const btn = document.getElementById('btn-confirm-payment');
             btn.disabled = true;
-            btn.innerText = 'Đang xử lý thanh toán...';
+            btn.innerText = 'Đang tạo đơn hàng...';
 
             const selectedMethod = document.querySelector('input[name="payment-method"]:checked').value;
-            const couponCode = document.getElementById('coupon-input').value.trim();
+            const couponCode = appliedCouponCode || '';
 
             $.ajax({
                 url: '@Url.Action("Checkout", "Cart")',
@@ -358,11 +663,31 @@
                     btn.innerText = 'Xác nhận thanh toán';
 
                     if (res.success) {
-                        if (typeof updateHeaderCartBadge === 'function') {
+                        // Đơn có phí: sang cổng thanh toán (giỏ hàng giữ tới khi thanh toán xong);
+                        // đơn 0đ: đã ghi danh, sang trang kết quả
+                        if (!res.requirePayment && typeof updateHeaderCartBadge === 'function') {
                             updateHeaderCartBadge(0);
                         }
-                        document.getElementById('payment-success-modal').style.display = 'flex';
+                        if (res.redirectUrl) {
+                            btn.disabled = true;
+                            btn.innerText = res.requirePayment ? 'Đang chuyển sang cổng thanh toán...' : 'Đang mở kết quả...';
+                            window.location.href = res.redirectUrl;
+                        } else {
+                            document.getElementById('payment-success-modal').style.display = 'flex';
+                        }
+                    } else if (res.requireLogin) {
+                        showToast(res.message, 'warning');
+                        setTimeout(function () {
+                            window.location.href = '@Url.Action("Login", "Account")?returnUrl=' + encodeURIComponent(window.location.pathname);
+                        }, 600);
+                    } else if (res.unsupportedMethod) {
+                        showUnsupportedMethod(selectedMethod);
                     } else {
+                        if (res.couponInvalid) {
+                            setAppliedCoupon(null);
+                            showCouponWarning(res.message);
+                            refreshCouponList();
+                        }
                         showToast(res.message, 'error');
                     }
                 },

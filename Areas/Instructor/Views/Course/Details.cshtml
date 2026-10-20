@@ -1,0 +1,512 @@
+@model ECOLearning.Models.KhoaHoc
+
+@{
+    ViewBag.Title = "Chi tiết khóa học";
+    ViewBag.BreadcrumbCurrent = "Chi tiết khóa học";
+    ViewBag.ShowCourseBreadcrumb = true;
+    ViewBag.BreadcrumbCourseName = Model.tenKhoaHoc;
+    ViewBag.BreadcrumbCourseId = Model.maKhoaHoc;
+    bool isPublished = Model.trangThai == "DaDuyet" || Model.trangThai == "Đã xuất bản" || Model.trangThai == "Đã duyệt";
+    bool needsRevision = Model.trangThai == "TuChoi" || Model.trangThai == "Từ chối" || Model.trangThai == "Cần sửa đổi";
+    var outlineChapters = Model.ChuongHoc != null
+        ? Model.ChuongHoc.OrderBy(c => c.thuTu).ToList()
+        : new System.Collections.Generic.List<ECOLearning.Models.ChuongHoc>();
+    var unchapteredLessons = ViewBag.UnchapteredLessons as System.Collections.Generic.List<ECOLearning.Models.BaiHoc>;
+    if (unchapteredLessons != null && unchapteredLessons.Any())
+    {
+        outlineChapters.Add(new ECOLearning.Models.ChuongHoc
+        {
+            tenChuong = "Bài học không theo chương",
+            BaiHoc = unchapteredLessons
+        });
+    }
+    var outlineLessons = outlineChapters.SelectMany(c => c.BaiHoc).ToList();
+}
+
+<style>
+.course-detail-actions { gap:20px;flex-wrap:wrap; }
+.course-detail-actions > div:first-child { flex:1 1 260px !important;min-width:0; }
+.course-detail-actions > div:last-child { flex:0 1 auto;min-width:0; }
+.course-detail-actions .btn { white-space:nowrap; }
+@@media(max-width:900px) {
+    .course-detail-actions { position:static !important;align-items:stretch !important;padding:20px !important;gap:16px; }
+    .course-detail-actions > div:first-child,
+    .course-detail-actions > div:last-child { flex:1 1 100% !important;width:100%; }
+    .course-detail-actions > div:last-child { align-items:center; }
+}
+@@media(max-width:480px) {
+    .course-detail-actions > div:last-child > .btn,
+    .course-detail-actions > div:last-child > form { flex:1 1 100%; }
+    .course-detail-actions > div:last-child > form .btn { width:100%; }
+}
+.outline-resource-toggle { border:0; background:transparent; padding:4px 0; color:var(--primary); font-size:12px; cursor:pointer; }
+
+.course-outline-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 4px; }
+.course-outline-lesson { border-bottom:1px solid var(--border-color); }
+.course-outline-lesson:last-child { border-bottom:0; }
+.course-outline-name { display:flex; align-items:center; gap:10px; font-size:14px; color:var(--text-heading); }
+.course-outline-play { display:flex; align-items:center; justify-content:center; width:18px; height:18px; flex:0 0 18px; color:var(--primary); }
+.course-outline-placeholder { display:block; width:18px; height:18px; flex:0 0 18px; }
+.course-outline-meta > span:last-child { min-width:40px; text-align:right; font-variant-numeric:tabular-nums; }
+.course-outline-meta { display:flex; align-items:center; gap:16px; color:var(--text-muted); font-size:12px; white-space:nowrap; }
+@@media (max-width:576px) { .course-outline-row { align-items:flex-start; flex-direction:column; gap:8px; } }
+
+#detail-status-badge { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; font-size:14px; line-height:1.4; font-weight:700; border-radius:10px; border:1px solid #CBD5E1; background:#E2E8F0; color:#334155; }
+#detail-status-badge::before { content:''; width:8px; height:8px; border-radius:50%; background:currentColor; }
+#detail-status-badge.badge-warning { background:#FEF3C7; color:#92400E; border-color:#FCD34D; }
+#detail-status-badge.badge-success { background:#DCFCE7; color:#166534; border-color:#86EFAC; }
+#detail-status-badge.badge-danger { background:#FEE2E2; color:#991B1B; border-color:#FCA5A5; }
+.detail-lesson-card { padding:18px 20px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-surface); margin-top:12px; }
+.detail-lesson-title { font-size:14px; color:var(--text-heading); }
+.detail-lesson-media { display:flex; align-items:center; gap:12px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border-color); }
+.detail-video-link { display:flex; align-items:center; gap:5px; min-width:0; flex:1; color:var(--primary); text-decoration:none; font-size:12px; }
+.detail-video-link svg { flex-shrink:0; }
+.detail-video-link span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text-secondary); }
+.detail-lesson-media .badge { flex-shrink:0; }
+.detail-documents { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:12px; font-size:12px; color:var(--text-muted); }
+.detail-document-chip { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border-color); border-radius:8px; padding:7px 10px; background:var(--bg-canvas); color:var(--text-heading); text-decoration:none; }
+
+    .course-detail-cover {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        border-radius: var(--radius-2xl);
+        object-fit: cover;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-card);
+    }
+
+    .detail-stat-pill {
+        background: var(--bg-canvas);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-xl);
+        padding: 14px 18px;
+        text-align: center;
+    }
+
+    .detail-stat-val {
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--text-heading);
+    }
+
+    .accordion-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        background: var(--bg-canvas);
+        border-radius: var(--radius-xl);
+        cursor: pointer;
+        font-weight: 700;
+        color: var(--text-heading);
+        transition: background var(--transition-fast);
+    }
+
+    .accordion-header:hover {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+        .accordion-body {
+        padding: 16px 0 8px;
+    }
+
+    
+
+        .accordion-lesson-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        margin-bottom: 8px;
+        background: var(--bg-surface);
+    }
+
+    
+</style>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div style="padding: 12px 16px; background: #ECFDF5; border: 1px solid #10B981; color: #065F46; border-radius: 12px; margin-bottom: 20px; font-size: 14px; font-weight: 600;">
+        ✓ @TempData["SuccessMessage"]
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div style="padding: 12px 16px; background: #FEF2F2; border: 1px solid #EF4444; color: #991B1B; border-radius: 12px; margin-bottom: 20px; font-size: 14px; font-weight: 600;">
+        ✕ @TempData["ErrorMessage"]
+    </div>
+}
+
+<!-- SECTION 1: OVERVIEW CARD -->
+<div class="card" style="margin-bottom: 24px;">
+<div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 16px;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+            @{
+                string badgeClass = "badge-secondary";
+                string badgeText = "Bản nháp";
+                if (isPublished)
+                {
+                    badgeClass = "badge-success"; badgeText = "Đã xuất bản";
+                }
+                else if (Model.trangThai == "ChoDuyet" || Model.trangThai == "Chờ duyệt")
+                {
+                    badgeClass = "badge-warning"; badgeText = "Chờ duyệt";
+                }
+                else if (needsRevision)
+                {
+                    badgeClass = "badge-danger"; badgeText = "Cần sửa đổi";
+                }
+                else if (Model.trangThai == "Tạm khóa")
+                {
+                    badgeClass = "badge-warning"; badgeText = "Tạm khóa (vi phạm)";
+                }
+                else if (Model.trangThai == "Khóa vĩnh viễn")
+                {
+                    badgeClass = "badge-danger"; badgeText = "Khóa vĩnh viễn";
+                }
+            }
+        </div>
+        <h1 class="h2" style="margin:0;" id="detail-title">@Model.tenKhoaHoc</h1>
+    </div>
+
+    <!-- Actions -->
+    <div style="display: flex; gap: 6px; padding: 4px;">
+        <span class="badge @badgeClass" id="detail-status-badge">@badgeText</span>
+        
+    </div>
+</div>
+
+    <div class="grid-12">
+        <!-- Cover Image 16:9 -->
+        <div class="col-5">
+            <img id="detail-image" src="@(!string.IsNullOrEmpty(Model.anhBia) ? Model.anhBia : "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=80")" alt="Cover Image" class="course-detail-cover">
+        </div>
+
+        <!-- Overview Details -->
+        <div class="col-7">
+            <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                <span class="badge badge-primary" id="detail-category">@(Model.DanhMuc != null ? Model.DanhMuc.tenDanhMuc : "Danh mục")</span>
+                <span class="badge badge-secondary" id="detail-level">Cấp độ: @(string.IsNullOrEmpty(Model.capDo) ? "Người mới bắt đầu" : Model.capDo)</span>
+                <span class="badge badge-secondary" id="detail-lang">Ngôn ngữ: Tiếng Việt</span>
+            </div>
+
+            <p class="body-1" style="color: var(--text-secondary); margin-bottom: 20px;" id="detail-desc">
+                @(!string.IsNullOrEmpty(Model.moTaNgan) ? Model.moTaNgan : "Khóa học chưa có mô tả ngắn.")
+            </p>
+
+            <div style="margin-bottom: 20px;">
+                <div class="caption" style="color: var(--text-muted); margin-bottom: 10px; line-height: 1.5;">Giá bán niêm yết:</div>
+                <div style="display: flex; align-items: baseline; gap: 12px;">
+                    @{
+                        decimal displayPrice = Model.giaKhuyenMai.HasValue && Model.giaKhuyenMai.Value > 0 ? Model.giaKhuyenMai.Value : Model.giaBan;
+                    }
+                    @if (displayPrice == 0)
+                    {
+                        <span style="display: inline-block; font-size: 28px; line-height: 1.3; font-weight: 800; color: var(--status-success);" id="detail-price">Miễn phí</span>
+                    }
+                    else
+                    {
+                        <span style="display: inline-block; font-size: 28px; line-height: 1.3; font-weight: 800; color: var(--primary);" id="detail-price">@displayPrice.ToString("#,##0 đ")</span>
+                        if (Model.giaKhuyenMai.HasValue && Model.giaKhuyenMai.Value > 0 && Model.giaBan > Model.giaKhuyenMai.Value)
+                        {
+                            <span style="font-size: 16px; text-decoration: line-through; color: var(--text-muted);" id="detail-orig-price">@Model.giaBan.ToString("#,##0 đ")</span>
+                        }
+                    }
+                </div>
+            </div>
+
+            <!-- Metric Pills -->
+            <div class="grid-12">
+                <div class="col-3">
+                    <div class="detail-stat-pill">
+                        <div class="detail-stat-val" id="stat-lessons">@outlineLessons.Count</div>
+                        <div class="caption">Bài học</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="detail-stat-pill">
+                        <div class="detail-stat-val" id="stat-duration">
+                            @{
+                                int totalSecs = outlineLessons.Sum(b => b.thoiLuong ?? 0);
+                                string durationStr = totalSecs >= 3600 
+                                    ? string.Format("{0}h {1:D2}m", totalSecs / 3600, (totalSecs % 3600) / 60)
+                                    : string.Format("{0:D2}m {1:D2}s", totalSecs / 60, totalSecs % 60);
+                            }
+                            @durationStr
+                        </div>
+                        <div class="caption">Thời lượng</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="detail-stat-pill">
+                        <div class="detail-stat-val" id="stat-students">@(Model.DangKyKhoaHoc != null ? Model.DangKyKhoaHoc.Count : 0)</div>
+                        <div class="caption">Học viên</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="detail-stat-pill">
+                        <div class="detail-stat-val" style="color: #F59E0B;" id="stat-rating">
+                        @(Model.DanhGiaKhoaHoc != null && Model.DanhGiaKhoaHoc.Any() ? Math.Round(Model.DanhGiaKhoaHoc.Average(d => d.soSao), 1).ToString("0.0") : "0") ★
+                    </div>
+                        <div class="caption">Đánh giá</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 2: CURRICULUM ACCORDION -->
+<div class="card" style="margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <h3 class="h3">Đề cương khóa học</h3>
+
+        </div>
+        <a href="@Url.Action("Index", "Curriculum", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline btn-sm">Xem đề cương</a>
+    </div>
+
+    @if (outlineChapters.Any())
+    {
+        int accIndex = 1;
+        foreach (var chuong in outlineChapters)
+        {
+            <div style="margin-bottom: 14px;">
+                <div class="accordion-header" onclick="toggleAccordion('acc-@accIndex')">
+                    <span>@(string.IsNullOrEmpty(chuong.maChuong) ? chuong.tenChuong : "Chương " + accIndex + ": " + chuong.tenChuong) (@(chuong.BaiHoc?.Count ?? 0) bài học)</span>
+                    <span id="acc-icon-@accIndex">&#9660;</span>
+                </div>
+                <div class="accordion-body" id="acc-@accIndex">
+                    @if (chuong.BaiHoc != null && chuong.BaiHoc.Any())
+                    {
+                        int lessonIndex = 1;
+                        foreach (var bai in chuong.BaiHoc.OrderBy(b => b.thuTu))
+                        {
+                            <div class="course-outline-lesson">
+                            <div class="course-outline-row">
+                                <div class="course-outline-name">
+                                    @if (!string.IsNullOrWhiteSpace(bai.duongDanVideo))
+                                    {
+                                        <a class="course-outline-play" href="@bai.duongDanVideo" data-title="@bai.tenBaiHoc" onclick="previewVideo(this.getAttribute('href'), this.dataset.title); return false;" title="Xem video" aria-label="Xem video">
+                                            <svg width="18" height="18" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="currentColor"/><path d="M6.3 4.6L11 8L6.3 11.4Z" fill="white"/></svg>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="course-outline-placeholder" aria-hidden="true"></span>
+                                    }
+                                    <span>Bài @lessonIndex: @bai.tenBaiHoc</span>
+                                </div>
+                                <div class="course-outline-meta">
+                                    @if (bai.TaiNguyen != null && bai.TaiNguyen.Any()) {
+                                        <button type="button" class="outline-resource-toggle" aria-expanded="false" aria-controls="outline-res-@bai.maBaiHoc" onclick="var panel = document.getElementById(this.getAttribute('aria-controls')); panel.hidden = !panel.hidden; this.setAttribute('aria-expanded', String(!panel.hidden));">@bai.TaiNguyen.Count tài liệu ▾</button>
+                                    }
+                                    <span>@string.Format("{0:D2}:{1:D2}", (bai.thoiLuong ?? 0) / 60, (bai.thoiLuong ?? 0) % 60)</span>
+                                </div>
+                            </div>
+                            @if (bai.TaiNguyen != null && bai.TaiNguyen.Any())
+                            {
+                                <div id="outline-res-@bai.maBaiHoc" hidden>
+                                    <div class="detail-documents" style="margin:0;padding:0 4px 14px 32px;">
+                                        @foreach (var resource in bai.TaiNguyen)
+                                        {
+                                            string extension = (System.IO.Path.GetExtension(resource.duongDan) ?? "").TrimStart('.');
+                                            string name = System.IO.Path.GetFileNameWithoutExtension(resource.tenTaiNguyen);
+                                            <a class="detail-document-chip" href="@resource.duongDan" target="_blank" rel="noopener">@name @(!string.IsNullOrEmpty(extension) ? "(" + extension.ToUpperInvariant() + ")" : "")</a>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            </div>
+                            lessonIndex++;
+                        }
+                    }
+                    else
+                    {
+                        <div class="caption" style="text-align:center; padding: 10px; color: var(--text-muted);">Chưa có bài học nào trong chương này.</div>
+                    }
+                </div>
+            </div>
+            accIndex++;
+        }
+    }
+    else
+    {
+        <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+            <p style="margin-bottom: 10px;">Khóa học này chưa có đề cương nào.</p>
+            <a href="@Url.Action("Index", "Curriculum", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-primary">Xem đề cương</a>
+        </div>
+    }
+</div>
+
+<!-- SECTION 3: DYNAMIC ACTION BAR -->
+<div class="action-bar-card course-detail-actions" style="position: sticky; bottom: 24px; z-index: 30; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-2xl); padding: 18px 24px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12); display: flex; align-items: center; justify-content: space-between;">
+    @if (isPublished)
+    {
+        <div style="flex: 1;">
+            <strong style="color: var(--text-heading); font-size: 15px;">Khóa học đang hoạt động công khai</strong>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            @if (Model.DangKyKhoaHoc != null && Model.DangKyKhoaHoc.Any())
+            {
+                <a href="@Url.Action("CourseStudents", "Student", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline"><i class="bi bi-people" aria-hidden="true"></i> Xem học viên</a>
+            }
+            <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = Model.maKhoaHoc })" class="btn btn-outline">Chỉnh sửa thông tin</a>
+            <a href="@Url.Action("Index", "Analytics", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline">Báo cáo thống kê</a>
+        </div>
+    }
+    else if (Model.trangThai == "ChoDuyet" || Model.trangThai == "Chờ duyệt")
+    {
+        <div style="display: flex; align-items: center; gap: 12px; color: var(--status-warning); flex: 1;">
+            <div style="font-size: 24px;">⏳</div>
+            <div>
+                <strong style="color: var(--text-heading); font-size: 15px;">Khóa học đang chờ Admin kiểm duyệt</strong>
+                <div class="caption">Hệ thống tạm khóa tính năng chỉnh sửa nội dung trong thời gian chờ xét duyệt</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            @if (Model.DangKyKhoaHoc != null && Model.DangKyKhoaHoc.Any())
+            {
+                <a href="@Url.Action("CourseStudents", "Student", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline"><i class="bi bi-people" aria-hidden="true"></i> Xem học viên</a>
+            }
+            <form action="@Url.Action("CancelApproval", "Course", new { area = "Instructor" })" method="post" style="display:inline;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.maKhoaHoc" />
+                <button type="submit" class="btn btn-warning" onclick="return instructorConfirmSubmit(this, 'Bạn có chắc chắn muốn hủy gửi xét duyệt để quay lại trạng thái Bản nháp?');">Hủy gửi xét duyệt</button>
+            </form>
+            <button class="btn btn-secondary" disabled style="opacity: 0.5; cursor: not-allowed;">Đang khóa sửa</button>
+        </div>
+    }
+    else if (Model.trangThai == "Tạm khóa" || Model.trangThai == "Khóa vĩnh viễn")
+    {
+        bool isTempLocked = Model.trangThai == "Tạm khóa";
+        <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+            <div style="font-size: 22px; color: @(isTempLocked ? "#C2410C" : "#DC2626");"><i class="bi bi-flag-fill"></i></div>
+            <div>
+                <strong style="color: var(--text-heading); font-size: 15px;">@(isTempLocked ? "Khóa học đang bị tạm khóa do báo cáo vi phạm" : "Khóa học đã bị khóa vĩnh viễn do vi phạm")</strong>
+                <div class="caption">@(isTempLocked ? "Khóa học bị ẩn khỏi trang bán. Hãy chỉnh sửa nội dung và gửi phản hồi cho quản trị viên." : "Khóa học không còn được bán và học viên không thể tiếp tục học.")</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            @if (Model.DangKyKhoaHoc != null && Model.DangKyKhoaHoc.Any())
+            {
+                <a href="@Url.Action("CourseStudents", "Student", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline"><i class="bi bi-people" aria-hidden="true"></i> Xem học viên</a>
+            }
+            @if (isTempLocked)
+            {
+                <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = Model.maKhoaHoc })" class="btn btn-outline">Chỉnh sửa nội dung</a>
+            }
+            <a href="@Url.Action("Index", "Violation", new { area = "Instructor", id = Model.maKhoaHoc })" class="btn btn-primary">@(isTempLocked ? "Xử lý vi phạm" : "Xem lý do")</a>
+        </div>
+    }
+    else
+    {
+        <div style="flex: 1;">
+            <strong style="color: var(--text-heading); font-size: 15px;">@(needsRevision ? "Khóa học cần sửa đổi" : "Khóa học ở trạng thái Bản nháp")</strong>
+            <div class="caption">@(needsRevision ? "Vui lòng chỉnh sửa khóa học theo yêu cầu kiểm duyệt trước khi gửi xét duyệt lại" : "Vui lòng hoàn thiện video bài giảng trước khi gửi đăng ký duyệt xuất bản")</div>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            @if (Model.DangKyKhoaHoc != null && Model.DangKyKhoaHoc.Any())
+            {
+                <a href="@Url.Action("CourseStudents", "Student", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline"><i class="bi bi-people" aria-hidden="true"></i> Xem học viên</a>
+            }
+            <button class="btn btn-danger" onclick="instructorNotice('Tính năng xóa đang phát triển!');">Xóa khóa học</button>
+            <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = Model.maKhoaHoc })" class="btn btn-outline">Chỉnh sửa thông tin</a>
+            
+            <form action="@Url.Action("SubmitForApproval", "Course", new { area = "Instructor" })" method="post" style="display:inline;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.maKhoaHoc" />
+                <button type="submit" class="btn btn-primary" onclick="return instructorConfirmSubmit(this, 'Gửi duyệt khóa học này?');">@(needsRevision ? "Gửi xét duyệt lại" : "Gửi xét duyệt ngay")</button>
+            </form>
+        </div>
+    }
+</div>
+
+<!-- MODAL PREVIEW VIDEO -->
+<div class="modal-overlay" id="video-preview-modal">
+    <div class="modal-container" style="max-width: 720px; overflow: hidden;">
+        <div class="modal-header">
+            <h3 class="h3" id="video-preview-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%;">Xem trước video</h3>
+            <button class="btn btn-secondary btn-sm" onclick="closeVideoPreview()">×</button>
+        </div>
+        <div class="modal-body" style="padding: 0; background: #000;" id="preview-video-container"></div>
+    </div>
+</div>
+
+@section Scripts {
+            <script>
+        function toggleAccordion(id) {
+            const el = document.getElementById(id);
+            const icon = document.getElementById(id.replace('acc-', 'acc-icon-'));
+            if (el.style.display === 'none') {
+                el.style.display = 'block';
+                if (icon) icon.innerHTML = '&#9660;';
+            } else {
+                el.style.display = 'none';
+                if (icon) icon.innerHTML = '&#9650;';
+            }
+        }
+
+        function toggleResources(id, link) {
+            const el = document.getElementById(id);
+            if (el.style.display === 'none') {
+                el.style.display = 'block';
+                link.innerHTML = link.innerHTML.replace('▾', '▴');
+            } else {
+                el.style.display = 'none';
+                link.innerHTML = link.innerHTML.replace('▴', '▾');
+            }
+        }
+        function previewVideo(videoUrl, title) {
+            document.getElementById('video-preview-title').innerText = title;
+            const container = document.getElementById('preview-video-container');
+            
+            // Clear previous
+            container.innerHTML = '';
+            
+            // Fix absolute path for local files if needed, but in ASP.NET we already passed the exact URL.
+            // But wait, if videoUrl doesn't start with http, we should probably prepend the Uploads folder if it's just a filename.
+            if (!videoUrl.startsWith('http') && !videoUrl.startsWith('/')) {
+                videoUrl = '/Uploads/Videos/' + videoUrl;
+            }
+
+            if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+                let videoId = '';
+                if (videoUrl.includes('youtube.com/watch?v=')) {
+                    videoId = videoUrl.split('v=')[1];
+                    const ampersandPosition = videoId.indexOf('&');
+                    if (ampersandPosition !== -1) {
+                        videoId = videoId.substring(0, ampersandPosition);
+                    }
+                } else if (videoUrl.includes('youtu.be/')) {
+                    videoId = videoUrl.split('youtu.be/')[1];
+                }
+                
+                container.innerHTML = '<iframe width="100%" height="400" src="https://www.youtube.com/embed/' + videoId + '?autoplay=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+            } else {
+                const player = document.createElement('video');
+                player.controls = true;
+                player.style.width = '100%';
+                player.style.maxHeight = '60vh';
+                player.src = videoUrl;
+                container.appendChild(player);
+                player.play().catch(e => console.log('Auto-play blocked or error', e));
+            }
+
+            if (typeof openModal === 'function') openModal('video-preview-modal');
+            else document.getElementById('video-preview-modal').classList.add('active');
+        }
+
+        function closeVideoPreview() {
+            const container = document.getElementById('preview-video-container');
+            container.innerHTML = ''; // Stops playback
+            
+            if (typeof closeModal === 'function') closeModal('video-preview-modal');
+            else document.getElementById('video-preview-modal').classList.remove('active');
+        }
+    </script>
+}

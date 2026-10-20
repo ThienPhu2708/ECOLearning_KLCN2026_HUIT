@@ -4,21 +4,31 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 
     var chapters = ViewBag.Chapters as List<ECOLearning.Models.ChuongHoc> ?? (Model != null && Model.ChuongHoc != null ? Model.ChuongHoc.OrderBy(c => c.thuTu).ToList() : new List<ECOLearning.Models.ChuongHoc>());
+    var unchapteredLessons = ViewBag.UnchapteredLessons as List<ECOLearning.Models.BaiHoc> ?? new List<ECOLearning.Models.BaiHoc>();
     bool isEnrolled = ViewBag.IsEnrolled ?? false;
     bool isInCart = ViewBag.IsInCart ?? false;
+    bool isOwner = ViewBag.IsOwner ?? false;
+    bool isGuest = !User.Identity.IsAuthenticated && Session["UserId"] == null;
 
-    int totalLessons = chapters.Sum(c => c.BaiHoc != null ? c.BaiHoc.Count : 0);
-    int totalDurationSeconds = chapters.Sum(c => c.BaiHoc != null ? c.BaiHoc.Sum(b => b.thoiLuong ?? 0) : 0);
+    int totalLessons = chapters.Sum(c => c.BaiHoc != null ? c.BaiHoc.Count : 0) + unchapteredLessons.Count;
+    int totalDurationSeconds = chapters.Sum(c => c.BaiHoc != null ? c.BaiHoc.Sum(b => b.thoiLuong ?? 0) : 0) + unchapteredLessons.Sum(b => b.thoiLuong ?? 0);
     int totalMinutes = totalDurationSeconds / 60;
 
-    var previewLesson = chapters.SelectMany(c => c.BaiHoc != null ? c.BaiHoc : new List<ECOLearning.Models.BaiHoc>())
-                                .FirstOrDefault(b => b.choXemThu == true && !string.IsNullOrEmpty(b.duongDanVideo));
+    var allLessonsList = chapters.SelectMany(c => c.BaiHoc != null ? c.BaiHoc : new List<ECOLearning.Models.BaiHoc>()).Concat(unchapteredLessons).ToList();
+
+    var previewLesson = allLessonsList.FirstOrDefault(b => b.choXemThu == true && !string.IsNullOrEmpty(b.duongDanVideo));
     if (previewLesson == null)
     {
-        previewLesson = chapters.SelectMany(c => c.BaiHoc != null ? c.BaiHoc : new List<ECOLearning.Models.BaiHoc>())
-                                .FirstOrDefault(b => !string.IsNullOrEmpty(b.duongDanVideo));
+        previewLesson = allLessonsList.FirstOrDefault(b => !string.IsNullOrEmpty(b.duongDanVideo));
     }
-    string previewVideoUrl = previewLesson != null ? previewLesson.duongDanVideo : "";
+    // Video nội bộ: phát qua VideoStream/Play (không dùng Session) để hỗ trợ HTTP Range Request đúng chuẩn
+    // (static file trên IIS Express không phục vụ đúng Range, gây hiện tượng có tiếng nhưng hình đứng)
+    const string localVideoPrefix = "/assets/uploads/videos/";
+    Func<string, string> toPlayableVideoUrl = raw => !string.IsNullOrEmpty(raw) && raw.StartsWith(localVideoPrefix)
+        ? Url.Action("Play", "VideoStream", new { file = raw.Substring(localVideoPrefix.Length) })
+        : raw;
+
+    string previewVideoUrl = previewLesson != null ? toPlayableVideoUrl(previewLesson.duongDanVideo) : "";
     string previewLessonTitle = previewLesson != null ? previewLesson.tenBaiHoc : "Video giới thiệu khóa học";
 
     double avgRating = Model != null && Model.DanhGiaKhoaHoc != null && Model.DanhGiaKhoaHoc.Count > 0
@@ -28,6 +38,7 @@
 }
 
 @section styles {
+    <link rel="stylesheet" href="@Url.Content("~/assets/css/course-reviews.css?v=1.1")" />
     <style>
         .details-page-main {
             background-color: #F8FAFC;
@@ -113,6 +124,8 @@
         .details-right-sidebar {
             width: 360px;
             flex-shrink: 0;
+            /* Cao bằng cột trái (lưới dùng align-items: flex-start) để .sticky-course-card dính suốt khi cuộn tới cuối trang */
+            align-self: stretch;
         }
 
         @@media (max-width: 991px) {
@@ -121,6 +134,10 @@
             }
             .details-right-sidebar {
                 width: 100%;
+            }
+            /* Màn hình hẹp: thẻ mua nằm trên nội dung, không dính (đặt trước rule gốc nên cần selector mạnh hơn) */
+            .details-right-sidebar .sticky-course-card {
+                position: static;
             }
         }
 
@@ -424,6 +441,78 @@
             color: #FFFFFF;
         }
 
+        /* Khóa học liên quan cuối cột trái (Views/Course/_RelatedCourses.cshtml): mỗi khóa một dòng */
+        .rel-wrap { margin-top: 8px; overflow-anchor: none; }
+        .rel-section { margin-top: 36px; }
+        .rel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+        .rel-head h2 { font-size: 22px; font-weight: 800; color: #0F172A; margin: 0 0 4px; }
+        .rel-head p { font-size: 13.5px; color: #64748B; margin: 0; }
+        .rel-toggle { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px solid #E2E8F0; border-radius: 9px; background: #FFFFFF; color: #475569; font-size: 13px; font-weight: 700; cursor: pointer; }
+        .rel-toggle:hover { border-color: #434CE8; color: #434CE8; }
+        .rel-toggle:focus-visible { outline: 2px solid #A5B4FC; outline-offset: 2px; }
+        .rel-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+        .rel-list[hidden] { display: none; }
+
+        /* Combo "Thường xuyên được mua cùng nhau" */
+        .fbt-list { list-style: none; margin: 0; padding: 0; }
+        .fbt-item { position: relative; }
+        .fbt-card { display: flex; gap: 20px; padding: 18px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; }
+        .fbt-card.is-current { border-color: #C7D2FE; background: #FAFBFF; }
+        .fbt-thumb { flex: 0 0 230px; height: 130px; border-radius: 12px; overflow: hidden; background: #E2E8F0; }
+        .fbt-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .fbt-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+        .fbt-top { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+        .fbt-current { font-size: 11.5px; font-weight: 700; color: #434CE8; background: #EEF2FF; border-radius: 9999px; padding: 2px 10px; }
+        .fbt-title { font-size: 17px; font-weight: 800; color: #0F172A; line-height: 1.35; text-decoration: none; }
+        .fbt-title:hover { color: #434CE8; text-decoration: underline; }
+        .fbt-desc { margin: 0; font-size: 14px; color: #334155; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .fbt-teacher { font-size: 12.5px; color: #64748B; }
+        .rel-chip.rel-chip-hot { background: #E0F2FE; color: #0369A1; }
+        .rel-chip.rel-chip-top { background: #EEF2FF; color: #434CE8; }
+        .fbt-foot { margin-top: auto; padding-top: 8px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .fbt-price { display: flex; align-items: baseline; gap: 10px; }
+        .fbt-price strong { font-size: 17px; font-weight: 800; color: #0F172A; }
+        .fbt-price s { font-size: 14px; color: #94A3B8; }
+        .fbt-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 18px; border: 1px solid #434CE8; border-radius: 10px; background: #FFFFFF; color: #434CE8; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; white-space: nowrap; }
+        .fbt-btn:hover { background: #EEF2FF; color: #434CE8; }
+        .fbt-btn:disabled { opacity: .6; cursor: progress; }
+        .fbt-btn.is-in-cart { border-color: #C7D2FE; background: #F5F7FF; }
+        .fbt-plus { position: relative; z-index: 1; width: 40px; height: 40px; margin: -10px auto -10px 230px; border-radius: 50%; background: #FFFFFF; border: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: center; color: #475569; font-size: 18px; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06); }
+        .fbt-total { display: flex; justify-content: flex-end; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 18px; padding: 16px 18px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; }
+        .fbt-total-price { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+        .fbt-total-price span { font-size: 15px; color: #334155; }
+        .fbt-total-price strong { font-size: 20px; font-weight: 800; color: #0F172A; }
+        .fbt-total-price s { font-size: 14px; color: #94A3B8; }
+        .fbt-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 46px; padding: 0 22px; border: none; border-radius: 12px; background: #434CE8; color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none; cursor: pointer; white-space: nowrap; }
+        .fbt-btn-primary:hover { background: #3730C9; color: #FFFFFF; }
+        .fbt-btn-primary:disabled { opacity: .7; cursor: progress; }
+        .fbt-btn:focus-visible, .fbt-btn-primary:focus-visible, .fbt-title:focus-visible { outline: 2px solid #A5B4FC; outline-offset: 2px; }
+        .rel-row { display: flex; align-items: center; gap: 18px; padding: 18px 20px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; color: inherit; text-decoration: none; transition: border-color .2s, box-shadow .2s; }
+        .rel-row:hover { border-color: #C7D2FE; box-shadow: 0 8px 20px -12px rgba(67, 76, 232, 0.35); color: inherit; }
+        .rel-row:focus-visible { outline: 2px solid #A5B4FC; outline-offset: 2px; }
+        .rel-thumb { width: 64px; height: 64px; flex-shrink: 0; border-radius: 10px; object-fit: cover; background: #E2E8F0; align-self: flex-start; }
+        .rel-main { flex: 1; min-width: 0; }
+        .rel-title { font-size: 16.5px; font-weight: 700; color: #0F172A; line-height: 1.35; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .rel-row:hover .rel-title { color: #434CE8; }
+        .rel-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+        .rel-chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border-radius: 6px; background: #F1F5F9; color: #334155; font-size: 13px; font-weight: 700; white-space: nowrap; }
+        .rel-chip-rating .bi { color: #F59E0B; font-size: 12px; }
+        .rel-chip-outline { background: #FFFFFF; border: 1px solid #E2E8F0; color: #64748B; font-weight: 500; }
+        .rel-price { flex-shrink: 0; min-width: 116px; align-self: stretch; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding-left: 20px; border-left: 1px solid #E2E8F0; text-align: left; }
+        .rel-price strong { font-size: 17px; font-weight: 800; color: #0F172A; }
+        .rel-price s { font-size: 14px; color: #94A3B8; }
+        @@media (max-width: 640px) {
+            .rel-row { flex-wrap: wrap; padding: 14px; gap: 12px; }
+            .rel-thumb { width: 52px; height: 52px; }
+            .rel-price { flex-direction: row; justify-content: flex-start; align-items: baseline; gap: 10px; border-left: none; border-top: 1px solid #F1F5F9; padding: 10px 0 0; width: 100%; }
+            .rel-head { flex-direction: column; }
+            .fbt-card { flex-direction: column; padding: 14px; gap: 12px; }
+            .fbt-thumb { flex-basis: auto; width: 100%; height: 170px; }
+            .fbt-plus { margin: -10px auto; }
+            .fbt-total { justify-content: space-between; }
+            .fbt-btn-primary { width: 100%; }
+        }
+
         .custom-modal-body {
             padding: 0;
             background: #000000;
@@ -432,6 +521,7 @@
             justify-content: center;
             min-height: 320px;
         }
+
     </style>
 }
 
@@ -472,43 +562,47 @@
                 <h1 class="course-title-main" style="margin-top: 8px; margin-bottom: 14px;">@Model.tenKhoaHoc</h1>
 
                 <!-- Short Description -->
-                <p class="lead text-light opacity-75 fs-6 mb-4" style="max-width: 860px; line-height: 1.6; color: #94A3B8 !important;">@Model.moTaNgan</p>
+                <p class="lead text-light opacity-75 fs-6 mb-4" style="max-width: 860px; line-height: 1.6; color: #94A3B8 !important; white-space: pre-line;">@Model.moTaNgan</p>
 
                 <!-- Bottom Meta Info Bar -->
                 <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size: 14.5px;">
                     <!-- Rating & Reviews -->
-                    @if (reviewCount > 0)
-                    {
-                        <div class="d-flex align-items-center gap-1">
-                            <span class="fw-bold" style="color: #F59E0B; font-size: 15px;">@avgRating.ToString("0.0")</span>
-                            <div class="d-flex gap-1 ms-1" style="color: #F59E0B;">
-                                @for (int i = 1; i <= 5; i++)
+                    @{
+                        double headerScore = reviewCount > 0 ? avgRating : 0.0;
+                        int headerReviews = reviewCount;
+                    }
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="fw-bold" style="color: @(headerScore > 0 ? "#F59E0B" : "#94A3B8"); font-size: 15px;">@headerScore.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)</span>
+                        <div class="d-flex gap-1 ms-1" style="color: @(headerScore > 0 ? "#F59E0B" : "#CBD5E1");">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                if (headerScore > 0 && i <= Math.Round(headerScore))
                                 {
-                                    if (i <= Math.Round(avgRating))
-                                    {
-                                        <i class="bi bi-star-fill"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-star"></i>
-                                    }
+                                    <i class="bi bi-star-fill"></i>
                                 }
-                            </div>
-                            <span class="ms-1" style="color: #94A3B8;">(@reviewCount đánh giá)</span>
+                                else
+                                {
+                                    <i class="bi bi-star"></i>
+                                }
+                            }
                         </div>
-                        <span style="color: #475569;">•</span>
-                    }
-                    else
-                    {
-                        <div class="d-flex align-items-center gap-1" style="color: #94A3B8;">
-                            <span>Chưa có đánh giá</span>
-                        </div>
-                        <span style="color: #475569;">•</span>
-                    }
+                        <span class="ms-1" style="color: #CBD5E1;">(@headerReviews đánh giá)</span>
+                    </div>
+                    <span style="color: #475569;">•</span>
 
                     <!-- Giảng viên -->
                     <div style="color: #94A3B8;">
-                        Giảng viên: <strong style="color: #FFFFFF; font-weight: 700;">@(Model.NguoiDung != null ? Model.NguoiDung.hoTen : "Giảng viên E-Learning")</strong>
+                        Giáo viên: 
+                        @if (Model.NguoiDung != null)
+                        {
+                            <a href="@Url.Action("Index", "User", new { id = Model.NguoiDung.maNguoiDung })" target="_blank" rel="noopener" title="Xem thông tin chi tiết giáo viên @Model.NguoiDung.hoTen" style="color: #FFFFFF; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; transition: color 0.2s;" onmouseover="this.style.color='#A5B4FC'" onmouseout="this.style.color='#FFFFFF'">
+                                @Model.NguoiDung.hoTen
+                            </a>
+                        }
+                        else
+                        {
+                            <strong style="color: #FFFFFF; font-weight: 700;">Giáo viên E-Learning</strong>
+                        }
                     </div>
 
                     <span style="color: #475569;">•</span>
@@ -528,18 +622,27 @@
                     <!-- Section 1: Outcomes -->
                     @if (!string.IsNullOrEmpty(Model.mucTieuDauRa))
                     {
-                        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4" style="background: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 100%); border: 1px solid #C7D2FE !important;">
-                            <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-check-circle-fill text-primary me-2"></i>Mục tiêu đạt được sau khóa học</h5>
-                            <div class="row g-2">
-                                @foreach (var outcome in Model.mucTieuDauRa.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
-                                {
-                                    <div class="col-md-6 d-flex align-items-start gap-2">
-                                        <i class="bi bi-check2-circle text-primary fs-5"></i>
-                                        <span class="text-secondary fs-6 fw-medium">@outcome.Trim()</span>
-                                    </div>
-                                }
+                        var outcomesList = Model.mucTieuDauRa
+                            .Split(new[] { "\r\n", "\r", "\n", ";", "," }, StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => s.Trim().TrimStart('-', '•', '*').Trim())
+                            .Where(s => !string.IsNullOrEmpty(s))
+                            .ToList();
+
+                        if (outcomesList.Any())
+                        {
+                            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4" style="background: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 100%); border: 1px solid #C7D2FE !important;">
+                                <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-check-circle-fill text-primary me-2"></i>Mục tiêu đạt được sau khóa học</h5>
+                                <div class="row g-3">
+                                    @foreach (var outcome in outcomesList)
+                                    {
+                                        <div class="col-md-6 d-flex align-items-start gap-2">
+                                            <i class="bi bi-check2-circle text-primary fs-5 flex-shrink-0 mt-1"></i>
+                                            <span class="text-secondary fs-6 fw-medium lh-base">@outcome</span>
+                                        </div>
+                                    }
+                                </div>
                             </div>
-                        </div>
+                        }
                     }
 
                     <!-- Section 2: Dynamic Curriculum Accordion (Tính năng Thu gọn / Mở rộng chương học) -->
@@ -547,9 +650,58 @@
                         <div class="d-flex align-items-center justify-content-between mb-3 gap-3 flex-wrap">
                             <h4 class="fw-bold text-dark m-0 text-nowrap" style="font-size: 20px;"><i class="bi bi-list-nested me-2 text-primary"></i>Đề cương chi tiết</h4>
                             <div class="d-flex align-items-center gap-3 flex-wrap ms-auto">
-                                <span class="text-muted fs-6 text-nowrap"><strong>@chapters.Count</strong> chương • <strong>@totalLessons</strong> bài học • <strong>@totalMinutes phút</strong></span>
+                                <span class="text-muted fs-6 text-nowrap">@(chapters.Count > 0 ? $"{chapters.Count} chương • " : "")<strong>@totalLessons</strong> bài học • <strong>@totalMinutes phút</strong></span>
                             </div>
                         </div>
+
+                        @if (unchapteredLessons.Count > 0)
+                        {
+                            int unchapSeconds = unchapteredLessons.Sum(b => b.thoiLuong ?? 0);
+                            int unchapMin = unchapSeconds / 60;
+
+                            <div class="curriculum-chapter-card">
+                                <div class="chapter-header" onclick="toggleChapterAccordion('collapseUnchapDetail', this)" title="Bấm để đóng / mở danh sách bài học">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-chevron-down text-primary chevron-icon"></i>
+                                        <span class="fw-bold text-dark"><i class="bi bi-file-earmark-play me-2 text-primary"></i>@(chapters.Count > 0 ? "Bài học độc lập (Không phân chương)" : "Danh sách bài học")</span>
+                                    </div>
+                                    <span class="text-muted fw-normal fs-6">@unchapteredLessons.Count bài học (@unchapMin phút)</span>
+                                </div>
+
+                                <div id="collapseUnchapDetail" class="collapse-content">
+                                    @foreach (var les in unchapteredLessons)
+                                    {
+                                        int lesMin = (les.thoiLuong ?? 0) / 60;
+                                        int lesSec = (les.thoiLuong ?? 0) % 60;
+                                        string durationText = string.Format("{0:D2}:{1:D2}", lesMin, lesSec);
+                                        bool hasVideo = !string.IsNullOrEmpty(les.duongDanVideo);
+
+                                        <div class="lesson-item-row">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <i class="bi bi-play-circle-fill text-primary fs-5"></i>
+                                                <span class="fw-semibold text-dark">@les.tenBaiHoc</span>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-3">
+                                                @if (hasVideo && les.choXemThu == true)
+                                                {
+                                                    <span class="badge-preview" role="button" data-title="@les.tenBaiHoc" data-video="@toPlayableVideoUrl(les.duongDanVideo)" onclick="handlePreviewClick(this)">
+                                                        <i class="bi bi-eye"></i> Học thử
+                                                    </span>
+                                                }
+                                                else if (!hasVideo)
+                                                {
+                                                    <span class="badge bg-secondary opacity-75 fw-normal" style="font-size: 11px;">
+                                                        <i class="bi bi-clock-history me-1"></i> Video đang phát triển
+                                                    </span>
+                                                }
+                                                <span class="text-muted text-nowrap"><i class="bi bi-clock me-1"></i>@durationText</span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
                         @if (chapters.Count > 0)
                         {
                             int chapIndex = 1;
@@ -586,7 +738,7 @@
                                                     <div class="d-flex align-items-center gap-3">
                                                         @if (hasVideo && les.choXemThu == true)
                                                         {
-                                                            <span class="badge-preview" role="button" data-title="@les.tenBaiHoc" data-video="@les.duongDanVideo" onclick="handlePreviewClick(this)">
+                                                            <span class="badge-preview" role="button" data-title="@les.tenBaiHoc" data-video="@toPlayableVideoUrl(les.duongDanVideo)" onclick="handlePreviewClick(this)">
                                                                 <i class="bi bi-eye"></i> Học thử
                                                             </span>
                                                         }
@@ -610,7 +762,7 @@
                                 chapIndex++;
                             }
                         }
-                        else
+                        else if (unchapteredLessons.Count == 0)
                         {
                             <div class="alert alert-info">Đang cập nhật khung chương trình học.</div>
                         }
@@ -619,113 +771,29 @@
                     <!-- Section 3: Course Description -->
                     <div class="mb-5">
                         <h4 class="fw-bold text-dark mb-3"><i class="bi bi-file-text me-2 text-primary"></i> Mô tả chi tiết khóa học</h4>
-                        <div class="text-secondary fs-6 lh-lg p-4 rounded-4 bg-white border" style="border-color: #E2E8F0 !important;">
+                        <div class="text-secondary fs-6 lh-lg p-4 rounded-4 bg-white border" style="border-color: #E2E8F0 !important; white-space: pre-line;">
                             @Model.moTa
                         </div>
                     </div>
-
-                    <!-- Section 4: Student Reviews (Chỉ hiện khi có học viên đánh giá) -->
-                    @if (Model.DanhGiaKhoaHoc != null && Model.DanhGiaKhoaHoc.Count > 0)
+                    
+                    <!-- Giảng viên + các khóa khác của giảng viên (số liệu thật: Services/InstructorProfileService.cs) -->
+                    @{ var giangVien = ViewBag.GiangVien as ECOLearning.ViewModels.GiangVienKhoaHocViewModel; }
+                    @if (giangVien != null)
                     {
-                        var reviews = Model.DanhGiaKhoaHoc.OrderByDescending(d => d.ngayDanhGia).ToList();
-                        double overallRating = reviews.Average(d => (double)d.soSao);
-                        int totalReviewers = reviews.Count;
+                        @Html.Partial("_InstructorInfo", giangVien)
+                    }
 
-                        <div class="mb-5">
-                            <!-- Khung Card bao bọc toàn bộ Đánh giá từ học viên theo chuẩn 100% mẫu thiết kế -->
-                            <div class="card border-0 rounded-4 p-4 p-md-5 bg-white" style="border: 1px solid #E2E8F0 !important; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);">
-                                <h4 class="fw-bold text-dark mb-4" style="font-size: 20px; letter-spacing: -0.01em;">
-                                    Đánh giá từ học viên
-                                </h4>
-
-                                <div class="d-flex align-items-center gap-5 flex-wrap mb-4">
-                                    <!-- Cột trái: Điểm số lớn, 5 sao vàng, Tổng số lượt đánh giá -->
-                                    <div class="text-start px-2" style="min-width: 140px;">
-                                        <div style="font-size: 54px; font-weight: 800; color: #0F172A; line-height: 1.0; margin-bottom: 8px;">
-                                            @overallRating.ToString("0.0")
-                                        </div>
-                                        <div class="d-flex gap-1 text-warning mb-2" style="font-size: 18px; color: #F59E0B !important;">
-                                            @for (int i = 1; i <= 5; i++)
-                                            {
-                                                if (i <= Math.Round(overallRating))
-                                                {
-                                                    <i class="bi bi-star-fill"></i>
-                                                }
-                                                else
-                                                {
-                                                    <i class="bi bi-star"></i>
-                                                }
-                                            }
-                                        </div>
-                                        <div style="font-size: 14px; font-weight: 600; color: #64748B;">
-                                            @totalReviewers lượt đánh giá
-                                        </div>
-                                    </div>
-
-                                    <!-- Cột phải: Progress Bar (Thanh tiến trình tỉ lệ phần trăm phân bổ số sao từ 5 sao -> 1 sao) -->
-                                    <div style="flex: 1; min-width: 260px;">
-                                        @for (int star = 5; star >= 1; star--)
-                                        {
-                                            int starCount = reviews.Count(r => r.soSao == star);
-                                            int starPercent = totalReviewers > 0 ? (int)Math.Round((double)starCount / totalReviewers * 100) : 0;
-
-                                            <div class="d-flex align-items-center gap-3 mb-2" style="font-size: 14px;">
-                                                <span style="width: 48px; font-weight: 600; color: #475569;" class="text-nowrap">@star sao</span>
-                                                <div style="flex: 1; height: 10px; background: #E2E8F0; border-radius: 9999px; overflow: hidden; display: block; position: relative; min-width: 80px;">
-                                                    <div style="width: @starPercent%; height: 100%; background: #10B981; border-radius: 9999px; display: block; transition: width 0.6s ease;"></div>
-                                                </div>
-                                                <span style="width: 48px; font-weight: 700; color: #1E293B;" class="text-end text-nowrap">@starPercent%</span>
-                                            </div>
-                                        }
-                                    </div>
-                                </div>
-
-                                <!-- Đường kẻ ngang phân cách chuẩn thiết kế -->
-                                <hr style="border: 0; border-top: 1px solid #E2E8F0; margin: 24px 0 28px 0;" />
-
-                                <!-- Danh sách các bài nhận xét của học viên -->
-                                <div class="d-flex flex-column gap-4">
-                                    @foreach (var r in reviews)
-                                    {
-                                        string reviewerName = r.NguoiDung != null ? r.NguoiDung.hoTen : "Học viên";
-                                        string reviewerAvatar = (r.NguoiDung != null && !string.IsNullOrEmpty(r.NguoiDung.anhDaiDien))
-                                            ? r.NguoiDung.anhDaiDien
-                                            : (Session["Avatar"]?.ToString() ?? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80");
-
-                                        string reviewDateText = r.ngayDanhGia.HasValue ? r.ngayDanhGia.Value.ToString("dd/MM/yyyy") : "Vừa xong";
-
-                                        <div class="d-flex align-items-start gap-3">
-                                            <img src="@reviewerAvatar" class="rounded-circle flex-shrink-0" style="width: 44px; height: 44px; object-fit: cover; border: 1px solid #E2E8F0;" alt="@reviewerName" />
-
-                                            <div class="flex-grow-1">
-                                                <div class="fw-bold text-dark mb-1" style="font-size: 15px;">@reviewerName</div>
-                                                
-                                                <div class="d-flex align-items-center gap-2 mb-2" style="font-size: 13px; color: #F59E0B;">
-                                                    <div class="d-flex gap-1">
-                                                        @for (int s = 1; s <= 5; s++)
-                                                        {
-                                                            if (s <= r.soSao)
-                                                            {
-                                                                <i class="bi bi-star-fill"></i>
-                                                            }
-                                                            else
-                                                            {
-                                                                <i class="bi bi-star"></i>
-                                                            }
-                                                        }
-                                                    </div>
-                                                    <span style="color: #F59E0B; font-weight: 500;">• @reviewDateText</span>
-                                                </div>
-
-                                                <p class="mb-0" style="font-size: 14.5px; line-height: 1.6; color: #1E293B; font-weight: 400;">
-                                                    @r.noiDung
-                                                </p>
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Section 4: Student Reviews (UC6): 5 đánh giá mới nhất, hữu ích, phản hồi của giáo viên -->
+                    @{ var danhGia = ViewBag.DanhGia as ECOLearning.ViewModels.DanhSachDanhGiaViewModel; }
+                    @if (danhGia != null)
+                    {
+                        @Html.Partial("_ReviewSection", danhGia)
+                    }
+                    @* Item-based trên dữ liệu mua: "Thường xuyên được mua cùng nhau" + "Học viên khác cũng mua" *@
+                    @{ var lienQuan = ViewBag.KhoaHocLienQuan as ECOLearning.ViewModels.KhoaHocLienQuanViewModel; }
+                    @if (lienQuan != null && lienQuan.CoNoiDung)
+                    {
+                        <div class="rel-wrap">@Html.Partial("_RelatedCourses", lienQuan)</div>
                     }
                 </div>
 
@@ -741,52 +809,94 @@
 
                         <div class="p-4">
                             <!-- Price Block (Strict single horizontal line matching mockup 100%) -->
+                            @{
+                                decimal originalPrice = Model.giaBan;
+                                decimal? promoPrice = Model.giaKhuyenMai;
+                                bool hasPromo = promoPrice.HasValue && promoPrice.Value < originalPrice;
+                                decimal effectivePrice = hasPromo ? promoPrice.Value : originalPrice;
+                                bool isFree = effectivePrice <= 0;
+                            }
                             <div class="d-flex align-items-baseline gap-2 mb-3" style="flex-wrap: nowrap; white-space: nowrap;">
-                                @if (Model.giaKhuyenMai.HasValue && Model.giaKhuyenMai.Value > 0 && Model.giaBan > Model.giaKhuyenMai.Value)
+                                @if (isFree)
                                 {
-                                    <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@Model.giaKhuyenMai.Value.ToString("N0") đ</span>
-                                    <span style="font-size: 14px; color: #94A3B8; text-decoration: line-through; line-height: 1; margin-left: 2px;">@Model.giaBan.ToString("N0") đ</span>
-                                    int discountPercent = (int)((1.0 - ((double)Model.giaKhuyenMai.Value / (double)Model.giaBan)) * 100);
+                                    <span style="font-size: 26px; font-weight: 800; color: #10B981; line-height: 1; letter-spacing: -0.02em;">Miễn phí</span>
+                                    if (originalPrice > 0)
+                                    {
+                                        <span style="font-size: 14px; color: #94A3B8; text-decoration: line-through; line-height: 1; margin-left: 2px;">@originalPrice.ToString("N0") đ</span>
+                                        <span style="background: #ECFDF5; color: #059669; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; line-height: 1; margin-left: 2px; border: 1px solid #A7F3D0;">100% Miễn phí</span>
+                                    }
+                                }
+                                else if (hasPromo && promoPrice.Value > 0)
+                                {
+                                    <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@promoPrice.Value.ToString("N0") đ</span>
+                                    <span style="font-size: 14px; color: #94A3B8; text-decoration: line-through; line-height: 1; margin-left: 2px;">@originalPrice.ToString("N0") đ</span>
+                                    int discountPercent = (int)((1.0 - ((double)promoPrice.Value / (double)originalPrice)) * 100);
                                     if (discountPercent > 0)
                                     {
                                         <span style="background: #FFF1F2; color: #E11D48; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; line-height: 1; margin-left: 2px;">Giảm @discountPercent%</span>
                                     }
                                 }
-                                else if (Model.giaKhuyenMai.HasValue && Model.giaKhuyenMai.Value > 0)
-                                {
-                                    <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@Model.giaKhuyenMai.Value.ToString("N0") đ</span>
-                                }
                                 else
                                 {
-                                    decimal displayPrice = Model.giaBan > 0 ? Model.giaBan : 699000;
-                                    <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@displayPrice.ToString("N0") đ</span>
+                                    <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@originalPrice.ToString("N0") đ</span>
                                 }
                             </div>
 
                             <!-- Action Buttons -->
-                            @if (isEnrolled)
+                            @if (isOwner)
                             {
-                                <button type="button" onclick="if (typeof showToast === 'function') { showToast('Bạn đã sở hữu khóa học này!', 'info'); } else { alert('Bạn đã sở hữu khóa học này!'); }" class="btn btn-secondary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold" style="background: #E2E8F0; color: #475569; border: none; border-radius: 12px !important; font-size: 15px;">
-                                    <i class="bi bi-check-circle-fill me-2 text-success"></i> ĐÃ ĐĂNG KÝ KHÓA HỌC
-                                </button>
+                                <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = Model.maKhoaHoc })" class="btn btn-secondary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold text-decoration-none shadow-sm" style="background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px;">
+                                    <i class="bi bi-pencil-square me-2"></i> Quản lý khóa học của bạn
+                                </a>
+                            }
+                            else if (isEnrolled)
+                            {
+                                <a href="@Url.Action("Study", "Learning", new { courseId = Model.maKhoaHoc })" class="btn btn-secondary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold text-decoration-none shadow-sm" style="background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px; transition: all 0.2s;">
+                                    <i class="bi bi-play-circle-fill me-2 text-primary"></i> VÀO HỌC NGAY
+                                </a>
+                            }
+                            else if (isGuest)
+                            {
+                                @* Khách chưa đăng nhập (khóa có phí hay miễn phí): một nút "Đăng ký học" dẫn tới đăng nhập,
+                                   đăng nhập xong quay lại đúng khóa này; ẩn Mua ngay / Thêm vào giỏ hàng *@
+                                <div class="course-cta-row">
+                                    <a href="@Url.Action("Login", "Account", new { mode = "login", returnUrl = Request.RawUrl })" class="btn btn-cta-primary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold shadow-sm text-decoration-none" style="background: #10B981 !important; border: none !important; border-radius: 12px !important; font-size: 16px; color: #FFFFFF;">
+                                        <i class="bi bi-mortarboard-fill me-2"></i> Đăng ký học
+                                    </a>
+                                    @Html.Partial("_FavoriteButton", new ECOLearning.ViewModels.FavoriteButtonModel { CourseId = Model.maKhoaHoc, TeacherId = Model.maGiaoVien, Variant = "square" })
+                                </div>
+                            }
+                            else if (isFree)
+                            {
+                                <!-- Nút chính + nút thả tim vuông cùng một hàng -->
+                                <div class="course-cta-row">
+                                    <button type="button" onclick="enrollFreeAjax('@Model.maKhoaHoc', this)" class="btn btn-cta-primary btn-lg w-100 py-3 mb-3 text-center d-block fw-bold shadow-sm" style="background: #10B981 !important; border: none !important; border-radius: 12px !important; font-size: 16px;">
+                                        <i class="bi bi-mortarboard-fill me-2"></i> Đăng ký học
+                                    </button>
+                                    @Html.Partial("_FavoriteButton", new ECOLearning.ViewModels.FavoriteButtonModel { CourseId = Model.maKhoaHoc, TeacherId = Model.maGiaoVien, Variant = "square" })
+                                </div>
                             }
                             else
                             {
                                 <button type="button" onclick="buyNowAjax('@Model.maKhoaHoc', this)" class="btn btn-cta-primary btn-lg w-100 py-3 mb-2 text-center d-block fw-bold shadow-sm" style="border-radius: 12px !important; font-size: 16px;">
                                     Mua ngay
                                 </button>
-                                if (isInCart)
-                                {
-                                    <a href="@Url.Action("Index", "Cart")" id="btnAddToCartMain" class="btn w-100 py-3 fw-bold mb-3 text-center d-block text-decoration-none" style="background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px; transition: all 0.2s;">
-                                        <i class="bi me-1"></i> Chuyển đến giỏ hàng
-                                    </a>
-                                }
-                                else
-                                {
-                                    <button type="button" id="btnAddToCartMain" onclick="addToCartAjax('@Model.maKhoaHoc', this)" class="btn w-100 py-3 fw-bold mb-3" style="background: #F1F5F9; color: #0F172A; border: none; border-radius: 12px !important; font-size: 15px; transition: background 0.2s;">
-                                        Thêm vào giỏ hàng
-                                    </button>
-                                }
+                                <!-- Nút giỏ hàng + nút thả tim vuông cùng một hàng (addToCartAjax thay nút giỏ hàng tại chỗ) -->
+                                <div class="course-cta-row">
+                                    @if (isInCart)
+                                    {
+                                        <a href="@Url.Action("Index", "Cart")" id="btnAddToCartMain" class="btn w-100 py-3 fw-bold mb-3 text-center d-block text-decoration-none" style="background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px; transition: all 0.2s;">
+                                            <i class="bi me-1"></i> Chuyển đến giỏ hàng
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" id="btnAddToCartMain" onclick="addToCartAjax('@Model.maKhoaHoc', this)" class="btn w-100 py-3 fw-bold mb-3" style="background: #F1F5F9; color: #0F172A; border: none; border-radius: 12px !important; font-size: 15px; transition: background 0.2s;">
+                                            Thêm vào giỏ hàng
+                                        </button>
+                                    }
+                                    @Html.Partial("_FavoriteButton", new ECOLearning.ViewModels.FavoriteButtonModel { CourseId = Model.maKhoaHoc, TeacherId = Model.maGiaoVien, Variant = "square" })
+                                </div>
                             }
 
                             <!-- Course Inclusions Grid Layout (Matching Mockup 100%) -->
@@ -854,7 +964,139 @@
 </div>
 
 @section scripts {
+    <script src="@Url.Content("~/assets/js/course-reviews.js?v=1.0")"></script>
     <script>
+        // Thu gọn / hiện các mục khóa học liên quan; nhớ lựa chọn trên trình duyệt này.
+        // Chỉ ảnh hưởng cột trái: thẻ khóa học bên phải là sticky trong cột phải (cao bằng cột trái), nên khi cột trái
+        // co lại thẻ sẽ bị đẩy lên và trang bị kéo cuộn. Vì vậy bù khoảng trống cuối cột trái vừa đủ để thẻ giữ nguyên
+        // vị trí, rồi trả lại vị trí cuộn cũ — tất cả trong cùng một khung hình nên không thấy nhảy.
+        (function () {
+            var wrap = document.querySelector('.rel-wrap');
+            var grid = document.querySelector('.details-layout-grid');
+            var card = document.querySelector('.sticky-course-card');
+
+            function giuViTriTheBenPhai(doiNoiDung) {
+                if (!wrap || !grid || !card || getComputedStyle(card).position !== 'sticky') {
+                    doiNoiDung();
+                    return;
+                }
+                var y = window.scrollY;
+                var r = card.getBoundingClientRect();
+                var dayTheMongMuon = y + r.bottom;               // đáy thẻ (tọa độ trang) cần giữ
+                wrap.style.paddingBottom = '0px';
+                doiNoiDung();
+                var dayLuoi = grid.getBoundingClientRect().bottom + window.scrollY;
+                var thieu = Math.ceil(dayTheMongMuon - dayLuoi);
+                wrap.style.paddingBottom = thieu > 0 ? thieu + 'px' : '0px';
+                // base.css bật scroll-behavior: smooth; trả vị trí cuộn phải tức thì, nếu không trang sẽ trượt thấy rõ
+                window.scrollTo({ top: y, left: window.scrollX, behavior: 'instant' });
+            }
+
+            document.querySelectorAll('.rel-section').forEach(function (sec) {
+                var btn = sec.querySelector('.rel-toggle');
+                var body = document.getElementById(btn.getAttribute('aria-controls'));
+                var key = 'rel-collapsed-' + sec.getAttribute('data-rel-key');
+                function apply(collapsed) {
+                    body.hidden = collapsed;
+                    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                    btn.querySelector('.rel-toggle-text').textContent = collapsed ? 'Hiện ' + btn.getAttribute('data-count') + ' khóa học' : 'Thu gọn';
+                    btn.querySelector('.bi').className = collapsed ? 'bi bi-chevron-down' : 'bi bi-chevron-up';
+                }
+                var saved = null;
+                try { saved = localStorage.getItem(key); } catch (e) { }
+                apply(saved === '1');
+                btn.addEventListener('click', function () {
+                    var collapsed = !body.hidden;
+                    giuViTriTheBenPhai(function () { apply(collapsed); });
+                    try { localStorage.setItem(key, collapsed ? '1' : '0'); } catch (e) { }
+                });
+            });
+        })();
+
+        // Combo "Thường xuyên được mua cùng nhau": thêm từng khóa / thêm tất cả vào giỏ (Cart/AddManyToCart kiểm tra lại ở server)
+        (function () {
+            var cartUrl = '@Url.Action("Index", "Cart")';
+            var addManyUrl = '@Url.Action("AddManyToCart", "Cart")';
+            var khoaDangXem = '@Model.maKhoaHoc';
+
+            function daTrongGio(courseId) {
+                document.querySelectorAll('[data-fbt-add]').forEach(function (b) {
+                    if (b.getAttribute('data-course') !== courseId) return;
+                    var a = document.createElement('a');
+                    a.href = cartUrl;
+                    a.className = 'fbt-btn is-in-cart';
+                    a.innerHTML = '<i class="bi bi-check2"></i> Đã trong giỏ';
+                    b.replaceWith(a);
+                });
+                // Nút "Thêm vào giỏ hàng" của thẻ bên phải (khóa đang xem)
+                var main = document.getElementById('btnAddToCartMain');
+                if (courseId === khoaDangXem && main && main.tagName === 'BUTTON') {
+                    var link = document.createElement('a');
+                    link.href = cartUrl;
+                    link.id = 'btnAddToCartMain';
+                    link.className = 'btn w-100 py-3 fw-bold mb-3 text-center d-block text-decoration-none';
+                    link.style.cssText = 'background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE; border-radius: 12px !important; font-size: 15px; transition: all 0.2s;';
+                    link.innerHTML = '<i class="bi bi-cart-check-fill me-1"></i> Chuyển đến giỏ hàng';
+                    main.replaceWith(link);
+                }
+            }
+
+            function capNhatNutTatCa() {
+                var all = document.querySelector('[data-fbt-add-all]');
+                if (!all) return;
+                var conLai = Array.prototype.map.call(document.querySelectorAll('[data-fbt-add]'), function (b) { return b.getAttribute('data-course'); });
+                if (conLai.length === 0) {
+                    var a = document.createElement('a');
+                    a.href = cartUrl;
+                    a.className = 'fbt-btn-primary';
+                    a.innerHTML = '<i class="bi bi-cart-check"></i> Đến giỏ hàng';
+                    all.replaceWith(a);
+                } else {
+                    all.setAttribute('data-courses', conLai.join(','));
+                }
+            }
+
+            function themVaoGio(ids, nut, nhanCu) {
+                nut.disabled = true;
+                nut.textContent = 'Đang thêm...';
+                $.ajax({
+                    url: addManyUrl,
+                    type: 'POST',
+                    traditional: true,
+                    data: { courseIds: ids },
+                    success: function (res) {
+                        (res.inCart || []).forEach(daTrongGio);
+                        if (typeof res.cartCount === 'number' && typeof updateHeaderCartBadge === 'function') updateHeaderCartBadge(res.cartCount);
+                        capNhatNutTatCa();
+                        if (res.errors && res.errors.length) {
+                            showToast(res.errors.map(function (e) { return e.message; }).join(' '), 'warning');
+                        } else if (!res.success) {
+                            showToast(res.message || 'Không thêm được vào giỏ hàng.', 'error');
+                        }
+                        if (document.body.contains(nut)) { nut.disabled = false; nut.textContent = nhanCu; }
+                    },
+                    error: function () {
+                        nut.disabled = false;
+                        nut.textContent = nhanCu;
+                        showToast('Có lỗi xảy ra khi thêm vào giỏ hàng!', 'error');
+                    }
+                });
+            }
+
+            document.addEventListener('click', function (e) {
+                var mot = e.target.closest('[data-fbt-add]');
+                if (mot) {
+                    themVaoGio([mot.getAttribute('data-course')], mot, 'Thêm vào giỏ hàng');
+                    return;
+                }
+                var tatCa = e.target.closest('[data-fbt-add-all]');
+                if (tatCa) {
+                    var ids = (tatCa.getAttribute('data-courses') || '').split(',').filter(Boolean);
+                    if (ids.length) themVaoGio(ids, tatCa, 'Thêm tất cả vào giỏ hàng');
+                }
+            });
+        })();
+
         function extractVideoInfo(url) {
             if (!url || typeof url !== 'string' || !url.trim()) return null;
             url = url.trim();
@@ -1086,6 +1328,59 @@
                 },
                 error: function () {
                     window.location.href = '@Url.Action("Index", "Cart")';
+                }
+            });
+        }
+
+        function enrollFreeAjax(courseId, btnElement) {
+            if (!courseId) return;
+            var $btn = $(btnElement);
+            var originalHtml = $btn.html();
+
+            $btn.prop('disabled', true).css('opacity', '0.75').html('<i class="bi bi-hourglass-split me-1"></i> Đang đăng ký...');
+
+            $.ajax({
+                url: '@Url.Action("EnrollFree", "Course")',
+                type: 'POST',
+                data: { courseId: courseId },
+                success: function (res) {
+                    if (res.requireLogin) {
+                        if (typeof showToast === 'function') {
+                            showToast(res.message, 'warning');
+                        } else {
+                            alert(res.message);
+                        }
+                        setTimeout(function () {
+                            window.location.href = '@Url.Action("Login", "Account")?returnUrl=' + encodeURIComponent(window.location.pathname);
+                        }, 600);
+                        return;
+                    }
+
+                    if (res.success) {
+                        if (typeof showToast === 'function') {
+                            showToast(res.message, 'success');
+                        } else {
+                            alert(res.message);
+                        }
+                        setTimeout(function () {
+                            window.location.href = res.redirectUrl || '@Url.Action("MyCourses", "Learning")';
+                        }, 800);
+                    } else {
+                        $btn.prop('disabled', false).css('opacity', '1').html(originalHtml);
+                        if (typeof showToast === 'function') {
+                            showToast(res.message, 'danger');
+                        } else {
+                            alert(res.message);
+                        }
+                    }
+                },
+                error: function () {
+                    $btn.prop('disabled', false).css('opacity', '1').html(originalHtml);
+                    if (typeof showToast === 'function') {
+                        showToast('Có lỗi xảy ra trong quá trình đăng ký. Vui lòng thử lại!', 'danger');
+                    } else {
+                        alert('Có lỗi xảy ra trong quá trình đăng ký!');
+                    }
                 }
             });
         }

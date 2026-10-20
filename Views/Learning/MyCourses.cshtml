@@ -1,0 +1,447 @@
+﻿@model ECOLearning.ViewModels.MyCoursesViewModel
+@{
+    ViewBag.Title = "Khóa học của tôi - E-Learning";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    int ongoingCount = Model != null ? Model.SoDangHoc : 0;
+    int completedCount = Model != null ? Model.SoHoanThanh : 0;
+    int totalCount = Model != null ? Model.TotalCount : 0;
+    bool tabHoanThanh = Model != null && Model.LaTabHoanThanh;
+}
+
+<style>
+    .learning-course-card {
+        background: #FFFFFF;
+        border: 1px solid var(--border-color, #E2E8F0);
+        border-radius: var(--radius-2xl, 16px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        height: 100%;
+    }
+
+    .learning-course-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 20px -3px rgba(15, 23, 42, 0.08);
+        border-color: #CBD5E1;
+    }
+
+    .tab-nav {
+        display: flex;
+        border-bottom: 1px solid var(--border-color, #E2E8F0);
+        gap: 32px;
+        margin-bottom: 28px;
+    }
+
+    .tab-btn {
+        padding: 14px 0;
+        background: none;
+        border: none;
+        font-family: inherit;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-secondary, #64748B);
+        cursor: pointer;
+        position: relative;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    .tab-btn:hover {
+        color: var(--primary, #434CE8);
+    }
+
+    .tab-btn.active {
+        color: var(--primary, #434CE8);
+        font-weight: 700;
+    }
+
+    .tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background-color: var(--primary, #434CE8);
+        border-radius: 3px 3px 0 0;
+    }
+
+    .learning-progress-bar {
+        height: 8px;
+        background-color: var(--border-color, #E2E8F0);
+        border-radius: 9999px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .learning-progress-fill {
+        height: 100%;
+        background-color: var(--primary, #434CE8);
+        border-radius: 9999px;
+        transition: width 0.4s ease;
+    }
+
+    .learning-progress-fill.success {
+        background-color: #10B981;
+    }
+
+    .badge-ongoing {
+        background: #434CE8;
+        color: #FFFFFF;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 6px;
+    }
+
+    .badge-done {
+        background: #ECFDF5;
+        color: #059669;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid #A7F3D0;
+    }
+
+    .completed-course-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:4px 0 22px;font-size:12px;color:#8290a3;line-height:1.7}
+    .completed-course-meta>span{display:inline-flex;align-items:center;gap:7px}
+    .completed-quiz-badge{padding:5px 9px;border-radius:7px;background:#f0eeff;color:#7560b7;font-size:11px;font-weight:500}
+    .completed-quiz-badge.is-passed{background:#ebf7ef;color:#3e8864}
+    .completed-course-actions{display:flex;align-items:stretch;gap:10px;padding-top:18px;border-top:1px solid #edf0f5}
+    .completed-course-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:600;line-height:1.5;text-decoration:none;white-space:nowrap}
+    .completed-quiz-action{flex:1;box-shadow:0 3px 8px #434ce81a}
+    .completed-quiz-action>i:last-child{margin-left:auto;font-size:15px}
+    .completed-review-action{color:#68758a;background:#fff;border-color:#e2e7ef}
+    .completed-review-action:hover{background:#f6f8fb}
+    .completed-course-card .course-title{min-height:48px;margin-bottom:14px!important}
+    @@media(max-width:480px){.completed-course-actions{flex-wrap:wrap}.completed-quiz-action{flex-basis:100%}.completed-review-action{width:100%}.completed-course-meta{align-items:flex-start;flex-direction:column}}
+
+    /* Thẻ khóa học thu gọn: 4 thẻ / hàng trên màn rộng */
+    .my-course-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 20px;
+    }
+
+    .my-course-grid .badge-ongoing,
+    .my-course-grid .badge-done {
+        top: 10px !important;
+        left: 10px !important;
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+
+    .my-course-body {
+        padding: 14px 16px 16px;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .my-course-body .caption:first-child {
+        font-size: 11px !important;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .my-course-title {
+        margin: 6px 0 8px;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.4;
+        color: var(--text-heading, #0F172A);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 42px;
+    }
+
+    .my-course-info {
+        margin-bottom: 12px;
+        color: var(--text-secondary, #64748B);
+        font-size: 12.5px;
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .my-course-progress {
+        margin-top: auto;
+        margin-bottom: 14px;
+    }
+
+    .my-course-progress-head {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .my-course-grid .learning-progress-bar {
+        height: 6px;
+    }
+
+    .my-course-cta {
+        width: 100%;
+        padding: 9px 12px;
+        font-size: 13.5px;
+        font-weight: 700;
+        border-radius: 10px;
+        background: #434CE8;
+        border-color: #434CE8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        text-decoration: none;
+    }
+
+    .my-course-grid .completed-course-card .course-title {
+        min-height: 42px;
+        margin-bottom: 8px !important;
+    }
+
+    .my-course-grid .completed-course-meta {
+        margin: 0 0 12px;
+        font-size: 11.5px;
+        gap: 6px;
+    }
+
+    .my-course-grid .completed-course-actions {
+        gap: 8px;
+        padding-top: 12px;
+    }
+
+    .my-course-grid .completed-course-actions .btn {
+        padding: 8px 10px;
+        font-size: 12.5px;
+        gap: 6px;
+    }
+
+    @@media (max-width: 1200px) {
+        .my-course-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+
+    @@media (max-width: 900px) {
+        .my-course-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @@media (max-width: 560px) {
+        .my-course-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+</style>
+
+<main style="padding: 40px 0 80px; background: var(--bg-canvas, #F8FAFC); min-height: 80vh;">
+    <div class="safe-container">
+
+        <!-- Page Header -->
+        <div style="margin-bottom: 28px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <span class="caption" style="text-transform: uppercase; color: var(--primary, #434CE8); font-weight: 700; letter-spacing: 0.05em;">HỒ SƠ HỌC TẬP</span>
+            </div>
+            <h1 class="h2" style="margin-top: 4px; font-weight: 800; color: var(--text-heading, #0F172A); font-size: 28px;">Khóa học của tôi</h1>
+            <p class="body-2" style="color: var(--text-secondary, #64748B); font-size: 15px; margin-top: 4px;">
+                Theo dõi lộ trình, tiếp tục các bài giảng dang dở và xem chứng chỉ tốt nghiệp
+            </p>
+        </div>
+
+        @if (totalCount == 0)
+        {
+            <!-- EMPTY STATE TOÀN BỘ KHI CHƯA ĐĂNG KÝ KHÓA NÀO -->
+            <div class="card" style="text-align: center; padding: 70px 24px; background: #FFFFFF; border-radius: var(--radius-2xl, 16px); border: 1px dashed var(--border-color, #E2E8F0); margin-top: 20px;">
+                <div style="font-size: 54px; margin-bottom: 16px;">📚</div>
+                <h3 class="h3" style="margin-bottom: 8px; font-weight: 700; color: #0F172A;">Bạn chưa sở hữu khóa học nào</h3>
+                <p class="body-2" style="color: var(--text-secondary, #64748B); max-width: 480px; margin: 0 auto 24px; line-height: 1.6;">
+                    Hãy bắt đầu hành trình nâng cao kỹ năng ngay hôm nay với hàng trăm khóa học chất lượng từ các chuyên gia.
+                </p>
+                <a href="@Url.Action("Index", "Course")" class="btn btn-primary btn-lg" style="background: #434CE8; border-color: #434CE8; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 12px;">
+                    <i class="bi bi-compass me-2"></i> Khám phá khóa học ngay
+                </a>
+            </div>
+        }
+        else
+        {
+            <!-- Tab Navigation (Đang học / Đã học đủ bài): mỗi tab là một link, phân trang riêng 12 khóa / trang -->
+            <nav id="ds-khoa-hoc" class="tab-nav" style="scroll-margin-top: 96px;">
+                <a class="tab-btn @(tabHoanThanh ? "" : "active")" href="@Url.Action("MyCourses", "Learning")" aria-current="@(tabHoanThanh ? null : "page")">
+                    Đang học (@ongoingCount)
+                </a>
+                <a class="tab-btn @(tabHoanThanh ? "active" : "")" href="@Url.Action("MyCourses", "Learning", new { tab = ECOLearning.ViewModels.MyCoursesViewModel.TabHoanThanh })" aria-current="@(tabHoanThanh ? "page" : null)">
+                    Đã học đủ bài (@completedCount)
+                </a>
+            </nav>
+
+            if (!tabHoanThanh)
+            {
+            <!-- TAB 1: ONGOING COURSES (ĐANG HỌC) -->
+            <div id="tab-ongoing" class="tab-content">
+                @if (ongoingCount == 0)
+                {
+                    <div style="text-align: center; padding: 48px 20px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--border-color, #E2E8F0);">
+                        <i class="bi bi-check2-all text-success" style="font-size: 36px; display: block; margin-bottom: 8px;"></i>
+                        <h4 style="font-weight: 700; color: #0F172A; font-size: 18px; margin-bottom: 6px;">Không có khóa học nào đang dang dở</h4>
+                        <p style="color: var(--text-secondary, #64748B); font-size: 14px; margin-bottom: 16px;">Bạn đã học đủ bài trong các khóa đã đăng ký. Kiểm tra quiz cuối khóa và điều kiện chứng chỉ ở tab bên cạnh.</p>
+                        <a href="@Url.Action("Index", "Course")" class="btn btn-outline btn-sm" style="text-decoration: none;">Đăng ký khóa học mới</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="my-course-grid">
+                        @foreach (var item in Model.Items)
+                        {
+                            string studyUrl = Url.Action("Study", "Learning", new { courseId = item.MaKhoaHoc, lessonId = item.MaBaiHocTiepTheo });
+                            string badgeLabel = item.PhanTramTienDo > 0 ? "Đang học" : "Mới bắt đầu";
+
+                            <div>
+                                <div class="learning-course-card">
+                                    <div style="position: relative; aspect-ratio: 16/9; overflow: hidden; background: #0F172A;">
+                                        <img src="@item.AnhBia" alt="@item.TenKhoaHoc" style="width: 100%; height: 100%; object-fit: cover;" />
+                                        <span class="badge-ongoing" style="position: absolute; top: 14px; left: 14px;">
+                                            <i class="bi bi-play-circle me-1"></i> @badgeLabel
+                                        </span>
+                                    </div>
+
+                                    <div class="my-course-body">
+                                        <span class="caption" style="color: var(--primary, #434CE8); font-weight: 700; font-size: 12px; text-transform: uppercase;">
+                                            @item.TenDanhMuc
+                                        </span>
+
+                                        <h3 class="course-title my-course-title" title="@item.TenKhoaHoc">
+                                            @item.TenKhoaHoc
+                                        </h3>
+
+                                        <div class="caption my-course-info">
+                                            Giảng viên: <strong style="color: #1E293B;">@item.TenGiangVien</strong> • Bài học tiếp theo:
+                                            <strong style="color: #434CE8;" title="@item.TenBaiHocTiepTheo">@item.TenBaiHocTiepTheo</strong>
+                                        </div>
+
+                                        <!-- Progress Bar Section -->
+                                        <div class="my-course-progress">
+                                            <div class="my-course-progress-head">
+                                                <span style="color: var(--text-secondary, #64748B);">Đã học @item.SoBaiDaHoanThanh/@item.TongSoBaiHoc bài</span>
+                                                <span style="color: var(--primary, #434CE8); font-weight: 700;">@item.PhanTramTienDo%</span>
+                                            </div>
+                                            <div class="learning-progress-bar">
+                                                <div class="learning-progress-fill" style="width: @item.PhanTramTienDo%;"></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Action Button -->
+                                        <a href="@studyUrl" class="btn btn-primary my-course-cta">
+                                            <span>Tiếp tục học</span> <i class="bi bi-arrow-right"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            }
+            else
+            {
+            <!-- TAB 2: COMPLETED COURSES (ĐÃ HOÀN THÀNH) -->
+            <div id="tab-completed" class="tab-content">
+                @if (completedCount == 0)
+                {
+                    <div style="text-align: center; padding: 48px 20px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--border-color, #E2E8F0);">
+                        <i class="bi bi-trophy text-warning" style="font-size: 36px; display: block; margin-bottom: 8px;"></i>
+                        <h4 style="font-weight: 700; color: #0F172A; font-size: 18px; margin-bottom: 6px;">Bạn chưa hoàn thành khóa học nào</h4>
+                        <p style="color: var(--text-secondary, #64748B); font-size: 14px; margin-bottom: 16px;">Học đủ bài, đạt quiz cuối khóa rồi bấm Nhận chứng chỉ để được cấp tự động.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="my-course-grid">
+                        @foreach (var item in Model.Items)
+                        {
+                            var quizStates = ViewBag.CompletedQuizStates as Dictionary<string, ECOLearning.ViewModels.QuizStudentRow>;
+                            ECOLearning.ViewModels.QuizStudentRow quizState = null;
+                            if (quizStates != null) { quizStates.TryGetValue(item.MaKhoaHoc, out quizState); }
+                            string quizLabel = quizState == null ? "Chưa có kết quả quiz" : quizState.IssuedAt.HasValue ? "Đã cấp chứng chỉ" : quizState.Passed ? "Đã đạt quiz · Có thể nhận chứng chỉ" : quizState.HasOpenAttempt ? "Đang làm quiz" : quizState.Attempts > 0 ? "Quiz chưa đạt" : "Chưa làm quiz";
+                            string studyUrl = Url.Action("Study", "Learning", new { courseId = item.MaKhoaHoc });
+                            string certUrl = Url.Action("Index", "Quiz", new { courseId = item.MaKhoaHoc });
+                            string completeDate = item.NgayHoanThanh.HasValue ? item.NgayHoanThanh.Value.ToString("dd/MM/yyyy") : DateTime.Now.ToString("dd/MM/yyyy");
+
+                            <div>
+                                <div class="learning-course-card completed-course-card">
+                                    <div style="position: relative; aspect-ratio: 16/9; overflow: hidden; background: #0F172A;">
+                                        <img src="@item.AnhBia" alt="@item.TenKhoaHoc" style="width: 100%; height: 100%; object-fit: cover;" />
+                                        <span class="badge-done" style="position: absolute; top: 14px; left: 14px; background: #ECFDF5; color: #059669; font-weight: 700;">
+                                            <i class="bi bi-patch-check-fill me-1"></i> Đã hoàn thành bài học
+                                        </span>
+                                    </div>
+
+                                    <div class="my-course-body">
+                                        <span class="caption" style="color: #059669; font-weight: 700; font-size: 12px; text-transform: uppercase;">
+                                            @item.TenDanhMuc
+                                        </span>
+
+                                        <h3 class="course-title my-course-title" title="@item.TenKhoaHoc">
+                                            @item.TenKhoaHoc
+                                        </h3>
+
+                                        <div class="completed-course-meta"><span><i class="bi bi-calendar-check" aria-hidden="true"></i> Học xong @completeDate</span><span class="completed-quiz-badge @(quizState != null && quizState.Passed ? "is-passed" : "")"><i class="bi @(quizState != null && quizState.Passed ? "bi-check-circle" : "bi-clipboard")" aria-hidden="true"></i> @quizLabel</span></div>
+
+                                        <!-- Progress Bar 100% -->
+                                        <div class="my-course-progress">
+                                            <div class="my-course-progress-head">
+                                                <span style="color: var(--text-secondary, #64748B);">Đã học xong @item.TongSoBaiHoc bài</span>
+                                                <span style="color: #059669; font-weight: 700;">100%</span>
+                                            </div>
+                                            <div class="learning-progress-bar">
+                                                <div class="learning-progress-fill success" style="width: 100%;"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="completed-course-actions">
+                                            <a href="@certUrl" class="btn btn-primary completed-quiz-action"><i class="bi bi-pencil-square" aria-hidden="true"></i> Làm Quizz ngay <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                                            <a href="@studyUrl" class="btn btn-outline completed-review-action"><i class="bi bi-play-circle" aria-hidden="true"></i> Xem lại</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            }
+
+            @Html.Partial("_Pagination", Model.PhanTrang)
+
+            if (Model.PhanTrang == null || !Model.PhanTrang.CoNhieuTrang)
+            {
+            <!-- Total Courses Summary Footer (nhiều trang thì thanh phân trang đã có dòng tóm tắt) -->
+            <div style="margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--border-color, #E2E8F0); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div style="font-size: 14px; color: var(--text-secondary, #64748B);">
+                    Hiển thị <strong>@Model.Items.Count</strong> @(tabHoanThanh ? "khóa đã học đủ bài" : "khóa đang học") trên tổng số <strong>@totalCount</strong> khóa học của bạn
+                </div>
+            </div>
+            }
+        }
+
+    </div>
+</main>
+
+@section scripts {
+<script>
+    // Hai tab là link thường (?tab=hoan-thanh) để mỗi tab có phân trang riêng, không cần JS chuyển tab
+    document.addEventListener('DOMContentLoaded', function () {
+        @if (TempData["ErrorMessage"] != null)
+        {
+            @:showToast('@Html.Raw(HttpUtility.JavaScriptStringEncode((string)TempData["ErrorMessage"]))', 'warning');
+        }
+    });
+</script>
+}

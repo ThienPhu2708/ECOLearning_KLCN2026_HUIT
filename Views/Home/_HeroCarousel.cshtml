@@ -1,0 +1,564 @@
+@*
+    Hero Section dạng Carousel: 4 banner, mũi tên điều hướng, chấm chuyển slide, tự chuyển sau 2 giây.
+    Slide 1 là banner cũ; slide 2-4 có nút bấm thay đổi theo trạng thái đăng nhập / vai trò.
+    Di chuột hoặc focus vào banner thì tạm dừng tự chuyển; vuốt trên màn hình cảm ứng; phím mũi tên trái/phải.
+*@
+@{
+    bool isLoggedIn = User.Identity.IsAuthenticated || Session["UserId"] != null;
+    string role = Session["Role"]?.ToString() ?? "";
+    bool isTeacher = string.Equals(role, "GiaoVien", StringComparison.OrdinalIgnoreCase) || role == "Giáo viên";
+    int currentUserId = (Session["UserId"] as int?) ?? 0;
+
+    string loginUrl = Url.Action("Login", "Account", new { area = "", mode = "login" });
+    string registerUrl = Url.Action("Login", "Account", new { area = "", mode = "register" });
+
+    // Banner giáo viên: giáo viên vào kênh giáo viên, hồ sơ đang chờ duyệt xem trạng thái, còn lại đăng ký
+    string teacherCtaText = "Đăng ký làm giáo viên";
+    string teacherCtaUrl = Url.Action("Register", "TeacherApplication", new { area = "Instructor" });
+    if (isTeacher)
+    {
+        teacherCtaText = "Vào kênh giáo viên";
+        teacherCtaUrl = Url.Action("Index", "Dashboard", new { area = "Instructor" });
+    }
+    else if (isLoggedIn && currentUserId > 0)
+    {
+        var teacherApp = ECOLearning.Services.TeacherApplicationService.GetByUserId(currentUserId);
+        if (teacherApp != null && teacherApp.Status == "Pending")
+        {
+            teacherCtaText = "Xem trạng thái hồ sơ";
+            teacherCtaUrl = Url.Action("Status", "TeacherApplication", new { area = "Instructor" });
+        }
+    }
+
+    var slides = new[]
+    {
+        new
+        {
+            Eyebrow = "GỢI Ý CÁ NHÂN HÓA", EyebrowIcon = "bi-lightbulb-fill", Accent = "#0891B2", AccentBg = "#ECFEFF", AccentBorder = "#A5F3FC",
+            PanelBg = "linear-gradient(135deg, #ECFEFF 0%, #CFFAFE 100%)",
+            Title = "Khóa học phù hợp được gợi ý dành riêng cho bạn",
+            Description = "Hệ thống phân tích những khóa học bạn đã xem, học và đánh giá, kết hợp với lựa chọn của các học viên có cùng sở thích để đề xuất khóa học tiếp theo phù hợp nhất với bạn.",
+            Image = "~/assets/images/banners/banner_goi_y.jpg", ImageAlt = "Phân tích dữ liệu học tập để gợi ý khóa học",
+            CardIcon = "bi-arrow-repeat", CardTitle = "Gợi ý cập nhật liên tục", CardText = "Theo từng khóa học bạn xem và học",
+            PrimaryText = isLoggedIn ? "Xem gợi ý của tôi" : "Đăng ký để nhận gợi ý", PrimaryIcon = "bi-lightbulb",
+            PrimaryUrl = isLoggedIn ? Url.Action("Index", "Recommendation", new { area = "" }) : registerUrl,
+            SecondaryText = isLoggedIn ? "Khám phá khóa học" : "Đăng nhập",
+            SecondaryUrl = isLoggedIn ? Url.Action("Index", "Course", new { area = "" }) : loginUrl
+        },
+        new
+        {
+            Eyebrow = "HỌC LINH HOẠT", EyebrowIcon = "bi-laptop", Accent = "#EA580C", AccentBg = "#FFF7ED", AccentBorder = "#FED7AA",
+            PanelBg = "linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)",
+            Title = "Học mọi lúc, mọi nơi với bài giảng video chất lượng",
+            Description = "Xem bài giảng trên mọi thiết bị, hệ thống tự động lưu tiến độ và đưa bạn quay lại đúng bài đang học. Hoàn thành khóa học để nhận chứng chỉ hoàn thành.",
+            Image = "~/assets/images/banners/banner_hoc_linh_hoat.jpg", ImageAlt = "Góc học tập với laptop và sổ tay",
+            CardIcon = "bi-play-circle-fill", CardTitle = "Tự động lưu tiến độ", CardText = "Học tiếp đúng bài bạn đang dừng",
+            PrimaryText = isLoggedIn ? "Tiếp tục học" : "Bắt đầu học ngay", PrimaryIcon = "bi-play-fill",
+            PrimaryUrl = isLoggedIn ? Url.Action("MyCourses", "Learning", new { area = "" }) : registerUrl,
+            SecondaryText = isLoggedIn ? "Khám phá khóa học" : "Đăng nhập",
+            SecondaryUrl = isLoggedIn ? Url.Action("Index", "Course", new { area = "" }) : loginUrl
+        },
+        new
+        {
+            Eyebrow = "CHIA SẺ KIẾN THỨC", EyebrowIcon = "bi-mortarboard", Accent = "#059669", AccentBg = "#ECFDF5", AccentBorder = "#A7F3D0",
+            PanelBg = "linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)",
+            Title = "Trở thành giáo viên và chia sẻ kiến thức của bạn",
+            Description = "Gửi hồ sơ chuyên môn, xây dựng khóa học với video và tài liệu của riêng bạn, tiếp cận học viên trên toàn hệ thống và nhận doanh thu từ mỗi lượt đăng ký khóa học.",
+            Image = "~/assets/images/banners/banner_giang_vien.jpg", ImageAlt = "Giáo viên đang đứng lớp",
+            CardIcon = "bi-mortarboard-fill", CardTitle = "Hồ sơ được Admin xét duyệt", CardText = "Bắt đầu giảng dạy sau khi được duyệt",
+            PrimaryText = isLoggedIn ? teacherCtaText : "Đăng ký tài khoản", PrimaryIcon = "bi-person-workspace",
+            PrimaryUrl = isLoggedIn ? teacherCtaUrl : registerUrl,
+            SecondaryText = isLoggedIn ? "Khám phá khóa học" : "Đăng nhập",
+            SecondaryUrl = isLoggedIn ? Url.Action("Index", "Course", new { area = "" }) : loginUrl
+        }
+    };
+    int totalSlides = slides.Length + 1;
+}
+
+<style>
+    .hero-carousel {
+        position: relative;
+        --hero-interval: 2s;
+    }
+
+    /* Các slide xếp chồng cùng một ô lưới: chiều cao = slide cao nhất, không giật trang khi chuyển */
+    .hero-carousel-track {
+        display: grid;
+    }
+
+    .hero-slide {
+        grid-area: 1 / 1;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(var(--hero-enter, 48px));
+        transition: opacity 0.6s ease, transform 0.6s ease, visibility 0s linear 0.6s;
+    }
+
+    .hero-slide.is-active {
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        transition: opacity 0.6s ease, transform 0.6s ease, visibility 0s;
+    }
+
+    .hero-slide.is-leaving:not(.is-active) {
+        transform: translateX(var(--hero-leave, -48px));
+    }
+
+    .hero-slide-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 48px;
+        align-items: center;
+    }
+
+    .hero-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 700;
+        border-radius: 9999px;
+        margin-bottom: 20px;
+        letter-spacing: 0.05em;
+        border: 1px solid;
+    }
+
+    .hero-title {
+        font-size: var(--fs-h1, 40px);
+        line-height: 48px;
+        font-weight: 800;
+        color: var(--text-heading, #0F172A);
+        margin-bottom: 20px;
+    }
+
+    .hero-desc {
+        font-size: 17px;
+        line-height: 28px;
+        color: var(--text-secondary, #475569);
+        margin-bottom: 32px;
+        max-width: 520px;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .hero-actions .btn {
+        text-decoration: none;
+        padding: 14px 28px;
+        font-weight: 700;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* Hover nút trên banner: icon và chữ to ra một chút (scale không đổi kích thước nút, không đẩy layout) */
+    .hero-actions .btn i,
+    .hero-actions .btn .hero-btn-label {
+        display: inline-block;
+        transition: transform 0.2s ease;
+    }
+
+    .hero-actions .btn:hover i,
+    .hero-actions .btn:focus-visible i {
+        transform: scale(1.2);
+    }
+
+    .hero-actions .btn:hover .hero-btn-label,
+    .hero-actions .btn:focus-visible .hero-btn-label {
+        transform: scale(1.06);
+    }
+
+    /* Mũi tên "→" vừa to vừa nhích sang phải để gợi ý hướng đi */
+    .hero-actions .btn:hover .bi-arrow-right,
+    .hero-actions .btn:focus-visible .bi-arrow-right {
+        transform: translateX(4px) scale(1.2);
+    }
+
+    .hero-panel {
+        position: relative;
+        border-radius: var(--radius-3xl, 24px);
+        padding: 30px;
+        box-shadow: 0 20px 40px -15px rgba(67, 76, 232, 0.15);
+        min-height: 380px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .hero-panel img {
+        width: 100%;
+        max-width: 440px;
+        aspect-ratio: 3 / 2;
+        border-radius: 18px;
+        object-fit: cover;
+        box-shadow: var(--shadow-card);
+    }
+
+    .hero-float-card {
+        position: absolute;
+        bottom: 24px;
+        left: 24px;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(10px);
+        padding: 14px 20px;
+        border-radius: 16px;
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        border: 1px solid;
+    }
+
+    .hero-float-card .hero-float-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+
+    /* Mũi tên điều hướng */
+    .hero-carousel-arrow {
+        position: absolute;
+        top: 50%;
+        z-index: 5;
+        width: 48px;
+        height: 48px;
+        margin-top: -24px;
+        border-radius: 50%;
+        border: 1px solid var(--border-color, #E2E8F0);
+        background: rgba(255, 255, 255, 0.95);
+        color: var(--text-heading, #0F172A);
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        cursor: pointer;
+        transition: background var(--transition-fast, 0.2s), color var(--transition-fast, 0.2s), transform var(--transition-fast, 0.2s);
+    }
+
+    .hero-carousel-arrow:hover,
+    .hero-carousel-arrow:focus-visible {
+        background: var(--primary, #434CE8);
+        color: #FFFFFF;
+        border-color: var(--primary, #434CE8);
+        transform: scale(1.06);
+        outline: none;
+    }
+
+    .hero-carousel-arrow.prev {
+        left: 20px;
+    }
+
+    .hero-carousel-arrow.next {
+        right: 20px;
+    }
+
+    /* Màn hình hẹp: chừa chỗ hai bên để mũi tên không đè lên chữ */
+    @@media (max-width: 1399px) {
+        .hero-carousel .hero-slide .safe-container {
+            padding-left: 84px;
+            padding-right: 84px;
+        }
+    }
+
+    /* Chấm chuyển slide; chấm đang chọn có thanh tiến trình 2 giây, chạy hết thì sang slide kế */
+    .hero-carousel-dots {
+        position: absolute;
+        left: 50%;
+        bottom: 26px;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 8px;
+        z-index: 5;
+    }
+
+    .hero-carousel-dot {
+        position: relative;
+        width: 10px;
+        height: 10px;
+        padding: 0;
+        border: none;
+        border-radius: 9999px;
+        background: #CBD5E1;
+        cursor: pointer;
+        overflow: hidden;
+        transition: width 0.3s ease, background 0.3s ease;
+    }
+
+    .hero-carousel-dot.is-active {
+        width: 36px;
+        background: #C7D2FE;
+    }
+
+    .hero-carousel-dot.is-active::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: var(--primary, #434CE8);
+        transform-origin: left center;
+        animation: hero-dot-progress var(--hero-interval) linear forwards;
+    }
+
+    .hero-carousel.is-paused .hero-carousel-dot.is-active::after {
+        animation-play-state: paused;
+    }
+
+    @@keyframes hero-dot-progress {
+        from { transform: scaleX(0); }
+        to { transform: scaleX(1); }
+    }
+
+    @@media (max-width: 900px) {
+        .hero-slide-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .hero-panel {
+            min-height: 0;
+        }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .hero-slide,
+        .hero-slide.is-active,
+        .hero-actions .btn i,
+        .hero-actions .btn .hero-btn-label {
+            transition: none;
+        }
+
+        /* Không tự chuyển slide; vẫn dùng mũi tên / chấm */
+        .hero-carousel-dot.is-active::after {
+            animation: none;
+            transform: scaleX(1);
+        }
+    }
+</style>
+
+<section id="heroCarousel" class="hero-section hero-carousel" aria-roledescription="carousel" aria-label="Banner giới thiệu E-Learning"
+         style="margin: 0 !important; padding-top: 48px; padding-bottom: 72px; background: #FFFFFF; border-bottom: 1px solid var(--border-color, #E2E8F0); position: relative; overflow: hidden;">
+    <div class="hero-carousel-track">
+
+        <!-- Slide 1: banner cũ -->
+        <div class="hero-slide is-active" role="group" aria-roledescription="slide" aria-label="1 / @totalSlides">
+            <div class="safe-container">
+                <div class="hero-slide-grid">
+                    <div>
+                        <div class="hero-eyebrow" style="background-color: var(--primary-light, #EEF2FF); color: var(--primary, #434CE8); border-color: #C7D2FE;">
+                            @if (isLoggedIn)
+                            {
+                                <text><i class="bi bi-compass-fill"></i> LEARNING, MADE PERSONAL</text>
+                            }
+                            else
+                            {
+                                <text><i class="bi bi-shield-check"></i> NỀN TẢNG ĐÀO TẠO TRỰC TUYẾN CHUẨN MỰC</text>
+                            }
+                        </div>
+                        <h1 class="hero-title">
+                            @if (isLoggedIn)
+                            {
+                                <span>Tìm kiếm khóa học phù hợp cho lộ trình phát triển của bạn</span>
+                            }
+                            else
+                            {
+                                <span>Khởi đầu hành trình chinh phục tri thức cùng E-Learning</span>
+                            }
+                        </h1>
+                        <p class="hero-desc">
+                            @if (isLoggedIn)
+                            {
+                                <span>Khám phá hàng trăm khóa học trực tuyến thực chiến từ các chuyên gia hàng đầu. Hệ thống tự động đề xuất dựa trên sở thích và định hướng phát triển sự nghiệp của bạn.</span>
+                            }
+                            else
+                            {
+                                <span>Hệ thống đào tạo trực tuyến chuẩn mực kết hợp lý thuyết và dự án thực tế. Đăng nhập ngay hôm nay để truy cập trang chủ, mở khóa hàng trăm khóa học chất lượng cao và đồng hành cùng chuyên gia.</span>
+                            }
+                        </p>
+                        <div class="hero-actions">
+                            @if (isLoggedIn)
+                            {
+                                <a href="#categories-section" class="btn btn-primary btn-lg"><span class="hero-btn-label">Khám phá khóa học</span> <i class="bi bi-arrow-right"></i></a>
+                                <a href="@Url.Action("Index", "Recommendation")" class="btn btn-outline btn-lg"><i class="bi bi-lightbulb" style="font-size: 18px;"></i> <span class="hero-btn-label">Xem gợi ý cá nhân</span></a>
+                            }
+                            else
+                            {
+                                <a href="@loginUrl" class="btn btn-primary btn-lg" style="box-shadow: 0 4px 14px rgba(67, 76, 232, 0.35);">
+                                    <i class="bi bi-box-arrow-in-right" style="font-size: 18px;"></i> <span class="hero-btn-label">Đăng nhập hệ thống</span>
+                                </a>
+                                <a href="@registerUrl" class="btn btn-outline btn-lg">
+                                    <i class="bi bi-person-plus" style="font-size: 18px;"></i> <span class="hero-btn-label">Đăng ký tài khoản mới</span>
+                                </a>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="hero-panel" style="background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);">
+                        <img src="@Url.Content("~/assets/images/banners/hero_section.jpg")" alt="E-Learning Illustration" />
+
+                        @if (isLoggedIn)
+                        {
+                            <!-- Floating Recommendation Card -->
+                            <div style="position: absolute; bottom: 24px; left: 24px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid var(--border-color); padding: 16px 20px; border-radius: var(--radius-2xl); box-shadow: var(--shadow-modal); display: flex; align-items: center; gap: 14px;">
+                                <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--status-success-bg, #ECFDF5); color: var(--status-success, #10B981); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px;">
+                                    98%
+                                </div>
+                                <div>
+                                    <div style="font-size: 11px; font-weight: 700; color: var(--primary, #434CE8); letter-spacing: 0.05em; text-transform: uppercase;">GỢI Ý TỐT NHẤT</div>
+                                    <div style="font-size: 14px; font-weight: 700; color: var(--text-heading, #0F172A);">Web Development Masterclass</div>
+                                    <div style="font-size: 12px; color: var(--text-secondary, #64748B);">Dựa trên lịch sử quan tâm của bạn</div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <!-- Floating Welcome Card -->
+                            <div class="hero-float-card" style="border-color: #C7D2FE;">
+                                <div class="hero-float-icon" style="background: #EEF2FF; color: #434CE8;">
+                                    <i class="bi bi-shield-lock-fill"></i>
+                                </div>
+                                <div>
+                                    <div style="font-size: 13px; font-weight: 700; color: #0F172A;">Hệ thống bảo mật</div>
+                                    <div style="font-size: 12px; color: #64748B;">Đăng nhập để vào trang chủ & xem khóa học</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2-4: banner giới thiệu chức năng -->
+        @for (int i = 0; i < slides.Length; i++)
+        {
+            var s = slides[i];
+            <div class="hero-slide" role="group" aria-roledescription="slide" aria-label="@(i + 2) / @totalSlides" aria-hidden="true">
+                <div class="safe-container">
+                    <div class="hero-slide-grid">
+                        <div>
+                            <div class="hero-eyebrow" style="background-color: @s.AccentBg; color: @s.Accent; border-color: @s.AccentBorder;">
+                                <i class="bi @s.EyebrowIcon"></i> @s.Eyebrow
+                            </div>
+                            <h2 class="hero-title">@s.Title</h2>
+                            <p class="hero-desc">@s.Description</p>
+                            <div class="hero-actions">
+                                <a href="@s.PrimaryUrl" class="btn btn-primary btn-lg" style="box-shadow: 0 4px 14px rgba(67, 76, 232, 0.35);">
+                                    <i class="bi @s.PrimaryIcon" style="font-size: 18px;"></i> <span class="hero-btn-label">@s.PrimaryText</span>
+                                </a>
+                                <a href="@s.SecondaryUrl" class="btn btn-outline btn-lg"><span class="hero-btn-label">@s.SecondaryText</span> <i class="bi bi-arrow-right"></i></a>
+                            </div>
+                        </div>
+
+                        <div class="hero-panel" style="background: @s.PanelBg;">
+                            <img src="@Url.Content(s.Image)" alt="@s.ImageAlt" decoding="async" />
+                            <div class="hero-float-card" style="border-color: @s.AccentBorder;">
+                                <div class="hero-float-icon" style="background: @s.AccentBg; color: @s.Accent;">
+                                    <i class="bi @s.CardIcon"></i>
+                                </div>
+                                <div>
+                                    <div style="font-size: 13px; font-weight: 700; color: #0F172A;">@s.CardTitle</div>
+                                    <div style="font-size: 12px; color: #64748B;">@s.CardText</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <button type="button" class="hero-carousel-arrow prev" aria-label="Banner trước"><i class="bi bi-chevron-left"></i></button>
+    <button type="button" class="hero-carousel-arrow next" aria-label="Banner tiếp theo"><i class="bi bi-chevron-right"></i></button>
+
+    <div class="hero-carousel-dots">
+        @for (int i = 0; i < totalSlides; i++)
+        {
+            <button type="button" class="hero-carousel-dot@(i == 0 ? " is-active" : "")" aria-label="Chuyển tới banner @(i + 1)" aria-current="@(i == 0 ? "true" : null)"></button>
+        }
+    </div>
+</section>
+
+<script>
+    (function () {
+        var root = document.getElementById('heroCarousel');
+        if (!root) return;
+
+        var slides = root.querySelectorAll('.hero-slide');
+        var dots = root.querySelectorAll('.hero-carousel-dot');
+        var current = 0;
+
+        // Chuyển tới slide index; dir = 1 (sang phải) / -1 (sang trái) quyết định hướng trượt
+        function goTo(index, dir) {
+            var n = slides.length;
+            index = (index + n) % n;
+            if (index === current) return;
+            dir = dir || (index > current ? 1 : -1);
+
+            root.style.setProperty('--hero-enter', (dir > 0 ? 48 : -48) + 'px');
+            root.style.setProperty('--hero-leave', (dir > 0 ? -48 : 48) + 'px');
+
+            var prev = slides[current];
+            var next = slides[index];
+            void next.offsetWidth; // áp dụng vị trí bắt đầu mới trước khi chạy hiệu ứng
+
+            // Bấm chuyển liên tục: slide vừa rời đi có thể được chọn lại ngay, phải xóa trạng thái "đang rời"
+            slides.forEach(function (s) { if (s !== prev) s.classList.remove('is-leaving'); });
+            prev.classList.remove('is-active');
+            prev.classList.add('is-leaving');
+            prev.setAttribute('aria-hidden', 'true');
+            setTimeout(function () { if (!prev.classList.contains('is-active')) prev.classList.remove('is-leaving'); }, 650);
+
+            next.classList.add('is-active');
+            next.removeAttribute('aria-hidden');
+
+            dots[current].classList.remove('is-active');
+            dots[current].removeAttribute('aria-current');
+            dots[index].classList.add('is-active');
+            dots[index].setAttribute('aria-current', 'true');
+
+            current = index;
+        }
+
+        root.querySelector('.hero-carousel-arrow.prev').addEventListener('click', function () { goTo(current - 1, -1); });
+        root.querySelector('.hero-carousel-arrow.next').addEventListener('click', function () { goTo(current + 1, 1); });
+        dots.forEach(function (dot, i) {
+            dot.addEventListener('click', function () { goTo(i); });
+            // Tự chuyển: thanh tiến trình trên chấm đang chọn chạy hết 2 giây thì sang slide kế
+            dot.addEventListener('animationend', function () {
+                if (dot.classList.contains('is-active')) goTo(current + 1, 1);
+            });
+        });
+
+        // Tạm dừng khi người dùng đang xem / thao tác trên banner
+        function pause() { root.classList.add('is-paused'); }
+        function resume() { if (!root.matches(':hover') && !root.contains(document.activeElement)) root.classList.remove('is-paused'); }
+        root.addEventListener('mouseenter', pause);
+        root.addEventListener('mouseleave', resume);
+        root.addEventListener('focusin', pause);
+        root.addEventListener('focusout', function () { setTimeout(resume, 0); });
+
+        root.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowLeft') goTo(current - 1, -1);
+            if (e.key === 'ArrowRight') goTo(current + 1, 1);
+        });
+
+        // Vuốt trái / phải trên màn hình cảm ứng
+        var startX = null;
+        root.addEventListener('pointerdown', function (e) { if (e.pointerType === 'touch') startX = e.clientX; });
+        root.addEventListener('pointerup', function (e) {
+            if (startX === null) return;
+            var dx = e.clientX - startX;
+            startX = null;
+            if (Math.abs(dx) > 50) goTo(current + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
+        });
+    })();
+</script>

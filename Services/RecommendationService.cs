@@ -191,23 +191,33 @@ namespace ECOLearning.Services
             var daXem = session[SessionKhoaDaXem] as HashSet<string> ?? new HashSet<string>();
             if (daXem.Contains(courseId))
             {
-                try
+                GhiLuotXem(userId, courseId, false);
+                return;
+            }
+            daXem.Add(courseId);
+            if (GhiLuotXem(userId, courseId, true))
+            {
+                session[SessionKhoaDaXem] = daXem;
+            }
+        }
+
+        /// <summary>
+        /// Ghi lượt xem không cần Session (API ứng dụng di động): [tangLuotXem] = false chỉ cập nhật thời điểm xem gần nhất.
+        /// Người gọi tự chống cộng lặp (API dùng bộ nhớ đệm theo người dùng + khóa học).
+        /// </summary>
+        public bool GhiLuotXem(int userId, string courseId, bool tangLuotXem)
+        {
+            if (userId <= 0 || string.IsNullOrEmpty(courseId)) return false;
+            try
+            {
+                if (!tangLuotXem)
                 {
                     db.Database.ExecuteSqlCommand(TransactionalBehavior.DoNotEnsureTransaction,
                         "UPDATE dbo.TuongTacKhoaHoc SET lanCapNhat = GETDATE() WHERE maHocVien = @maHocVien AND maKhoaHoc = @maKhoaHoc",
                         new SqlParameter("@maHocVien", userId),
                         new SqlParameter("@maKhoaHoc", courseId));
+                    return true;
                 }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine("Touch course view error: " + ex.Message);
-                }
-                return;
-            }
-            daXem.Add(courseId);
-
-            try
-            {
                 db.Database.ExecuteSqlCommand(TransactionalBehavior.DoNotEnsureTransaction, @"
                     MERGE dbo.TuongTacKhoaHoc WITH (HOLDLOCK) AS t
                     USING (SELECT @maHocVien AS maHocVien, @maKhoaHoc AS maKhoaHoc) AS s
@@ -218,12 +228,41 @@ namespace ECOLearning.Services
                         INSERT (maHocVien, maKhoaHoc, luotXem) VALUES (s.maHocVien, s.maKhoaHoc, 1);",
                     new SqlParameter("@maHocVien", userId),
                     new SqlParameter("@maKhoaHoc", courseId));
-                session[SessionKhoaDaXem] = daXem;
+                return true;
             }
             catch (Exception ex)
             {
                 // Chưa chạy migration 005 hoặc lỗi kết nối: không ảnh hưởng trang chi tiết
                 System.Diagnostics.Debug.WriteLine("Record course view error: " + ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Ghi một lượt click thẻ khóa học (tín hiệu "clicks" của lọc cộng tác, trọng số trong GoiY_TrongSo).
+        /// Không đổi lanCapNhat: thời điểm xem do lượt mở trang chi tiết quyết định.
+        /// </summary>
+        public bool GhiLuotClick(int userId, string courseId)
+        {
+            if (userId <= 0 || string.IsNullOrEmpty(courseId)) return false;
+            try
+            {
+                db.Database.ExecuteSqlCommand(TransactionalBehavior.DoNotEnsureTransaction, @"
+                    MERGE dbo.TuongTacKhoaHoc WITH (HOLDLOCK) AS t
+                    USING (SELECT @maHocVien AS maHocVien, @maKhoaHoc AS maKhoaHoc) AS s
+                        ON t.maHocVien = s.maHocVien AND t.maKhoaHoc = s.maKhoaHoc
+                    WHEN MATCHED THEN
+                        UPDATE SET luotClick = t.luotClick + 1
+                    WHEN NOT MATCHED THEN
+                        INSERT (maHocVien, maKhoaHoc, luotClick) VALUES (s.maHocVien, s.maKhoaHoc, 1);",
+                    new SqlParameter("@maHocVien", userId),
+                    new SqlParameter("@maKhoaHoc", courseId));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Record course click error: " + ex.Message);
+                return false;
             }
         }
 

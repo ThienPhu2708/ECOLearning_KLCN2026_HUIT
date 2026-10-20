@@ -13,6 +13,15 @@ namespace ECOLearning
         {
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
 
+            // API cho ứng dụng di động: /api/v1/... khai báo bằng [Route] trong Controllers/Api (Tuan10/Task_Tuan10.docx)
+            routes.MapMvcAttributeRoutes();
+            routes.MapRoute(
+                name: "ApiKhongTonTai",
+                url: "api/{*path}",
+                defaults: new { controller = "ApiNotFound", action = "Index" },
+                namespaces: new[] { "ECOLearning.Controllers.Api" }
+            );
+
             // Tất cả lĩnh vực (nút "Tất cả các lĩnh vực" ở trang chủ), /danh-muc không có slug
             // Trang danh mục: một trang cho mọi danh mục, slug sinh từ tên danh mục (Services/SlugHelper)
             routes.MapRoute(

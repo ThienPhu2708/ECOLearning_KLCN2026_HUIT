@@ -5,6 +5,12 @@ VisualStudioVersion = 17.13.35806.99 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ECOLearning", "ECOLearning.csproj", "{750FA526-AD7B-4E1D-8B52-276EA1E16FA1}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{473C58B5-F21A-6117-BBC1-CDAE8BF26CFB}"
+	ProjectSection(SolutionItems) = preProject
+		..\Hosting\ecolearning.runasp.net-WebDeploy.publishSettings = ..\Hosting\ecolearning.runasp.net-WebDeploy.publishSettings
+	EndProjectSection
+EndProject
+
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

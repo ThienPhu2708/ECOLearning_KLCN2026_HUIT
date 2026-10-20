@@ -41,3 +41,10 @@ Uploads/Videos/
 
 # Khóa bí mật (VNPay...), xem Secrets.config.example
 Secrets.config
+
+# cloudflared tải về để chạy Tools/chay_tunnel_api.bat (không đưa lên Git)
+Tools/cloudflared*.exe
+
+# Publish lên hosting (MonsterASP...): file cấu hình chứa mật khẩu deploy / chuỗi kết nối, không đưa lên Git
+*.publishsettings
+Properties/PublishProfiles/

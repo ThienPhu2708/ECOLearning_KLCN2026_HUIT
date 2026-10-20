@@ -28,12 +28,13 @@ Thư mục: `Database/Migrations/`
 | 12 | `012_DanhMuc_AnhMinhHoa.sql` | Ảnh minh họa danh mục: thêm cột `DanhMuc.anhMinhHoa` (ảnh Admin tải lên ở Quản lý danh mục, hiện ở trang chủ, trang Tất cả lĩnh vực và banner trang danh mục), tạo các danh mục `CAT-002`..`CAT-006` nếu máy chưa có, điền mô tả còn trống và gắn ảnh có sẵn trong `assets/images/categories/` (chỉ điền chỗ trống, không ghi đè). Thiếu file này thì form danh mục không có ô chọn ảnh và các trang hiện biểu tượng như cũ. |
 | 13 | `013_BoSung_KhoaHoc_DanhMuc.sql` | Dữ liệu demo: thêm khóa học để **mỗi danh mục có ít nhất 10 khóa đang bán** (mã `K13-...`, mỗi khóa 1 chương 1 bài xem thử, dùng chung video demo có trong repo). Chỉ thêm số khóa còn thiếu theo dữ liệu trên máy bạn. Chạy **sau 012** và sau khi đã nạp dữ liệu demo (cần tài khoản giáo viên). |
 | 14 | `014_ThanhToan_ThuNghiem.sql` | Thanh toán và chi trả **thử nghiệm**: thêm cột trạng thái cho `DonHang` (phương thức, hạn thanh toán, ngày thanh toán), `ThanhToan` (cổng, mã giao dịch, ngày thanh toán), `NhanThanhToan` (Admin xử lý, mã giao dịch chi, lý do từ chối) và bảng `NhatKyThanhToan`. Thiếu file này thì giỏ hàng báo "Chức năng thanh toán chưa được khởi tạo" và trang Admin "Chi trả giáo viên" nhắc chạy 014. |
+| 15 | `015_Api_Token_Otp.sql` | API cho **ứng dụng di động** (`/api/v1`): bảng `ApiToken` (token đăng nhập của app, chỉ lưu SHA-256, hạn 30 ngày) và `ApiOtp` (mã OTP đăng ký / quên mật khẩu, vì app không dùng Session như website). Thiếu file này thì app không đăng nhập được (`/api/v1/ping` báo `tokenTableReady: false`). |
 
 ### Cách chạy trong SQL Server Management Studio (SSMS)
 1. Mở SSMS, kết nối vào SQL Server trên máy bạn.
 2. **File → Open → File...** → chọn file `001_...sql`.
 3. Bấm **Execute** (hoặc phím **F5**). Thấy *"Commands completed successfully"* là xong.
-4. Lặp lại với `002`, `003`, `004`, `005`, `006`, cả hai file `007`, `008`, `009`, `010`, `011`, `012`, `013`, `014` **theo đúng thứ tự**.
+4. Lặp lại với `002`, `003`, `004`, `005`, `006`, cả hai file `007`, `008`, `009`, `010`, `011`, `012`, `013`, `014`, `015` **theo đúng thứ tự**.
 
 > Mỗi file đã có sẵn dòng `USE QL_HETHONG_CUNGCAP_KHOAHOC;` nên không cần chọn database trước.
 > Nếu chạy bằng dòng lệnh `sqlcmd` thì thêm tham số **`-I`** (bật `QUOTED_IDENTIFIER`), nếu không `007_Quiz_ChungChi.sql`
@@ -59,7 +60,8 @@ SELECT
   CASE WHEN OBJECT_ID('dbo.PhanHoiDanhGia') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 011' END AS [011],
   CASE WHEN COL_LENGTH('dbo.DanhMuc','anhMinhHoa') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 012' END AS [012],
   CASE WHEN EXISTS (SELECT 1 FROM dbo.KhoaHoc WHERE maKhoaHoc LIKE 'K13-%') THEN N'OK' ELSE N'THIẾU - chạy 013' END AS [013],
-  CASE WHEN OBJECT_ID('dbo.NhatKyThanhToan') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 014' END AS [014];
+  CASE WHEN OBJECT_ID('dbo.NhatKyThanhToan') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 014' END AS [014],
+  CASE WHEN OBJECT_ID('dbo.ApiToken') IS NOT NULL AND OBJECT_ID('dbo.ApiOtp') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 015' END AS [015];
 ```
 
 Cả 14 cột đều ra **OK** là được.

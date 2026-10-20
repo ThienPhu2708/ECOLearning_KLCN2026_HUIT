@@ -594,50 +594,48 @@ namespace ECOLearning.Controllers
             Session.Remove("Register_OtpVerified_Email");
         }
 
-        // POST: Account/GoogleLogin (Xác thực ID Token từ Google API & Đăng nhập / Đăng ký)
+        // Client ID OAuth của web (không phải khóa bí mật), phải trùng client_id trong Views/Account/Login.cshtml
+        private const string GoogleClientId = "16112335076-7inckr0r5mo4og4gmi70c5t10j82bg4o.apps.googleusercontent.com";
+
+        // POST: Account/GoogleLogin (Xác thực token với Google rồi Đăng nhập / Đăng ký)
+        // Chỉ tin thông tin máy chủ Google trả về, KHÔNG tin email/họ tên do trình duyệt gửi lên
+        // (nếu tin, ai cũng có thể gửi email của người khác, kể cả Admin, để đăng nhập không cần mật khẩu).
         [HttpPost]
-        public JsonResult GoogleLogin(string idToken, string googleEmail, string googleName, string googleAvatar, string googleGivenName = null, string googleFamilyName = null)
+        public JsonResult GoogleLogin(string idToken, string accessToken)
         {
-            string email = string.IsNullOrWhiteSpace(googleEmail) ? "hocvien.google@elearning.vn" : googleEmail.Trim().ToLower();
-
-            // 1. Trích xuất họ và tên đầy đủ từ Google (Ưu tiên kết hợp Họ + Tên nếu có)
-            string givenName = (googleGivenName ?? "").Trim();
-            string familyName = (googleFamilyName ?? "").Trim();
-            string passedName = (googleName ?? "").Trim();
-
-            string name = "";
-            if (!string.IsNullOrWhiteSpace(familyName) && !string.IsNullOrWhiteSpace(givenName))
-            {
-                name = $"{familyName} {givenName}".Trim();
-            }
-            else if (!string.IsNullOrWhiteSpace(passedName))
-            {
-                name = passedName;
-            }
-            else if (!string.IsNullOrWhiteSpace(givenName))
-            {
-                name = givenName;
-            }
-
-            string avatar = string.IsNullOrWhiteSpace(googleAvatar) ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" : googleAvatar.Trim();
-
-            // 2. BE xác thực ID Token trực tiếp với Google API Server (https://oauth2.googleapis.com/tokeninfo)
+            GoogleTokenPayload hoSo = null;
             if (!string.IsNullOrWhiteSpace(idToken))
             {
-                var verifiedPayload = VerifyGoogleIdToken(idToken);
-                if (verifiedPayload != null && !string.IsNullOrEmpty(verifiedPayload.Email))
-                {
-                    email = verifiedPayload.Email.Trim().ToLower();
-                    if (!string.IsNullOrEmpty(verifiedPayload.Name))
-                    {
-                        name = verifiedPayload.Name.Trim();
-                    }
-                    if (!string.IsNullOrEmpty(verifiedPayload.Picture))
-                    {
-                        avatar = verifiedPayload.Picture.Trim();
-                    }
-                }
+                hoSo = VerifyGoogleIdToken(idToken);
             }
+            else if (!string.IsNullOrWhiteSpace(accessToken))
+            {
+                hoSo = VerifyGoogleAccessToken(accessToken);
+            }
+
+            if (hoSo == null)
+            {
+                return Json(new { success = false, message = "Không xác thực được tài khoản Google. Vui lòng thử lại!" });
+            }
+
+            string email = hoSo.Email.Trim().ToLower();
+
+            // 1. Họ và tên đầy đủ từ Google (ưu tiên Họ + Tên nếu có)
+            string name = "";
+            if (!string.IsNullOrWhiteSpace(hoSo.FamilyName) && !string.IsNullOrWhiteSpace(hoSo.GivenName))
+            {
+                name = $"{hoSo.FamilyName.Trim()} {hoSo.GivenName.Trim()}";
+            }
+            else if (!string.IsNullOrWhiteSpace(hoSo.Name))
+            {
+                name = hoSo.Name.Trim();
+            }
+            else if (!string.IsNullOrWhiteSpace(hoSo.GivenName))
+            {
+                name = hoSo.GivenName.Trim();
+            }
+
+            string avatar = string.IsNullOrWhiteSpace(hoSo.Picture) ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" : hoSo.Picture.Trim();
 
             // Tuyệt đối không lấy tên tài khoản / tiền tố email làm họ tên
             if (string.IsNullOrWhiteSpace(name) || name.Equals(email.Split('@')[0], StringComparison.OrdinalIgnoreCase))
@@ -656,7 +654,8 @@ namespace ECOLearning.Controllers
                     {
                         hoTen = name,
                         email = email,
-                        matKhau = PasswordHasher.HashPassword("GoogleOAuth2026"),
+                        // Mật khẩu ngẫu nhiên, không ai biết: muốn đăng nhập bằng mật khẩu thì dùng "Quên mật khẩu" để đặt
+                        matKhau = PasswordHasher.HashPassword(Guid.NewGuid().ToString("N") + "Aa1!"),
                         vaiTro = "HocVien",
                         trangThai = true,
                         anhDaiDien = avatar
@@ -666,6 +665,11 @@ namespace ECOLearning.Controllers
                 }
                 else
                 {
+                    if (user.trangThai.HasValue && !user.trangThai.Value)
+                    {
+                        return Json(new { success = false, message = "Tài khoản của bạn đã bị khóa hoặc chưa được kích hoạt." });
+                    }
+
                     bool isUpdated = false;
                     if (!string.IsNullOrEmpty(avatar) && user.anhDaiDien != avatar)
                     {
@@ -702,57 +706,86 @@ namespace ECOLearning.Controllers
             return Json(new { success = false, message = "Đã xảy ra lỗi khi kết nối hệ thống. Vui lòng thử lại sau!" });
         }
 
+        // ID Token (One Tap): Google kiểm tra chữ ký + hạn dùng; ta kiểm tra token cấp cho đúng web này và email đã xác minh
         private GoogleTokenPayload VerifyGoogleIdToken(string idToken)
         {
-            if (string.IsNullOrWhiteSpace(idToken)) return null;
+            var dict = GoiGoogle("https://oauth2.googleapis.com/tokeninfo?id_token=" + Uri.EscapeDataString(idToken), null);
+            if (dict == null || GiaTri(dict, "aud") != GoogleClientId) return null;
 
+            string iss = GiaTri(dict, "iss");
+            if (iss != "accounts.google.com" && iss != "https://accounts.google.com") return null;
+
+            return TaoHoSoGoogle(dict);
+        }
+
+        // Access Token (cửa sổ popup): kiểm tra token cấp cho đúng web này rồi mới lấy thông tin người dùng
+        private GoogleTokenPayload VerifyGoogleAccessToken(string accessToken)
+        {
+            var info = GoiGoogle("https://oauth2.googleapis.com/tokeninfo?access_token=" + Uri.EscapeDataString(accessToken), null);
+            if (info == null || GiaTri(info, "aud") != GoogleClientId) return null;
+
+            var dict = GoiGoogle("https://www.googleapis.com/oauth2/v3/userinfo", accessToken);
+            if (dict == null || GiaTri(dict, "sub") != GiaTri(info, "sub")) return null;
+
+            return TaoHoSoGoogle(dict);
+        }
+
+        private static GoogleTokenPayload TaoHoSoGoogle(Dictionary<string, object> dict)
+        {
+            string email = GiaTri(dict, "email");
+            // email_verified: tokeninfo trả chuỗi "true", userinfo trả kiểu bool
+            if (string.IsNullOrWhiteSpace(email) || !string.Equals(GiaTri(dict, "email_verified"), "true", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return new GoogleTokenPayload
+            {
+                Email = email,
+                Name = GiaTri(dict, "name"),
+                GivenName = GiaTri(dict, "given_name"),
+                FamilyName = GiaTri(dict, "family_name"),
+                Picture = GiaTri(dict, "picture"),
+                Sub = GiaTri(dict, "sub")
+            };
+        }
+
+        // Gọi API Google, token sai/hết hạn (HTTP 400/401) hoặc lỗi mạng thì trả null
+        private static Dictionary<string, object> GoiGoogle(string url, string bearerToken)
+        {
             try
             {
+                System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;
                 using (var client = new System.Net.WebClient())
                 {
                     client.Encoding = System.Text.Encoding.UTF8;
-                    string url = "https://oauth2.googleapis.com/tokeninfo?id_token=" + Uri.EscapeDataString(idToken);
-                    string jsonResponse = client.DownloadString(url);
-
-                    if (!string.IsNullOrEmpty(jsonResponse))
+                    if (bearerToken != null)
                     {
-                        var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
-                        var dict = serializer.Deserialize<System.Collections.Generic.Dictionary<string, object>>(jsonResponse);
-
-                        if (dict != null && dict.ContainsKey("email"))
-                        {
-                            string gName = dict.ContainsKey("name") ? dict["name"]?.ToString() : null;
-                            string gGiven = dict.ContainsKey("given_name") ? dict["given_name"]?.ToString() : null;
-                            string gFamily = dict.ContainsKey("family_name") ? dict["family_name"]?.ToString() : null;
-
-                            string finalName = gName;
-                            if (!string.IsNullOrWhiteSpace(gFamily) && !string.IsNullOrWhiteSpace(gGiven))
-                            {
-                                finalName = $"{gFamily.Trim()} {gGiven.Trim()}";
-                            }
-
-                            return new GoogleTokenPayload
-                            {
-                                Email = dict["email"]?.ToString(),
-                                Name = finalName,
-                                Picture = dict.ContainsKey("picture") ? dict["picture"]?.ToString() : null,
-                                Sub = dict.ContainsKey("sub") ? dict["sub"]?.ToString() : null
-                            };
-                        }
+                        client.Headers[System.Net.HttpRequestHeader.Authorization] = "Bearer " + bearerToken;
                     }
+                    string json = client.DownloadString(url);
+                    return new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<Dictionary<string, object>>(json);
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("Google ID Token Validation Error: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine("Google token validation error: " + ex.Message);
+                return null;
             }
-            return null;
+        }
+
+        private static string GiaTri(Dictionary<string, object> dict, string key)
+        {
+            object v;
+            return dict.TryGetValue(key, out v) && v != null ? Convert.ToString(v) : null;
         }
 
         public class GoogleTokenPayload
         {
             public string Email { get; set; }
             public string Name { get; set; }
+            public string GivenName { get; set; }
+            public string FamilyName { get; set; }
             public string Picture { get; set; }
             public string Sub { get; set; }
         }

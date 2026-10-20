@@ -229,6 +229,21 @@
     <Compile Include="Controllers\InterestController.cs" />
     <Compile Include="Controllers\CouponController.cs" />
     <Compile Include="Controllers\VideoStreamController.cs" />
+    <Compile Include="Controllers\Api\ApiControllerBase.cs" />
+    <Compile Include="Controllers\Api\ApiRules.cs" />
+    <Compile Include="Controllers\Api\PingApiController.cs" />
+    <Compile Include="Controllers\Api\AuthApiController.cs" />
+    <Compile Include="Controllers\Api\ProfileApiController.cs" />
+    <Compile Include="Controllers\Api\CatalogApiController.cs" />
+    <Compile Include="Controllers\Api\RecommendationApiController.cs" />
+    <Compile Include="Controllers\Api\OrderApiController.cs" />
+    <Compile Include="Controllers\Api\LearningApiController.cs" />
+    <Compile Include="Controllers\Api\QuizApiController.cs" />
+    <Compile Include="Services\Api\ApiTokenService.cs" />
+    <Compile Include="Services\Api\ApiOtpService.cs" />
+    <Compile Include="Services\Api\ApiCourseMapper.cs" />
+    <Compile Include="Services\LearningService.cs" />
+    <Compile Include="Services\OrderService.cs" />
     <Compile Include="Areas\Admin\Controllers\PayoutRequestController.cs" />
     <Compile Include="Controllers\SearchController.cs" />
     <Compile Include="Controllers\CategoryController.cs" />
@@ -515,6 +530,8 @@
     <None Include="Database\Migrations\009_ViMaGiamGia.sql" />
     <None Include="Database\Migrations\010_TimKiem.sql" />
     <None Include="Database\Migrations\011_DanhGia_HuuIch_PhanHoi.sql" />
+    <None Include="Database\Migrations\015_Api_Token_Otp.sql" />
+    <None Include="Tools\chay_tunnel_api.bat" />
     <Content Include="Areas\Instructor\Views\Violation\Index.cshtml" />
     <Content Include="assets\css\dashboard-tables.css" />
     <Content Include="assets\js\table-pagination.js" />
@@ -625,6 +642,72 @@
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- View, font, thư viện từng bị mất khỏi project: thiếu thì Publish không đưa lên hosting -->
+    <Content Include="Areas\Admin\Views\TeacherApproval\Index.cshtml" />
+    <Content Include="Areas\Instructor\Views\TeacherApplication\Register.cshtml" />
+    <Content Include="Areas\Instructor\Views\TeacherApplication\Status.cshtml" />
+    <Content Include="Views\Course\Details.cshtml" />
+    <Content Include="Views\Course\Index.cshtml" />
+    <Content Include="Views\Home\About.cshtml" />
+    <Content Include="Views\Home\Contact.cshtml" />
+    <Content Include="Views\Learning\Study.cshtml" />
+    <Content Include="assets\js\sweetalert2.all.min.js" />
+    <Content Include="assets\vendor\bootstrap-icons\bootstrap-icons.min.css" />
+    <Content Include="assets\vendor\google-fonts\fonts.css" />
+    <Content Include="assets\vendor\google-fonts\fonts.local.css" />
+    <Content Include="assets\vendor\bootstrap-icons\fonts\bootstrap-icons.woff" />
+    <Content Include="assets\vendor\bootstrap-icons\fonts\bootstrap-icons.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yw.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko40yyygA.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko50yyygA.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko70yyygA.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\LDIuaomQNQcsA88c7O9yZ4KMCoOg4Koz4y6qhA.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\LDIuaomQNQcsA88c7O9yZ4KMCoOg4Koz4yCqhMva.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\LDIuaomQNQcsA88c7O9yZ4KMCoOg4Koz4yGqhMva.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\LDIuaomQNQcsA88c7O9yZ4KMCoOg4Koz4yOqhMva.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HSMIG81Rb0.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HSMIG86Rb0bcw.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HSMIG87Rb0bcw.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HSQI281Rb0.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HSQI286Rb0bcw.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HSQI287Rb0bcw.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HScJ281Rb0.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HScJ286Rb0bcw.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HScJ287Rb0bcw.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HTEJm81Rb0.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HTEJm86Rb0bcw.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HTEJm87Rb0bcw.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HToIW81Rb0.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HToIW86Rb0bcw.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVMSTAyLFyeg_IDWvOJmVES_HToIW87Rb0bcw.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVNSTAyLFyeg_IDWvOJmVES_HwyNXYSYIAi.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVNSTAyLFyeg_IDWvOJmVES_HwyNXcSYIAi.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVNSTAyLFyeg_IDWvOJmVES_HwyNXgSYA.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVPSTAyLFyeg_IDWvOJmVES_Hw3BXo.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVPSTAyLFyeg_IDWvOJmVES_Hw4BXoKZA.woff2" />
+    <Content Include="assets\vendor\google-fonts\files\QdVPSTAyLFyeg_IDWvOJmVES_Hw5BXoKZA.woff2" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Ảnh mặc định, ảnh danh mục, chứng chỉ mà CSDL đang trỏ tới: thiếu thì Publish không đưa lên hosting -->
+    <Content Include="assets\images\avatars\avatar_13_639263626485880877.jpg" />
+    <Content Include="assets\images\avatars\avatar_6_639256864165513634.jpg" />
+    <Content Include="assets\images\avatars\avatar_admin.jpg" />
+    <Content Include="assets\images\avatars\avatar_default.jpg" />
+    <Content Include="assets\images\categories\CAT-002-c4189c0e.jpg" />
+    <Content Include="assets\images\categories\CAT-003-733e4cd0.jpg" />
+    <Content Include="assets\images\categories\CAT-004-9938a943.jpg" />
+    <Content Include="assets\images\categories\CAT-005-4b1be6bb.jpg" />
+    <Content Include="assets\images\categories\CAT-006-0b1fa143.jpg" />
+    <Content Include="assets\images\categories\DM01-d54fcc6f.jpg" />
+    <Content Include="assets\images\categories\DM02-ee150cec.jpg" />
+    <Content Include="assets\images\categories\DM03-475cb7de.jpg" />
+    <Content Include="assets\images\categories\DM04-a994c062.jpg" />
+    <Content Include="assets\images\categories\DM06-ff0eca1e.jpg" />
+    <Content Include="assets\uploads\certificates\cert_13_20260929134334.jpg" />
+    <Content Include="assets\uploads\certificates\cert_8_20260922230320.jpg" />
+    <Content Include="assets\uploads\certificates\cert_8_20260929101748.pdf" />
+  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != '' and Exists('$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets')" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" Condition="false" />

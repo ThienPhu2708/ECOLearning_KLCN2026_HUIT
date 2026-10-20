@@ -960,7 +960,42 @@ Dashboard, Quản lý danh mục, Báo cáo hệ thống, Doanh thu theo ngày k
 
 ---
 
-## 25. Việc còn lại / cần quyết định
+## 25. API cho ứng dụng di động `/api/v1` (mới, **chưa commit**)
+
+Tài liệu đầy đủ (danh sách API, mẫu JSON, quy tắc, phân công): `D:\Nam4_DH\KLTN\Tuan10\Task_Tuan10.docx`;
+bộ Postman: `Tuan10\ECOLearning_API.postman_collection.json`; app Flutter: repo `ECOLearning_Application`.
+
+- **Cách làm**: controller MVC 5 trả JSON (không cài thêm gói Web API), attribute routing `routes.MapMvcAttributeRoutes()`;
+  đường dẫn `/api/...` không khớp API nào trả 404 dạng JSON (`ApiNotFoundController`). `Web.config` mở thêm PUT / DELETE cho handler
+  mặc định của IIS. Mọi phản hồi: `{ success, message, data }` / `{ success: false, code, message, errors }`, JSON camelCase,
+  thời gian ISO 8601 `+07:00`, tiền là số nguyên VND, ảnh / video là đường dẫn đầy đủ.
+- **Xác thực**: token `Authorization: Bearer` (bảng `ApiToken`, migration 015, chỉ lưu SHA-256, hạn 30 ngày; đăng xuất thu hồi token,
+  đổi / đặt lại mật khẩu thu hồi token ở thiết bị khác). OTP đăng ký / quên mật khẩu lưu bảng `ApiOtp` (app không có Session),
+  cùng quy tắc với website: 6 số, hết hạn 5 phút, sai 5 lần thì vô hiệu, gửi lại sau 60 giây.
+- **File**: `Controllers/Api/` (ApiControllerBase, ApiRules, Ping, Auth, Profile, Catalog, Recommendation, Order + PaymentReturn,
+  Learning, Quiz), `Services/Api/` (ApiTokenService, ApiOtpService, ApiCourseMapper), `Services/LearningService.cs`,
+  `Services/OrderService.cs`, `Tools/chay_tunnel_api.bat`.
+- **Dùng chung nghiệp vụ với website** (không viết lại): gợi ý lọc cộng tác (`RecommendationService.GetForHome`), tìm kiếm không dấu
+  (`SearchService`), mã giảm giá (`PromotionService`), VNPay (`VnPayService`), quiz và chứng chỉ (`QuizService`), yêu thích, sở thích.
+  - `LearningService`: phần lưu tiến độ / đồng bộ thời lượng video / tính % khóa chuyển từ `LearningController` sang; web và app gọi
+    chung nên học ở đâu cũng ra cùng tiến độ (đã kiểm tra lại trang Study của web: lưu dở 200, dữ liệu sai 400, xem hết tính hoàn thành
+    theo độ dài thật của file video).
+  - `OrderService`: tạo đơn cho app với cùng các bước của `CartController.Checkout` (giỏ hàng của app nằm trên máy).
+  - `RecommendationService`: thêm `GhiLuotXem` (không cần Session) và `GhiLuotClick` (cột `luotClick` trước đây không có chỗ nào ghi).
+- **Thanh toán trên app**: F3 trả `paymentUrl` của VNPay với `vnp_ReturnUrl = /api/v1/payments/vnpay-return`; trang này ghi nhận kết quả
+  (cùng hàm với `/Payment/VnpayReturn`) và **không chuyển tiếp** nên WebView của app luôn bắt được địa chỉ để đóng lại rồi gọi F4.
+- **Địa chỉ public cho app** (máy ảo / điện thoại không gọi được `localhost`): `Tools/chay_tunnel_api.bat` (Cloudflare Tunnel).
+  Link ảnh / video / VNPay lấy theo `Api:PublicBaseUrl` (Secrets.config) → header `X-Forwarded-Host` → địa chỉ request;
+  `GET /api/v1/ping` trả `publicBaseUrl` để kiểm tra.
+- **Kiểm thử** (gọi thật vào API, tài khoản `test.*@demo.ecolearning.vn`, đã xóa sạch sau khi chạy): 101/101 trường hợp đạt, gồm lỗi
+  401 / 403 / 404 / 409 / 429, đăng ký OTP 3 bước, đổi / đặt lại mật khẩu thu hồi token, tìm kiếm không dấu, ghi lượt xem / click, gợi ý
+  "Vì bạn đã xem…", và trọn luồng: tạo đơn → trả bằng thẻ NCB trên VNPay Sandbox → đơn `paid` → học 8 bài (video tua được, HTTP 206)
+  → quiz 10/10 → nhận chứng chỉ → đánh giá → thống kê hồ sơ.
+- **Chưa làm**: A12 đăng nhập Google (P3); link video có hạn dùng (video nội bộ vẫn mở công khai theo tên file như website).
+
+---
+
+## 26. Việc còn lại / cần quyết định
 
 | Việc | Ghi chú |
 | :--- | :--- |

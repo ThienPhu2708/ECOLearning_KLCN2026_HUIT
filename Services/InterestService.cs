@@ -51,16 +51,20 @@ namespace ECOLearning.Services
                 new SqlParameter("@maNguoiDung", userId)).FirstOrDefault() == 1;
         }
 
-        /// <summary>Danh mục đang hoạt động và có ít nhất một khóa đã xuất bản, kèm số khóa.</summary>
+        /// <summary>
+        /// Mọi danh mục đang hoạt động, kể cả danh mục chưa có khóa nào (học viên vẫn chọn được để nhận gợi ý khi
+        /// danh mục có khóa mới), kèm số khóa đang bán. Danh mục nhiều khóa xếp trước.
+        /// </summary>
         public List<LinhVucQuanTamItem> GetChoices()
         {
             return db.Database.SqlQuery<LinhVucQuanTamItem>(@"
-                SELECT dm.maDanhMuc AS MaDanhMuc, dm.tenDanhMuc AS TenDanhMuc, COUNT(*) AS SoKhoaHoc
+                SELECT dm.maDanhMuc AS MaDanhMuc, dm.tenDanhMuc AS TenDanhMuc, COUNT(kh.maKhoaHoc) AS SoKhoaHoc
                 FROM dbo.DanhMuc dm
-                INNER JOIN dbo.KhoaHoc kh ON kh.maDanhMuc = dm.maDanhMuc AND kh.trangThai = N'Đã xuất bản'
+                LEFT JOIN dbo.KhoaHoc kh ON kh.maDanhMuc = dm.maDanhMuc
+                    AND kh.trangThai IN (N'Đã xuất bản', N'Đã duyệt', N'Active')
                 WHERE ISNULL(dm.trangThai, 1) = 1
                 GROUP BY dm.maDanhMuc, dm.tenDanhMuc
-                ORDER BY COUNT(*) DESC, dm.tenDanhMuc").ToList();
+                ORDER BY COUNT(kh.maKhoaHoc) DESC, dm.tenDanhMuc").ToList();
         }
 
         /// <summary>Lĩnh vực học viên đã chọn (theo thứ tự chọn), chỉ gồm danh mục còn hoạt động.</summary>

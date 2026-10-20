@@ -1,0 +1,101 @@
+@model ECOLearning.Services.DonThanhToan
+@*
+    Kết quả thanh toán của một đơn (PaymentController.Result). Trạng thái lấy từ CSDL (đã được IPN cập nhật),
+    không dựa vào tham số trên URL.
+*@
+@using ECOLearning.Services
+@{
+    ViewBag.Title = "Kết quả thanh toán";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    string tt = Model.TrangThai;
+    bool ok = tt == PaymentService.DaThanhToan;
+    bool cho = Model.DangCho;
+    bool loi = tt == PaymentService.ThatBai;
+    string icon = ok ? "bi-check-lg" : cho ? "bi-hourglass-split" : loi ? "bi-x-lg" : "bi-slash-circle";
+    string mau = ok ? "#059669" : cho ? "#434CE8" : loi ? "#DC2626" : "#64748B";
+    string nen = ok ? "#ECFDF5" : cho ? "#EEF2FF" : loi ? "#FEF2F2" : "#F1F5F9";
+    string tieuDe = ok ? "Thanh toán thành công" : cho ? "Đơn hàng đang chờ thanh toán" : loi ? "Thanh toán không thành công"
+        : tt == PaymentService.HetHan ? "Đơn hàng đã hết hạn" : "Đơn hàng đã hủy";
+    string moTa = ok ? "Khóa học đã được thêm vào hồ sơ học tập của bạn. Chúc bạn học tốt!"
+        : cho ? "Bạn chưa hoàn tất thanh toán. Đơn được giữ tới " + (Model.NgayHetHan.HasValue ? Model.NgayHetHan.Value.ToString("HH:mm dd/MM/yyyy") : "") + "."
+        : loi ? "Giao dịch bị hủy hoặc bị cổng thanh toán từ chối. Bạn chưa bị trừ tiền, các khóa học vẫn nằm trong giỏ hàng."
+        : "Đơn không còn hiệu lực. Các khóa học vẫn nằm trong giỏ hàng, bạn có thể đặt lại.";
+}
+
+@section styles {
+<style>
+    .pr-wrap { max-width: 640px; margin: 40px auto 80px; padding: 0 16px; }
+    .pr-card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 32px 28px; text-align: center; }
+    .pr-icon { width: 68px; height: 68px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px; margin-bottom: 14px; }
+    .pr-card h1 { font-size: 22px; font-weight: 800; color: #0F172A; margin: 0 0 8px; }
+    .pr-card > p { font-size: 14.5px; color: #64748B; line-height: 1.6; margin: 0 auto 22px; max-width: 460px; }
+    .pr-info { text-align: left; border-top: 1px solid #E2E8F0; padding-top: 14px; }
+    .pr-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; font-size: 14px; }
+    .pr-row span:first-child { color: #64748B; }
+    .pr-row strong { color: #0F172A; text-align: right; word-break: break-all; }
+    .pr-courses { list-style: none; margin: 12px 0 0; padding: 0; text-align: left; }
+    .pr-courses li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px dashed #E2E8F0; }
+    .pr-courses img { width: 64px; height: 40px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: #E2E8F0; }
+    .pr-courses .pr-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: #0F172A; }
+    .pr-courses a { font-size: 13px; font-weight: 700; color: #434CE8; text-decoration: none; white-space: nowrap; }
+    .pr-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
+    .pr-actions a { height: 46px; padding: 0 22px; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14.5px; text-decoration: none; }
+    .pr-primary { background: #434CE8; color: #FFFFFF; }
+    .pr-secondary { background: #F1F5F9; color: #334155; }
+    .pr-sandbox { margin-top: 18px; font-size: 12.5px; color: #92400E; background: #FEF3C7; border-radius: 10px; padding: 8px 12px; display: inline-flex; gap: 6px; }
+    .pr-error { margin-bottom: 16px; padding: 12px 14px; border-radius: 12px; background: #FEF2F2; color: #B91C1C; font-size: 14px; text-align: left; }
+</style>
+}
+
+<div class="pr-wrap">
+    @if (!string.IsNullOrEmpty(ViewBag.Error as string))
+    {
+        <div class="pr-error" role="alert"><i class="bi bi-exclamation-triangle-fill me-1"></i> @ViewBag.Error</div>
+    }
+    <div class="pr-card">
+        <div class="pr-icon" style="background: @nen; color: @mau;"><i class="bi @icon"></i></div>
+        <h1>@tieuDe</h1>
+        <p>@moTa</p>
+
+        <div class="pr-info">
+            <div class="pr-row"><span>Mã đơn hàng</span><strong>@Model.MaDonHang</strong></div>
+            <div class="pr-row"><span>Số tiền</span><strong>@Model.TongTien.ToString("#,##0") đ</strong></div>
+            <div class="pr-row"><span>Phương thức</span><strong>@(Model.PhuongThuc ?? "—")</strong></div>
+            <div class="pr-row"><span>Trạng thái</span><strong style="color: @mau;">@tt</strong></div>
+            @if (Model.NgayThanhToan.HasValue)
+            {
+                <div class="pr-row"><span>Thời gian thanh toán</span><strong>@Model.NgayThanhToan.Value.ToString("HH:mm dd/MM/yyyy")</strong></div>
+            }
+            <ul class="pr-courses">
+                @foreach (var k in Model.KhoaHoc)
+                {
+                    <li>
+                        <img src="@k.AnhBia" alt="" loading="lazy" />
+                        <span class="pr-name">@k.TenKhoaHoc</span>
+                        @if (ok)
+                        {
+                            <a href="@Url.Action("Study", "Learning", new { courseId = k.MaKhoaHoc })">Vào học <i class="bi bi-arrow-right"></i></a>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+
+        <div class="pr-actions">
+            @if (ok)
+            {
+                <a class="pr-primary" href="@Url.Action("MyCourses", "Learning")"><i class="bi bi-play-circle"></i> Khóa học của tôi</a>
+            }
+            else if (cho)
+            {
+                <a class="pr-primary" href="@Url.Action("Gateway", "Payment", new { orderId = Model.MaDonHang })"><i class="bi bi-credit-card"></i> Tiếp tục thanh toán</a>
+            }
+            else
+            {
+                <a class="pr-primary" href="@Url.Action("Index", "Cart")"><i class="bi bi-cart"></i> Quay lại giỏ hàng</a>
+            }
+            <a class="pr-secondary" href="@Url.Action("History", "Payment")"><i class="bi bi-receipt"></i> Lịch sử mua hàng</a>
+        </div>
+        <div class="pr-sandbox"><i class="bi bi-info-circle"></i> Thanh toán ở chế độ thử nghiệm, không phát sinh giao dịch tiền thật.</div>
+    </div>
+</div>

@@ -1,0 +1,86 @@
+@model List<ECOLearning.Services.DonThanhToan>
+@*
+    Lịch sử mua hàng của học viên (PaymentController.History): mọi đơn kể cả chờ / thất bại / hết hạn.
+*@
+@using ECOLearning.Services
+@{
+    ViewBag.Title = "Lịch sử mua hàng";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+<style>
+    .ph-wrap { max-width: 920px; margin: 0 auto; padding: 36px 16px 80px; }
+    .ph-head h1 { font-size: 26px; font-weight: 800; color: #0F172A; margin: 4px 0 6px; }
+    .ph-head p { font-size: 14.5px; color: #64748B; margin: 0 0 22px; }
+    .ph-order { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 18px 20px; margin-bottom: 14px; }
+    .ph-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+    .ph-code { font-weight: 800; color: #0F172A; font-size: 15px; }
+    .ph-meta { font-size: 13px; color: #64748B; margin-top: 3px; }
+    .ph-badge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; white-space: nowrap; }
+    .ph-ok { background: #ECFDF5; color: #047857; }
+    .ph-wait { background: #EEF2FF; color: #3730A3; }
+    .ph-fail { background: #FEF2F2; color: #B91C1C; }
+    .ph-off { background: #F1F5F9; color: #475569; }
+    .ph-items { list-style: none; margin: 12px 0 0; padding: 0; }
+    .ph-items li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: #334155; padding: 5px 0; }
+    .ph-items li span:last-child { white-space: nowrap; color: #64748B; }
+    .ph-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #E2E8F0; font-size: 14px; }
+    .ph-total strong { font-size: 17px; color: #0F172A; }
+    .ph-foot a { font-size: 13.5px; font-weight: 700; color: #434CE8; text-decoration: none; }
+    .ph-empty { text-align: center; padding: 56px 20px; background: #FFFFFF; border: 1px dashed #E2E8F0; border-radius: 16px; color: #64748B; }
+</style>
+}
+
+<div class="ph-wrap">
+    <div class="ph-head">
+        <span class="caption" style="text-transform: uppercase; color: #434CE8; font-weight: 700;">Tài khoản</span>
+        <h1>Lịch sử mua hàng</h1>
+        <p>Tất cả đơn hàng của bạn. Thanh toán đang ở chế độ thử nghiệm, không phát sinh giao dịch tiền thật.</p>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="ph-empty">
+            <i class="bi bi-receipt" style="font-size: 34px; display: block; margin-bottom: 8px;"></i>
+            Bạn chưa có đơn hàng nào. <a href="@Url.Action("Index", "Course")" style="font-weight: 700;">Khám phá khóa học</a>
+        </div>
+    }
+    @foreach (var d in Model)
+    {
+        string cls = d.TrangThai == PaymentService.DaThanhToan ? "ph-ok" : d.DangCho ? "ph-wait" : d.TrangThai == PaymentService.ThatBai ? "ph-fail" : "ph-off";
+        string nhan = d.TrangThai == PaymentService.ChoThanhToan && !d.DangCho ? PaymentService.HetHan : d.TrangThai;
+        <div class="ph-order">
+            <div class="ph-top">
+                <div>
+                    <div class="ph-code">@d.MaDonHang</div>
+                    <div class="ph-meta">
+                        Đặt lúc @(d.NgayDat.HasValue ? d.NgayDat.Value.ToString("HH:mm dd/MM/yyyy") : "—")
+                        @if (!string.IsNullOrEmpty(d.PhuongThuc)) { <text> · @d.PhuongThuc</text> }
+                        @if (!string.IsNullOrEmpty(d.MaGiaoDich)) { <text> · Mã GD @d.MaGiaoDich</text> }
+                    </div>
+                </div>
+                <span class="ph-badge @cls">@nhan</span>
+            </div>
+            <ul class="ph-items">
+                @foreach (var k in d.KhoaHoc)
+                {
+                    <li><span>@k.TenKhoaHoc</span><span>@k.DonGia.ToString("#,##0") đ</span></li>
+                }
+            </ul>
+            <div class="ph-foot">
+                <span class="ph-total">Tổng thanh toán: <strong>@d.TongTien.ToString("#,##0") đ</strong>
+                    @if (d.TongTruocGiam > d.TongTien) { <small style="color: #059669;">(đã giảm @((d.TongTruocGiam - d.TongTien).ToString("#,##0")) đ)</small> }
+                </span>
+                @if (d.DangCho)
+                {
+                    <a href="@Url.Action("Gateway", "Payment", new { orderId = d.MaDonHang })">Tiếp tục thanh toán <i class="bi bi-arrow-right"></i></a>
+                }
+                else
+                {
+                    <a href="@Url.Action("Result", "Payment", new { orderId = d.MaDonHang })">Xem chi tiết <i class="bi bi-arrow-right"></i></a>
+                }
+            </div>
+        </div>
+    }
+</div>

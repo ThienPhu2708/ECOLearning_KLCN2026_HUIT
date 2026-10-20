@@ -124,6 +124,16 @@ namespace ECOLearning.Areas.Admin.Controllers
             return View(model);
         }
 
+        // GET: Admin/Dashboard/PendingCounts (menu tự làm mới chấm đỏ khi Admin đang mở trang)
+        [HttpGet]
+        public JsonResult PendingCounts()
+        {
+            Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+            var dem = new ECOLearning.Services.AdminPendingService(db).Dem();
+            return Json(new { success = true, courses = dem.KhoaHoc, teachers = dem.GiaoVien, violations = dem.ViPham, payouts = dem.ChiTra },
+                JsonRequestBehavior.AllowGet);
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)

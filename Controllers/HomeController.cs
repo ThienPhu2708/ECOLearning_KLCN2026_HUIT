@@ -48,12 +48,14 @@ namespace ECOLearning.Controllers
                         .Where(c => c.trangThai == null || c.trangThai == true)
                         .OrderBy(c => c.maDanhMuc)
                         .ToList();
+
+                    // Ảnh minh họa Admin tải lên (migration 012); danh mục chưa có ảnh vẫn hiện biểu tượng
+                    ViewBag.CategoryImages = new CategoryImageService(db).LayTatCa();
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("Fetch home data error: " + ex.Message);
-            }
+                System.Diagnostics.Debug.WriteLine("Fetch home data error: " + ex.Message);            }
 
             // UC7: "Khóa học dành riêng cho bạn" (RecommendationService.GetForHome):
             //  "Vì bạn đã xem X" → gợi ý tổng hợp đã tính sẵn → "Vì bạn quan tâm …" (lĩnh vực đã chọn) → khóa phổ biến.

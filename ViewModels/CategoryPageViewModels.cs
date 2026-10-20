@@ -58,6 +58,9 @@ namespace ECOLearning.ViewModels
         public string Slug { get; set; }
         public IconDanhMuc Icon { get; set; }
 
+        /// <summary>Ảnh minh họa Admin tải lên (DanhMuc.anhMinhHoa), null nếu chưa có.</summary>
+        public string AnhMinhHoa { get; set; }
+
         /// <summary>Khóa đang bán, đã bỏ khóa người dùng sở hữu (khớp số khóa trên trang danh mục).</summary>
         public int SoKhoaHoc { get; set; }
         public int SoHocVien { get; set; }
@@ -78,6 +81,9 @@ namespace ECOLearning.ViewModels
         public string TenDanhMuc { get; set; }
         public string MoTa { get; set; }
         public string Slug { get; set; }
+
+        /// <summary>Ảnh minh họa Admin tải lên (DanhMuc.anhMinhHoa, migration 012), null nếu chưa có.</summary>
+        public string AnhMinhHoa { get; set; }
 
         /// <summary>Số khóa trong danh mục (chưa lọc cấp độ, đã bỏ khóa người dùng sở hữu).</summary>
         public int TongSoKhoaHoc { get; set; }

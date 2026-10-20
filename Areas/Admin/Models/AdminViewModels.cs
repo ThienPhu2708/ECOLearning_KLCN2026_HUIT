@@ -54,6 +54,9 @@ namespace ECOLearning.Areas.Admin.Models
         public string MoTa { get; set; }
         public int SoKhoaHoc { get; set; }
         public bool TrangThai { get; set; }
+
+        /// <summary>Đường dẫn ảnh minh họa (DanhMuc.anhMinhHoa, migration 012), null nếu chưa có.</summary>
+        public string AnhMinhHoa { get; set; }
     }
 
     public class TaiNguyenDetail

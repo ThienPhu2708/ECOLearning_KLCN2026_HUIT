@@ -1,3 +1,7 @@
+@helper ChamDo(string key, int soLuong, string donVi)
+{
+    <span class="sb-dot" data-pending="@key" data-unit="@donVi" title="@soLuong @donVi chờ xử lý" hidden="@(soLuong > 0 ? null : "hidden")"><span class="sb-sr">@soLuong @donVi chờ xử lý</span></span>
+}
 <!DOCTYPE html>
 <html lang="vi">
     <head>
@@ -9,6 +13,66 @@
         <link rel="stylesheet" href="~/assets/css/components.css">
         <link rel="stylesheet" href="~/assets/css/dashboard-tables.css?v=4">
         <link rel="stylesheet" href="~/assets/vendor/bootstrap-icons/bootstrap-icons.min.css" />
+        <style>
+            /* Chấm đỏ: mục có yêu cầu từ người dùng đang chờ Admin xử lý.
+               Đặt tuyệt đối trong phần đệm bên phải của mục: không chiếm chỗ của chữ, mục giữ nguyên kích thước */
+            .sidebar-item {
+                position: relative;
+            }
+
+            .sidebar-item > svg,
+            .sidebar-item > i {
+                flex-shrink: 0;
+            }
+
+            .sidebar-menu {
+                overflow-x: hidden;
+            }
+
+            .sb-dot {
+                position: absolute;
+                top: 50%;
+                right: 5px;
+                width: 8px;
+                height: 8px;
+                margin-top: -4px;
+                border-radius: 50%;
+                pointer-events: none;
+                background: #EF4444;
+                box-shadow: 0 0 0 2px #FFFFFF;
+            }
+
+            .sb-dot[hidden] {
+                display: none;
+            }
+
+            .sb-dot::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                background: #EF4444;
+                animation: sb-dot-pulse 1.8s ease-out infinite;
+            }
+
+            @@keyframes sb-dot-pulse {
+                0% { transform: scale(1); opacity: .6; }
+                100% { transform: scale(2); opacity: 0; }
+            }
+
+            @@media (prefers-reduced-motion: reduce) {
+                .sb-dot::after { animation: none; }
+            }
+
+            .sb-sr {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                overflow: hidden;
+                clip: rect(0 0 0 0);
+                white-space: nowrap;
+            }
+        </style>
     </head>
     <body>
         <div class="dashboard-layout">
@@ -29,6 +93,7 @@
 
                 @{
                 string currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Dashboard";
+                var choXuLy = ViewBag.AdminPending as ECOLearning.Services.AdminPendingCounts ?? new ECOLearning.Services.AdminPendingCounts();
             }
 
             <nav class="sidebar-menu">
@@ -53,6 +118,7 @@
                         <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
                     </svg>
                     Kiểm duyệt khóa học
+                    @ChamDo("courses", choXuLy.KhoaHoc, "khóa học")
                 </a>
                 <a href="@Url.Action("Index", "TeacherApproval", new { area = "Admin" })" class="sidebar-item @(currentController == "TeacherApproval" ? "active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -61,6 +127,7 @@
                         <polyline points="17 11 19 13 23 9"></polyline>
                     </svg>
                     Duyệt hồ sơ Giáo viên
+                    @ChamDo("teachers", choXuLy.GiaoVien, "hồ sơ")
                 </a>
                 <a href="@Url.Action("Index", "ViolationReport", new { area = "Admin" })" class="sidebar-item @(currentController == "ViolationReport" ? "active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -68,6 +135,7 @@
                         <line x1="4" y1="22" x2="4" y2="15"></line>
                     </svg>
                     Báo cáo vi phạm
+                    @ChamDo("violations", choXuLy.ViPham, "yêu cầu")
                 </a>
                 <a href="@Url.Action("Index", "SystemReport", new { area = "Admin" })" class="sidebar-item @(currentController == "SystemReport" ? "active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -80,6 +148,11 @@
                 <a href="@Url.Action("Index", "RevenueReport", new { area = "Admin" })" class="sidebar-item @(currentController == "RevenueReport" ? "active" : "")">
                     <i class="bi bi-calendar-range" style="font-size: 17px; width: 18px; text-align: center;"></i>
                     Doanh thu theo ngày
+                </a>
+                <a href="@Url.Action("Index", "PayoutRequest", new { area = "Admin" })" class="sidebar-item @(currentController == "PayoutRequest" ? "active" : "")">
+                    <i class="bi bi-cash-coin" style="font-size: 17px; width: 18px; text-align: center;"></i>
+                    Chi trả giáo viên
+                    @ChamDo("payouts", choXuLy.ChiTra, "phiếu chi")
                 </a>
             </nav>
 
@@ -187,6 +260,40 @@
                 }
             }
         }
+
+        // Làm mới chấm đỏ khi Admin để trang mở lâu, quay lại tab, hoặc vừa duyệt / từ chối bằng AJAX
+        (function () {
+            var url = '@Url.Action("PendingCounts", "Dashboard", new { area = "Admin" })';
+            var dangTai = false;
+
+            function capNhat(data) {
+                document.querySelectorAll('.sb-dot[data-pending]').forEach(function (dot) {
+                    var n = parseInt(data[dot.getAttribute('data-pending')], 10) || 0;
+                    var text = n + ' ' + dot.getAttribute('data-unit') + ' chờ xử lý';
+                    dot.hidden = n === 0;
+                    dot.title = text;
+                    dot.firstElementChild.textContent = text;
+                });
+            }
+
+            function taiLai() {
+                if (dangTai || document.hidden) return;
+                dangTai = true;
+                fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', cache: 'no-store' })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (data) { if (data && data.success) capNhat(data); })
+                    .catch(function () { })
+                    .then(function () { dangTai = false; });
+            }
+
+            setInterval(taiLai, 60000);
+            document.addEventListener('visibilitychange', function () { if (!document.hidden) taiLai(); });
+            if (window.jQuery) {
+                jQuery(document).ajaxSuccess(function (e, xhr, settings) {
+                    if (settings.type && settings.type.toUpperCase() !== 'GET') setTimeout(taiLai, 300);
+                });
+            }
+        })();
 
         function closeAdminLogoutModal() {
             const modal = document.getElementById('admin-logout-modal');

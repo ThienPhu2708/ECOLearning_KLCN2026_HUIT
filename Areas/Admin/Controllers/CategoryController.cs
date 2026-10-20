@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Web;
 using System.Web.Mvc;
 using ECOLearning.Models;
 using ECOLearning.Areas.Admin.Models;
+using ECOLearning.Services;
 
 namespace ECOLearning.Areas.Admin.Controllers
 {
@@ -55,6 +57,16 @@ namespace ECOLearning.Areas.Admin.Controllers
                 })
                 .ToList();
 
+            // Ảnh minh họa (migration 012); chưa chạy migration thì ô chọn ảnh trong form bị ẩn
+            var anhService = new CategoryImageService(db);
+            ViewBag.AnhInstalled = anhService.IsInstalled();
+            var anh = anhService.LayTatCa();
+            foreach (var item in model)
+            {
+                string duongDan;
+                if (anh.TryGetValue(item.MaDanhMuc, out duongDan)) item.AnhMinhHoa = duongDan;
+            }
+
             ViewBag.Search = search;
             ViewBag.Status = status;
             ViewBag.Page = page;
@@ -67,15 +79,31 @@ namespace ECOLearning.Areas.Admin.Controllers
             return View(model);
         }
 
-        // POST: Admin/Category/Create
+        // POST: Admin/Category/Create (kèm ảnh minh họa, không bắt buộc)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create(string tenDanhMuc, string moTa)
+        public ActionResult Create(string tenDanhMuc, string moTa, HttpPostedFileBase anhMinhHoa)
         {
             string error = ValidateInput(null, tenDanhMuc, moTa);
             if (error != null)
             {
                 return Json(new { success = false, message = error });
+            }
+
+            // Kiểm tra ảnh trước khi ghi CSDL để ảnh lỗi không tạo ra danh mục thiếu ảnh
+            var anhService = new CategoryImageService(db);
+            AnhDaXuLy anh = null;
+            if (anhMinhHoa != null && anhMinhHoa.ContentLength > 0)
+            {
+                if (!anhService.IsInstalled())
+                {
+                    return Json(new { success = false, message = "Chưa chạy Database/Migrations/012_DanhMuc_AnhMinhHoa.sql nên chưa lưu được ảnh." });
+                }
+                anh = CategoryImageService.ChuanBi(anhMinhHoa, out error);
+                if (anh == null)
+                {
+                    return Json(new { success = false, message = error });
+                }
             }
 
             var newCat = new DanhMuc
@@ -89,13 +117,18 @@ namespace ECOLearning.Areas.Admin.Controllers
             db.DanhMuc.Add(newCat);
             db.SaveChanges();
 
+            if (anh != null)
+            {
+                anhService.CapNhat(newCat.maDanhMuc, CategoryImageService.GhiFile(anh, newCat.maDanhMuc, Server));
+            }
+
             return Json(new { success = true, message = "Thêm danh mục mới thành công!" });
         }
 
-        // POST: Admin/Category/Edit
+        // POST: Admin/Category/Edit (đổi ảnh: gửi anhMinhHoa; không gửi ảnh thì giữ ảnh cũ)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(string id, string tenDanhMuc, string moTa)
+        public ActionResult Edit(string id, string tenDanhMuc, string moTa, HttpPostedFileBase anhMinhHoa)
         {
             var cat = db.DanhMuc.FirstOrDefault(c => c.maDanhMuc == id);
             if (cat == null)
@@ -109,9 +142,33 @@ namespace ECOLearning.Areas.Admin.Controllers
                 return Json(new { success = false, message = error });
             }
 
+            var anhService = new CategoryImageService(db);
+            bool coAnhMoi = anhMinhHoa != null && anhMinhHoa.ContentLength > 0;
+            AnhDaXuLy anh = null;
+            if (coAnhMoi && !anhService.IsInstalled())
+            {
+                return Json(new { success = false, message = "Chưa chạy Database/Migrations/012_DanhMuc_AnhMinhHoa.sql nên chưa lưu được ảnh." });
+            }
+            if (coAnhMoi)
+            {
+                anh = CategoryImageService.ChuanBi(anhMinhHoa, out error);
+                if (anh == null)
+                {
+                    return Json(new { success = false, message = error });
+                }
+            }
+
             cat.tenDanhMuc = tenDanhMuc.Trim();
             cat.moTa = string.IsNullOrWhiteSpace(moTa) ? null : moTa.Trim();
             db.SaveChanges();
+
+            if (anh != null)
+            {
+                string anhCu = anhService.Lay(id);
+                anhService.CapNhat(id, CategoryImageService.GhiFile(anh, id, Server));
+                // Xóa file cũ sau khi CSDL đã trỏ sang ảnh mới
+                CategoryImageService.XoaFile(anhCu, Server);
+            }
 
             return Json(new { success = true, message = "Cập nhật danh mục thành công!" });
         }
@@ -161,8 +218,10 @@ namespace ECOLearning.Areas.Admin.Controllers
                 });
             }
 
+            string anhCu = new CategoryImageService(db).Lay(id);
             db.DanhMuc.Remove(cat);
             db.SaveChanges();
+            CategoryImageService.XoaFile(anhCu, Server);
 
             return Json(new { success = true, message = "Đã xóa danh mục thành công!" });
         }

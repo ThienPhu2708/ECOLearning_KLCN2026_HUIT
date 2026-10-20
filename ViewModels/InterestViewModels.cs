@@ -8,7 +8,7 @@ namespace ECOLearning.ViewModels
         public string MaDanhMuc { get; set; }
         public string TenDanhMuc { get; set; }
 
-        /// <summary>Số khóa đã xuất bản trong danh mục (0 khi chỉ đọc lựa chọn đã lưu).</summary>
+        /// <summary>Số khóa đang bán trong danh mục (0 khi danh mục chưa có khóa, hoặc khi chỉ đọc lựa chọn đã lưu).</summary>
         public int SoKhoaHoc { get; set; }
     }
 
@@ -22,5 +22,11 @@ namespace ECOLearning.ViewModels
         public bool TuDongMo { get; set; }
 
         public int SoLuaChonToiDa { get; set; } = 3;
+
+        /// <summary>Số lĩnh vực hiện sẵn; các lĩnh vực còn lại ẩn sau nút "Xem thêm".</summary>
+        public const int SoHienThiBanDau = 4;
+
+        /// <summary>Hộp thoại tự mở sau khoảng này kể từ khi vào trang, để học viên kịp nhìn trang trước.</summary>
+        public const int GiayChoTuDongMo = 5;
     }
 }

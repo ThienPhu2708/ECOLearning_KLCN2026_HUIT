@@ -379,7 +379,10 @@ và phải tự đi xem khóa học rồi quay lại mới có gợi ý. Với d
   Thẻ bù có nhãn **"Phổ biến"** để phân biệt với "Phù hợp với bạn".
 - **Hộp thoại "Bạn quan tâm lĩnh vực nào?"** (`Views/Shared/_InterestPicker.cshtml`):
   - Tự mở **một lần** với học viên chưa có tương tác nào và chưa trả lời lần nào (kể cả đăng nhập bằng Google).
-  - Chọn 1–3 lĩnh vực (chỉ hiện danh mục đang hoạt động và có khóa đã xuất bản). Lưu xong tải lại trang.
+    Mở **sau 5 giây** kể từ khi vào trang. Nếu lúc đó đang mở hộp thoại khác (vd. xác nhận lưu mã giảm giá) thì chờ hộp thoại đó đóng.
+  - Hiện **mọi danh mục đang hoạt động**, kể cả danh mục chưa có khóa ("Chưa có khóa học"); danh mục nhiều khóa xếp trước.
+    Mặc định hiện 4 danh mục, còn lại bấm **"Xem thêm N lĩnh vực"** / "Thu gọn". Mở lại để đổi mà lĩnh vực đã chọn nằm trong
+    phần ẩn thì danh sách mở sẵn. Chọn 1–3 lĩnh vực (chọn đủ 3 thì các ô khác bị khóa, server cũng chặn). Lưu xong tải lại trang.
   - "Bỏ qua", nút X, phím Esc hay bấm ra ngoài đều tính là bỏ qua, không tự mở lại.
   - Mở lại bất cứ lúc nào qua link "Đổi lĩnh vực" / "Chọn lĩnh vực quan tâm" ở trang chủ và trang `/Recommendation`.
   - Giáo viên cũng chọn được (giáo viên vẫn mua / học khóa của người khác), nhưng không tự mở.
@@ -724,6 +727,10 @@ File: `Services/InstructorProfileService.cs`, `Services/CourseReviewService.cs`,
   - Server **kiểm tra và chuẩn hóa lại** tất cả (mã ngân hàng giả, số tài khoản sai, tên rỗng đều bị chặn), không tin dữ liệu trình duyệt.
 - **Sửa lỗi:** ô "Tên chủ tài khoản" có 2 thuộc tính `style` nên mất định dạng; nộp bị lỗi thì **giữ lại mọi giá trị đã nhập**
   (trước đây xóa sạch); hồ sơ bị từ chối khi nộp lại được **điền sẵn** thông tin cũ; lỗi hiện ngay dưới từng ô.
+- **Hộp thoại "Điều khoản hợp tác đối tác giảng dạy"** (link trong ô cam kết, trước đây là `href="#"`): 8 mục (phạm vi, điều kiện, nội dung khóa học,
+  doanh thu và thanh toán, chất lượng, vi phạm, bảo mật, thay đổi / chấm dứt). Số liệu lấy đúng theo hệ thống: giáo viên nhận **80%** doanh thu,
+  nền tảng 20% (`PayoutController`), rút tối thiểu **500.000đ**, khóa phải có video và được Admin duyệt, tạm khóa / khóa vĩnh viễn khi vi phạm.
+  Nút "Tôi đã đọc và đồng ý" chỉ bật khi đã cuộn hết nội dung và tự tích ô cam kết; đóng bằng nút X, "Đóng", Esc hoặc bấm ra ngoài.
 
 **Kiểm thử (giáo viên / học viên tạm, dữ liệu test đã xóa, `App_Data/TeacherApplications.json` khôi phục):** hồ sơ "ACB Chi nhánh Gò Mây" → chọn sẵn ACB
 + ghi chú; gõ tên tự do → lỗi, không lưu được; chọn "quan doi" → MB Bank, lưu `MB Bank` / `0720015799` / `TRAN THI HONG NHUNG`; gọi API với tên tự do
@@ -780,7 +787,180 @@ File: `ViewModels/PhanTrangViewModel.cs`, `Views/Shared/_Pagination.cshtml`, `as
 
 ---
 
-## 20. Việc còn lại / cần quyết định
+## 20. Ảnh minh họa danh mục (Admin) và thẻ lĩnh vực có ảnh ở trang chủ (mới, **chưa commit**)
+
+- **Admin > Quản lý danh mục** (`/Admin/Category`): form "Thêm / Chỉnh sửa danh mục" có ô **Ảnh minh họa**:
+  - bấm hoặc kéo thả ảnh vào khung; khung xem trước có cùng tỉ lệ 16:10 với thẻ ở trang chủ, nên thấy trước ảnh sẽ bị cắt thế nào;
+  - chỉ có nút "Chọn ảnh" (không có nút bỏ ảnh / ghi chú); sửa danh mục mà không chọn ảnh mới thì giữ ảnh cũ;
+  - bảng danh mục có thêm cột ảnh thu nhỏ.
+- **Kiểm tra phía server** (`Services/CategoryImageService.cs`), không tin kiểm tra của trình duyệt:
+  - chỉ nhận JPG / PNG / WEBP, tối đa 2 MB, tối thiểu 200 × 120 px;
+  - JPG / PNG được đọc lại thành ảnh thật (file giả đuôi `.jpg` bị chặn), thu nhỏ còn tối đa 1200 px chiều ngang rồi lưu lại;
+    PNG trong suốt giữ PNG, còn lại lưu JPG chất lượng 85. WEBP chỉ kiểm tra chữ ký file (GDI+ của .NET Framework không đọc được WEBP);
+  - tên file sinh mới `{maDanhMuc}-{8 ký tự ngẫu nhiên}.jpg` trong `assets/images/categories/`;
+  - kiểm tra ảnh **trước** khi ghi CSDL: ảnh lỗi thì không tạo / sửa danh mục;
+  - đổi ảnh hay xóa danh mục thì **xóa file ảnh cũ** (chỉ xóa file trong thư mục ảnh danh mục).
+- **Trang chủ, mục "Khám phá theo lĩnh vực":** thẻ đổi thành ảnh ở trên (khung 16:10 cố định) + tên lĩnh vực ở dưới.
+  Ảnh khác tỉ lệ được **cắt giữa cho vừa khung** (`object-fit: cover`), không méo. Danh mục chưa có ảnh hiện biểu tượng trên nền màu cùng khung,
+  nên các thẻ luôn cao bằng nhau.
+- **Trang danh mục `/danh-muc/{slug}`:** ảnh của danh mục phủ nửa phải banner tối ở đầu trang. Ảnh đặt `position: absolute`
+  nên banner **giữ nguyên kích thước** (đo: 1425 × 290 trên máy tính, 375 × 314 ở 390 px, có ảnh hay không đều như nhau);
+  ảnh cắt vừa khung (`object-fit: cover`), mép trái mờ dần vào nền (`mask-image`) nên không lộ đường nối.
+  Điện thoại: ảnh làm nền cả banner, phủ tối để chữ đọc được. Danh mục chưa có ảnh thì banner như cũ.
+- **CSDL:** migration `012_DanhMuc_AnhMinhHoa.sql` thêm cột `DanhMuc.anhMinhHoa`. Cột đọc / ghi bằng SQL (không sửa file `.edmx`).
+  Chưa chạy migration thì form hiện lời nhắc chạy 012 và trang chủ hiện biểu tượng như cũ.
+
+**Kiểm thử (Admin và học viên tạm, danh mục test `DM07` đã xóa qua nút Xóa):** ảnh 1800 × 900 lưu thành 1200 × 600;
+file giả `.jpg`, ảnh 100 × 80, ảnh 14 MB đều bị chặn; đổi sang ảnh dọc 600 × 1200, PNG trong suốt, WEBP đều lưu được và file cũ bị xóa
+(thư mục chỉ còn 1 file); ảnh dọc trên trang chủ hiện trong khung 290 × 181 (16:10), cắt giữa; xóa danh mục thì file ảnh bị xóa theo.
+
+File: `Database/Migrations/012_DanhMuc_AnhMinhHoa.sql`, `Services/CategoryImageService.cs`, `Areas/Admin/Controllers/CategoryController.cs`,
+`Areas/Admin/Models/` (`CategoryViewModel.AnhMinhHoa`), `Areas/Admin/Views/Category/Index.cshtml`, `Controllers/HomeController.cs`, `Views/Home/Index.cshtml`.
+
+- **Trang Tất cả lĩnh vực `/danh-muc`:** thẻ có ảnh minh họa ở trên (khung 16:9, cắt vừa khung), bỏ biểu tượng.
+  Danh mục chưa có ảnh hiện nền màu kèm chữ cái đầu tên lĩnh vực.
+- **Migration 012 có thêm phần dữ liệu:** tạo `CAT-002`..`CAT-006` nếu máy chưa có (các danh mục này được tạo trên máy phát triển,
+  không có trong seed), điền mô tả còn trống và gắn 10 ảnh danh mục trong `assets/images/categories/`. Chỉ điền chỗ trống, không ghi đè.
+
+---
+
+## 21. Dữ liệu demo: mỗi danh mục ít nhất 10 khóa học (migration 013) và thẻ "Khóa học của tôi" gọn hơn (mới, **chưa commit**)
+
+- **`Database/Migrations/013_BoSung_KhoaHoc_DanhMuc.sql`:** 100 khóa soạn sẵn (10 khóa / danh mục), mã `K13-<danh mục>-<stt>`.
+  - Chỉ thêm số khóa còn thiếu để danh mục đạt **10 khóa đang bán** (không tính khóa K13). Trên máy này đã thêm 89 khóa
+    (DM01 +3, DM02 +9, DM03 +8, DM06 +9, DM04 và CAT-002..006 +10); máy có ít khóa hơn sẽ được thêm nhiều hơn.
+  - Mỗi khóa: tên, mô tả ngắn, mô tả và mục tiêu đầu ra **viết riêng theo nội dung khóa**, cấp độ, giá (một số có giá khuyến mãi),
+    ảnh bìa Unsplash đã kiểm tra tải được và đúng chủ đề (100 ảnh khác nhau), 1 chương + 1 bài **xem thử**, lịch sử duyệt "Đã duyệt".
+  - Mục tiêu đầu ra không chứa dấu phẩy, vì trang chi tiết tách mục tiêu theo dấu `;` và `,`.
+  - Video: dùng chung `vid_KH260929150333_20260930121911_38701957.mp4` (14 MB, 5:17, **có trong Git**) nên máy khác cũng phát được.
+  - Giáo viên: khoa.tran (Lập trình, Y tế), ha.le (UI/UX, Thiết kế, Nhiếp ảnh, Ngoại ngữ), bao.pham (Dữ liệu, Kinh doanh, Marketing, Tài chính).
+    Bài sức khỏe ghi rõ mang tính giáo dục, không thay thế tư vấn của bác sĩ.
+  - Chạy lại được (lần hai không thêm gì); cuối file có đoạn lệnh gỡ dữ liệu K13 (đã comment).
+- **Khóa học của tôi:** thẻ thu gọn, 4 thẻ / hàng (3 ở ≤ 1200 px, 2 ở ≤ 900 px, 1 ở ≤ 560 px); ảnh, chữ, nút nhỏ lại; tên khóa và dòng
+  "Bài học tiếp theo" tối đa 2 dòng. Đo ở 1440 px: thẻ 295 × 412 (trước đây ~610 px chiều ngang, 2 thẻ / hàng).
+
+**Kiểm thử (học viên tạm, đã xóa):** `/danh-muc` 10 thẻ đều có ảnh, mỗi lĩnh vực 10 khóa; `/danh-muc/y-te-suc-khoe` 10 thẻ, không ảnh lỗi;
+trang chi tiết khóa K13 hiện đúng bài "Bài 1: …"; vào học khóa K13 phát được video (HTTP 206 video/mp4); thẻ "Khóa học của tôi" 4/3/2/1 thẻ
+mỗi hàng theo bề rộng, nút "Làm Quizz ngay" không tràn.
+
+---
+
+## 22. Sửa lỗi lưu tiến độ học ở trang Study (mới, **chưa commit**)
+
+**Nguyên nhân (3 lỗi chồng nhau):**
+1. **Request video giữ khóa Session.** Video phát qua `Learning/StreamVideo`, cùng controller có Session. ASP.NET xử lý lần lượt các request
+   dùng Session của cùng một người, mà request video kéo dài suốt lúc xem, nên mọi request `UpdateProgress` phải xếp hàng chờ và không được
+   ghi (đo được: phát 17 giây rồi tạm dừng, CSDL không có dòng nào). Chuyển sang trang khác khi video đang phát cũng bị treo.
+2. **Chỉ lưu một lần khi xem đủ 80%.** Thoát giữa chừng thì không có gì được lưu, mở lại bài video chạy từ đầu.
+3. **`BaiHoc.thoiLuong` lệch xa video thật** (vd. `DMKH01_1` ghi 420 giây, video dài 1828 giây). Trigger `trg_TienDoBaiHoc_CapNhatHoanThanh`
+   tự đánh dấu hoàn thành khi `thoiGianXemDungLai >= 80% thoiLuong`, nên nếu lưu vị trí định kỳ thì bài bị tính xong khi mới xem ~18%.
+   Ngoài ra trigger `trg_TienDoBaiHoc_CapNhatTienDoKhoaHoc` chỉ tính bài trong chương, nên khóa có bài không phân chương luôn 0% ở trang giáo viên.
+
+**Cách sửa:**
+- `Controllers/VideoStreamController.cs` (mới): phát video tại `/VideoStream/Play?file=...` với `[SessionState(Disabled)]`; xóa
+  `LearningController.StreamVideo`; `Study.cshtml` và `Course/Details.cshtml` dùng đường dẫn mới.
+- `Views/Learning/Study.cshtml`: lưu vị trí **mỗi 15 giây khi đang phát, khi tạm dừng, khi chuyển bài và khi rời trang / ẩn tab**
+  (`navigator.sendBeacon`, dự phòng `fetch keepalive`, để request không bị hủy khi đóng trang). Mở lại bài thì **tiếp tục từ vị trí đã lưu**
+  (gần hết bài thì xem lại từ đầu). Bài đã hoàn thành được tua tự do; bài chưa xong vẫn chỉ tua tới đoạn đã xem.
+- `Services/VideoDuration.cs` (mới): đọc độ dài thật của file MP4 / MOV / M4V từ hộp `mvhd` (chỉ đọc vài KB, có cache).
+- `LearningController`:
+  - `Study` đồng bộ `BaiHoc.thoiLuong` của khóa theo độ dài video thật và trả vị trí xem dở (`ViewBag.ResumeSeconds`);
+  - `UpdateProgress` dùng độ dài thật (không tin số trình duyệt gửi), đồng bộ `thoiLuong` **trước** khi ghi tiến độ để trigger không đánh dấu sai,
+    giới hạn vị trí không vượt độ dài video, không bao giờ bỏ trạng thái đã hoàn thành;
+  - sau mỗi lần lưu tính lại `TienDoHocTap.phanTramHoanThanh` (cả bài trong chương lẫn không phân chương) và `lanTruyCapGanNhat`.
+
+**Kiểm thử (học viên tạm, đã xóa):** phát 17 giây → lưu định kỳ vị trí 31; tạm dừng → 36; xem tiếp rồi rời trang → 48, chuyển trang không còn
+treo; mở lại → video tiếp tục từ 48; gửi vị trí 600 với độ dài giả 420 → **chưa** hoàn thành (độ dài thật 1828); vị trí 1500 → hoàn thành,
+% khóa `DMKH01` = 16,67; khóa `KH260929150333` (bài không phân chương) 1/8 bài → 12,5%.
+`thoiLuong` của các bài thuộc `DMKH01` và `KH260929150333` đã được đồng bộ theo video thật; các khóa khác tự đồng bộ khi có người mở trang học.
+
+---
+
+## 23. Thanh toán và chi trả doanh thu ở chế độ thử nghiệm (mới, **chưa commit**)
+
+Chưa có pháp nhân nên chưa ký được với cổng thật; hệ thống dùng **cổng thử nghiệm** nhưng đi đúng luồng của cổng thật (VNPay / MoMo).
+
+**Học viên mua khóa học** (`Services/PaymentService.cs`, `Controllers/PaymentController.cs`, `Controllers/CartController.Checkout`):
+1. Giỏ hàng tạo đơn **"Chờ thanh toán"**, hạn 15 phút, lưu phương thức chọn ở giỏ. **Chưa ghi danh.** Mỗi học viên chỉ một đơn chờ
+   (tạo đơn mới thì đơn chờ cũ chuyển "Đã hủy"); đơn quá hạn chuyển "Hết hạn" khi mở cổng / giỏ hàng / lịch sử.
+2. Chuyển sang **`/Payment/Gateway`** (trang cổng thử nghiệm, tách khỏi layout chính): số tiền, các khóa, đồng hồ hết hạn, giao diện theo phương thức
+   (QR minh họa / thẻ ATM thử nghiệm / thẻ quốc tế thử nghiệm) và 3 nút: **Xác nhận thanh toán**, **Mô phỏng thất bại** (mã 51), **Hủy giao dịch** (mã 24).
+3. Cổng tạo kết quả có **chữ ký HMAC-SHA512** (cách ký giống VNPay) và gửi **IPN**: `PaymentService.XuLyKetQua` kiểm tra chữ ký, đơn tồn tại,
+   số tiền khớp, trạng thái đơn, khóa theo đơn (`sp_getapplock`) để IPN gọi lặp chỉ ghi nhận một lần. Thành công thì ghi dòng `ThanhToan` "Đã thanh toán"
+   (trigger có sẵn `trg_ThanhToan_TuDongDangKy` **ghi danh** các khóa trong đơn) và đơn chuyển "Đã thanh toán"; thất bại / hủy ghi `ThanhToan` "Thanh toán thất bại".
+   Mã phản hồi cho cổng: 00, 01 không thấy đơn, 02 đã xử lý / đơn không còn chờ, 04 sai số tiền, 97 sai chữ ký.
+4. Trình duyệt quay về `/Payment/Return` (chỉ kiểm tra chữ ký, ghi nhật ký) → `/Payment/Result` hiển thị theo CSDL; thanh toán xong mới bỏ khóa khỏi giỏ.
+5. `POST /Payment/Ipn` là endpoint công khai cho cổng gọi server-to-server (cổng thật sẽ dùng); cổng thử nghiệm chạy cùng ứng dụng nên gọi thẳng cùng hàm xử lý.
+6. **Đơn 0đ** (mã giảm giá trừ hết) không qua cổng, ghi danh ngay. **Lịch sử mua hàng** `/Payment/History` (menu "Khóa học của tôi").
+7. Mọi bước ghi `NhatKyThanhToan` (TAO_DON, IPN, RETURN, HET_HAN, HUY) để tra soát. Báo cáo doanh thu, giới hạn lượt coupon và doanh thu giáo viên
+   chỉ tính đơn "Đã thanh toán" nên đơn chờ / thất bại / hết hạn tự động không được tính.
+
+**Giáo viên nhận doanh thu** (`Areas/Instructor/Controllers/PayoutController.cs`, `Areas/Admin/Controllers/PayoutRequestController.cs`):
+- Số dư = **80% doanh thu thực thu** (sau khi trừ mã giảm giá, phân bổ theo `RevenueService.TyLeThucThuTheoDon`) − các yêu cầu chưa bị từ chối.
+  Trước đây tính trên giá trước coupon và phiếu chi còn trừ thêm `tiLeChietKhau = 0.2` (thực nhận 99,8%); nay phiếu chi không trừ thêm.
+- Giáo viên gửi yêu cầu rút (tối thiểu 500.000đ) → Admin vào **"Chi trả giáo viên"** (menu Admin mới): **Duyệt chi** = chuyển khoản thử nghiệm
+  (sinh mã `SBXCHI...`, ghi người duyệt, thời điểm) hoặc **Từ chối** kèm lý do (5–500 ký tự, số tiền trở lại số dư). Chỉ xử lý phiếu còn "Chờ duyệt".
+- Trang Nhận thanh toán của giáo viên hiện doanh thu thực thu, phần 80%, mã giao dịch chi / lý do từ chối của từng phiếu.
+
+**CSDL:** `Database/Migrations/014_ThanhToan_ThuNghiem.sql` (index duy nhất `(congThanhToan, maGiaoDichCong)` là index lọc nên lệnh sửa bảng `ThanhToan`
+bằng `sqlcmd` cần `-I`; ứng dụng không bị ảnh hưởng). Khóa ký mặc định dùng cho thử nghiệm; có thể đặt `appSettings["PaymentSandbox:HashSecret"]`.
+
+**Kiểm thử (học viên / Admin tạm, dữ liệu đã xóa):** 2 khóa 1.139.000đ: "Mô phỏng thất bại" → đơn "Thanh toán thất bại", không ghi danh, giỏ còn 2 khóa;
+thanh toán lại thành công → đơn "Đã thanh toán", ghi danh 2 khóa, giỏ trống, `ThanhToan` có mã giao dịch `SBX...`; IPN giả chữ ký → 97; IPN hợp lệ gọi lặp → 02,
+không ghi danh thêm; chữ ký đúng nhưng sai số tiền → 04; đơn quá hạn → mở cổng chuyển sang "Đơn hàng đã hết hạn", IPN tới muộn → 02, không ghi danh;
+"Hủy giao dịch" → thất bại. Giáo viên `khoa.tran`: số dư 4.726.400 → gửi 2 × 500.000 → 3.726.400 → Admin duyệt 1, từ chối 1 → 4.226.400, đã chi +500.000.
+
+### 23.1. Tích hợp VNPay Sandbox (cổng thật của VNPay, môi trường test)
+
+- **Cấu hình** trong `Secrets.config` (đã gitignore, `Web.config` đọc qua `<appSettings file="Secrets.config">`; mẫu: `Secrets.config.example`):
+  `Payment:Mode = VNPay`, `VNPay:TmnCode`, `VNPay:HashSecret`, `VNPay:PaymentUrl`, `VNPay:ApiUrl`. Máy không có file này (hoặc Mode khác VNPay)
+  tự dùng cổng thử nghiệm nội bộ ở trên, nên demo vẫn chạy khi mất mạng: đổi `Payment:Mode` thành `Sandbox`.
+- **`Services/VnPayService.cs`** (API 2.1.0):
+  - `TaoUrlThanhToan`: số tiền ×100, `vnp_CreateDate` / `vnp_ExpireDate` giờ GMT+7 (hạn = hạn đơn 15 phút), `vnp_TxnRef = mã đơn_HHmmss`
+    (mỗi lần mở cổng là giao dịch mới vì VNPay không nhận trùng TxnRef trong ngày), `vnp_BankCode` theo phương thức chọn ở giỏ
+    (`VNBANK` thẻ nội địa, `INTCARD` thẻ quốc tế), ký HMAC-SHA512 trên chuỗi tham số sắp theo tên, mã hóa URL như mã mẫu .NET của VNPay.
+  - `XuLyKetQua`: kiểm chữ ký + `vnp_TmnCode`, thành công khi `vnp_ResponseCode = 00` và `vnp_TransactionStatus = 00`, rồi gọi
+    `PaymentService.GhiNhanKetQua` (lõi chung với cổng thử nghiệm: kiểm tra đơn, số tiền, trạng thái, khóa theo đơn, ghi `ThanhToan`).
+  - `TruyVan` (API **querydr**): trên máy phát triển VNPay không gọi được IPN vào `localhost`, nên trang quay về **hỏi lại VNPay** trước khi
+    ghi nhận thành công (kiểm cả chữ ký phản hồi). `vnp_TransactionDate` lấy từ nhật ký `TAO_URL`. VNPay chặn (403) request không có
+    User-Agent nên request đặt `UserAgent` và tắt `Expect: 100-continue`. Không gọi được API thì dùng dữ liệu quay về (đã đúng chữ ký VNPay).
+- **`PaymentController`**: `Gateway` chuyển thẳng sang VNPay khi bật; `GET /Payment/VnpayReturn`; `GET /Payment/VnpayIpn` (trả `RspCode`
+  00/01/02/04/97/99 theo quy ước VNPay; dùng khi chạy trên máy chủ có HTTPS công khai, cấu hình IPN URL ở trang quản trị merchant).
+- **Kiểm thử thật trên VNPay Sandbox (học viên tạm, đã xóa; giao dịch test còn lưu ở phía VNPay):** thẻ NCB `9704198526191432198` + OTP `123456`
+  → quay về "Thanh toán thành công", mã giao dịch VNPay `15709177`, querydr `ResponseCode=00, TransactionStatus=00, chữ ký hợp lệ`, ghi danh;
+  thẻ NCB không đủ số dư `9704195798459170488` → VNPay báo lỗi, bấm "Hủy thanh toán" → mã 24 → đơn "Thanh toán thất bại", giỏ còn khóa;
+  IPN giả chữ ký → 97; IPN hợp lệ gửi lặp cho đơn đã thanh toán → 02, không ghi danh thêm.
+- Thẻ test: [trang demo VNPay](https://sandbox.vnpayment.vn/apis/vnpay-demo/). Sandbox không hỗ trợ thanh toán QR; khi demo chọn "Thẻ ATM nội địa".
+- **Chặn phương thức chưa dùng được**: trên Sandbox chỉ **thẻ ATM nội địa** hoàn tất được. Ví / VNPAY-QR / App VNPAY: app thật không thanh toán
+  mã QR test; thẻ quốc tế: tài khoản sandbox chưa được VNPay mở kênh thẻ quốc tế. Khi bật VNPay, giỏ hàng khóa "Ví điện tử MoMo / VNPay" và
+  "Thẻ Quốc Tế Visa / Mastercard / JCB" (nhãn "Chưa hỗ trợ", bấm vào hiện hộp thoại nêu lý do riêng từng phương thức, nút chuyển sang thẻ ATM nội địa),
+  mặc định chọn thẻ ATM nội địa; `CartController.Checkout` từ chối mọi phương thức khác `Napas` (`VnPayService.HoTroPhuongThuc`);
+  `TaoUrlThanhToan` luôn gửi `vnp_BankCode=VNBANK` nên VNPay mở thẳng danh sách ngân hàng. Ở cổng thử nghiệm nội bộ (không bật VNPay) cả 3 phương thức vẫn dùng được.
+
+---
+
+## 24. Chấm đỏ nhắc việc ở menu Admin (mới, **chưa commit**)
+
+Mục ở menu Admin có yêu cầu từ người dùng đang chờ xử lý thì hiện chấm đỏ nhỏ bên phải (rê chuột xem số lượng), để Admin không bỏ sót:
+
+| Mục menu | Đếm |
+| --- | --- |
+| Kiểm duyệt khóa học | Khóa học giáo viên gửi duyệt (`Chờ duyệt` / `Chờ kiểm duyệt`) |
+| Duyệt hồ sơ Giáo viên | Hồ sơ đăng ký giáo viên `Pending` (`DangKyGiaoVien`) |
+| Báo cáo vi phạm | Báo cáo `Chờ xử lý` + khóa học tạm khóa mà giáo viên đã phản hồi (`Chờ Admin xem xét`) |
+| Chi trả giáo viên | Phiếu rút tiền `Chờ duyệt` |
+
+Dashboard, Quản lý danh mục, Báo cáo hệ thống, Doanh thu theo ngày không nhận yêu cầu từ người dùng nên không có chấm.
+
+- `Services/AdminPendingService.cs`: đếm từng mục riêng (một bảng chưa có thì mục đó là 0, không làm hỏng trang).
+- `AdminBaseController.OnResultExecuting`: mọi trang Admin trả về View đều có `ViewBag.AdminPending`; `_LayoutAdmin` hiện chấm (viền trắng để vẫn thấy trên mục đang chọn màu xanh, có hiệu ứng nhấp nháy nhẹ, tắt khi người dùng chọn giảm chuyển động).
+  Chấm đặt tuyệt đối trong phần đệm bên phải của mục (không chiếm chỗ của chữ): mục giữ nguyên chiều cao 48px, chữ dài không bị xuống dòng, menu không hiện thanh cuộn ngang.
+- `GET /Admin/Dashboard/PendingCounts` (JSON): menu tự làm mới chấm mỗi 60 giây, khi quay lại tab và sau khi Admin gửi thao tác AJAX, nên yêu cầu mới đến trong lúc đang mở trang vẫn hiện chấm.
+- Kiểm thử: chấm hiện đúng với dữ liệu hiện có (2 hồ sơ giáo viên, 3 yêu cầu vi phạm); thêm tạm một phiếu rút tiền thì chấm "Chi trả giáo viên" tự hiện không cần tải lại trang, xóa phiếu thì chấm tắt (đã xóa dữ liệu test).
+
+---
+
+## 25. Việc còn lại / cần quyết định
 
 | Việc | Ghi chú |
 | :--- | :--- |
@@ -791,7 +971,8 @@ File: `ViewModels/PhanTrangViewModel.cs`, `Views/Shared/_Pagination.cshtml`, `as
 | Link danh mục ở footer | `_Layout.cshtml` vẫn dùng mã giả (`category = "CNTT"`, `"Design"`, `"Business"`), nên đổi sang trang danh mục |
 | `ReviewController.SubmitReview` | Chỉ kiểm tra đăng nhập, **chưa kiểm tra đã đăng ký khóa và tiến độ**. Giao diện học yêu cầu 100% bài, hàm `fn_DuDieuKienDanhGia` (25%) chưa được gọi, báo cáo ghi 70%. Cần chốt một ngưỡng và kiểm tra phía server |
 | Quản lý người dùng của Admin | Báo cáo có Hình 4.37–4.38 nhưng code chưa có. Làm thêm hoặc bỏ hình |
-| Thanh toán | `Checkout` ghi "Đã thanh toán" ngay và **chưa tạo dòng `ThanhToan`**; `PaymentController` (VNPay/MoMo) mới là khung. Ghi rõ "thanh toán mô phỏng" trong báo cáo |
+| Bảo mật cấu hình | `Web.config` (được đưa lên Git) đang chứa `SmtpPassword` (mật khẩu ứng dụng Gmail). Nên chuyển sang `Secrets.config` và thu hồi / tạo lại mật khẩu ứng dụng |
+| Thanh toán thật | Đã tích hợp **VNPay Sandbox** (mục 23.1) và cổng thử nghiệm dự phòng. Khi có pháp nhân: ký hợp đồng VNPay, đổi `VNPay:TmnCode`, `VNPay:HashSecret`, `VNPay:PaymentUrl`, `VNPay:ApiUrl` sang môi trường thật trong `Secrets.config`, cấu hình IPN về tên miền HTTPS công khai. Chưa có hoàn tiền; trang Dashboard / Báo cáo của giáo viên vẫn tính doanh thu theo giá bán trước mã giảm giá (trang Nhận thanh toán đã tính theo thực thu) |
 | Hoàn tiền / hủy đơn | Đặc tả có nhắc nhưng CSDL chưa có trạng thái hoàn tiền, nên báo cáo chỉ tính đơn "Đã thanh toán". Lượt coupon của đơn bị hủy chưa được trả lại |
 | Ưu đãi cho "nhóm học viên được chỉ định" | Mới có tiêu chí số khóa và tổng chi tiêu; chưa có danh sách học viên chỉ định cụ thể |
 | "Mở lại" khóa học sau xử lý vi phạm | Admin mở lại khóa đã tạm khóa **không** kiểm tra lại video (chỉ Gửi duyệt và Phê duyệt có kiểm tra) |

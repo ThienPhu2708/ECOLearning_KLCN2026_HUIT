@@ -4,6 +4,7 @@
     ViewBag.Title = isLoggedIn ? "Trang Chủ - Nền tảng Đào tạo Trực tuyến" : "Chào mừng đến với E-Learning";
     var courses = Model ?? new List<ECOLearning.Models.KhoaHoc>();
     var categories = ViewBag.Categories as List<ECOLearning.Models.DanhMuc> ?? new List<ECOLearning.Models.DanhMuc>();
+    var categoryImages = ViewBag.CategoryImages as Dictionary<string, string> ?? new Dictionary<string, string>();
     var enrollCounts = ViewBag.EnrollCounts as Dictionary<string, int> ?? new Dictionary<string, int>();
     var homeRecommendation = ViewBag.HomeRecommendation as ECOLearning.ViewModels.GoiYTrangChuViewModel ?? new ECOLearning.ViewModels.GoiYTrangChuViewModel();
     var recommendations = homeRecommendation.Items;
@@ -40,11 +41,12 @@
     max-width: calc(25% - 18px);
 }
 
+/* Thẻ lĩnh vực: ảnh minh họa (Admin tải lên) ở trên, khung 16:10 cố định; ảnh khác tỉ lệ được cắt vừa khung
+   (object-fit: cover), không méo. Danh mục chưa có ảnh hiện biểu tượng trên nền màu cùng khung. */
 .category-card {
 display: flex;
-align-items: center;
-gap: 16px;
-padding: 20px;
+flex-direction: column;
+overflow: hidden;
 background: #FFFFFF;
 border: 1px solid var(--border-color, #E2E8F0);
 border-radius: var(--radius-2xl, 16px);
@@ -60,8 +62,46 @@ transform: translateY(-3px);
 box-shadow: 0 10px 25px rgba(67, 76, 232, 0.12) !important;
 }
 
+.category-media {
+position: relative;
+aspect-ratio: 16 / 10;
+width: 100%;
+overflow: hidden;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 34px;
+flex-shrink: 0;
+}
+
+.category-media img {
+width: 100%;
+height: 100%;
+object-fit: cover;
+object-position: center;
+display: block;
+transition: transform 0.35s ease;
+}
+
+.category-media .category-icon-bg {
+transition: transform 0.25s ease;
+}
+
+.category-card:hover .category-media img,
 .category-card:hover .category-icon-bg {
-transform: scale(1.08);
+transform: scale(1.06);
+}
+
+.category-card-name {
+padding: 14px 16px 16px;
+font-weight: 700;
+font-size: 15px;
+line-height: 1.4;
+color: var(--text-heading, #0F172A);
+display: -webkit-box;
+-webkit-line-clamp: 2;
+-webkit-box-orient: vertical;
+overflow: hidden;
 }
 
 .cat-nav-btn {
@@ -150,14 +190,23 @@ color: #FFFFFF;
                 {
                     var cat = categories[i];
                     var style = ECOLearning.ViewModels.IconDanhMuc.TheoViTri(i);
+                    string anhDanhMuc;
+                    categoryImages.TryGetValue(cat.maDanhMuc, out anhDanhMuc);
                     <div class="category-item-col">
                         <a href="@Url.Action("Index", "Category", new { area = "", slug = ECOLearning.Services.SlugHelper.ToSlug(cat.tenDanhMuc) })" class="category-card" title="Xem danh mục @cat.tenDanhMuc">
-                            <div class="category-icon-bg" style="width: 48px; height: 48px; border-radius: 12px; background: @style.Bg; color: @style.Color; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; transition: transform 0.25s ease;">
-                                <i class="bi @style.Icon"></i>
-                            </div>
-                            <div>
-                                <div style="font-weight: 700; font-size: 15px; color: var(--text-heading, #0F172A);">@cat.tenDanhMuc</div>
-                            </div>
+                            @if (!string.IsNullOrEmpty(anhDanhMuc))
+                            {
+                                <div class="category-media" style="background: @style.Bg;">
+                                    <img src="@Url.Content("~" + anhDanhMuc)" alt="@cat.tenDanhMuc" loading="lazy" />
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="category-media" style="background: @style.Bg; color: @style.Color;">
+                                    <i class="bi @style.Icon category-icon-bg" aria-hidden="true"></i>
+                                </div>
+                            }
+                            <div class="category-card-name">@cat.tenDanhMuc</div>
                         </a>
                     </div>
                 }

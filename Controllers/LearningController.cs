@@ -278,6 +278,9 @@ namespace ECOLearning.Controllers
                 activeLesson = allLessons.FirstOrDefault();
             }
 
+            // Thời lượng bài học theo độ dài thật của video (dữ liệu cũ nhập tay có thể lệch nhiều so với video đã tải lên)
+            DongBoThoiLuong(allLessons);
+
             // Tiến độ học tập của người dùng
             var currentUser = GetCurrentStudent(courseId);
             List<string> completedLessonIds = new List<string>();
@@ -291,6 +294,18 @@ namespace ECOLearning.Controllers
                     .Distinct()
                     .ToList();
             }
+
+            // Vị trí xem dở của bài hiện tại: trang Study tua tới đó khi mở lại bài (giáo viên / Admin xem thử thì không lưu)
+            int resumeSeconds = 0;
+            if (currentUser != null && activeLesson != null && !isPreview)
+            {
+                resumeSeconds = db.TienDoBaiHoc
+                    .Where(t => t.maHocVien == currentUser.maNguoiDung && t.maBaiHoc == activeLesson.maBaiHoc)
+                    .OrderByDescending(t => t.lanTruyCapGanNhat)
+                    .Select(t => t.thoiGianXemDungLai)
+                    .FirstOrDefault() ?? 0;
+            }
+            ViewBag.ResumeSeconds = Math.Max(0, resumeSeconds);
 
             bool hasSubmittedReview = false;
             if (currentUser != null)
@@ -327,7 +342,8 @@ namespace ECOLearning.Controllers
             return View();
         }
 
-        // POST: Learning/UpdateProgress (Lưu tiến độ & đánh dấu hoàn thành nếu >= 80%)
+        // POST: Learning/UpdateProgress: lưu vị trí đang xem (gọi định kỳ khi xem, khi tạm dừng và khi rời trang)
+        // và đánh dấu hoàn thành khi đã xem >= 80% thời lượng video.
         [HttpPost, ValidateAntiForgeryToken]
         public ActionResult UpdateProgress(string courseId, string lessonId, float? durationWatched, float? totalDuration)
         {
@@ -347,11 +363,21 @@ namespace ECOLearning.Controllers
 
             float watched = durationWatched ?? 0f;
             float total = totalDuration ?? 0f;
-            bool lessonBelongsToCourse = db.BaiHoc.Any(b => b.maBaiHoc == lessonId &&
+            var lesson = db.BaiHoc.FirstOrDefault(b => b.maBaiHoc == lessonId &&
                 ((b.ChuongHoc != null && b.ChuongHoc.maKhoaHoc == courseId) ||
                  (b.maChuong == null && b.maBaiHoc.StartsWith(courseId + "_"))));
-            if (!lessonBelongsToCourse || watched < 0 || total <= 0 || float.IsNaN(watched) || float.IsInfinity(watched) || float.IsNaN(total) || float.IsInfinity(total))
+            if (lesson == null || watched < 0 || float.IsNaN(watched) || float.IsInfinity(watched) || float.IsNaN(total) || float.IsInfinity(total))
                 return new HttpStatusCodeResult(400, "Thông tin tiến độ hoặc bài học không hợp lệ.");
+
+            // Độ dài video lấy từ chính file trên máy chủ, không tin số trình duyệt gửi lên. Cập nhật BaiHoc.thoiLuong TRƯỚC khi
+            // ghi tiến độ: trigger trg_TienDoBaiHoc_CapNhatHoanThanh tự đánh dấu hoàn thành khi thoiGianXemDungLai >= 80% thoiLuong,
+            // nên thoiLuong sai (nhỏ hơn video thật) sẽ làm bài được tính xong khi mới xem một phần.
+            int? thoiLuongThat = DongBoThoiLuong(new[] { lesson }, total);
+            if (thoiLuongThat.HasValue) total = thoiLuongThat.Value;
+            else if (total <= 0) total = lesson.thoiLuong ?? 0;
+            if (total <= 0)
+                return new HttpStatusCodeResult(400, "Thông tin tiến độ hoặc bài học không hợp lệ.");
+            if (watched > total) watched = total;
 
             // Hoàn thành nếu đã xem >= 80% thời lượng bài học (hoặc video chạy đến cuối / còn <= 3 giây)
             bool isDone = (total > 0 && (watched / total) >= 0.795f) || (total > 0 && watched >= (total - 3));
@@ -384,8 +410,71 @@ namespace ECOLearning.Controllers
             }
 
             db.SaveChanges();
+            CapNhatTienDoKhoaHoc(studentId, courseId);
 
-            return Json(new { success = true, completed = existingProgress.daHoanThanh, studentId = studentId, isDone = isDone });
+            return Json(new { success = true, completed = existingProgress.daHoanThanh == true, position = existingProgress.thoiGianXemDungLai, isDone = isDone });
+        }
+
+        /// <summary>
+        /// Đặt BaiHoc.thoiLuong theo độ dài thật của file video (đọc từ file, Services/VideoDuration).
+        /// Video không đọc được độ dài (YouTube, WebM, MKV...) thì dùng độ dài trình phát báo về nếu có.
+        /// Trả về độ dài thật của bài đầu tiên (null nếu không xác định được).
+        /// </summary>
+        private int? DongBoThoiLuong(IEnumerable<BaiHoc> lessons, float doDaiTrinhPhat = 0f)
+        {
+            int? dauTien = null;
+            bool coThayDoi = false, laBaiDau = true;
+            foreach (var b in lessons)
+            {
+                int? thuc = VideoDuration.LaySoGiay(b.duongDanVideo);
+                if (!thuc.HasValue && doDaiTrinhPhat > 0 && laBaiDau
+                    && !string.IsNullOrEmpty(b.duongDanVideo) && b.duongDanVideo.StartsWith(VideoDuration.ThuMucVideo, StringComparison.OrdinalIgnoreCase))
+                {
+                    thuc = (int)Math.Round(doDaiTrinhPhat);
+                }
+                if (laBaiDau) dauTien = thuc;
+                laBaiDau = false;
+                if (thuc.HasValue && thuc.Value > 0 && Math.Abs((b.thoiLuong ?? 0) - thuc.Value) > 1)
+                {
+                    b.thoiLuong = thuc.Value;
+                    coThayDoi = true;
+                }
+            }
+            if (coThayDoi) db.SaveChanges();
+            return dauTien;
+        }
+
+        /// <summary>
+        /// Tính lại % hoàn thành của khóa (TienDoHocTap) và lần truy cập gần nhất. Trigger trg_TienDoBaiHoc_CapNhatTienDoKhoaHoc
+        /// chỉ tính bài nằm trong chương, nên khóa có bài không phân chương trước đây luôn hiện 0% ở trang giáo viên.
+        /// </summary>
+        private void CapNhatTienDoKhoaHoc(int studentId, string courseId)
+        {
+            var lessonIds = db.BaiHoc
+                .Where(b => (b.ChuongHoc != null && b.ChuongHoc.maKhoaHoc == courseId) || (b.maChuong == null && b.maBaiHoc.StartsWith(courseId + "_")))
+                .Select(b => b.maBaiHoc)
+                .ToList();
+            int done = lessonIds.Count == 0 ? 0 : db.TienDoBaiHoc
+                .Where(t => t.maHocVien == studentId && t.daHoanThanh == true && lessonIds.Contains(t.maBaiHoc))
+                .Select(t => t.maBaiHoc)
+                .Distinct()
+                .Count();
+            double percent = lessonIds.Count == 0 ? 0 : Math.Round(100.0 * done / lessonIds.Count, 2);
+
+            var row = db.TienDoHocTap.FirstOrDefault(t => t.maHocVien == studentId && t.maKhoaHoc == courseId);
+            if (row == null)
+            {
+                row = new TienDoHocTap
+                {
+                    maTienDo = "TD_" + Guid.NewGuid().ToString("N").Substring(0, 17),
+                    maHocVien = studentId,
+                    maKhoaHoc = courseId
+                };
+                db.TienDoHocTap.Add(row);
+            }
+            row.phanTramHoanThanh = percent;
+            row.lanTruyCapGanNhat = DateTime.Now;
+            db.SaveChanges();
         }
 
         // POST: Learning/ResetProgress (Đặt lại toàn bộ tiến độ của khóa học để kiểm thử lại)
@@ -458,101 +547,6 @@ namespace ECOLearning.Controllers
             ViewBag.CertificateIssuedAt = certificateState.IssuedAt;
 
             return View();
-        }
-
-        // GET: Learning/StreamVideo (Phát video nội bộ có hỗ trợ HTTP Range Request để tua/streaming mượt,
-        // vì IIS Express không phục vụ đúng Range cho static file, gây hiện tượng có tiếng nhưng hình đứng)
-        public ActionResult StreamVideo(string file)
-        {
-            if (string.IsNullOrEmpty(file) || file.Contains("..") || file.Contains("/") || file.Contains("\\"))
-            {
-                return new HttpStatusCodeResult(400, "Tên file không hợp lệ");
-            }
-
-            string videoDir = Server.MapPath("~/assets/uploads/videos/");
-            string fullPath = Path.Combine(videoDir, file);
-
-            if (!fullPath.StartsWith(videoDir, StringComparison.OrdinalIgnoreCase) || !System.IO.File.Exists(fullPath))
-            {
-                return HttpNotFound();
-            }
-
-            string ext = Path.GetExtension(fullPath).ToLowerInvariant();
-            string contentType;
-            switch (ext)
-            {
-                case ".webm": contentType = "video/webm"; break;
-                case ".mov": contentType = "video/quicktime"; break;
-                case ".mkv": contentType = "video/x-matroska"; break;
-                case ".ogv": contentType = "video/ogg"; break;
-                default: contentType = "video/mp4"; break;
-            }
-
-            long totalLength = new FileInfo(fullPath).Length;
-            long start = 0;
-            long end = totalLength - 1;
-
-            Response.Clear();
-            Response.BufferOutput = false;
-            Response.AddHeader("Accept-Ranges", "bytes");
-            Response.ContentType = contentType;
-
-            string rangeHeader = Request.Headers["Range"];
-            if (!string.IsNullOrEmpty(rangeHeader) && rangeHeader.StartsWith("bytes="))
-            {
-                string[] parts = rangeHeader.Substring("bytes=".Length).Split('-');
-                if (!long.TryParse(parts[0], out start)) start = 0;
-                if (parts.Length > 1 && parts[1].Length > 0 && long.TryParse(parts[1], out long parsedEnd))
-                {
-                    end = parsedEnd;
-                }
-                if (end >= totalLength) end = totalLength - 1;
-
-                if (start < 0 || start > end)
-                {
-                    Response.StatusCode = 416;
-                    Response.AddHeader("Content-Range", "bytes */" + totalLength);
-                    return new EmptyResult();
-                }
-
-                Response.StatusCode = 206;
-                Response.StatusDescription = "Partial Content";
-                Response.AddHeader("Content-Range", string.Format("bytes {0}-{1}/{2}", start, end, totalLength));
-            }
-
-            long contentLength = end - start + 1;
-            Response.AddHeader("Content-Length", contentLength.ToString());
-
-            const int bufferSize = 65536;
-            byte[] buffer = new byte[bufferSize];
-
-            using (var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-            {
-                stream.Seek(start, SeekOrigin.Begin);
-                long bytesRemaining = contentLength;
-
-                while (bytesRemaining > 0 && Response.IsClientConnected)
-                {
-                    int bytesToRead = (int)Math.Min(bufferSize, bytesRemaining);
-                    int bytesRead = stream.Read(buffer, 0, bytesToRead);
-                    if (bytesRead == 0) break;
-
-                    try
-                    {
-                        Response.OutputStream.Write(buffer, 0, bytesRead);
-                    }
-                    catch (System.Web.HttpException ex) when (
-                        ex.ErrorCode == unchecked((int)0x800703E3) || !Response.IsClientConnected)
-                    {
-                        // The browser can cancel a video request after the connection check
-                        // (for example when seeking or leaving the page).
-                        break;
-                    }
-                    bytesRemaining -= bytesRead;
-                }
-            }
-
-            return new EmptyResult();
         }
 
         protected override void Dispose(bool disposing)

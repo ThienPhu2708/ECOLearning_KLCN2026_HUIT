@@ -205,10 +205,19 @@ namespace ECOLearning.Areas.Instructor.Models
         public string NganHang { get; set; }
         public string SoTaiKhoan { get; set; }
         public string TenChuTaiKhoan { get; set; }
+
+        /// <summary>Admin xử lý (migration 014): thời điểm, mã giao dịch chi thử nghiệm, lý do từ chối.</summary>
+        public DateTime? NgayXuLy { get; set; }
+        public string MaGiaoDichChi { get; set; }
+        public string LyDoTuChoi { get; set; }
     }
 
     public class InstructorPayoutViewModel
     {
+        /// <summary>Doanh thu thực thu các khóa của giáo viên (đơn đã thanh toán, sau khi trừ mã giảm giá).</summary>
+        public decimal TongDoanhThuThucThu { get; set; }
+        /// <summary>Phần giáo viên được hưởng (80% doanh thu thực thu).</summary>
+        public decimal PhanGiaoVien { get; set; }
         public decimal AvailableBalance { get; set; }
         public decimal PendingBalance { get; set; }
         public decimal TotalPaid { get; set; }

@@ -313,10 +313,25 @@ namespace ECOLearning.Controllers
             if (string.IsNullOrWhiteSpace(appliedCoupon)) appliedCoupon = couponCode;
             appliedCoupon = string.IsNullOrWhiteSpace(appliedCoupon) ? null : appliedCoupon.Trim().ToUpperInvariant();
 
+            var payment = new PaymentService(db);
+            if (!payment.IsInstalled())
+            {
+                return Json(new { success = false, message = "Chức năng thanh toán chưa được khởi tạo (chạy Database/Migrations/014_ThanhToan_ThuNghiem.sql)." });
+            }
+            string phuongThuc = PaymentService.PhuongThucHopLe.Contains(paymentMethod) ? paymentMethod : PaymentService.PhuongThucHopLe[0];
+            if (VnPayService.DangBat && !VnPayService.HoTroPhuongThuc(phuongThuc))
+            {
+                return Json(new { success = false, unsupportedMethod = true, message = VnPayService.ThongBaoChuaHoTro });
+            }
+
             try
             {
                 var promotions = new PromotionService(db);
                 string orderId = "DH" + DateTime.Now.ToString("yyMMddHHmmss") + new Random().Next(1000, 9999);
+                decimal total;
+                // Mỗi học viên chỉ giữ một đơn chờ; đơn quá hạn chuyển "Hết hạn"
+                payment.XuLyDonHetHan();
+                payment.HuyDonChoCu(userId);
                 KetQuaApDungUuDai uuDai = null;
 
                 using (var tx = db.Database.BeginTransaction())
@@ -336,14 +351,15 @@ namespace ECOLearning.Controllers
                     }
 
                     decimal discount = uuDai != null ? uuDai.TienGiam : 0;
-                    decimal total = Math.Max(0, subtotal - discount);
+                    total = Math.Max(0, subtotal - discount);
 
                     db.DonHang.Add(new DonHang
                     {
                         maDonHang = orderId,
                         ngayDat = DateTime.Now,
                         tongTien = total,
-                        trangThai = PromotionService.DonDaThanhToan,
+                        // Đơn chờ thanh toán: chỉ ghi danh khi cổng báo thanh toán thành công (PaymentService.XuLyKetQua)
+                        trangThai = PaymentService.ChoThanhToan,
                         maHocVien = userId,
                         maGiamGia = uuDai != null ? uuDai.MaGiamGia : null
                     });
@@ -359,22 +375,16 @@ namespace ECOLearning.Controllers
                             donGia = item.Price
                         });
 
-                        db.DangKyKhoaHoc.Add(new DangKyKhoaHoc
-                        {
-                            maDangKy = "DK" + Guid.NewGuid().ToString("N").Substring(0, 18),
-                            ngayDangKy = DateTime.Now,
-                            trangThaiDK = "Đã thanh toán",
-                            maHocVien = userId,
-                            maKhoaHoc = item.CourseId
-                        });
                     }
 
                     db.SaveChanges();
 
                     if (uuDai != null)
                     {
+                        // Lượt dùng gắn với đơn; giới hạn lượt chỉ tính đơn "Đã thanh toán" nên đơn chờ / hết hạn không chiếm lượt
                         promotions.GhiNhanSuDung(orderId, userId, uuDai);
                     }
+                    payment.DatThongTinDonCho(orderId, total > 0 ? phuongThuc : "Miễn phí");
                     // Trigger chi tiết đơn hàng tính lại tổng tiền; đặt lại số tiền thực trả để chắc chắn khớp
                     db.Database.ExecuteSqlCommand("UPDATE dbo.DonHang SET tongTien = @t WHERE maDonHang = @dh",
                         new SqlParameter("@t", total), new SqlParameter("@dh", orderId));
@@ -382,16 +392,32 @@ namespace ECOLearning.Controllers
                     tx.Commit();
                 }
 
-                // Chỉ xóa giỏ hàng và mã giảm giá SAU KHI đã lưu đơn hàng thành công vào CSDL
-                Session.Remove("Cart");
-                Session.Remove(SessionCoupon);
+                payment.GhiNhatKy(orderId, "TAO_DON", null, null, null,
+                    "Tạo đơn " + total.ToString("#,##0") + "đ, phương thức " + (total > 0 ? phuongThuc : "Miễn phí"));
 
+                if (total <= 0)
+                {
+                    // Đơn 0đ: không qua cổng, ghi danh ngay
+                    payment.XacNhanDonMienPhi(orderId);
+                    Session.Remove("Cart");
+                    Session.Remove(SessionCoupon);
+                    return Json(new
+                    {
+                        success = true,
+                        message = "Đơn hàng 0đ đã được xác nhận. Khóa học đã được thêm vào hồ sơ học tập của bạn.",
+                        orderId,
+                        redirectUrl = Url.Action("Result", "Payment", new { orderId })
+                    });
+                }
+
+                // Giỏ hàng giữ nguyên tới khi cổng báo thanh toán thành công (xóa ở PaymentController.Return)
                 return Json(new
                 {
                     success = true,
-                    message = "Thanh toán Thành công! Hệ thống đã tự động ghi nhận đơn hàng và kích hoạt khóa học vào hồ sơ học tập của bạn.",
+                    requirePayment = true,
+                    message = "Đã tạo đơn hàng, đang chuyển sang cổng thanh toán...",
                     orderId,
-                    redirectUrl = Url.Action("Index", "Home")
+                    redirectUrl = Url.Action("Gateway", "Payment", new { orderId })
                 });
             }
             catch (Exception ex)

@@ -41,11 +41,11 @@
         gap: 20px;
     }
 
+    /* Thẻ lĩnh vực: ảnh minh họa (Admin tải lên) ở trên, khung 16:9 cố định, ảnh khác tỉ lệ được cắt vừa khung */
     .lv-card {
         display: flex;
         flex-direction: column;
-        gap: 14px;
-        padding: 22px;
+        overflow: hidden;
         background: #FFFFFF;
         border: 1px solid var(--border-color, #E2E8F0);
         border-radius: 16px;
@@ -61,26 +61,41 @@
         box-shadow: 0 10px 25px rgba(67, 76, 232, 0.12);
     }
 
-    .lv-card-head {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-    }
-
-    .lv-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
+    .lv-media {
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 22px;
         flex-shrink: 0;
-        transition: transform 0.25s ease;
     }
 
-    .lv-card:hover .lv-icon {
-        transform: scale(1.08);
+    .lv-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        display: block;
+        transition: transform 0.35s ease;
+    }
+
+    .lv-card:hover .lv-media img {
+        transform: scale(1.05);
+    }
+
+    /* Danh mục chưa có ảnh: nền màu kèm chữ cái đầu tên lĩnh vực */
+    .lv-media-initial {
+        font-size: 44px;
+        font-weight: 800;
+        opacity: 0.85;
+    }
+
+    .lv-body {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        flex: 1;
+        padding: 18px 20px 20px;
     }
 
     .lv-name {
@@ -152,7 +167,7 @@
 
     @@media (max-width: 640px) {
         .lv-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-        .lv-card { padding: 18px; }
+        .lv-body { padding: 16px 18px 18px; }
     }
 </style>
 }
@@ -186,13 +201,19 @@
                 {
                     bool coKhoa = lv.SoKhoaHoc > 0;
                     <a class="lv-card @(coKhoa ? "" : "is-empty")" href="@Url.Action("Index", "Category", new { area = "", slug = lv.Slug })" title="Xem lĩnh vực @lv.Ten">
-                        <div class="lv-card-head">
-                            <div class="lv-icon" style="background: @lv.Icon.Bg; color: @lv.Icon.Color;"><i class="bi @lv.Icon.Icon"></i></div>
+                        @if (!string.IsNullOrEmpty(lv.AnhMinhHoa))
+                        {
+                            <div class="lv-media"><img src="@Url.Content("~" + lv.AnhMinhHoa)" alt="@lv.Ten" loading="lazy" /></div>
+                        }
+                        else
+                        {
+                            <div class="lv-media" style="background: @lv.Icon.Bg; color: @lv.Icon.Color;" aria-hidden="true"><span class="lv-media-initial">@lv.Ten.Substring(0, 1)</span></div>
+                        }
+                        <div class="lv-body">
                             <div style="min-width: 0;">
                                 <h2 class="lv-name">@lv.Ten</h2>
                                 <div class="lv-count">@(coKhoa ? lv.SoKhoaHoc + " khóa học" : "Chưa có khóa học")</div>
                             </div>
-                        </div>
 
                         @if (!string.IsNullOrWhiteSpace(lv.MoTa))
                         {
@@ -211,6 +232,7 @@
                                 }
                             </div>
                             <span class="lv-go">@(coKhoa ? "Xem khóa học" : "Xem lĩnh vực") <i class="bi bi-arrow-right"></i></span>
+                        </div>
                         </div>
                     </a>
                 }

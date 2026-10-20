@@ -11,7 +11,71 @@
     int inactiveCount = ViewBag.InactiveCount;
     int fromItem = totalItems == 0 ? 0 : (page - 1) * pageSize + 1;
     int toItem = Math.Min(page * pageSize, totalItems);
+    bool anhInstalled = ViewBag.AnhInstalled as bool? ?? false;
 }
+
+<style>
+    /* Ảnh minh họa danh mục: khung 16:10 giống thẻ "Khám phá theo lĩnh vực" ở trang chủ */
+    .cat-thumb {
+        width: 80px;
+        aspect-ratio: 16 / 10;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #F1F5F9;
+        border: 1px solid #E2E8F0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94A3B8;
+        font-size: 18px;
+    }
+
+    .cat-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .cat-img-picker {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    /* Ảnh đã chọn / ảnh hiện tại: khung 16:10 giống thẻ trang chủ, chỉ hiện khi có ảnh */
+    .cat-img-preview {
+        flex: 0 0 200px;
+        aspect-ratio: 16 / 10;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #E2E8F0;
+        background: #F8FAFC;
+    }
+
+    .cat-img-preview[hidden] {
+        display: none;
+    }
+
+    .cat-img-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .cat-img-hint {
+        margin: 0;
+        font-size: 12.5px;
+        line-height: 1.55;
+        color: #64748B;
+    }
+
+    @@media (max-width: 560px) {
+        .cat-img-picker { flex-direction: column; }
+        .cat-img-preview { flex-basis: auto; width: 100%; }
+    }
+</style>
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 12px;">
     <div>
@@ -47,6 +111,7 @@
             <thead>
                 <tr>
                     <th style="width: 120px;">Mã danh mục</th>
+                    <th style="width: 104px;">Ảnh</th>
                     <th>Tên Danh Mục</th>
                     <th>Mô Tả Phân Loại</th>
                     <th>Số Khóa Học</th>
@@ -61,6 +126,18 @@
                     {
                         <tr data-cat-id="@item.MaDanhMuc" data-count="@item.SoKhoaHoc">
                             <td><code>@item.MaDanhMuc</code></td>
+                            <td>
+                                <div class="cat-thumb" title="@(string.IsNullOrEmpty(item.AnhMinhHoa) ? "Chưa có ảnh minh họa" : "Ảnh minh họa")">
+                                    @if (!string.IsNullOrEmpty(item.AnhMinhHoa))
+                                    {
+                                        <img src="@Url.Content("~" + item.AnhMinhHoa)" alt="@item.TenDanhMuc" loading="lazy" />
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-image" aria-hidden="true"></i>
+                                    }
+                                </div>
+                            </td>
                             <td><strong>@item.TenDanhMuc</strong></td>
                             <td class="cell-wrap">@(string.IsNullOrEmpty(item.MoTa) ? "Chưa có mô tả" : item.MoTa)</td>
                             <td>
@@ -86,7 +163,7 @@
                             <td>
                                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                                     <button class="btn btn-secondary btn-sm"
-                                            onclick="editCategory('@item.MaDanhMuc', '@JavaScriptEncode(item.TenDanhMuc)', '@JavaScriptEncode(item.MoTa)')">
+                                            onclick="editCategory('@item.MaDanhMuc', '@JavaScriptEncode(item.TenDanhMuc)', '@JavaScriptEncode(item.MoTa)', '@JavaScriptEncode(string.IsNullOrEmpty(item.AnhMinhHoa) ? "" : Url.Content("~" + item.AnhMinhHoa))')">
                                         Sửa
                                     </button>
                                     @if (item.TrangThai)
@@ -119,7 +196,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 24px;">
+                        <td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 24px;">
                             @(string.IsNullOrWhiteSpace(search) && status == "all" ? "Chưa có danh mục nào trong cơ sở dữ liệu." : "Không tìm thấy danh mục phù hợp.")
                         </td>
                     </tr>
@@ -174,6 +251,24 @@
                               placeholder="Mô tả phạm vi và nhóm kỹ năng của danh mục này..."></textarea>
                 </div>
 
+                <div class="form-group">
+                    <label class="form-label" for="cat-img-input">Ảnh minh họa</label>
+                    @if (anhInstalled)
+                    {
+                        <div class="cat-img-picker">
+                            <div class="cat-img-preview" id="cat-img-preview" hidden>
+                                <img id="cat-img-tag" alt="Xem trước ảnh minh họa" />
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" id="cat-img-pick"><i class="bi bi-upload me-1"></i> Chọn ảnh</button>
+                            <input type="file" id="cat-img-input" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden />
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="cat-img-hint">Cần chạy <code>Database/Migrations/012_DanhMuc_AnhMinhHoa.sql</code> để thêm ảnh minh họa cho danh mục.</p>
+                    }
+                </div>
+
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
                     <button type="button" class="btn btn-secondary" data-modal-close>Hủy</button>
                     <button type="submit" class="btn btn-primary" id="btn-submit-cat">Lưu danh mục</button>
@@ -207,21 +302,67 @@
             else document.getElementById(id).classList.remove('active');
         }
 
+        // ===== Ảnh minh họa: nút "Chọn ảnh"; có ảnh thì xem trước đúng khung thẻ trang chủ (không chọn ảnh mới thì giữ ảnh cũ) =====
+        const MAX_IMG_MB = @(ECOLearning.Services.CategoryImageService.DungLuongToiDaMB);
+        const imgState = { file: null, original: '', objectUrl: null };
+        const imgInput = document.getElementById('cat-img-input');
+        const imgPreview = document.getElementById('cat-img-preview');
+
+        function renderImage(src) {
+            if (!imgPreview) return;
+            const tag = document.getElementById('cat-img-tag');
+            if (src) tag.src = src; else tag.removeAttribute('src');
+            imgPreview.hidden = !src;
+        }
+
+        function resetImage(originalUrl) {
+            if (imgState.objectUrl) URL.revokeObjectURL(imgState.objectUrl);
+            imgState.file = null; imgState.objectUrl = null;
+            imgState.original = originalUrl || '';
+            if (imgInput) imgInput.value = '';
+            renderImage(imgState.original);
+        }
+
+        function showFormError(message) {
+            const err = document.getElementById('cat-name-error');
+            err.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i> ' + message;
+            err.style.display = 'block';
+        }
+
+        function pickImage(file) {
+            if (!file) return;
+            const okType = /^image\/(jpeg|png|webp)$/.test(file.type) || /\.(jpe?g|png|webp)$/i.test(file.name);
+            if (!okType) { showFormError('Chỉ nhận ảnh JPG, PNG hoặc WEBP.'); return; }
+            if (file.size > MAX_IMG_MB * 1024 * 1024) { showFormError('Ảnh tối đa ' + MAX_IMG_MB + ' MB.'); return; }
+            document.getElementById('cat-name-error').style.display = 'none';
+            if (imgState.objectUrl) URL.revokeObjectURL(imgState.objectUrl);
+            imgState.file = file;
+            imgState.objectUrl = URL.createObjectURL(file);
+            renderImage(imgState.objectUrl);
+        }
+
+        if (imgPreview) {
+            document.getElementById('cat-img-pick').addEventListener('click', () => imgInput.click());
+            imgInput.addEventListener('change', () => pickImage(imgInput.files[0]));
+        }
+
         function openAddCategoryModal() {
             document.getElementById('cat-id-input').value = '';
             document.getElementById('modal-cat-title').innerText = 'Thêm Danh Mục Khóa Học Mới';
             document.getElementById('cat-name-input').value = '';
             document.getElementById('cat-desc-input').value = '';
             document.getElementById('cat-name-error').style.display = 'none';
+            resetImage('');
             showModal('category-modal');
         }
 
-        function editCategory(id, name, desc) {
+        function editCategory(id, name, desc, imageUrl) {
             document.getElementById('cat-id-input').value = id;
             document.getElementById('modal-cat-title').innerText = `Chỉnh sửa Danh Mục: ${id}`;
             document.getElementById('cat-name-input').value = name;
             document.getElementById('cat-desc-input').value = desc || '';
             document.getElementById('cat-name-error').style.display = 'none';
+            resetImage(imageUrl);
             showModal('category-modal');
         }
 
@@ -232,17 +373,22 @@
             const btn = document.getElementById('btn-submit-cat');
             const url = id ? '@Url.Action("Edit", "Category", new { area = "Admin" })' : '@Url.Action("Create", "Category", new { area = "Admin" })';
 
+            // Gửi multipart (FormData) để kèm file ảnh
+            const form = new FormData();
+            form.append('__RequestVerificationToken', getToken());
+            form.append('id', id);
+            form.append('tenDanhMuc', document.getElementById('cat-name-input').value.trim());
+            form.append('moTa', document.getElementById('cat-desc-input').value.trim());
+            if (imgState.file) form.append('anhMinhHoa', imgState.file, imgState.file.name);
+
             btn.disabled = true;
             $.ajax({
                 url: url,
                 type: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                data: {
-                    __RequestVerificationToken: getToken(),
-                    id: id,
-                    tenDanhMuc: document.getElementById('cat-name-input').value.trim(),
-                    moTa: document.getElementById('cat-desc-input').value.trim()
-                },
+                data: form,
+                processData: false,
+                contentType: false,
                 success: function (res) {
                     if (res.success) {
                         err.style.display = 'none';

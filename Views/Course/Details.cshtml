@@ -21,11 +21,11 @@
     {
         previewLesson = allLessonsList.FirstOrDefault(b => !string.IsNullOrEmpty(b.duongDanVideo));
     }
-    // Video nội bộ: phát qua Learning/StreamVideo để hỗ trợ HTTP Range Request đúng chuẩn
+    // Video nội bộ: phát qua VideoStream/Play (không dùng Session) để hỗ trợ HTTP Range Request đúng chuẩn
     // (static file trên IIS Express không phục vụ đúng Range, gây hiện tượng có tiếng nhưng hình đứng)
     const string localVideoPrefix = "/assets/uploads/videos/";
     Func<string, string> toPlayableVideoUrl = raw => !string.IsNullOrEmpty(raw) && raw.StartsWith(localVideoPrefix)
-        ? Url.Action("StreamVideo", "Learning", new { file = raw.Substring(localVideoPrefix.Length) })
+        ? Url.Action("Play", "VideoStream", new { file = raw.Substring(localVideoPrefix.Length) })
         : raw;
 
     string previewVideoUrl = previewLesson != null ? toPlayableVideoUrl(previewLesson.duongDanVideo) : "";

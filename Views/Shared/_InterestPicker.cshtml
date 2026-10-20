@@ -1,12 +1,17 @@
 @model ECOLearning.ViewModels.InterestPickerViewModel
 @*
     Hộp thoại "Bạn quan tâm lĩnh vực nào?" (cold-start của gợi ý khóa học, InterestController).
-    - Tự mở một lần với học viên mới (Model.TuDongMo). Đóng / bỏ qua thì ghi nhận để không hỏi lại.
+    - Tự mở một lần với học viên mới (Model.TuDongMo), sau 5 giây kể từ khi vào trang. Đóng / bỏ qua thì ghi nhận để không hỏi lại.
+    - Hiện mọi danh mục đang hoạt động: 4 danh mục đầu, còn lại ẩn sau nút "Xem thêm". Chọn tối đa 3.
     - Phần tử bất kỳ có thuộc tính data-open-interest mở lại hộp thoại để đổi lựa chọn.
     Lưu xong tải lại trang để mục gợi ý dùng lĩnh vực mới.
 *@
 @{
     int toiDa = Model.SoLuaChonToiDa;
+    int hienSan = ECOLearning.ViewModels.InterestPickerViewModel.SoHienThiBanDau;
+    int soAn = Math.Max(0, Model.LuaChon.Count - hienSan);
+    // Đổi lựa chọn mà lĩnh vực đã chọn nằm trong phần ẩn thì mở sẵn danh sách đầy đủ
+    bool moRongSan = Model.LuaChon.Skip(hienSan).Any(x => Model.DaChon.Contains(x.MaDanhMuc));
 }
 
 <style>
@@ -174,6 +179,44 @@
         margin-top: 2px;
     }
 
+    .interest-options:not(.is-expanded) .interest-option[data-extra] {
+        display: none;
+    }
+
+    .interest-more {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 12px;
+        padding: 6px 2px;
+        border: none;
+        background: none;
+        color: #434CE8;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .interest-more:hover {
+        text-decoration: underline;
+    }
+
+    .interest-more:focus-visible {
+        outline: 2px solid #A5B4FC;
+        outline-offset: 2px;
+        border-radius: 6px;
+    }
+
+    .interest-more i {
+        font-size: 12px;
+        transition: transform 0.2s ease;
+    }
+
+    .interest-more[aria-expanded="true"] i {
+        transform: rotate(180deg);
+    }
+
     .interest-status {
         margin: 14px 0 0;
         font-size: 13px;
@@ -219,6 +262,7 @@
 
 <div class="interest-dialog" id="interest-dialog" role="dialog" aria-modal="true" aria-labelledby="interest-title"
      data-auto-open="@(Model.TuDongMo ? "true" : "false")" data-max="@toiDa"
+     data-delay="@(ECOLearning.ViewModels.InterestPickerViewModel.GiayChoTuDongMo * 1000)"
      data-save-url="@Url.Action("Save", "Interest", new { area = "" })"
      data-skip-url="@Url.Action("Skip", "Interest", new { area = "" })" hidden>
     <div class="interest-backdrop" data-interest-dismiss></div>
@@ -229,19 +273,27 @@
         <p class="interest-desc">Chọn tối đa @toiDa lĩnh vực để nhận gợi ý khóa học phù hợp ngay. Bạn có thể đổi lại bất cứ lúc nào.</p>
 
         @Html.AntiForgeryToken()
-        <div class="interest-options" role="group" aria-label="Lĩnh vực quan tâm">
-            @foreach (var item in Model.LuaChon)
+        <div class="interest-options@(moRongSan ? " is-expanded" : "")" id="interest-options" role="group" aria-label="Lĩnh vực quan tâm">
+            @for (int i = 0; i < Model.LuaChon.Count; i++)
             {
+                var item = Model.LuaChon[i];
                 bool chon = Model.DaChon.Contains(item.MaDanhMuc);
-                <button type="button" class="interest-option@(chon ? " is-selected" : "")" data-id="@item.MaDanhMuc" aria-pressed="@(chon ? "true" : "false")">
+                <button type="button" class="interest-option@(chon ? " is-selected" : "")" data-id="@item.MaDanhMuc" aria-pressed="@(chon ? "true" : "false")" @(i >= hienSan ? "data-extra" : "")>
                     <span class="interest-check" aria-hidden="true"><i class="bi bi-check-lg"></i></span>
                     <span>
                         <span class="interest-name">@item.TenDanhMuc</span>
-                        <span class="interest-count">@item.SoKhoaHoc khóa học</span>
+                        <span class="interest-count">@(item.SoKhoaHoc > 0 ? item.SoKhoaHoc + " khóa học" : "Chưa có khóa học")</span>
                     </span>
                 </button>
             }
         </div>
+        @if (soAn > 0)
+        {
+            <button type="button" class="interest-more" data-interest-more aria-controls="interest-options" aria-expanded="@(moRongSan ? "true" : "false")"
+                    data-more-text="Xem thêm @soAn lĩnh vực" data-less-text="Thu gọn">
+                <span>@(moRongSan ? "Thu gọn" : "Xem thêm " + soAn + " lĩnh vực")</span> <i class="bi bi-chevron-down" aria-hidden="true"></i>
+            </button>
+        }
 
         <p class="interest-status" aria-live="polite"></p>
         <p class="interest-error" role="alert" hidden></p>
@@ -266,6 +318,9 @@
         var saveBtn = dialog.querySelector('[data-interest-save]');
         var lastFocus = null;
         var skipped = false;
+        var autoTimer = null;
+        var optionList = dialog.querySelector('.interest-options');
+        var moreBtn = dialog.querySelector('[data-interest-more]');
 
         function token() {
             var input = dialog.querySelector('input[name="__RequestVerificationToken"]')
@@ -307,6 +362,8 @@
         }
 
         function open() {
+            if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+            if (!dialog.hidden) return;
             lastFocus = document.activeElement;
             showError('');
             refresh();
@@ -329,6 +386,14 @@
                 post(dialog.getAttribute('data-skip-url')).catch(function () { });
             }
             close();
+        }
+
+        if (moreBtn) {
+            moreBtn.addEventListener('click', function () {
+                var expanded = optionList.classList.toggle('is-expanded');
+                moreBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                moreBtn.querySelector('span').textContent = moreBtn.getAttribute(expanded ? 'data-less-text' : 'data-more-text');
+            });
         }
 
         options.forEach(function (o) {
@@ -385,8 +450,25 @@
             }
         });
 
-        if (autoOpen) {
+        // Tự mở sau vài giây để học viên kịp nhìn trang trước. Đang có hộp thoại khác mở (vd. xác nhận lưu mã
+        // giảm giá) thì chờ hộp thoại đó đóng rồi mới mở, không chồng hai hộp thoại lên nhau.
+        function otherDialogOpen() {
+            return !!document.querySelector('.modal-overlay.active, .modal.show');
+        }
+
+        function autoOpenWhenReady() {
+            autoTimer = null;
+            if (!dialog.hidden || skipped) return;
+            if (otherDialogOpen()) {
+                autoTimer = setTimeout(autoOpenWhenReady, 1000);
+                return;
+            }
             open();
+        }
+
+        if (autoOpen) {
+            var delay = parseInt(dialog.getAttribute('data-delay'), 10);
+            autoTimer = setTimeout(autoOpenWhenReady, isNaN(delay) ? 5000 : delay);
         }
     })();
 </script>

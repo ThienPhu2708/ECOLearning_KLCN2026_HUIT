@@ -44,14 +44,14 @@
         else if (System.Text.RegularExpressions.Regex.IsMatch(vidUrl, @"^[a-zA-Z0-9_-]{11}$")) { ytId = vidUrl; }
     }
 
-    // Video nội bộ: phát qua Learning/StreamVideo để hỗ trợ HTTP Range Request đúng chuẩn
+    // Video nội bộ: phát qua VideoStream/Play (không dùng Session) để hỗ trợ HTTP Range Request đúng chuẩn
     // (static file trên IIS Express không phục vụ đúng Range, gây hiện tượng có tiếng nhưng hình đứng)
     const string localVideoPrefix = "/assets/uploads/videos/";
     string activeVideoSrc = "";
     if (activeLesson != null && !string.IsNullOrEmpty(activeLesson.duongDanVideo))
     {
         activeVideoSrc = activeLesson.duongDanVideo.StartsWith(localVideoPrefix)
-            ? Url.Action("StreamVideo", "Learning", new { file = activeLesson.duongDanVideo.Substring(localVideoPrefix.Length) })
+            ? Url.Action("Play", "VideoStream", new { file = activeLesson.duongDanVideo.Substring(localVideoPrefix.Length) })
             : activeLesson.duongDanVideo;
     }
 }
@@ -816,8 +816,16 @@
         var hasSubmittedReview = @(hasSubmittedReview ? "true" : "false");
         var hasSavedProgress   = @(isCurrentCompleted ? "true" : "false");
 
-        // Chống tua nhanh
-        var lastTrackedTime = 0;
+        // Lưu vị trí xem: định kỳ khi đang phát, khi tạm dừng, khi chuyển bài và khi rời trang (LearningController.UpdateProgress)
+        var isPreviewMode     = @(ViewBag.IsPreview == true ? "true" : "false");
+        var resumeAtSec       = @((ViewBag.ResumeSeconds as int?) ?? 0);
+        var SAVE_INTERVAL_MS  = 15000;
+        var lastSavedPosition = -1;
+        var lastSavedAt       = 0;
+
+        // Chống tua nhanh: chỉ tua được tới đoạn đã xem (bài đã hoàn thành thì tua tự do)
+        var allowFreeSeek   = hasSavedProgress;
+        var lastTrackedTime = resumeAtSec;
         var seekWarnTimer   = null;
         var SEEK_THRESHOLD  = 10; // giây
 
@@ -877,7 +885,7 @@
                     updatePlayerTimeDisplay(cur, dur, percent);
 
                     var delta = cur - lastTrackedTime;
-                    if (delta > SEEK_THRESHOLD && delta < dur * 0.9) {
+                    if (!allowFreeSeek && delta > SEEK_THRESHOLD && delta < dur * 0.9) {
                         // Phát hiện tua nhanh — kéo về vị trí thực
                         player.currentTime = lastTrackedTime;
                         showSeekWarning();
@@ -889,7 +897,28 @@
                     if (percent >= 79.5 && !hasSavedProgress) {
                         hasSavedProgress = true;
                         trigger80PercentReached(cur, dur, false);
+                    } else if (!player.paused && Date.now() - lastSavedAt >= SAVE_INTERVAL_MS) {
+                        saveCurrentPosition(false);
                     }
+                });
+
+                // Mở lại bài đang xem dở: tua tới vị trí đã lưu (gần hết bài thì xem lại từ đầu)
+                player.addEventListener('loadedmetadata', function () {
+                    if (resumeAtSec > 3 && player.duration && resumeAtSec < player.duration - 5) {
+                        player.currentTime = resumeAtSec;
+                        lastTrackedTime = Math.max(lastTrackedTime, resumeAtSec);
+                        showToast('Tiếp tục từ ' + formatSec(resumeAtSec) + ' lần học trước', 'info');
+                    }
+                }, { once: true });
+
+                player.addEventListener('pause', function () {
+                    if (!player.ended) saveCurrentPosition(false);
+                });
+
+                // Rời trang (đóng tab, bấm Back, chuyển trang, ẩn tab trên điện thoại): gửi bằng sendBeacon để không bị hủy giữa chừng
+                window.addEventListener('pagehide', function () { saveCurrentPosition(true); });
+                document.addEventListener('visibilitychange', function () {
+                    if (document.visibilityState === 'hidden') saveCurrentPosition(true);
                 });
 
                 player.addEventListener('ended', function () {
@@ -922,6 +951,7 @@
                 return;
             }
             var url = '@Url.Action("Study", "Learning")';
+            saveCurrentPosition(true);
             window.location.href = url + '?courseId=' + encodeURIComponent(currentCourseId) + '&lessonId=' + encodeURIComponent(lessonId);
         }
 
@@ -1095,7 +1125,7 @@
             if (player && player.duration > 0) {
                 var target = (percent / 100) * player.duration;
                 var delta  = target - lastTrackedTime;
-                if (delta > SEEK_THRESHOLD) {
+                if (!allowFreeSeek && delta > SEEK_THRESHOLD) {
                     showSeekWarning();
                     showToast('Video đang tua quá nhanh', 'error');
                     var realPct = (lastTrackedTime / player.duration) * 100;
@@ -1250,15 +1280,39 @@
             }
         }
 
-        function sendProgressToDatabase(watched, total) {
-            if (@(ViewBag.IsPreview == true ? "true" : "false")) return;
-            if (!currentLessonId || !currentCourseId) return;
-            $.ajax({
-                url: '@Url.Action("UpdateProgress", "Learning")', type: 'POST',
-                data: { __RequestVerificationToken: document.querySelector('#learning-antiforgery input').value, courseId: currentCourseId, lessonId: currentLessonId, durationWatched: Math.round(watched), totalDuration: Math.round(total) },
-                success: function (res) { console.log('UpdateProgress:', res); },
-                error: function (err)   { console.error('UpdateProgress error:', err); }
-            });
+        var progressUrl = '@Url.Action("UpdateProgress", "Learning")';
+
+        function progressPayload(watched, total) {
+            var fd = new FormData();
+            fd.append('__RequestVerificationToken', document.querySelector('#learning-antiforgery input').value);
+            fd.append('courseId', currentCourseId);
+            fd.append('lessonId', currentLessonId);
+            fd.append('durationWatched', Math.round(watched));
+            fd.append('totalDuration', Math.round(total));
+            return fd;
+        }
+
+        function sendProgressToDatabase(watched, total, useBeacon) {
+            if (isPreviewMode) return;
+            if (!currentLessonId || !currentCourseId || !(total > 0)) return;
+            lastSavedAt = Date.now();
+            lastSavedPosition = Math.round(watched);
+            var body = progressPayload(watched, total);
+            // Khi rời trang, request thường bị trình duyệt hủy; sendBeacon / keepalive vẫn được gửi đi
+            if (useBeacon && navigator.sendBeacon && navigator.sendBeacon(progressUrl, body)) return;
+            fetch(progressUrl, { method: 'POST', body: body, credentials: 'same-origin', keepalive: !!useBeacon,
+                                 headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { if (!r.ok) console.error('UpdateProgress error:', r.status); })
+                .catch(function (err) { console.error('UpdateProgress error:', err); });
+        }
+
+        // Lưu vị trí đang xem (không đánh dấu hoàn thành ở phía trình duyệt; máy chủ tự xét >= 80%)
+        function saveCurrentPosition(useBeacon) {
+            var player = document.getElementById('studyPlayer');
+            if (!player || !player.duration || player.duration <= 0) return;
+            var pos = Math.round(player.currentTime);
+            if (pos === lastSavedPosition || pos < 1) return;
+            sendProgressToDatabase(pos, player.duration, useBeacon);
         }
 
         function handleRatingButtonClick() {

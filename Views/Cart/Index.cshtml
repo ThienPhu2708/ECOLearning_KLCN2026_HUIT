@@ -57,6 +57,73 @@
             cursor: pointer;
         }
 
+        /* Phương thức chưa dùng được ở VNPay Sandbox: vẫn hiện, bấm vào thì báo lý do */
+        .payment-option.is-unavailable {
+            background: #F8FAFC;
+            border-style: dashed;
+            cursor: not-allowed;
+        }
+
+        .payment-option.is-unavailable:hover {
+            border-color: #CBD5E1;
+        }
+
+        .payment-option.is-unavailable .po-text {
+            opacity: .55;
+        }
+
+        .payment-option.is-unavailable input[type="radio"] {
+            cursor: not-allowed;
+        }
+
+        .mu-box {
+            max-width: 440px;
+            padding: 32px 28px 28px;
+            text-align: center;
+        }
+
+        .mu-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            background: #FEF3C7;
+            color: #B45309;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .mu-box h3 {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0F172A;
+            margin-bottom: 10px;
+        }
+
+        .mu-box p {
+            font-size: 14px;
+            color: #64748B;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .mu-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .mu-actions .btn {
+            height: 46px;
+            border-radius: 12px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+        }
+
         .grid-12 {
             display: grid;
             grid-template-columns: repeat(12, 1fr);
@@ -209,30 +276,63 @@
                 <div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                     <h3 class="h3" style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 16px;">Chọn phương thức thanh toán</h3>
 
-                    <label class="payment-option selected" onclick="selectPayment(this)">
-                        <input type="radio" name="payment-method" value="MoMo/VNPay" checked />
-                        <div style="flex: 1;">
-                            <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Ví điện tử MoMo / VNPay (Khuyên dùng)</div>
-                            <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Quét mã QR qua app ngân hàng hoặc ví điện tử tức thời</div>
+                    @{
+                        // VNPay Sandbox (tài khoản test hiện tại) chỉ hoàn tất được thẻ ATM nội địa:
+                        // khóa ví / quét mã và thẻ quốc tế, mặc định thẻ ATM nội địa
+                        bool chuaHoTroVi = ECOLearning.Services.VnPayService.DangBat;
+                    }
+                    @if (chuaHoTroVi)
+                    {
+                        <div class="payment-option is-unavailable" role="button" tabindex="0" aria-disabled="true" onclick="showUnsupportedMethod('MoMo/VNPay')" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showUnsupportedMethod('MoMo/VNPay'); }">
+                            <input type="radio" value="MoMo/VNPay" disabled tabindex="-1" aria-hidden="true" />
+                            <div class="po-text" style="flex: 1;">
+                                <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Ví điện tử MoMo / VNPay</div>
+                                <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Quét mã QR qua app ngân hàng hoặc ví điện tử</div>
+                            </div>
+                            <span class="badge" style="background: #F1F5F9; color: #64748B; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; white-space: nowrap;"><i class="bi bi-lock-fill me-1"></i>Chưa hỗ trợ</span>
                         </div>
-                        <span class="badge" style="background: #ECFDF5; color: #10B981; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 9999px;">Nhanh & Tiện lợi</span>
-                    </label>
+                    }
+                    else
+                    {
+                        <label class="payment-option selected" onclick="selectPayment(this)">
+                            <input type="radio" name="payment-method" value="MoMo/VNPay" checked />
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Ví điện tử MoMo / VNPay (Khuyên dùng)</div>
+                                <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Quét mã QR qua app ngân hàng hoặc ví điện tử tức thời</div>
+                            </div>
+                            <span class="badge" style="background: #ECFDF5; color: #10B981; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 9999px;">Nhanh & Tiện lợi</span>
+                        </label>
+                    }
 
-                    <label class="payment-option" onclick="selectPayment(this)">
-                        <input type="radio" name="payment-method" value="Napas" />
+                    <label class="payment-option @(chuaHoTroVi ? "selected" : "")" onclick="selectPayment(this)">
+                        <input type="radio" name="payment-method" value="Napas" @(chuaHoTroVi ? "checked" : "") />
                         <div style="flex: 1;">
                             <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Thẻ ATM nội địa (Internet Banking Napas)</div>
                             <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Hỗ trợ tất cả ngân hàng tại Việt Nam (Vietcombank, Techcombank,...)</div>
                         </div>
                     </label>
 
-                    <label class="payment-option" onclick="selectPayment(this)">
-                        <input type="radio" name="payment-method" value="Visa/Mastercard" />
-                        <div style="flex: 1;">
-                            <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Thẻ Quốc Tế Visa / Mastercard / JCB</div>
-                            <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Thanh toán an toàn bảo mật chuẩn 3D-Secure quốc tế</div>
+                    @if (chuaHoTroVi)
+                    {
+                        <div class="payment-option is-unavailable" role="button" tabindex="0" aria-disabled="true" onclick="showUnsupportedMethod('Visa/Mastercard')" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showUnsupportedMethod('Visa/Mastercard'); }">
+                            <input type="radio" value="Visa/Mastercard" disabled tabindex="-1" aria-hidden="true" />
+                            <div class="po-text" style="flex: 1;">
+                                <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Thẻ Quốc Tế Visa / Mastercard / JCB</div>
+                                <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Thanh toán an toàn bảo mật chuẩn 3D-Secure quốc tế</div>
+                            </div>
+                            <span class="badge" style="background: #F1F5F9; color: #64748B; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; white-space: nowrap;"><i class="bi bi-lock-fill me-1"></i>Chưa hỗ trợ</span>
                         </div>
-                    </label>
+                    }
+                    else
+                    {
+                        <label class="payment-option" onclick="selectPayment(this)">
+                            <input type="radio" name="payment-method" value="Visa/Mastercard" />
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; font-size: 14px; color: #0F172A;">Thẻ Quốc Tế Visa / Mastercard / JCB</div>
+                                <div class="caption" style="font-size: 12px; color: #64748B; margin-top: 2px;">Thanh toán an toàn bảo mật chuẩn 3D-Secure quốc tế</div>
+                            </div>
+                        </label>
+                    }
                 </div>
 
             </div>
@@ -297,7 +397,9 @@
                     </button>
 
                     <div class="caption" style="text-align: center; margin-top: 16px; color: #94A3B8; font-size: 12px; line-height: 1.5;">
-                        <i class="bi bi-shield-lock-fill me-1"></i> Bảo mật thanh toán 256-bit SSL. Bằng việc xác nhận, bạn đồng ý với Điều khoản dịch vụ E-Learning.
+                        <i class="bi bi-shield-lock-fill me-1"></i> Dữ liệu thanh toán được ký số HMAC-SHA512 và xác thực ở máy chủ. Bằng việc xác nhận, bạn đồng ý với Điều khoản dịch vụ E-Learning.
+                        <div style="margin-top: 8px; color: #92400E; background: #FEF3C7; border-radius: 8px; padding: 6px 10px;"><i class="bi bi-info-circle me-1"></i>Thanh toán đang ở chế độ <strong>thử nghiệm</strong>:
+                            @(ECOLearning.Services.VnPayService.DangBat ? "bạn sẽ được chuyển sang VNPay Sandbox (môi trường test của VNPay), dùng thẻ test, không trừ tiền thật." : "bạn sẽ được chuyển sang cổng thử nghiệm, không trừ tiền thật.")</div>
                     </div>
                 </aside>
             </div>
@@ -319,6 +421,20 @@
         <div style="display: flex; gap: 12px; justify-content: center; flex-direction: column;">
             <a href="@Url.Action("Index", "Home")" class="btn btn-primary" style="height: 48px; background: #434CE8; color: #FFFFFF; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">Bắt đầu học ngay <i class="bi bi-arrow-right ms-1"></i></a>
             <a href="@Url.Action("Index", "Profile")" class="btn btn-secondary" style="height: 44px; background: #F1F5F9; color: #475569; border-radius: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">Xem Hồ sơ cá nhân</a>
+        </div>
+    </div>
+</div>
+
+<!-- THÔNG BÁO PHƯƠNG THỨC CHƯA HỖ TRỢ (VNPay Sandbox) -->
+<div class="modal-overlay" id="method-unsupported-modal" role="dialog" aria-modal="true" aria-labelledby="mu-title">
+    <div class="modal-container mu-box">
+        <div class="mu-icon"><i class="bi bi-qr-code-scan" id="mu-icon"></i></div>
+        <h3 id="mu-title">Phương thức chưa hỗ trợ</h3>
+        <p id="mu-reason"></p>
+        <p>Vui lòng chọn <strong>Thẻ ATM nội địa</strong> (dùng thẻ test, không trừ tiền thật).</p>
+        <div class="mu-actions">
+            <button type="button" class="btn btn-primary" style="background: #434CE8; color: #FFFFFF;" onclick="chooseMethod('Napas')">Dùng Thẻ ATM nội địa</button>
+            <button type="button" class="btn btn-secondary" style="background: #F1F5F9; color: #475569;" data-modal-close>Đóng</button>
         </div>
     </div>
 </div>
@@ -351,6 +467,33 @@
             document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
             el.classList.add('selected');
             el.querySelector('input[type="radio"]').checked = true;
+        }
+
+        // Ví / quét mã và thẻ quốc tế chưa dùng được ở VNPay Sandbox: báo lý do, gợi ý thẻ ATM nội địa
+        const unsupportedMethods = {
+            'MoMo/VNPay': {
+                icon: 'bi bi-qr-code-scan',
+                html: '<strong>Ví điện tử MoMo / VNPay</strong> và <strong>quét mã VNPAY-QR</strong> chưa dùng được ở môi trường thử nghiệm VNPay Sandbox: '
+                    + 'app ngân hàng, ví điện tử thật không thanh toán được mã QR thử nghiệm.'
+            },
+            'Visa/Mastercard': {
+                icon: 'bi bi-credit-card-2-front',
+                html: '<strong>Thẻ quốc tế Visa / Mastercard / JCB</strong> chưa dùng được: tài khoản VNPay Sandbox của hệ thống '
+                    + 'chưa được VNPay mở kênh thanh toán thẻ quốc tế.'
+            }
+        };
+
+        function showUnsupportedMethod(method) {
+            const info = unsupportedMethods[method] || unsupportedMethods['MoMo/VNPay'];
+            document.getElementById('mu-icon').className = info.icon;
+            document.getElementById('mu-reason').innerHTML = info.html;
+            openModal('method-unsupported-modal');
+        }
+
+        function chooseMethod(value) {
+            const radio = document.querySelector('input[name="payment-method"][value="' + value + '"]');
+            if (radio) selectPayment(radio.closest('.payment-option'));
+            closeModal('method-unsupported-modal');
         }
 
         // Xóa khóa học khỏi giỏ hàng qua AJAX
@@ -506,7 +649,7 @@
 
             const btn = document.getElementById('btn-confirm-payment');
             btn.disabled = true;
-            btn.innerText = 'Đang xử lý thanh toán...';
+            btn.innerText = 'Đang tạo đơn hàng...';
 
             const selectedMethod = document.querySelector('input[name="payment-method"]:checked').value;
             const couponCode = appliedCouponCode || '';
@@ -520,15 +663,25 @@
                     btn.innerText = 'Xác nhận thanh toán';
 
                     if (res.success) {
-                        if (typeof updateHeaderCartBadge === 'function') {
+                        // Đơn có phí: sang cổng thanh toán (giỏ hàng giữ tới khi thanh toán xong);
+                        // đơn 0đ: đã ghi danh, sang trang kết quả
+                        if (!res.requirePayment && typeof updateHeaderCartBadge === 'function') {
                             updateHeaderCartBadge(0);
                         }
-                        document.getElementById('payment-success-modal').style.display = 'flex';
+                        if (res.redirectUrl) {
+                            btn.disabled = true;
+                            btn.innerText = res.requirePayment ? 'Đang chuyển sang cổng thanh toán...' : 'Đang mở kết quả...';
+                            window.location.href = res.redirectUrl;
+                        } else {
+                            document.getElementById('payment-success-modal').style.display = 'flex';
+                        }
                     } else if (res.requireLogin) {
                         showToast(res.message, 'warning');
                         setTimeout(function () {
                             window.location.href = '@Url.Action("Login", "Account")?returnUrl=' + encodeURIComponent(window.location.pathname);
                         }, 600);
+                    } else if (res.unsupportedMethod) {
+                        showUnsupportedMethod(selectedMethod);
                     } else {
                         if (res.couponInvalid) {
                             setAppliedCoupon(null);

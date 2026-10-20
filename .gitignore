@@ -38,3 +38,6 @@ $RECYCLE.BIN/
 # Video bài học do giáo viên tải lên (dung lượng lớn, không đưa lên Git)
 assets/uploads/videos/
 Uploads/Videos/
+
+# Khóa bí mật (VNPay...), xem Secrets.config.example
+Secrets.config

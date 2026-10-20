@@ -25,6 +25,45 @@
         padding: 36px 0 40px;
     }
 
+    /* Ảnh minh họa danh mục (Admin tải lên): phủ nửa phải banner, đặt absolute nên banner giữ nguyên kích thước;
+       ảnh khác tỉ lệ được cắt vừa khung (object-fit: cover); dải mờ tối bên trái giữ chữ dễ đọc */
+    .category-hero.has-media {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .category-hero.has-media > .safe-container {
+        position: relative;
+        z-index: 1;
+    }
+
+    .category-hero-media {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 48%;
+        pointer-events: none;
+        /* Mép trái ảnh mờ dần vào nền banner (nền là dải màu nên không phủ bằng một màu cố định được) */
+        -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 55%);
+        mask-image: linear-gradient(90deg, transparent 0%, #000 55%);
+    }
+
+    .category-hero-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        display: block;
+    }
+
+    .category-hero-media::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.3);
+    }
+
     .category-breadcrumb {
         display: flex;
         align-items: center;
@@ -120,11 +159,21 @@
 
     @@media (max-width: 640px) {
         .category-grid { grid-template-columns: 1fr; }
+
+        /* Màn hình hẹp: ảnh làm nền cả banner, phủ tối đều để chữ đọc được */
+        .category-hero-media { width: 100%; -webkit-mask-image: none; mask-image: none; }
+        .category-hero-media::after { background: rgba(15, 23, 42, 0.78); }
     }
 </style>
 }
 
-<section class="category-hero">
+<section class="category-hero@(string.IsNullOrEmpty(Model.AnhMinhHoa) ? "" : " has-media")">
+    @if (!string.IsNullOrEmpty(Model.AnhMinhHoa))
+    {
+        <div class="category-hero-media" aria-hidden="true">
+            <img src="@Url.Content("~" + Model.AnhMinhHoa)" alt="" />
+        </div>
+    }
     <div class="safe-container">
         <nav class="category-breadcrumb" aria-label="Breadcrumb">
             <a href="@Url.Action("Index", "Home", new { area = "" })">Trang chủ</a>

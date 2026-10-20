@@ -95,6 +95,7 @@ namespace ECOLearning.Controllers
                 TenDanhMuc = current.tenDanhMuc,
                 MoTa = current.moTa,
                 Slug = current.Slug,
+                AnhMinhHoa = new CategoryImageService(db).Lay(current.maDanhMuc),
                 TongSoKhoaHoc = items.Count,
                 SoKhoaDaSoHuu = userId > 0
                     ? db.DangKyKhoaHoc.Count(d => d.maHocVien == userId && d.KhoaHoc.maDanhMuc == current.maDanhMuc)
@@ -188,6 +189,7 @@ namespace ECOLearning.Controllers
                 .Select(g => new { MaDanhMuc = g.Key, SoHocVien = g.Select(d => d.maHocVien).Distinct().Count() })
                 .ToDictionary(x => x.MaDanhMuc, x => x.SoHocVien);
 
+            var anhDanhMuc = new CategoryImageService(db).LayTatCa();
             var model = new TatCaLinhVucViewModel();
             for (int i = 0; i < danhMuc.Count; i++)
             {
@@ -205,6 +207,7 @@ namespace ECOLearning.Controllers
                     MoTa = d.moTa,
                     Slug = slug,
                     Icon = IconDanhMuc.TheoViTri(i),
+                    AnhMinhHoa = anhDanhMuc.ContainsKey(d.maDanhMuc) ? anhDanhMuc[d.maDanhMuc] : null,
                     SoKhoaHoc = thongKe != null ? thongKe.SoKhoa : 0,
                     SoGiangVien = thongKe != null ? thongKe.SoGiangVien : 0,
                     SoHocVien = hocVien

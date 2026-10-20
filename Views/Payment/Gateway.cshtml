@@ -1,0 +1,197 @@
+@model ECOLearning.Services.DonThanhToan
+@*
+    Cổng thanh toán THỬ NGHIỆM (PaymentController.Gateway). Đóng vai trang của cổng thật (VNPay / MoMo): hiển thị đơn,
+    học viên chọn kết quả giao dịch. Không trừ tiền thật. Trang tách khỏi layout chính để giống trang của bên thứ ba.
+*@
+@{
+    Layout = null;
+    string pt = Model.PhuongThuc ?? "MoMo/VNPay";
+    long conLaiGiay = Model.NgayHetHan.HasValue ? Math.Max(0, (long)(Model.NgayHetHan.Value - DateTime.Now).TotalSeconds) : 900;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cổng thanh toán thử nghiệm · @Model.MaDonHang</title>
+    <link rel="stylesheet" href="@Url.Content("~/assets/vendor/google-fonts/fonts.local.css")" />
+    <link rel="stylesheet" href="@Url.Content("~/assets/vendor/bootstrap-icons/bootstrap-icons.min.css")" />
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Plus Jakarta Sans', 'Be Vietnam Pro', system-ui, sans-serif; background: #F1F5F9; color: #0F172A; }
+        .gw-top { background: #0F172A; color: #FFFFFF; }
+        .gw-top-in { max-width: 1000px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .gw-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16px; }
+        .gw-brand i { width: 34px; height: 34px; border-radius: 10px; background: #434CE8; display: inline-flex; align-items: center; justify-content: center; font-size: 17px; }
+        .gw-brand small { display: block; font-weight: 500; font-size: 12px; color: #94A3B8; }
+        .gw-secure { font-size: 12.5px; color: #CBD5E1; display: inline-flex; align-items: center; gap: 6px; }
+        .gw-sandbox { background: #FEF3C7; color: #92400E; border-bottom: 1px solid #FDE68A; }
+        .gw-sandbox div { max-width: 1000px; margin: 0 auto; padding: 10px 16px; font-size: 13.5px; display: flex; gap: 8px; align-items: flex-start; }
+        .gw-wrap { max-width: 1000px; margin: 24px auto 48px; padding: 0 16px; display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 20px; align-items: start; }
+        .gw-card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 22px; }
+        .gw-label { font-size: 12px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+        .gw-amount { font-size: 30px; font-weight: 800; color: #434CE8; margin: 2px 0 14px; }
+        .gw-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; padding: 8px 0; border-top: 1px dashed #E2E8F0; }
+        .gw-row span:first-child { color: #64748B; }
+        .gw-row strong { text-align: right; word-break: break-all; }
+        .gw-items { list-style: none; margin: 10px 0 0; padding: 0; }
+        .gw-items li { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 6px 0; color: #334155; }
+        .gw-items li span:last-child { white-space: nowrap; font-weight: 600; }
+        .gw-timer { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: #EEF2FF; color: #3730A3; font-size: 13.5px; display: flex; gap: 8px; align-items: center; }
+        .gw-timer.is-late { background: #FEE2E2; color: #B91C1C; }
+        .gw-method { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; margin-bottom: 16px; }
+        .gw-method i { color: #434CE8; font-size: 20px; }
+        .gw-qr { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+        .gw-qr-box { width: 180px; height: 180px; border-radius: 14px; border: 1px solid #E2E8F0; padding: 12px; display: grid; grid-template-columns: repeat(21, 1fr); gap: 0; }
+        .gw-qr-box span { background: #0F172A; }
+        .gw-qr-box span.o { background: transparent; }
+        .gw-steps { margin: 0; padding-left: 18px; font-size: 13.5px; color: #475569; line-height: 1.7; }
+        .gw-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .gw-fields label { display: block; font-size: 12.5px; color: #64748B; font-weight: 600; }
+        .gw-fields input { width: 100%; margin-top: 4px; height: 40px; border: 1px solid #E2E8F0; border-radius: 10px; padding: 0 12px; font: inherit; font-size: 14px; background: #F8FAFC; color: #0F172A; }
+        .gw-fields .full { grid-column: 1 / -1; }
+        .gw-note { margin: 12px 0 0; font-size: 12.5px; color: #64748B; }
+        .gw-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; padding-top: 18px; border-top: 1px solid #E2E8F0; }
+        .gw-btn { height: 46px; padding: 0 20px; border-radius: 12px; font: inherit; font-weight: 700; font-size: 14.5px; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 8px; }
+        .gw-btn { white-space: nowrap; }
+        .gw-btn-pay { background: #434CE8; color: #FFFFFF; flex: 1 1 100%; justify-content: center; }
+        .gw-btn-fail, .gw-btn-cancel { flex: 1; justify-content: center; }
+        .gw-btn-pay:hover { background: #3730A3; }
+        .gw-btn-fail { background: #FFFFFF; color: #B91C1C; border-color: #FECACA; }
+        .gw-btn-cancel { background: #FFFFFF; color: #475569; border-color: #E2E8F0; }
+        .gw-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .gw-expired { display: none; margin-top: 16px; padding: 12px; border-radius: 10px; background: #FEE2E2; color: #B91C1C; font-size: 13.5px; }
+        .gw-expired a { color: #B91C1C; font-weight: 700; }
+        @@media (max-width: 820px) {
+            .gw-wrap { grid-template-columns: minmax(0, 1fr); }
+            .gw-btn-pay { flex-basis: 100%; }
+            .gw-btn-fail, .gw-btn-cancel { flex: 1; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="gw-top">
+        <div class="gw-top-in">
+            <div class="gw-brand"><i class="bi bi-credit-card-2-front"></i><div>Cổng thanh toán thử nghiệm<small>Sandbox · đối tác E-Learning</small></div></div>
+            <span class="gw-secure"><i class="bi bi-shield-lock"></i> Chữ ký HMAC-SHA512</span>
+        </div>
+    </div>
+    <div class="gw-sandbox" role="note">
+        <div><i class="bi bi-exclamation-triangle-fill"></i><span><strong>Môi trường thử nghiệm:</strong> không trừ tiền thật. Chọn kết quả giao dịch bên dưới để mô phỏng phản hồi của cổng thanh toán (VNPay / MoMo).</span></div>
+    </div>
+
+    <div class="gw-wrap">
+        <section class="gw-card" aria-label="Thông tin đơn hàng">
+            <div class="gw-label">Số tiền thanh toán</div>
+            <div class="gw-amount">@Model.TongTien.ToString("#,##0") đ</div>
+            <div class="gw-row"><span>Đơn vị nhận</span><strong>E-Learning</strong></div>
+            <div class="gw-row"><span>Mã đơn hàng</span><strong>@Model.MaDonHang</strong></div>
+            @if (Model.TongTruocGiam > Model.TongTien)
+            {
+                <div class="gw-row"><span>Đã giảm</span><strong style="color: #059669;">-@((Model.TongTruocGiam - Model.TongTien).ToString("#,##0")) đ</strong></div>
+            }
+            <ul class="gw-items">
+                @foreach (var k in Model.KhoaHoc)
+                {
+                    <li><span>@k.TenKhoaHoc</span><span>@k.DonGia.ToString("#,##0") đ</span></li>
+                }
+            </ul>
+            <div class="gw-timer" id="gw-timer" data-seconds="@conLaiGiay"><i class="bi bi-clock"></i> <span>Đơn hết hạn sau <strong id="gw-countdown">--:--</strong></span></div>
+        </section>
+
+        <section class="gw-card" aria-label="Thanh toán">
+            @if (pt == "Napas")
+            {
+                <div class="gw-method"><i class="bi bi-bank"></i> Thẻ ATM nội địa / Internet Banking (Napas)</div>
+                <div class="gw-fields">
+                    <label class="full">Số thẻ (thẻ thử nghiệm)<input value="9704 1985 2619 1432 198" readonly /></label>
+                    <label>Tên chủ thẻ<input value="NGUYEN VAN A" readonly /></label>
+                    <label>Ngày phát hành<input value="07/15" readonly /></label>
+                    <label class="full">Mã OTP<input value="123456" readonly /></label>
+                </div>
+                <p class="gw-note">Thông tin thẻ là dữ liệu thử nghiệm, không gửi đi đâu.</p>
+            }
+            else if (pt == "Visa/Mastercard")
+            {
+                <div class="gw-method"><i class="bi bi-credit-card"></i> Thẻ quốc tế Visa / Mastercard / JCB</div>
+                <div class="gw-fields">
+                    <label class="full">Số thẻ (thẻ thử nghiệm)<input value="4111 1111 1111 1111" readonly /></label>
+                    <label>Hết hạn<input value="12/30" readonly /></label>
+                    <label>CVV<input value="123" readonly /></label>
+                    <label class="full">Tên in trên thẻ<input value="NGUYEN VAN A" readonly /></label>
+                </div>
+                <p class="gw-note">Thông tin thẻ là dữ liệu thử nghiệm, không gửi đi đâu. Cổng thật sẽ yêu cầu xác thực 3D-Secure.</p>
+            }
+            else
+            {
+                <div class="gw-method"><i class="bi bi-qr-code-scan"></i> Quét mã QR (ví MoMo / ứng dụng ngân hàng VNPay-QR)</div>
+                <div class="gw-qr">
+                    <div class="gw-qr-box" aria-label="Mã QR thử nghiệm" role="img">
+                        @{
+                            // Hình QR minh họa sinh từ mã đơn (không quét được); cổng thật trả về mã QR thật
+                            int hat = Model.MaDonHang.GetHashCode();
+                            for (int r = 0; r < 21; r++)
+                            {
+                                for (int c = 0; c < 21; c++)
+                                {
+                                    bool goc = (r < 7 && c < 7) || (r < 7 && c > 13) || (r > 13 && c < 7);
+                                    bool den = goc
+                                        ? (r % 6 == 0 || c % 6 == 0 || (r % 7 >= 2 && r % 7 <= 4 && c % 7 >= 2 && c % 7 <= 4) || (c > 13 && (c - 14) % 6 == 0) || (r > 13 && (r - 14) % 6 == 0))
+                                        : ((unchecked((uint)(hat ^ (r * 73856093) ^ (c * 19349663)) * 2654435761u) >> 29) & 1) == 1;
+                                    <span class="@(den ? "" : "o")"></span>
+                                }
+                            }
+                        }
+                    </div>
+                    <ol class="gw-steps">
+                        <li>Mở ứng dụng MoMo hoặc ứng dụng ngân hàng</li>
+                        <li>Chọn "Quét mã QR" và quét mã bên cạnh</li>
+                        <li>Xác nhận thanh toán <strong>@Model.TongTien.ToString("#,##0") đ</strong></li>
+                    </ol>
+                </div>
+                <p class="gw-note">Mã QR chỉ để minh họa. Ở chế độ thử nghiệm, bấm "Xác nhận thanh toán" thay cho bước quét mã.</p>
+            }
+
+            @using (Html.BeginForm("Pay", "Payment", FormMethod.Post, new { id = "gw-form" }))
+            {
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="orderId" value="@Model.MaDonHang" />
+                <div class="gw-actions">
+                    <button type="submit" name="outcome" value="success" class="gw-btn gw-btn-pay"><i class="bi bi-check2-circle"></i> Xác nhận thanh toán</button>
+                    <button type="submit" name="outcome" value="fail" class="gw-btn gw-btn-fail" title="Mô phỏng giao dịch bị từ chối do tài khoản không đủ số dư"><i class="bi bi-x-octagon"></i> Mô phỏng thất bại</button>
+                    <button type="submit" name="outcome" value="cancel" class="gw-btn gw-btn-cancel"><i class="bi bi-arrow-left"></i> Hủy giao dịch</button>
+                </div>
+            }
+            <div class="gw-expired" id="gw-expired" role="alert">Đơn hàng đã hết hạn thanh toán. <a href="@Url.Action("Index", "Cart")">Quay lại giỏ hàng</a> để tạo đơn mới.</div>
+        </section>
+    </div>
+
+    <script>
+        (function () {
+            var box = document.getElementById('gw-timer');
+            var out = document.getElementById('gw-countdown');
+            var left = parseInt(box.getAttribute('data-seconds'), 10) || 0;
+            var form = document.getElementById('gw-form');
+            function tick() {
+                if (left <= 0) {
+                    out.textContent = '00:00';
+                    box.classList.add('is-late');
+                    form.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+                    document.getElementById('gw-expired').style.display = 'block';
+                    return;
+                }
+                var m = Math.floor(left / 60), s = left % 60;
+                out.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+                if (left <= 60) box.classList.add('is-late');
+                left--;
+                setTimeout(tick, 1000);
+            }
+            tick();
+            // Chặn bấm hai lần
+            form.addEventListener('submit', function () {
+                setTimeout(function () { form.querySelectorAll('button').forEach(function (b) { b.disabled = true; }); }, 0);
+            });
+        })();
+    </script>
+</body>
+</html>

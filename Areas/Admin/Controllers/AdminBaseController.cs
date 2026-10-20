@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using System.Web.Mvc;
 using System.Web.Routing;
+using ECOLearning.Models;
+using ECOLearning.Services;
 
 namespace ECOLearning.Areas.Admin.Controllers
 {
@@ -40,6 +42,19 @@ namespace ECOLearning.Areas.Admin.Controllers
             }
 
             base.OnActionExecuting(filterContext);
+        }
+
+        /// <summary>Trang có layout Admin: đếm yêu cầu chờ xử lý để menu hiện chấm đỏ.</summary>
+        protected override void OnResultExecuting(ResultExecutingContext filterContext)
+        {
+            if (filterContext.Result is ViewResult && !filterContext.IsChildAction && ViewBag.AdminPending == null)
+            {
+                using (var db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1())
+                {
+                    ViewBag.AdminPending = new AdminPendingService(db).Dem();
+                }
+            }
+            base.OnResultExecuting(filterContext);
         }
     }
 }

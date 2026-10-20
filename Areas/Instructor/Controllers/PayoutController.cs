@@ -4,11 +4,36 @@ using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Areas.Instructor.Models;
 using ECOLearning.Models;
+using ECOLearning.Services;
 
 namespace ECOLearning.Areas.Instructor.Controllers
 {
     public class PayoutController : InstructorBaseController
     {
+        /// <summary>Giáo viên nhận 80% doanh thu thực thu; nền tảng giữ 20%. Phí 20% đã trừ ở đây nên phiếu chi không trừ thêm.</summary>
+        public const decimal TyLeGiaoVien = 0.8m;
+
+        /// <summary>
+        /// Doanh thu thực thu của các khóa thuộc giáo viên: chỉ đơn đã thanh toán (đơn chờ / thất bại / hết hạn không tính),
+        /// mỗi dòng đơn tính theo số tiền học viên thực trả sau mã giảm giá (RevenueService.TyLeThucThuTheoDon phân bổ tiền giảm về từng khóa).
+        /// </summary>
+        private decimal DoanhThuThucThu(int teacherId)
+        {
+            var courseIds = db.KhoaHoc.Where(k => k.maGiaoVien == teacherId).Select(k => k.maKhoaHoc).ToList();
+            var paid = db.ChiTietDonHang
+                .Where(ct => courseIds.Contains(ct.maKhoaHoc) && ct.DonHang != null && RevenueService.TrangThaiThanhCong.Contains(ct.DonHang.trangThai))
+                .Select(ct => new { ct.maDonHang, ct.donGia })
+                .ToList();
+            var tyLe = new RevenueService(db).TyLeThucThuTheoDon();
+            decimal tong = 0;
+            foreach (var d in paid)
+            {
+                decimal r;
+                tong += tyLe.TryGetValue(d.maDonHang, out r) ? Math.Round(d.donGia * r, 0) : d.donGia;
+            }
+            return tong;
+        }
+
         // GET: Instructor/Payout (UC13: Nhận thanh toán khóa học)
         public ActionResult Index()
         {
@@ -21,14 +46,10 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 .Select(k => k.maKhoaHoc)
                 .ToList();
 
-            var paidDetails = db.ChiTietDonHang
-                .Where(ct => courseIds.Contains(ct.maKhoaHoc) && ct.DonHang != null && (ct.DonHang.trangThai == "Đã thanh toán" || ct.DonHang.trangThai == "Hoàn tất" || ct.DonHang.trangThai == "Success"))
-                .ToList();
-
-            decimal grossRevenue = paidDetails.Sum(ct => (decimal?)ct.donGia) ?? 0;
-
-            // Tỷ lệ chia sẻ doanh thu cho giảng viên là 80% (sàn thu phí 20%)
-            decimal teacherShare = Math.Round(grossRevenue * 0.8m, 0);
+            decimal grossRevenue = DoanhThuThucThu(teacherId);
+            decimal teacherShare = Math.Round(grossRevenue * TyLeGiaoVien, 0);
+            model.TongDoanhThuThucThu = grossRevenue;
+            model.PhanGiaoVien = teacherShare;
 
             // 2. Lấy danh sách yêu cầu thanh toán từ NhanThanhToan
             var requests = db.NhanThanhToan
@@ -43,8 +64,22 @@ namespace ECOLearning.Areas.Instructor.Controllers
             decimal available = teacherShare - totalRequested;
             model.AvailableBalance = available > 0 ? available : 0;
 
+            // Thông tin Admin xử lý (cột của migration 014, ngoài mô hình EF)
+            var xuLy = new Dictionary<string, XuLyPhieuChi>();
+            try
+            {
+                xuLy = db.Database.SqlQuery<XuLyPhieuChi>(@"SELECT maPhieuChi AS MaPhieuChi, ngayXuLy AS NgayXuLy,
+                        maGiaoDichChi AS MaGiaoDichChi, lyDoTuChoi AS LyDoTuChoi FROM dbo.NhanThanhToan WHERE maGiaoVien = @id",
+                        new System.Data.SqlClient.SqlParameter("@id", teacherId))
+                    .ToDictionary(x => x.MaPhieuChi);
+            }
+            catch (System.Data.SqlClient.SqlException) { /* chưa chạy migration 014 */ }
+
             model.PayoutRequests = requests.Select(p => new PayoutItem
             {
+                NgayXuLy = xuLy.ContainsKey(p.maPhieuChi) ? xuLy[p.maPhieuChi].NgayXuLy : null,
+                MaGiaoDichChi = xuLy.ContainsKey(p.maPhieuChi) ? xuLy[p.maPhieuChi].MaGiaoDichChi : null,
+                LyDoTuChoi = xuLy.ContainsKey(p.maPhieuChi) ? xuLy[p.maPhieuChi].LyDoTuChoi : null,
                 MaPhieuChi = p.maPhieuChi,
                 SoTien = p.soTienYeuCau,
                 ThucNhan = p.thucNhan,
@@ -131,10 +166,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
             using (var transaction = db.Database.BeginTransaction(System.Data.IsolationLevel.Serializable))
             {
             // Tính số dư khả dụng
-            var courseIds = db.KhoaHoc.Where(k => k.maGiaoVien == teacherId).Select(k => k.maKhoaHoc).ToList();
-            var paidDetails = db.ChiTietDonHang.Where(ct => courseIds.Contains(ct.maKhoaHoc) && ct.DonHang != null && (ct.DonHang.trangThai == "Đã thanh toán" || ct.DonHang.trangThai == "Hoàn tất" || ct.DonHang.trangThai == "Success")).ToList();
-            decimal grossRevenue = paidDetails.Sum(ct => (decimal?)ct.donGia) ?? 0;
-            decimal teacherShare = Math.Round(grossRevenue * 0.8m, 0);
+            decimal teacherShare = Math.Round(DoanhThuThucThu(teacherId) * TyLeGiaoVien, 0);
 
             var requests = db.NhanThanhToan.Where(p => p.maGiaoVien == teacherId && p.trangThai != "Từ chối").ToList();
             decimal totalRequested = requests.Sum(p => p.soTienYeuCau);
@@ -154,7 +186,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 maPhieuChi = phieuId,
                 maGiaoVien = teacherId,
                 soTienYeuCau = soTien,
-                tiLeChietKhau = 0.2, // 20% phí nền tảng
+                // Phí nền tảng 20% đã trừ khi tính số dư (TyLeGiaoVien), nên phiếu chi không trừ thêm:
+                // trigger trg_NhanThanhToan_TinhThucNhan tính thucNhan = soTien x (1 - tiLeChietKhau / 100)
+                tiLeChietKhau = 0,
                 thucNhan = Math.Round(soTien, 0),
                 ngayYeuCau = DateTime.Now,
                 nganHang = nganHang.Trim(),
@@ -170,6 +204,14 @@ namespace ECOLearning.Areas.Instructor.Controllers
             TempData["SuccessMessage"] = string.Format("Gửi yêu cầu nhận thanh toán {0:N0} đ thành công! Mã phiếu chi: {1}.", soTien, phieuId);
             return RedirectToAction("Index");
             }
+        }
+
+        private class XuLyPhieuChi
+        {
+            public string MaPhieuChi { get; set; }
+            public DateTime? NgayXuLy { get; set; }
+            public string MaGiaoDichChi { get; set; }
+            public string LyDoTuChoi { get; set; }
         }
     }
 }

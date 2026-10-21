@@ -4,6 +4,7 @@
     var khoaHoc = ViewBag.KhoaHoc as List<ECOLearning.ViewModels.LuaChonKhoaHoc> ?? new List<ECOLearning.ViewModels.LuaChonKhoaHoc>();
     var luot = ViewBag.LuotSuDung as List<ECOLearning.ViewModels.LuotSuDungUuDai> ?? new List<ECOLearning.ViewModels.LuotSuDungUuDai>();
     string tt = Model.TrangThaiHienThi(DateTime.Now);
+    string lyDoAdmin = ViewBag.LyDoAdminTamDung as string;
 }
 
 <div class="mk-page-head">
@@ -26,7 +27,11 @@
             @using (Html.BeginForm("ChangeStatus", "Promotion", new { id = Model.MaKhuyenMai }, FormMethod.Post))
             {
                 @Html.AntiForgeryToken()
-                if (Model.TrangThaiLuu == "TamNgung")
+                if (lyDoAdmin != null)
+                {
+                    <button type="button" class="btn btn-secondary" disabled title="Chương trình đang bị Quản trị viên tạm dừng">Kích hoạt lại</button>
+                }
+                else if (Model.TrangThaiLuu == "TamNgung")
                 {
                     <button type="submit" name="hanhDong" value="resume" class="btn btn-secondary">Kích hoạt lại</button>
                 }
@@ -45,6 +50,18 @@
 </div>
 
 @Html.Partial("_Flash")
+
+@if (lyDoAdmin != null)
+{
+    <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 18px; margin-bottom: 18px; border-radius: 14px; background: #FEF2F2; border: 1px solid #FECACA; color: #7F1D1D;">
+        <i class="bi bi-shield-exclamation" style="font-size: 22px; line-height: 1;"></i>
+        <div>
+            <strong>Quản trị viên đã tạm dừng chương trình này.</strong>
+            <div style="margin-top: 2px;">Lý do: @lyDoAdmin</div>
+            <div style="font-size: 13px; margin-top: 4px;">Mã không áp dụng được cho học viên. Hãy điều chỉnh chương trình rồi liên hệ Quản trị viên để được cho chạy lại.</div>
+        </div>
+    </div>
+}
 
 <div class="mk-stats">
     <div class="card mk-stat">

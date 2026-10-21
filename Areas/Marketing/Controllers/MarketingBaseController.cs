@@ -14,10 +14,25 @@ namespace ECOLearning.Areas.Marketing.Controllers
             var role = Session["Role"]?.ToString();
             var userId = Session["UserId"];
 
-            // Cho phép Marketing và Admin kiểm thử
-            bool isAllowed = userId != null && !string.IsNullOrEmpty(role) &&
-                (role.Equals("Marketing", StringComparison.OrdinalIgnoreCase) ||
-                 role.Equals("Admin", StringComparison.OrdinalIgnoreCase));
+            // Chỉ nhân viên Marketing (phân tách vai trò): Admin không tạo / sửa khuyến mãi, chiến dịch, giá bán mà chỉ giám sát
+            // và tạm dừng ở Admin / Giám sát Marketing (Areas/Admin/Controllers/MarketingController.cs)
+            bool isAllowed = userId != null && string.Equals(role, "Marketing", StringComparison.OrdinalIgnoreCase);
+
+            if (!isAllowed && userId != null && string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                const string thongBao = "Khu Marketing chỉ dành cho nhân viên Marketing. Quản trị viên theo dõi và tạm dừng khuyến mãi tại trang Giám sát Marketing.";
+                var urlGiamSat = new UrlHelper(filterContext.RequestContext).Action("Index", "Marketing", new { area = "Admin" });
+                if (filterContext.HttpContext.Request.IsAjaxRequest())
+                {
+                    filterContext.Result = new JsonResult { Data = new { success = false, message = thongBao, redirectUrl = urlGiamSat }, JsonRequestBehavior = JsonRequestBehavior.AllowGet };
+                }
+                else
+                {
+                    TempData["InfoMessage"] = thongBao;
+                    filterContext.Result = new RedirectResult(urlGiamSat);
+                }
+                return;
+            }
 
             if (!isAllowed)
             {

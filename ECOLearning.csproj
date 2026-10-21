@@ -138,6 +138,21 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\BundleConfig.cs" />
+    <Compile Include="Services\StaffViewMode.cs" />
+    <Compile Include="App_Start\StaffReadOnlyAttribute.cs" />
+    <Compile Include="Services\AdminTeacherService.cs" />
+    <Compile Include="Services\AdminMarketingService.cs" />
+    <Compile Include="Areas\Admin\Controllers\TeacherController.cs" />
+    <Compile Include="Areas\Admin\Controllers\MarketingController.cs" />
+    <Compile Include="App_Start\AccountStatusFilter.cs" />
+    <Compile Include="Services\AccountAdminService.cs" />
+    <Compile Include="Services\PhienDocQuyenService.cs" />
+    <Compile Include="Services\AppLog.cs" />
+    <Compile Include="Services\SessionNguoiDung.cs" />
+    <Compile Include="App_Start\GhiLogLoiAttribute.cs" />
+    <Compile Include="Services\AdminUserQueryService.cs" />
+    <Compile Include="Areas\Admin\Controllers\UserController.cs" />
+    <Compile Include="Areas\Admin\Models\AccountActionsModel.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="Controllers\AdminController.cs" />
@@ -406,6 +421,23 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\bootstrap-grid.css" />
+    <Content Include="assets\css\staff-readonly.css" />
+    <Content Include="assets\js\staff-readonly.js" />
+    <Content Include="Areas\Admin\Views\Teacher\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\Teacher\Details.cshtml" />
+    <Content Include="Areas\Admin\Views\Marketing\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\Marketing\Details.cshtml" />
+    <Content Include="Areas\Admin\Views\Shared\_PromotionAdminActions.cshtml" />
+    <Content Include="Areas\Admin\Views\Shared\_PromotionAdminForms.cshtml" />
+    <Content Include="Areas\Admin\Views\User\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\User\Details.cshtml" />
+    <Content Include="Areas\Admin\Views\Shared\_AccountActions.cshtml" />
+    <Content Include="Areas\Admin\Views\Shared\_AdminFlash.cshtml" />
+    <Content Include="Areas\Admin\Views\Shared\_ChuaKhoiTao016.cshtml" />
+    <Content Include="Areas\Admin\Views\Shared\_NhatKyQuanTri.cshtml" />
+    <Content Include="assets\css\admin-users.css" />
+    <Content Include="Database\Migrations\016_QuanTri_NguoiDung.sql" />
+    <Content Include="Database\Migrations\017_PhienDangNhap_DocQuyen.sql" />
     <Content Include="Content\bootstrap-grid.min.css" />
     <Content Include="Content\bootstrap-grid.rtl.css" />
     <Content Include="Content\bootstrap-grid.rtl.min.css" />
@@ -580,6 +612,7 @@
     <Content Include="Areas\Admin\Views\PayoutRequest\Index.cshtml" />
     <Content Include="Views\Shared\_BankPicker.cshtml" />
     <Content Include="Views\Shared\_CouponCollectModal.cshtml" />
+    <Content Include="Views\Shared\_PhienDangNhap.cshtml" />
     <Content Include="Views\Coupon\Index.cshtml" />
     <Content Include="Views\Coupon\Details.cshtml" />
     <Content Include="Views\Coupon\ChuaKhoiTao.cshtml" />

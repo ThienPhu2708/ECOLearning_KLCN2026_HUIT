@@ -77,7 +77,13 @@ namespace ECOLearning.Controllers.Api
             }
             // Không nói rõ sai email hay sai mật khẩu (chống dò tài khoản)
             if (!dung) return Fail(401, "WRONG_CREDENTIALS", "Tài khoản hoặc mật khẩu không chính xác.");
-            if (user.trangThai == false) return Fail(403, "ACCOUNT_LOCKED", "Tài khoản của bạn đã bị khóa hoặc chưa được kích hoạt.");
+            if (user.trangThai == false)
+            {
+                // Hết thời hạn khóa thì tự mở; còn khóa thì báo lý do và thời hạn
+                AccountAdminService.MoKhoaHetHanKhiDangNhap(Db, user.maNguoiDung);
+                Db.Entry(user).Reload();
+                if (user.trangThai == false) return Fail(403, "ACCOUNT_LOCKED", AccountAdminService.CauBaoKhoa(Db, user.maNguoiDung));
+            }
             if (!VaiTroDuocDung.Contains(user.vaiTro))
                 return Fail(403, "ROLE_NOT_ALLOWED", "Ứng dụng dành cho học viên. Tài khoản quản trị vui lòng đăng nhập trên website.");
 
@@ -212,6 +218,7 @@ namespace ECOLearning.Controllers.Api
 
             user.matKhau = PasswordHasher.HashPassword(req.NewPassword);
             Db.SaveChanges();
+            AccountAdminService.DaDoiMatKhau(Db, user.maNguoiDung);
             // Đặt lại mật khẩu: đăng xuất mọi thiết bị đang dùng token cũ
             new ApiTokenService(Db).ThuHoiTatCa(user.maNguoiDung);
             return Ok(null, "Thiết lập mật khẩu mới thành công! Vui lòng đăng nhập lại.");

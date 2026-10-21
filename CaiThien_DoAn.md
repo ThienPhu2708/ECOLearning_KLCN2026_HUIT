@@ -995,7 +995,73 @@ bộ Postman: `Tuan10\ECOLearning_API.postman_collection.json`; app Flutter: rep
 
 ---
 
-## 26. Việc còn lại / cần quyết định
+## 26. Admin: Quản lý người dùng, Quản lý giáo viên, Giám sát Marketing (mới, **chưa commit**)
+
+Chạy `Database/Migrations/016_QuanTri_NguoiDung.sql` (trên hosting: xóa dòng `USE`, chọn CSDL hosting). Chưa chạy thì 3 trang mới
+báo "Chưa khởi tạo dữ liệu", phần còn lại của web vẫn chạy. Menu Admin thêm 3 mục ngay dưới Dashboard.
+
+### 26.1. Quản lý người dùng (`/Admin/User`)
+- **Danh sách**: 5 ô thống kê (bấm để lọc), tìm theo họ tên / email / SĐT / mã, lọc vai trò và trạng thái, 20 dòng mỗi trang.
+- **Chi tiết** (học viên, nhân viên; giáo viên chuyển sang 26.2): thông tin, khóa học đã đăng ký + % tiến độ, đơn hàng, đánh giá,
+  số chứng chỉ, nhật ký quản trị.
+- **Khóa tài khoản** 7 ngày / 30 ngày / vĩnh viễn, bắt buộc lý do (gửi email cho người bị khóa). Người đang đăng nhập bị **đăng xuất
+  ngay** ở lần bấm kế tiếp (`App_Start/AccountStatusFilter.cs`, bộ lọc toàn cục; trước đây phiên cũ vẫn dùng được đến khi hết hạn),
+  token app bị thu hồi. Đăng nhập lại (web, Google, API) báo lý do và hạn khóa (chỉ khi nhập đúng mật khẩu, tránh lộ thông tin).
+  Hết hạn thì **tự mở** khi người đó đăng nhập hoặc khi Admin mở danh sách (nhật ký ghi "Hệ thống").
+- **Quy tắc**: không xóa tài khoản (còn đơn hàng, doanh thu, chứng chỉ); không tự khóa mình; không khóa Admin cuối cùng.
+- **Đặt lại mật khẩu**: hệ thống sinh mật khẩu tạm 12 ký tự và **chỉ gửi qua email** (Admin không thấy), mật khẩu cũ hết hiệu lực,
+  người dùng **bắt buộc đổi mật khẩu** ở lần đăng nhập kế tiếp (mọi trang chuyển về Hồ sơ > Đổi mật khẩu). Gửi email lỗi thì hoàn tác.
+- **Tạo tài khoản nhân viên** Marketing / Quản trị viên (trước đây chỉ tạo được bằng SQL): cùng cơ chế mật khẩu tạm.
+- **Cảnh cáo**: gửi email + ghi nhật ký, không khóa.
+- Mọi thao tác ghi bảng `NhatKyQuanTri`. File: `Services/AccountAdminService.cs`, `Services/AdminUserQueryService.cs`,
+  `Areas/Admin/Controllers/UserController.cs`, `Areas/Admin/Views/User/*`, partial `_AccountActions`, `_NhatKyQuanTri`, `_AdminFlash`.
+
+### 26.2. Quản lý giáo viên (`/Admin/Teacher`)
+- Tách khỏi "Duyệt hồ sơ Giáo viên" (đơn đăng ký). Danh sách: số khóa đang bán / chờ duyệt, học viên, điểm đánh giá, **doanh thu thực thu**
+  (cùng cách tính với trang Rút tiền của giáo viên), tiền chờ chi, số vi phạm chờ xử lý. Mặc định xếp người cần chú ý lên đầu.
+- **Hồ sơ**: tab Khóa học, Hồ sơ đăng ký (chuyên môn, ngân hàng, chứng chỉ), Chi trả, Đánh giá, Vi phạm (link sang trang xử lý), Nhật ký.
+  Trang xử lý vi phạm có link ngược "Hồ sơ giáo viên".
+- **Khóa giáo viên**: khóa đang bán chuyển trạng thái **"Tạm ẩn"** (`CourseStatus.TamAn`, trạng thái cũ lưu ở `KhoaHocTamAn`) nên mọi
+  trang bán hàng / tìm kiếm / gợi ý tự loại ra mà không phải sửa từng truy vấn; **học viên đã mua vẫn học** (trang học chỉ chặn
+  "Khóa vĩnh viễn"). Phiếu chi bị **tạm giữ** (Chi trả giáo viên hiện nhãn "Tạm giữ", nút Duyệt chi bị chặn ở server); Kiểm duyệt khóa học
+  không xuất bản được khóa mới của giáo viên đang bị khóa. Mở khóa thì khôi phục trạng thái cũ (chỉ khóa còn "Tạm ẩn").
+- File: `Services/AdminTeacherService.cs`, `Areas/Admin/Controllers/TeacherController.cs`, `Areas/Admin/Views/Teacher/*`;
+  sửa `PayoutRequestController`, `CourseApprovalController.Approve`, `InstructorBaseController` (bị khóa thì đăng xuất hẳn).
+
+### 26.3. Giám sát Marketing (`/Admin/Marketing`)
+- Admin **không tạo khuyến mãi thay Marketing**, chỉ giám sát: chương trình đang chạy, hết hạn trong 7 ngày, tiền đã giảm so với doanh thu
+  sau giảm, chiến dịch đang mở, bảng nhân viên Marketing (số chương trình / chiến dịch đã tạo, số bị tạm dừng).
+- **Cảnh báo tự động**: giảm từ 50% (ghi rõ nếu không giới hạn số tiền), tiền đã giảm vượt doanh thu sau giảm, giảm 100%.
+- **Tạm dừng** kèm lý do: mã ngừng áp dụng ngay, nhân viên tạo chương trình nhận email; phía Marketing hiện khung đỏ có lý do, nút
+  "Kích hoạt lại" bị vô hiệu và **server cũng chặn** (`PromotionService.DoiTrangThai`). Chỉ Admin "Cho chạy lại" (nếu chưa hết hạn).
+- **Admin không vào khu Marketing** (trước đây `MarketingBaseController` cho Admin toàn quyền "để kiểm thử": tạo / sửa khuyến mãi,
+  đặt giá bán, chiến dịch). Nay chỉ nhân viên Marketing vào được; Admin mở `/Marketing/...` được chuyển về Giám sát Marketing kèm thông báo,
+  yêu cầu ghi gửi thẳng cũng bị chặn. Bù lại, trang chi tiết bên Admin có thêm khóa học áp dụng và lịch sử dùng mã. Kiểm thử 26/26.
+- File: `Services/AdminMarketingService.cs`, `Areas/Admin/Controllers/MarketingController.cs`, `Areas/Admin/Views/Marketing/*`,
+  partial `_PromotionAdminActions`, `_PromotionAdminForms`; sửa `Areas/Marketing/Controllers/PromotionController.cs`, view Promotion Index / Details.
+
+### 26.4. Chế độ chỉ xem của Admin / Marketing ở trang người học
+- Mục tiêu (phân tách vai trò): tài khoản vận hành thấy **đúng giao diện học viên** để kiểm tra nội dung, giá, mã giảm giá, nhưng
+  **không tạo dữ liệu** làm sai doanh thu, thống kê khuyến mãi, lượt yêu thích và dữ liệu gợi ý. Giáo viên không thuộc chế độ này.
+- Giao diện: dải vàng dưới header "Bạn đang xem với vai trò … chế độ chỉ xem" + nút về trang quản trị; mọi nút tương tác (Mua ngay,
+  Thêm vào giỏ, Học miễn phí, combo mua cùng, thả tim ở mọi nơi, Lưu mã, Hữu ích / Không hữu ích, đánh giá, báo cáo vi phạm, giỏ hàng
+  và "Khóa học của tôi" trên header) **giữ nguyên vị trí nhưng xám**, con trỏ "không cho phép", rê chuột hiện chú thích, bấm hiện thông báo.
+  `assets/js/staff-readonly.js` đánh dấu theo danh sách bộ chọn (cả nút tải thêm bằng AJAX) và chặn bấm ở pha capture nên xử lý gốc không chạy.
+- Server: `[StaffReadOnly]` (App_Start/StaffReadOnlyAttribute.cs) trên 21 action (giỏ hàng, thanh toán, mã giảm giá, ghi danh miễn phí,
+  yêu thích, sở thích, đánh giá, hữu ích, báo cáo vi phạm, tiến độ, quiz) trả `{ success: false, staffReadOnly: true }`; trang cá nhân
+  (giỏ hàng, ví mã, khóa học của tôi, yêu thích, lịch sử thanh toán) chuyển về Trang chủ. Tìm kiếm của Admin / Marketing không ghi thống kê từ khóa.
+- Kiểm thử: 85/85 (Admin, Marketing gọi thẳng 16 action đều bị chặn, dữ liệu trong mọi bảng liên quan không đổi; học viên, giáo viên vẫn
+  thêm giỏ / thả tim / tìm kiếm bình thường); kiểm tra JS trong Edge: nút bị khóa không chạy xử lý gốc, kể cả nút thêm sau khi tải trang.
+
+### 26.5. Kiểm thử
+Gọi thật vào web (IIS Express), tài khoản / khóa học / đơn hàng / khuyến mãi tạm, **đã xóa sạch** sau khi chạy; email test gửi về chính
+hộp thư hệ thống. Mục 26.1: 51/51 đạt; 26.2 + 26.3: 53/53 đạt (gồm gửi thẳng yêu cầu bỏ qua giao diện: thiếu AntiForgeryToken, Marketing
+gọi "resume" khi Admin đã tạm dừng, duyệt chi phiếu tạm giữ, Marketing vào trang Admin); hồi quy 47 trang cũ của khách / học viên /
+giáo viên / Admin / Marketing / API đều 200.
+
+---
+
+## 27. Việc còn lại / cần quyết định
 
 | Việc | Ghi chú |
 | :--- | :--- |
@@ -1005,7 +1071,8 @@ bộ Postman: `Tuan10\ECOLearning_API.postman_collection.json`; app Flutter: rep
 | Mục "Khóa học tương tự" (theo mọi tương tác) ở trang chi tiết | Trang chi tiết đã có 2 mục dựa trên dữ liệu mua (mục 16). `sp_GoiY_KhoaHocTuongTu` (dựa trên `course_similarity`) vẫn chưa gắn; Hình 4.13 trong báo cáo cần vẽ lại theo 2 mục mới |
 | Link danh mục ở footer | `_Layout.cshtml` vẫn dùng mã giả (`category = "CNTT"`, `"Design"`, `"Business"`), nên đổi sang trang danh mục |
 | `ReviewController.SubmitReview` | Chỉ kiểm tra đăng nhập, **chưa kiểm tra đã đăng ký khóa và tiến độ**. Giao diện học yêu cầu 100% bài, hàm `fn_DuDieuKienDanhGia` (25%) chưa được gọi, báo cáo ghi 70%. Cần chốt một ngưỡng và kiểm tra phía server |
-| Quản lý người dùng của Admin | Báo cáo có Hình 4.37–4.38 nhưng code chưa có. Làm thêm hoặc bỏ hình |
+| Quản lý người dùng của Admin | **Đã làm** (mục 26). Hình 4.37–4.38 trong báo cáo cần chụp lại theo giao diện mới; tài khoản tạo qua Google trước 21/10 còn mật khẩu chung `GoogleOAuth2026` trong CSDL, nên "Đặt lại mật khẩu" hoặc đổi sang mật khẩu ngẫu nhiên |
+| Chạy migration 016 trên hosting | Xóa dòng `USE` rồi chạy trên CSDL hosting trước khi Publish bản có mục 26 |
 | Bảo mật cấu hình | `Web.config` (được đưa lên Git) đang chứa `SmtpPassword` (mật khẩu ứng dụng Gmail). Nên chuyển sang `Secrets.config` và thu hồi / tạo lại mật khẩu ứng dụng |
 | Thanh toán thật | Đã tích hợp **VNPay Sandbox** (mục 23.1) và cổng thử nghiệm dự phòng. Khi có pháp nhân: ký hợp đồng VNPay, đổi `VNPay:TmnCode`, `VNPay:HashSecret`, `VNPay:PaymentUrl`, `VNPay:ApiUrl` sang môi trường thật trong `Secrets.config`, cấu hình IPN về tên miền HTTPS công khai. Chưa có hoàn tiền; trang Dashboard / Báo cáo của giáo viên vẫn tính doanh thu theo giá bán trước mã giảm giá (trang Nhận thanh toán đã tính theo thực thu) |
 | Hoàn tiền / hủy đơn | Đặc tả có nhắc nhưng CSDL chưa có trạng thái hoàn tiền, nên báo cáo chỉ tính đơn "Đã thanh toán". Lượt coupon của đơn bị hủy chưa được trả lại |

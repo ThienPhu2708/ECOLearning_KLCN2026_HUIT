@@ -37,6 +37,7 @@ namespace ECOLearning.Controllers
         }
 
         // GET: /ma-giam-gia-cua-toi?tab=codung|dadung|hethan|thuthap
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public ActionResult Index(string tab)
         {
             if (UserId <= 0) return RedirectToAction("Login", "Account", new { returnUrl = Request.RawUrl });
@@ -66,6 +67,7 @@ namespace ECOLearning.Controllers
         // POST: Coupon/Collect — lưu mã vào ví (đã xác nhận ở hộp thoại; không hoàn tác được)
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public JsonResult Collect(string code)
         {
             if (UserId <= 0)

@@ -1,0 +1,101 @@
+@using ECOLearning.Services
+@*
+    Một phiên cho mỗi tài khoản Admin / Marketing (PhienDocQuyenService, migration 017).
+    - Đang đăng nhập Admin / Marketing: hỏi Account/KiemTraPhien mỗi 15 giây (và ngay khi quay lại tab); tài khoản đã đăng nhập
+      ở nơi khác thì hiện pop-up trên trang đang mở rồi chuyển về Đăng nhập.
+    - Trang Đăng nhập sau khi bị đá ra (ViewBag.PhienBiThay): pop-up hiện sẵn.
+    Đặt sau jQuery trong layout (bắt cả JSON phienBiThay của các lệnh AJAX khác).
+*@
+@{
+    var biThay = ViewBag.PhienBiThay as PhienDangNhapMoi;
+    bool hoiDinhKy = Session["UserId"] != null && PhienDocQuyenService.ApDung(Session["Role"] as string);
+}
+@if (biThay != null || hoiDinhKy)
+{
+    <div class="modal-overlay @(biThay != null ? "active" : "")" id="phien-bi-thay-modal" style="z-index: 10000;" role="alertdialog" aria-modal="true" aria-labelledby="phien-bi-thay-title">
+        <div class="modal-container" style="max-width: 440px; text-align: center; padding: 32px 24px; border-radius: 20px; background: #FFFFFF;">
+            <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(245, 158, 11, 0.12); color: #D97706; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </div>
+            <h3 class="h3" id="phien-bi-thay-title" style="margin-bottom: 8px;">Phiên đăng nhập đã kết thúc</h3>
+            <p class="body-2" style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px; line-height: 1.5;">
+                Tài khoản của bạn vừa được đăng nhập ở nơi khác nên phiên làm việc trên trình duyệt này đã tự đăng xuất.
+            </p>
+            <div style="text-align: left; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-size: 14px; line-height: 1.8;">
+                <div><span style="color: #64748B;">Thời gian:</span> <strong data-phien="thoiGian">@(biThay?.ThoiGian ?? "Không rõ")</strong></div>
+                <div><span style="color: #64748B;">Trình duyệt:</span> <strong data-phien="trinhDuyet">@(biThay?.TrinhDuyet ?? "Không rõ")</strong></div>
+                <div><span style="color: #64748B;">Địa chỉ IP:</span> <strong data-phien="ip">@(biThay?.Ip ?? "Không rõ")</strong></div>
+            </div>
+            <p class="body-2" style="color: #B45309; margin-bottom: 24px; font-size: 13px; line-height: 1.5;">
+                Nếu không phải bạn, hãy đăng nhập lại và đổi mật khẩu ngay.
+            </p>
+            <button type="button" class="btn btn-primary" id="phien-bi-thay-ok" style="width: 100%;">@(biThay != null ? "Đã hiểu" : "Đăng nhập lại")</button>
+        </div>
+    </div>
+}
+@if (biThay != null)
+{
+    <script>
+        (function () {
+            var modal = document.getElementById('phien-bi-thay-modal');
+            var nut = document.getElementById('phien-bi-thay-ok');
+            nut.addEventListener('click', function () { modal.classList.remove('active'); });
+            nut.focus();
+        })();
+    </script>
+}
+else if (hoiDinhKy)
+{
+    <script>
+        (function () {
+            var url = '@Url.Action("KiemTraPhien", "Account", new { area = "" })';
+            // da-bao: trang Đăng nhập không hiện lại pop-up này lần nữa
+            var urlDangNhap = '@Url.Action("Login", "Account", new { area = "", phien = "da-bao" })';
+            var modal = document.getElementById('phien-bi-thay-modal');
+            var dangHoi = false, daDung = false;
+
+            function hien(d) {
+                if (daDung) return;
+                daDung = true;
+                clearInterval(timer);
+                ['thoiGian', 'trinhDuyet', 'ip'].forEach(function (k) {
+                    var el = modal.querySelector('[data-phien="' + k + '"]');
+                    if (el) el.textContent = d[k] || 'Không rõ';
+                });
+                var nut = document.getElementById('phien-bi-thay-ok');
+                nut.addEventListener('click', function () { window.location.href = urlDangNhap; });
+                modal.classList.add('active');
+                nut.focus();
+            }
+
+            function hoi() {
+                // Tab ẩn thì không hỏi (không giữ phiên sống vô hạn); quay lại tab thì hỏi ngay
+                if (dangHoi || daDung || document.hidden) return;
+                dangHoi = true;
+                fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, credentials: 'same-origin', cache: 'no-store' })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (d) {
+                        if (d && d.phienBiThay) hien(d);
+                        else if (d && d.success === false) { daDung = true; clearInterval(timer); }   // phiên đã hết hạn / đăng xuất
+                    })
+                    .catch(function () { })
+                    .then(function () { dangHoi = false; });
+            }
+
+            var timer = setInterval(hoi, 15000);
+            document.addEventListener('visibilitychange', function () { if (!document.hidden) hoi(); });
+            window.addEventListener('focus', hoi);
+            // Lệnh AJAX khác của trang (duyệt, khóa, lưu...) cũng có thể là lệnh phát hiện phiên bị thay
+            if (window.jQuery) {
+                jQuery(document).ajaxComplete(function (e, xhr) {
+                    var d = xhr && xhr.responseJSON;
+                    if (d && d.phienBiThay) hien(d);
+                });
+            }
+        })();
+    </script>
+}

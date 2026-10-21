@@ -1,0 +1,25 @@
+@model List<ECOLearning.Services.NhatKyQuanTriItem>
+@* Nhật ký thao tác của Admin trên một đối tượng (người dùng / chương trình khuyến mãi), mới nhất trước *@
+@if (Model == null || Model.Count == 0)
+{
+    <div class="au-empty">Chưa có thao tác quản trị nào.</div>
+}
+else
+{
+    <ul class="au-log">
+        @foreach (var n in Model)
+        {
+            <li>
+                <time>@n.NgayTao.ToString("HH:mm dd/MM/yyyy")</time>
+                <div>
+                    <span class="badge @n.MauBadge">@n.TenHanhDong</span>
+                    <span class="au-sub">bởi @n.TenAdmin</span>
+                    @if (!string.IsNullOrEmpty(n.LyDo))
+                    {
+                        <p>@n.LyDo</p>
+                    }
+                </div>
+            </li>
+        }
+    </ul>
+}

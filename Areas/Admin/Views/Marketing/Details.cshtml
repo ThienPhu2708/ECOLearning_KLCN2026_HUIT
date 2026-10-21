@@ -1,0 +1,120 @@
+@using ECOLearning.Services
+@model KhuyenMaiAdminItem
+@*
+    Admin / Giám sát Marketing / Chi tiết chương trình: cấu hình ưu đãi, hiệu quả, cảnh báo, nhật ký Admin, tạm dừng / cho chạy lại.
+*@
+@{
+    var p = Model.ChuongTrinh;
+    ViewBag.Title = p.TenKhuyenMai + " | Giám sát Marketing";
+    var nhatKy = ViewBag.NhatKy as List<NhatKyQuanTriItem> ?? new List<NhatKyQuanTriItem>();
+    var khoaHoc = ViewBag.KhoaHoc as List<ECOLearning.ViewModels.LuaChonKhoaHoc> ?? new List<ECOLearning.ViewModels.LuaChonKhoaHoc>();
+    var luot = ViewBag.LuotSuDung as List<ECOLearning.ViewModels.LuotSuDungUuDai> ?? new List<ECOLearning.ViewModels.LuotSuDungUuDai>();
+}
+
+<link rel="stylesheet" href="~/assets/css/admin-users.css?v=1" />
+
+<div style="margin-bottom: 14px;">
+    <a href="@Url.Action("Index")" class="btn btn-outline btn-sm"><i class="bi bi-arrow-left"></i> Giám sát Marketing</a>
+</div>
+
+@Html.Partial("_AdminFlash")
+
+<div class="card au-profile">
+    <div>
+        <h2>@p.TenKhuyenMai</h2>
+        <div class="au-sub"><code>@p.MaCode</code> · Tạo bởi @(Model.TenNguoiTao ?? "không rõ") · @p.NgayTao.ToString("dd/MM/yyyy")</div>
+        <div class="au-badges">
+            @if (Model.AdminTamDung)
+            {
+                <span class="badge badge-danger"><i class="bi bi-shield-exclamation"></i> Admin tạm dừng</span>
+            }
+            else
+            {
+                <span class="badge @(Model.TrangThai == "Đang chạy" ? "badge-success" : Model.TrangThai == "Tạm ngưng" ? "badge-warning" : "badge-secondary")">@Model.TrangThai</span>
+            }
+            @if (p.LaThanThiet) { <span class="badge badge-warning">Học viên thân thiết</span> }
+            @if (!p.CongKhai) { <span class="badge badge-secondary">Mã kín</span> }
+        </div>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        @Html.Partial("_PromotionAdminActions", Model)
+    </div>
+</div>
+
+@if (Model.AdminTamDung)
+{
+    <div class="au-lock-box">
+        <strong><i class="bi bi-shield-exclamation"></i> Đang bị Admin tạm dừng@(Model.NgayAdminTamDung.HasValue ? " từ " + Model.NgayAdminTamDung.Value.ToString("HH:mm dd/MM/yyyy") : "")</strong>
+        <div style="margin-top: 4px;">Lý do: @Model.LyDoAdminTamDung</div>
+        <div class="au-sub" style="margin-top: 4px;">Mã không áp dụng được; nhân viên Marketing không tự kích hoạt lại được.</div>
+    </div>
+}
+@foreach (var c in Model.CanhBao)
+{
+    <div class="au-note" style="background: #FFFBEB; color: #92400E;"><i class="bi bi-exclamation-triangle-fill"></i> @c</div>
+}
+
+<div class="au-info-grid">
+    <div class="card au-info"><span>Ưu đãi</span><b style="color: #E11D48;">@p.MoTaUuDai</b>@if (p.DonHangToiThieu.HasValue) { <div class="au-sub">Đơn từ @p.DonHangToiThieu.Value.ToString("#,##0") đ</div> }</div>
+    <div class="card au-info"><span>Thời gian</span><b>@p.NgayBatDau.ToString("dd/MM/yyyy") – @p.NgayKetThuc.ToString("dd/MM/yyyy")</b></div>
+    <div class="card au-info"><span>Lượt dùng</span><b>@p.SoLuotDaDung@(p.GioiHanLuotDung.HasValue ? " / " + p.GioiHanLuotDung.Value : "")</b><div class="au-sub">Tối đa @p.GioiHanMoiHocVien lượt / học viên</div></div>
+    <div class="card au-info"><span>Đã giảm / Doanh thu sau giảm</span><b>@p.TongTienGiam.ToString("#,##0") đ</b><div class="au-sub">/ @p.DoanhThuSauGiam.ToString("#,##0") đ</div></div>
+    <div class="card au-info"><span>Phạm vi</span><b>@p.MoTaPhamVi</b></div>
+    <div class="card au-info"><span>Chiến dịch</span><b>@(p.TenChienDich ?? "Không thuộc chiến dịch")</b></div>
+    <div class="card au-info" style="grid-column: span 2;"><span>Điều kiện / Chính sách</span><div style="font-size: 14px; white-space: pre-line;">@(string.IsNullOrWhiteSpace(p.ChinhSach) ? p.DieuKienApDung : p.ChinhSach)</div></div>
+</div>
+
+@if (p.PhamVi == "KhoaHoc")
+{
+    <div class="card" style="padding: 18px 20px; margin-bottom: 20px;">
+        <h3 class="h3" style="margin-bottom: 8px;">Khóa học áp dụng (@khoaHoc.Count)</h3>
+        <div class="table-responsive">
+            <table class="table au-table">
+                <thead><tr><th>Khóa học</th><th>Danh mục</th><th>Giá bán</th></tr></thead>
+                <tbody>
+                    @if (khoaHoc.Count == 0)
+                    {
+                        <tr><td colspan="3" class="au-empty">Chưa gắn khóa học nào.</td></tr>
+                    }
+                    @foreach (var k in khoaHoc)
+                    {
+                        <tr><td class="au-wrap"><strong>@k.TenKhoaHoc</strong><div class="au-sub">@k.MaKhoaHoc</div></td><td>@k.TenDanhMuc</td><td>@k.GiaBan.ToString("#,##0") đ</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+<div class="card" style="padding: 18px 20px; margin-bottom: 20px;">
+    <h3 class="h3" style="margin-bottom: 8px;">Lịch sử sử dụng mã (@luot.Count)</h3>
+    <div class="table-responsive">
+        <table class="table au-table" data-paginate="10">
+            <thead><tr><th>Thời gian</th><th>Học viên</th><th>Mã đơn</th><th>Trước giảm</th><th>Đã giảm</th><th>Tổng đơn</th></tr></thead>
+            <tbody>
+                @if (luot.Count == 0)
+                {
+                    <tr><td colspan="6" class="au-empty">Chưa có học viên nào dùng mã (chỉ tính đơn đã thanh toán).</td></tr>
+                }
+                @foreach (var l in luot)
+                {
+                    <tr>
+                        <td>@l.NgaySuDung.ToString("HH:mm dd/MM/yyyy")</td>
+                        <td><strong>@l.HoTen</strong><div class="au-sub">@l.Email</div></td>
+                        <td><code>@l.MaDonHang</code></td>
+                        <td>@l.TienTruocGiam.ToString("#,##0") đ</td>
+                        <td style="color: #E11D48;">-@l.TienGiam.ToString("#,##0") đ</td>
+                        <td><strong>@l.TongDonHang.ToString("#,##0") đ</strong></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="padding: 18px 20px;">
+    <h3 class="h3" style="margin-bottom: 8px;">Nhật ký quản trị</h3>
+    @Html.Partial("_NhatKyQuanTri", nhatKy)
+</div>
+
+@Html.Partial("_PromotionAdminForms")

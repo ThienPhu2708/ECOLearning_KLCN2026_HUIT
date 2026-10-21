@@ -17,6 +17,7 @@ namespace ECOLearning.Controllers
 
         // GET: Cart (UC4: Giỏ hàng & Thanh toán)
         [HttpGet]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public ActionResult Index()
         {
             var cart = GetCartSession();
@@ -59,6 +60,7 @@ namespace ECOLearning.Controllers
 
         // POST: Cart/AddToCart (Thêm khóa học vào giỏ)
         [HttpPost]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public JsonResult AddToCart(string courseId)
         {
             var cart = GetCartSession();
@@ -79,6 +81,7 @@ namespace ECOLearning.Controllers
         // POST: Cart/AddManyToCart — nút "Thêm tất cả vào giỏ hàng" của mục "Thường xuyên được mua cùng nhau".
         // Kiểm tra từng khóa như AddToCart; khóa đã có trong giỏ tính là thành công (không thêm lần hai).
         [HttpPost]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public JsonResult AddManyToCart(string[] courseIds)
         {
             var ids = (courseIds ?? new string[0]).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().Take(10).ToList();
@@ -174,6 +177,7 @@ namespace ECOLearning.Controllers
 
         // POST: Cart/RemoveFromCart (Xóa khóa học khỏi giỏ)
         [HttpPost]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public JsonResult RemoveFromCart(string courseId)
         {
             var cart = GetCartSession();
@@ -222,6 +226,7 @@ namespace ECOLearning.Controllers
 
         // POST: Cart/ApplyCoupon — kiểm tra & tính giảm giá hoàn toàn ở server (PromotionService)
         [HttpPost]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public JsonResult ApplyCoupon(string couponCode)
         {
             if (string.IsNullOrWhiteSpace(couponCode))
@@ -253,6 +258,7 @@ namespace ECOLearning.Controllers
 
         // POST: Cart/Checkout (Xác nhận thanh toán đơn hàng & Lưu vào CSDL)
         [HttpPost]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public JsonResult Checkout(string paymentMethod, string couponCode)
         {
             var cart = GetCartSession();
@@ -515,6 +521,7 @@ namespace ECOLearning.Controllers
 
         // POST: Cart/RemoveCoupon — bỏ mã đang áp dụng (mã vẫn nằm trong ví, chưa tính lượt dùng)
         [HttpPost]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public JsonResult RemoveCoupon()
         {
             Session.Remove(SessionCoupon);

@@ -29,12 +29,14 @@ Thư mục: `Database/Migrations/`
 | 13 | `013_BoSung_KhoaHoc_DanhMuc.sql` | Dữ liệu demo: thêm khóa học để **mỗi danh mục có ít nhất 10 khóa đang bán** (mã `K13-...`, mỗi khóa 1 chương 1 bài xem thử, dùng chung video demo có trong repo). Chỉ thêm số khóa còn thiếu theo dữ liệu trên máy bạn. Chạy **sau 012** và sau khi đã nạp dữ liệu demo (cần tài khoản giáo viên). |
 | 14 | `014_ThanhToan_ThuNghiem.sql` | Thanh toán và chi trả **thử nghiệm**: thêm cột trạng thái cho `DonHang` (phương thức, hạn thanh toán, ngày thanh toán), `ThanhToan` (cổng, mã giao dịch, ngày thanh toán), `NhanThanhToan` (Admin xử lý, mã giao dịch chi, lý do từ chối) và bảng `NhatKyThanhToan`. Thiếu file này thì giỏ hàng báo "Chức năng thanh toán chưa được khởi tạo" và trang Admin "Chi trả giáo viên" nhắc chạy 014. |
 | 15 | `015_Api_Token_Otp.sql` | API cho **ứng dụng di động** (`/api/v1`): bảng `ApiToken` (token đăng nhập của app, chỉ lưu SHA-256, hạn 30 ngày) và `ApiOtp` (mã OTP đăng ký / quên mật khẩu, vì app không dùng Session như website). Thiếu file này thì app không đăng nhập được (`/api/v1/ping` báo `tokenTableReady: false`). |
+| 16 | `016_QuanTri_NguoiDung.sql` | Admin quản lý người dùng / giáo viên / giám sát Marketing: thêm cột cho `NguoiDung` (ngày tạo, lý do / thời điểm / hạn khóa, Admin khóa, cờ buộc đổi mật khẩu tạm), bảng `NhatKyQuanTri` (nhật ký thao tác Admin), `KhoaHocTamAn` (khóa học bị ẩn khi giáo viên bị khóa, lưu trạng thái cũ) và cột Admin tạm dừng cho `KhuyenMai`. Thiếu file này thì 3 trang Quản lý người dùng, Quản lý giáo viên, Giám sát Marketing báo "Chưa khởi tạo dữ liệu"; đăng nhập và các trang khác vẫn chạy. |
+| 17 | `017_PhienDangNhap_DocQuyen.sql` | Mỗi tài khoản **Admin / Marketing chỉ một phiên đăng nhập**: thêm cột `maPhien`, `phienLuc`, `phienIp`, `phienTrinhDuyet` cho `NguoiDung`. Người đăng nhập sau thay người trước; phiên cũ bị đăng xuất trong khoảng 15 giây, hiện pop-up (thời gian, trình duyệt, IP của lần đăng nhập mới) và ghi "Đăng nhập nơi khác" vào nhật ký quản trị. Chạy **sau 016**. Thiếu file này thì Admin / Marketing vẫn đăng nhập nhiều nơi cùng lúc như trước. |
 
 ### Cách chạy trong SQL Server Management Studio (SSMS)
 1. Mở SSMS, kết nối vào SQL Server trên máy bạn.
 2. **File → Open → File...** → chọn file `001_...sql`.
 3. Bấm **Execute** (hoặc phím **F5**). Thấy *"Commands completed successfully"* là xong.
-4. Lặp lại với `002`, `003`, `004`, `005`, `006`, cả hai file `007`, `008`, `009`, `010`, `011`, `012`, `013`, `014`, `015` **theo đúng thứ tự**.
+4. Lặp lại với `002`, `003`, `004`, `005`, `006`, cả hai file `007`, `008`, `009`, `010`, `011`, `012`, `013`, `014`, `015`, `016`, `017` **theo đúng thứ tự**.
 
 > Mỗi file đã có sẵn dòng `USE QL_HETHONG_CUNGCAP_KHOAHOC;` nên không cần chọn database trước.
 > Nếu chạy bằng dòng lệnh `sqlcmd` thì thêm tham số **`-I`** (bật `QUOTED_IDENTIFIER`), nếu không `007_Quiz_ChungChi.sql`
@@ -61,10 +63,14 @@ SELECT
   CASE WHEN COL_LENGTH('dbo.DanhMuc','anhMinhHoa') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 012' END AS [012],
   CASE WHEN EXISTS (SELECT 1 FROM dbo.KhoaHoc WHERE maKhoaHoc LIKE 'K13-%') THEN N'OK' ELSE N'THIẾU - chạy 013' END AS [013],
   CASE WHEN OBJECT_ID('dbo.NhatKyThanhToan') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 014' END AS [014],
-  CASE WHEN OBJECT_ID('dbo.ApiToken') IS NOT NULL AND OBJECT_ID('dbo.ApiOtp') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 015' END AS [015];
+  CASE WHEN OBJECT_ID('dbo.ApiToken') IS NOT NULL AND OBJECT_ID('dbo.ApiOtp') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 015' END AS [015],
+  CASE WHEN OBJECT_ID('dbo.NhatKyQuanTri') IS NOT NULL AND COL_LENGTH('dbo.KhuyenMai','adminTamDung') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 016' END AS [016],
+  CASE WHEN COL_LENGTH('dbo.NguoiDung','maPhien') IS NOT NULL THEN N'OK' ELSE N'THIẾU - chạy 017' END AS [017];
 ```
 
-Cả 14 cột đều ra **OK** là được.
+Cả 17 cột đều ra **OK** là được.
+
+> **Trên hosting** (CSDL có tên khác, vd. `db74837`): mở file `016_...sql` / `017_...sql`, **xóa dòng `USE ...`** ở đầu, chọn đúng CSDL hosting rồi chạy.
 
 > **Sau khi chạy 005/006 phải chạy job Python ít nhất một lần** (`Recommender/README.md`), nếu không bảng
 > `course_similarity` trống và không có gợi ý lọc cộng tác nào. Kiểm tra: `SELECT COUNT(*) FROM course_similarity;` phải lớn hơn 0.

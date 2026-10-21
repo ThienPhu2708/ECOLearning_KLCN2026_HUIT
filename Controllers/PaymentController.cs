@@ -165,6 +165,7 @@ namespace ECOLearning.Controllers
         }
 
         // GET: /Payment/History (lịch sử mua hàng của học viên)
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public ActionResult History()
         {
             if (UserId <= 0) return YeuCauDangNhap();

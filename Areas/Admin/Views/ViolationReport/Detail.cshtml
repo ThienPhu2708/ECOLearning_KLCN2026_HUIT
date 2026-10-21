@@ -30,6 +30,10 @@
             <div class="caption" style="color: var(--text-secondary);">
                 Mã: <code>@course.maKhoaHoc</code> •
                 Giáo viên: <strong>@(course.NguoiDung != null ? course.NguoiDung.hoTen : "N/A")</strong>
+                @if (course.NguoiDung != null)
+                {
+                    <a href="@Url.Action("Details", "Teacher", new { id = course.maGiaoVien })" style="margin-left: 6px; font-size: 13px;" title="Khóa học, doanh thu, lịch sử vi phạm; cảnh cáo hoặc khóa tài khoản giáo viên"><i class="bi bi-person-badge"></i> Hồ sơ giáo viên</a>
+                }
                 (@(course.NguoiDung != null ? course.NguoiDung.email : ""))
             </div>
             <div style="margin-top: 10px;">

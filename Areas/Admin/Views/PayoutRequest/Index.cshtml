@@ -117,7 +117,15 @@ else
                                 }
                             </td>
                             <td>
-                                @if (p.TrangThai == "Chờ duyệt")
+                                @if (p.TrangThai == "Chờ duyệt" && p.GiaoVienBiKhoa)
+                                {
+                                    <div class="po-actions">
+                                        <span class="badge badge-danger" title="Giáo viên đang bị khóa tài khoản: phiếu chưa được chi đến khi mở khóa">Tạm giữ</span>
+                                        <a href="@Url.Action("Details", "Teacher", new { id = p.MaGiaoVien })" class="btn btn-outline btn-sm">Hồ sơ GV</a>
+                                        <button type="button" class="btn btn-outline btn-sm" onclick="tuChoiPhieu('@p.MaPhieuChi')">Từ chối</button>
+                                    </div>
+                                }
+                                else if (p.TrangThai == "Chờ duyệt")
                                 {
                                     <div class="po-actions">
                                         <button type="button" class="btn btn-primary btn-sm" onclick="duyetPhieu('@p.MaPhieuChi', '@HttpUtility.JavaScriptStringEncode(p.TenGiaoVien)', '@p.SoTien.ToString("#,##0")')"title="Chuyển khoản thử nghiệm: ghi nhận đã chi, không chuyển tiền thật">Duyệt chi</button>

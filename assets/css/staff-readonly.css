@@ -1,0 +1,49 @@
+/* Chế độ chỉ xem của Admin / Marketing ở trang người học (Services/StaffViewMode.cs, assets/js/staff-readonly.js).
+   Nút tương tác giữ nguyên vị trí và hình dạng, chỉ chuyển xám + con trỏ "không cho phép" để vẫn thấy đúng giao diện học viên. */
+
+.staff-banner {
+    position: sticky;
+    top: 76px;
+    z-index: 49;
+    background: #FFFBEB;
+    border-bottom: 1px solid #FDE68A;
+    color: #92400E;
+    font-size: 13.5px;
+}
+.staff-banner-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 8px 0;
+}
+.staff-banner strong { color: #78350F; }
+.staff-banner a {
+    color: #92400E;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1px solid #FCD34D;
+    background: #FFFFFF;
+    border-radius: 8px;
+    padding: 4px 12px;
+    white-space: nowrap;
+}
+.staff-banner a:hover { background: #FEF3C7; }
+
+.staff-readonly [data-staff-lock] {
+    opacity: .45 !important;
+    filter: grayscale(1) !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+    transform: none !important;
+    transition: none !important;
+}
+/* Rê chuột không đổi màu / nổi lên như nút đang dùng được */
+.staff-readonly [data-staff-lock]:hover,
+.staff-readonly [data-staff-lock]:focus,
+.staff-readonly [data-staff-lock]:active {
+    transform: none !important;
+    box-shadow: none !important;
+}
+.staff-readonly [data-staff-lock] * { cursor: not-allowed !important; }

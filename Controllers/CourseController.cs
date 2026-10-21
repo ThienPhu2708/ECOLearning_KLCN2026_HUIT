@@ -163,7 +163,7 @@ namespace ECOLearning.Controllers
             if (currentUser == null && currentUserId > 0)
             {
                 currentUser = db.NguoiDung.Find(currentUserId);
-                Session["User"] = currentUser;
+                Session["User"] = SessionNguoiDung.BanSao(currentUser);
             }
             var sessionRole = Session["Role"]?.ToString();
             bool isOwnerOrAdmin = (sessionRole == "Admin" || (course.maGiaoVien == currentUserId && currentUserId > 0));
@@ -269,6 +269,7 @@ namespace ECOLearning.Controllers
 
         // POST: Course/EnrollFree
         [HttpPost]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public ActionResult EnrollFree(string courseId)
         {
             int currentUserId = (Session["UserId"] as int?) ?? 0;
@@ -276,7 +277,7 @@ namespace ECOLearning.Controllers
             if (currentUser == null && currentUserId > 0)
             {
                 currentUser = db.NguoiDung.Find(currentUserId);
-                Session["User"] = currentUser;
+                Session["User"] = SessionNguoiDung.BanSao(currentUser);
             }
 
             if (currentUser == null)

@@ -38,7 +38,8 @@ namespace ECOLearning.Controllers
 
             // Thống kê từ khóa (gợi ý cho người sau): chỉ lần mở trang đầu, không tính lúc đổi trang / bộ lọc.
             // Kết quả chỉ khớp một phần tính là 0 để câu đó không được gợi ý lại.
-            if (vm.Q.Length > 0 && trang <= 1 && !vm.CoBoLoc)
+            // Admin / Marketing tìm để kiểm tra (chế độ chỉ xem) không tính vào thống kê.
+            if (vm.Q.Length > 0 && trang <= 1 && !vm.CoBoLoc && !StaffViewMode.LaChiXem(Session))
             {
                 service.GhiNhanTimKiem(vm.Q, vm.KhopMotPhan ? 0 : vm.TongSo, Session);
             }

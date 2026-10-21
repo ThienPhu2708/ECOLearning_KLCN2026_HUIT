@@ -125,6 +125,7 @@ namespace ECOLearning.Controllers.Api
 
             user.matKhau = PasswordHasher.HashPassword(req.NewPassword);
             Db.SaveChanges();
+            AccountAdminService.DaDoiMatKhau(Db, user.maNguoiDung);
             // Đăng xuất các thiết bị khác, giữ thiết bị đang dùng
             new ApiTokenService(Db).ThuHoiTatCa(CurrentUserId, CurrentToken);
             return Ok(null, "Đổi mật khẩu tài khoản thành công!");

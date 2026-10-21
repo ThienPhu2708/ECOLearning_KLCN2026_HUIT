@@ -1,0 +1,157 @@
+@using ECOLearning.Services
+@model TongQuanMarketingAdmin
+@*
+    Admin / Giám sát Marketing: tổng quan khuyến mãi, cảnh báo chương trình bất thường, tạm dừng / cho chạy lại,
+    hoạt động của nhân viên Marketing. Admin không tạo khuyến mãi thay Marketing (vào trang Marketing nếu cần).
+*@
+@{
+    ViewBag.Title = "Giám sát Marketing";
+    bool chuaKhoiTao = ViewBag.ChuaKhoiTao as bool? ?? false;
+    string q = ViewBag.Q as string;
+    string loc = ViewBag.Loc as string;
+    var now = DateTime.Now;
+}
+
+<link rel="stylesheet" href="~/assets/css/admin-users.css?v=1" />
+
+<div class="au-head">
+    <div>
+        <h1 class="h2" style="margin-top: 6px;">Giám Sát Marketing</h1>
+        <p class="body-2">Theo dõi chương trình khuyến mãi, chi phí giảm giá và hoạt động của nhân viên Marketing; tạm dừng chương trình sai chính sách</p>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        @* Admin không vào khu Marketing (phân tách vai trò): chỉ giám sát, tạm dừng ở trang này *@
+        <a href="@Url.Action("Index", "User", new { role = "Marketing" })" class="btn btn-outline"><i class="bi bi-person-badge me-1"></i> Tài khoản Marketing</a>
+    </div>
+</div>
+
+@Html.Partial("_AdminFlash")
+
+@if (chuaKhoiTao)
+{
+    <div class="card" style="border-color: #FCD34D; background: #FFFBEB;">
+        <h3 class="h3" style="margin-bottom: 8px;"><i class="bi bi-exclamation-triangle-fill me-1" style="color: #D97706;"></i> Chưa khởi tạo dữ liệu</h3>
+        <p style="margin: 0;">Cần chạy <code>008_Marketing_KhuyenMai.sql</code>, <code>009_ViMaGiamGia.sql</code> và <code>016_QuanTri_NguoiDung.sql</code> trong SQL Server Management Studio rồi tải lại trang.</p>
+    </div>
+}
+else
+{
+    <div class="au-stats">
+        <a href="@Url.Action("Index", new { loc = "running" })" class="card au-stat @(loc == "running" ? "is-active" : "")"><span><i class="bi bi-play-circle-fill" style="color: #059669;"></i> Đang chạy</span><strong>@Model.DangChay</strong><small>@Model.ChienDichDangMo chiến dịch đang mở</small></a>
+        <a href="@Url.Action("Index", new { loc = "warning" })" class="card au-stat @(loc == "warning" ? "is-active" : "")"><span><i class="bi bi-exclamation-triangle-fill" style="color: #D97706;"></i> Cần chú ý</span><strong style="@(Model.CanChuY > 0 ? "color: #D97706;" : "")">@Model.CanChuY</strong><small>Giảm sâu / chi phí vượt doanh thu</small></a>
+        <a href="@Url.Action("Index", new { loc = "admin-paused" })" class="card au-stat @(loc == "admin-paused" ? "is-active" : "")"><span><i class="bi bi-shield-exclamation" style="color: #DC2626;"></i> Admin tạm dừng</span><strong>@Model.AdminTamDung</strong></a>
+        <a href="@Url.Action("Index", new { loc = "expiring" })" class="card au-stat @(loc == "expiring" ? "is-active" : "")"><span><i class="bi bi-hourglass-split"></i> Hết hạn trong 7 ngày</span><strong>@Model.SapHetHan</strong></a>
+        <div class="card au-stat"><span><i class="bi bi-cash-stack"></i> Đã giảm / Doanh thu sau giảm</span><strong style="font-size: 18px;">@Model.TongTienGiam.ToString("#,##0") đ</strong><small>/ @Model.DoanhThuSauGiam.ToString("#,##0") đ · @Model.TongLuotDung lượt dùng</small></div>
+    </div>
+
+    <form method="get" action="@Url.Action("Index")" class="au-filter">
+        <input type="search" name="q" value="@q" class="form-control au-search" placeholder="Tìm theo tên chương trình, mã giảm giá hoặc người tạo" maxlength="100" />
+        <select name="loc" class="form-control" onchange="this.form.submit()">
+            <option value="">Tất cả chương trình</option>
+            <option value="running" @(loc == "running" ? "selected" : "")>Đang chạy</option>
+            <option value="warning" @(loc == "warning" ? "selected" : "")>Cần chú ý</option>
+            <option value="admin-paused" @(loc == "admin-paused" ? "selected" : "")>Admin tạm dừng</option>
+            <option value="expiring" @(loc == "expiring" ? "selected" : "")>Hết hạn trong 7 ngày</option>
+            <option value="ended" @(loc == "ended" ? "selected" : "")>Đã kết thúc</option>
+        </select>
+        <button type="submit" class="btn btn-secondary"><i class="bi bi-search"></i> Tìm</button>
+    </form>
+
+    <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 24px;">
+        <div class="table-responsive">
+            <table class="table au-table" data-paginate="15">
+                <thead>
+                    <tr>
+                        <th>Chương trình</th>
+                        <th>Ưu đãi</th>
+                        <th>Thời gian</th>
+                        <th>Lượt dùng</th>
+                        <th>Đã giảm / Doanh thu</th>
+                        <th>Trạng thái</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.ChuongTrinh.Count == 0)
+                    {
+                        <tr><td colspan="7" class="au-empty">Không có chương trình nào phù hợp.</td></tr>
+                    }
+                    @foreach (var d in Model.ChuongTrinh)
+                    {
+                        var p = d.ChuongTrinh;
+                        <tr>
+                            <td class="au-wrap" style="max-width: 280px;">
+                                <a href="@Url.Action("Details", new { id = p.MaKhuyenMai })" style="font-weight: 700; color: var(--text-heading); text-decoration: none;">@p.TenKhuyenMai</a>
+                                <div class="au-sub"><code>@p.MaCode</code> · @(d.TenNguoiTao ?? "Không rõ người tạo")</div>
+                                @foreach (var c in d.CanhBao)
+                                {
+                                    <div class="au-sub" style="color: #B45309;"><i class="bi bi-exclamation-triangle-fill"></i> @c</div>
+                                }
+                            </td>
+                            <td class="au-wrap"><strong style="color: #E11D48;">@p.MoTaUuDai</strong>@if (p.LaThanThiet) { <div class="au-sub">Học viên thân thiết</div> }</td>
+                            <td style="white-space: nowrap;">@p.NgayBatDau.ToString("dd/MM/yyyy")<br /><span class="au-sub">đến</span> @p.NgayKetThuc.ToString("dd/MM/yyyy")</td>
+                            <td>@p.SoLuotDaDung@(p.GioiHanLuotDung.HasValue ? " / " + p.GioiHanLuotDung.Value : "")</td>
+                            <td>@p.TongTienGiam.ToString("#,##0") đ<div class="au-sub">@p.DoanhThuSauGiam.ToString("#,##0") đ</div></td>
+                            <td class="au-wrap">
+                                @if (d.AdminTamDung)
+                                {
+                                    <span class="badge badge-danger"><i class="bi bi-shield-exclamation"></i> Admin tạm dừng</span>
+                                    <div class="au-sub" style="max-width: 200px;">@d.LyDoAdminTamDung</div>
+                                }
+                                else if (d.TrangThai == "Đang chạy")
+                                {
+                                    <span class="badge badge-success">Đang chạy</span>
+                                }
+                                else if (d.TrangThai == "Tạm ngưng")
+                                {
+                                    <span class="badge badge-warning">Marketing tạm ngưng</span>
+                                }
+                                else if (d.TrangThai == "Chưa bắt đầu")
+                                {
+                                    <span class="badge badge-primary">Chưa bắt đầu</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-secondary">Đã kết thúc</span>
+                                }
+                            </td>
+                            <td style="text-align: right; white-space: nowrap;">
+                                @Html.Partial("_PromotionAdminActions", d)
+                                <a href="@Url.Action("Details", new { id = p.MaKhuyenMai })" class="btn btn-sm btn-outline">Chi tiết</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h2 class="h3" style="margin-bottom: 12px;">Nhân viên Marketing</h2>
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="table-responsive">
+            <table class="table au-table">
+                <thead><tr><th>Nhân viên</th><th class="au-num">Chương trình đã tạo</th><th class="au-num">Chiến dịch</th><th class="au-num">Bị Admin tạm dừng</th><th>Tạo gần nhất</th><th>Tài khoản</th><th></th></tr></thead>
+                <tbody>
+                    @if (Model.NhanVien.Count == 0)
+                    {
+                        <tr><td colspan="7" class="au-empty">Chưa có nhân viên Marketing. Tạo tài khoản ở trang Quản lý người dùng.</td></tr>
+                    }
+                    @foreach (var nv in Model.NhanVien)
+                    {
+                        <tr>
+                            <td><strong>@nv.HoTen</strong><div class="au-sub">@nv.Email</div></td>
+                            <td class="au-num">@nv.SoChuongTrinh</td>
+                            <td class="au-num">@nv.SoChienDich</td>
+                            <td class="au-num">@if (nv.SoBiTamDung > 0) { <span class="badge badge-danger">@nv.SoBiTamDung</span> } else { <span class="au-sub">0</span> }</td>
+                            <td>@(nv.LanTaoGanNhat.HasValue ? nv.LanTaoGanNhat.Value.ToString("dd/MM/yyyy") : "-")</td>
+                            <td>@if (nv.HoatDong) { <span class="badge badge-success">Hoạt động</span> } else { <span class="badge badge-danger">Đang khóa</span> }</td>
+                            <td style="text-align: right;"><a href="@Url.Action("Details", "User", new { id = nv.MaNguoiDung })" class="btn btn-sm btn-outline">Tài khoản</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @Html.Partial("_PromotionAdminForms")
+}

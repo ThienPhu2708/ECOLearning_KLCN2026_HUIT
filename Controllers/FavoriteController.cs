@@ -13,6 +13,7 @@ namespace ECOLearning.Controllers
         // POST: Favorite/Toggle
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public JsonResult Toggle(string courseId)
         {
             int userId = (Session["UserId"] as int?) ?? 0;

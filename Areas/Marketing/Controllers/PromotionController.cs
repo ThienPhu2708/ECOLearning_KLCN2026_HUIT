@@ -7,7 +7,8 @@ using ECOLearning.ViewModels;
 namespace ECOLearning.Areas.Marketing.Controllers
 {
     /// <summary>
-    /// UC17: Quản lý chương trình khuyến mãi & coupon (chỉ Marketing / Admin; giáo viên không tự tạo giảm giá).
+    /// UC17: Quản lý chương trình khuyến mãi & coupon (chỉ nhân viên Marketing; Admin chỉ giám sát / tạm dừng ở Admin/Marketing;
+    /// giáo viên không tự tạo giảm giá).
     /// Chương trình đã phát sinh giao dịch không bị xóa: chỉ tạm ngừng hoặc kết thúc, lịch sử giữ nguyên.
     /// </summary>
     public class PromotionController : MarketingBaseController
@@ -35,6 +36,7 @@ namespace ECOLearning.Areas.Marketing.Controllers
             ViewBag.TuNgay = tu?.ToString("yyyy-MM-dd");
             ViewBag.DenNgay = den?.ToString("yyyy-MM-dd");
             ViewBag.ChienDich = chienDich;
+            ViewBag.AdminTamDung = AdminMarketingService.DanhSachAdminTamDung(db);
             ViewBag.BreadcrumbCurrent = "Chương trình khuyến mãi";
             return View(list);
         }
@@ -48,6 +50,7 @@ namespace ECOLearning.Areas.Marketing.Controllers
 
             ViewBag.KhoaHoc = Service.LayKhoaHocApDung(id);
             ViewBag.LuotSuDung = Service.LayLuotSuDung(id);
+            ViewBag.LyDoAdminTamDung = AdminMarketingService.LyDoAdminTamDung(db, id);
             ViewBag.BreadcrumbCurrent = "Chi tiết chương trình";
             return View(p);
         }

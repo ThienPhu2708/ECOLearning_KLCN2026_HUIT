@@ -97,6 +97,17 @@
             <h1 class="h2" style="margin-top: 8px; font-size: 28px; font-weight: 800; color: #0F172A;">Quản lý Hồ sơ Cá nhân</h1>
         </div>
 
+        @if (Session[ECOLearning.AccountStatusFilter.KeyCanDoiMatKhau] as bool? == true)
+        {
+            <div id="temp-password-banner" style="display: flex; gap: 12px; align-items: flex-start; background: #FFFBEB; border: 1px solid #FCD34D; border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; color: #92400E;">
+                <i class="bi bi-shield-exclamation" style="font-size: 22px; line-height: 1;"></i>
+                <div>
+                    <strong>Bạn đang dùng mật khẩu tạm do Ban quản trị cấp.</strong>
+                    <div style="font-size: 14px; margin-top: 2px;">Nhập mật khẩu tạm ở ô "Mật khẩu hiện tại" và đặt mật khẩu mới để tiếp tục sử dụng hệ thống.</div>
+                </div>
+            </div>
+        }
+
         <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 30px; background: #FFFFFF; border: 1px solid var(--border-color, #E2E8F0); border-radius: var(--radius-3xl, 24px); box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);">
             <!-- Top Banner -->
             <div class="profile-header-banner"></div>
@@ -347,6 +358,13 @@
             }
         }
 
+        // Mở thẳng tab đổi mật khẩu khi được chuyển đến từ yêu cầu đổi mật khẩu tạm (?tab=password)
+        document.addEventListener('DOMContentLoaded', function () {
+            if (new URLSearchParams(window.location.search).get('tab') === 'password' || document.getElementById('temp-password-banner')) {
+                switchProfileTab('password');
+            }
+        });
+
         // AJAX Update Teacher Profile
         function handleSaveTeacherProfile() {
             const specialization = document.getElementById('teacher-specialization') ? document.getElementById('teacher-specialization').value.trim() : '';
@@ -546,6 +564,10 @@
                     btn.innerText = 'Cập nhật mật khẩu';
                     if (res.success) {
                         showToast(res.message, 'success');
+                        if (res.redirectUrl) {
+                            setTimeout(function () { window.location.href = res.redirectUrl; }, 1200);
+                            return;
+                        }
                         document.getElementById('form-change-password').reset();
                         document.getElementById('profile-strength-bar').style.width = '0%';
                         document.getElementById('profile-strength-text').innerText = 'Độ mạnh: Chưa nhập';

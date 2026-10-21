@@ -1,0 +1,189 @@
+@using ECOLearning.Services
+@model NguoiDungChiTiet
+@*
+    Admin / Quản lý người dùng / Chi tiết (học viên, nhân viên Marketing, Quản trị viên).
+    Giáo viên được chuyển sang Admin/Teacher/Details.
+*@
+@{
+    ViewBag.Title = Model.HoTen + " | Quản lý người dùng";
+    bool laChinhMinh = ViewBag.LaChinhMinh as bool? ?? false;
+    bool laNhanVien = Model.VaiTro == AccountAdminService.Marketing || Model.VaiTro == AccountAdminService.Admin;
+    string anh = string.IsNullOrWhiteSpace(Model.AnhDaiDien) ? null : (Model.AnhDaiDien.StartsWith("http") ? Model.AnhDaiDien : Url.Content("~/" + Model.AnhDaiDien.TrimStart('~', '/')));
+    decimal tongChi = Model.DonHang.Where(d => RevenueService.TrangThaiThanhCong.Contains(d.TrangThai)).Sum(d => d.TongTien);
+}
+
+<link rel="stylesheet" href="~/assets/css/admin-users.css?v=1" />
+
+<div style="margin-bottom: 14px;">
+    <a href="@Url.Action("Index")" class="btn btn-outline btn-sm"><i class="bi bi-arrow-left"></i> Danh sách người dùng</a>
+</div>
+
+@Html.Partial("_AdminFlash")
+
+<div class="card au-profile">
+    <div class="au-profile-main">
+        @if (anh != null)
+        {
+            <img class="au-avatar lg" src="@anh" alt="" referrerpolicy="no-referrer" />
+        }
+        else
+        {
+            <span class="au-avatar lg">@(string.IsNullOrWhiteSpace(Model.HoTen) ? "?" : Model.HoTen.Trim().Split(' ').Last().Substring(0, 1).ToUpper())</span>
+        }
+        <div>
+            <h2>@Model.HoTen</h2>
+            <div class="au-sub">@Model.Email · Mã #@Model.MaNguoiDung</div>
+            <div class="au-badges">
+                <span class="badge @AdminUserQueryService.MauVaiTro(Model.VaiTro)">@AdminUserQueryService.TenVaiTro(Model.VaiTro)</span>
+                @if (Model.HoatDong)
+                {
+                    <span class="badge badge-success">Hoạt động</span>
+                }
+                else
+                {
+                    <span class="badge badge-danger">Đang khóa</span>
+                }
+                @if (Model.CanDoiMatKhau)
+                {
+                    <span class="badge badge-warning" title="Người dùng chưa đổi mật khẩu tạm do Admin cấp"><i class="bi bi-key"></i> Đang dùng mật khẩu tạm</span>
+                }
+            </div>
+        </div>
+    </div>
+    @Html.Partial("_AccountActions", new ECOLearning.Areas.Admin.Models.AccountActionsModel
+    {
+        MaNguoiDung = Model.MaNguoiDung, HoTen = Model.HoTen, Email = Model.Email, VaiTro = Model.VaiTro,
+        HoatDong = Model.HoatDong, LaChinhMinh = laChinhMinh, ReturnUrl = Request.RawUrl
+    })
+</div>
+
+@if (!Model.HoatDong)
+{
+    <div class="au-lock-box">
+        <strong><i class="bi bi-lock-fill"></i> Tài khoản đang bị khóa @(Model.KhoaDenNgay.HasValue ? "đến " + Model.KhoaDenNgay.Value.ToString("HH:mm dd/MM/yyyy") : "vĩnh viễn")</strong>
+        @if (!string.IsNullOrEmpty(Model.LyDoKhoa))
+        {
+            <div style="margin-top: 4px;">Lý do: @Model.LyDoKhoa</div>
+        }
+        <div class="au-sub" style="margin-top: 4px;">
+            @(Model.NgayKhoa.HasValue ? "Khóa lúc " + Model.NgayKhoa.Value.ToString("HH:mm dd/MM/yyyy") : "")@(string.IsNullOrEmpty(Model.TenAdminKhoa) ? "" : " bởi " + Model.TenAdminKhoa)
+            @(Model.KhoaDenNgay.HasValue ? " · Tự mở khi hết hạn" : "")
+        </div>
+    </div>
+}
+
+<div class="au-info-grid">
+    <div class="card au-info"><span>Số điện thoại</span><b>@(string.IsNullOrEmpty(Model.SoDienThoai) ? "Chưa cập nhật" : Model.SoDienThoai)</b></div>
+    <div class="card au-info"><span>Giới tính / Ngày sinh</span><b>@(Model.GioiTinh ?? "-") · @(Model.NgaySinh.HasValue ? Model.NgaySinh.Value.ToString("dd/MM/yyyy") : "-")</b></div>
+    <div class="card au-info"><span>Ngày tạo tài khoản</span><b>@(Model.NgayTao.HasValue ? Model.NgayTao.Value.ToString("dd/MM/yyyy HH:mm") : "Trước khi có thống kê")</b></div>
+    @if (laNhanVien)
+    {
+        <div class="card au-info"><span>Khu vực làm việc</span><b>@(Model.VaiTro == AccountAdminService.Admin ? "Trang Quản trị" : "Trang Marketing")</b></div>
+    }
+    else
+    {
+        <div class="card au-info"><span>Tổng chi tiêu (đơn đã thanh toán)</span><b>@tongChi.ToString("#,##0 đ")</b></div>
+    }
+</div>
+
+<div class="card" style="padding: 18px 20px;">
+    <div class="au-tabs" role="tablist">
+        @if (!laNhanVien)
+        {
+            <button type="button" class="au-tab active" data-tab="khoa-hoc">Khóa học <span class="au-count">@Model.KhoaHoc.Count</span></button>
+            <button type="button" class="au-tab" data-tab="don-hang">Đơn hàng <span class="au-count">@Model.DonHang.Count</span></button>
+            <button type="button" class="au-tab" data-tab="danh-gia">Đánh giá <span class="au-count">@Model.DanhGia.Count</span></button>
+        }
+        <button type="button" class="au-tab @(laNhanVien ? "active" : "")" data-tab="nhat-ky">Nhật ký quản trị <span class="au-count">@Model.NhatKy.Count</span></button>
+    </div>
+
+    @if (!laNhanVien)
+    {
+        <div class="au-panel active" id="tab-khoa-hoc">
+            <div class="au-note"><i class="bi bi-award"></i> Đã nhận <strong>@Model.SoChungChi</strong> chứng chỉ hoàn thành khóa học.</div>
+            <div class="table-responsive">
+                <table class="table au-table">
+                    <thead><tr><th>Khóa học</th><th>Ngày đăng ký</th><th>Tiến độ</th><th>Học gần nhất</th></tr></thead>
+                    <tbody>
+                        @if (Model.KhoaHoc.Count == 0)
+                        {
+                            <tr><td colspan="4" class="au-empty">Chưa đăng ký khóa học nào.</td></tr>
+                        }
+                        @foreach (var k in Model.KhoaHoc)
+                        {
+                            <tr>
+                                <td class="au-wrap"><strong>@k.TenKhoaHoc</strong><div class="au-sub">@k.MaKhoaHoc</div></td>
+                                <td>@(k.NgayDangKy.HasValue ? k.NgayDangKy.Value.ToString("dd/MM/yyyy") : "-")</td>
+                                <td><span class="au-progress"><i style="width: @k.PhanTram%;"></i></span> <span class="au-sub">@k.PhanTram%</span></td>
+                                <td>@(k.LanHocGanNhat.HasValue ? k.LanHocGanNhat.Value.ToString("dd/MM/yyyy HH:mm") : "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="au-panel" id="tab-don-hang">
+            <div class="table-responsive">
+                <table class="table au-table">
+                    <thead><tr><th>Mã đơn</th><th>Ngày đặt</th><th class="au-num">Số khóa</th><th>Tổng tiền</th><th>Trạng thái</th></tr></thead>
+                    <tbody>
+                        @if (Model.DonHang.Count == 0)
+                        {
+                            <tr><td colspan="5" class="au-empty">Chưa có đơn hàng.</td></tr>
+                        }
+                        @foreach (var d in Model.DonHang)
+                        {
+                            bool ok = RevenueService.TrangThaiThanhCong.Contains(d.TrangThai);
+                            <tr>
+                                <td><code>@d.MaDonHang</code></td>
+                                <td>@(d.NgayDat.HasValue ? d.NgayDat.Value.ToString("dd/MM/yyyy HH:mm") : "-")</td>
+                                <td class="au-num">@d.SoKhoa</td>
+                                <td><strong>@d.TongTien.ToString("#,##0 đ")</strong></td>
+                                <td><span class="badge @(ok ? "badge-success" : d.TrangThai == "Chờ thanh toán" ? "badge-warning" : "badge-secondary")">@d.TrangThai</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="au-panel" id="tab-danh-gia">
+            <div class="table-responsive">
+                <table class="table au-table">
+                    <thead><tr><th>Khóa học</th><th>Số sao</th><th>Nội dung</th><th>Ngày</th></tr></thead>
+                    <tbody>
+                        @if (Model.DanhGia.Count == 0)
+                        {
+                            <tr><td colspan="4" class="au-empty">Chưa viết đánh giá nào.</td></tr>
+                        }
+                        @foreach (var g in Model.DanhGia)
+                        {
+                            <tr>
+                                <td class="au-wrap"><strong>@g.TenKhoaHoc</strong></td>
+                                <td><span class="au-stars">@(new string('★', Math.Max(0, Math.Min(5, g.SoSao))))@(new string('☆', 5 - Math.Max(0, Math.Min(5, g.SoSao))))</span></td>
+                                <td class="au-wrap" style="max-width: 420px;">@g.NoiDung</td>
+                                <td>@(g.NgayDanhGia.HasValue ? g.NgayDanhGia.Value.ToString("dd/MM/yyyy") : "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <div class="au-panel @(laNhanVien ? "active" : "")" id="tab-nhat-ky">
+        @Html.Partial("_NhatKyQuanTri", Model.NhatKy)
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.au-tab').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.au-tab').forEach(function (b) { b.classList.toggle('active', b === btn); });
+                document.querySelectorAll('.au-panel').forEach(function (p) { p.classList.toggle('active', p.id === 'tab-' + btn.getAttribute('data-tab')); });
+            });
+        });
+    </script>
+}

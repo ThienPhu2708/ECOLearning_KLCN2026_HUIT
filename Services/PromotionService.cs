@@ -452,6 +452,9 @@ namespace ECOLearning.Services
                     break;
                 case "resume":
                     if (hienThi == "Đã kết thúc") return "Chương trình đã kết thúc, không thể kích hoạt lại.";
+                    // Admin tạm dừng (migration 016): chỉ Admin cho chạy lại được
+                    string lyDoAdmin = AdminMarketingService.LyDoAdminTamDung(db, maKhuyenMai);
+                    if (lyDoAdmin != null) return "Chương trình đang bị Quản trị viên tạm dừng (lý do: " + lyDoAdmin + "). Hãy điều chỉnh rồi liên hệ Quản trị viên để được cho chạy lại.";
                     moi = HoatDong;
                     break;
                 case "end":

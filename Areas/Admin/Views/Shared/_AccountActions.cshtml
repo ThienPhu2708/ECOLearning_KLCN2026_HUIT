@@ -1,0 +1,149 @@
+@model ECOLearning.Areas.Admin.Models.AccountActionsModel
+@*
+    Nút thao tác tài khoản dùng chung cho Admin/User/Details và Admin/Teacher/Details.
+    Mỗi thao tác gửi form POST (có AntiForgeryToken) tới Admin/User; quy tắc nằm ở AccountAdminService.
+*@
+@{
+    bool laGiaoVien = Model.VaiTro == ECOLearning.Services.AccountAdminService.GiaoVien;
+    // Chèn vào chuỗi JS rồi vào HTML của hộp thoại: mã hóa HTML trước, sau đó mã hóa JS (JavaScriptStringEncode đổi < > thành < >)
+    var ten = Html.Raw(HttpUtility.JavaScriptStringEncode(HttpUtility.HtmlEncode(Model.HoTen ?? Model.Email)));
+    var email = Html.Raw(HttpUtility.JavaScriptStringEncode(HttpUtility.HtmlEncode(Model.Email)));
+}
+
+@if (Model.LaChinhMinh)
+{
+    <div class="caption" style="color: var(--text-secondary);"><i class="bi bi-info-circle"></i> Đây là tài khoản của bạn. Đổi mật khẩu ở trang Hồ sơ.</div>
+}
+else
+{
+    <div class="acc-actions">
+        @if (Model.HoatDong)
+        {
+            <button type="button" class="btn btn-sm acc-btn-danger" onclick="accKhoa()"><i class="bi bi-lock-fill"></i> Khóa tài khoản</button>
+        }
+        else
+        {
+            <button type="button" class="btn btn-sm btn-primary" onclick="accMoKhoa()"><i class="bi bi-unlock-fill"></i> Mở khóa</button>
+        }
+        <button type="button" class="btn btn-sm acc-btn-warning" onclick="accCanhCao()"><i class="bi bi-exclamation-triangle-fill"></i> Gửi cảnh cáo</button>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="accDatLaiMatKhau()"><i class="bi bi-key-fill"></i> Đặt lại mật khẩu</button>
+    </div>
+
+    using (Html.BeginForm("Lock", "User", new { area = "Admin" }, FormMethod.Post, new { id = "acc-lock-form" }))
+    {
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.MaNguoiDung" />
+        <input type="hidden" name="lyDo" />
+        <input type="hidden" name="soNgay" />
+        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+    }
+    using (Html.BeginForm("Unlock", "User", new { area = "Admin" }, FormMethod.Post, new { id = "acc-unlock-form" }))
+    {
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.MaNguoiDung" />
+        <input type="hidden" name="ghiChu" />
+        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+    }
+    using (Html.BeginForm("Warn", "User", new { area = "Admin" }, FormMethod.Post, new { id = "acc-warn-form" }))
+    {
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.MaNguoiDung" />
+        <input type="hidden" name="noiDung" />
+        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+    }
+    using (Html.BeginForm("ResetPassword", "User", new { area = "Admin" }, FormMethod.Post, new { id = "acc-reset-form" }))
+    {
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.MaNguoiDung" />
+        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+    }
+
+    <style>
+        .acc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .acc-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+        .acc-btn-danger { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
+        .acc-btn-danger:hover { background: #FEE2E2; }
+        .acc-btn-warning { background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
+        .acc-btn-warning:hover { background: #FEF3C7; }
+        .acc-swal-field { text-align: left; margin-top: 12px; }
+        .acc-swal-field label { display: block; font-size: 13px; font-weight: 700; color: #0F172A; margin-bottom: 6px; }
+        .acc-swal-field select, .acc-swal-field textarea { width: 100%; box-sizing: border-box; border: 1px solid #CBD5E1; border-radius: 10px; padding: 9px 12px; font: inherit; font-size: 14px; }
+        .acc-swal-field textarea { min-height: 90px; resize: vertical; }
+        .acc-swal-note { text-align: left; font-size: 13px; color: #64748B; background: #F8FAFC; border-radius: 10px; padding: 10px 12px; margin-top: 4px; }
+    </style>
+
+    <script>
+        function accGui(formId, giaTri) {
+            var f = document.getElementById(formId);
+            Object.keys(giaTri || {}).forEach(function (k) { f.querySelector('[name=' + k + ']').value = giaTri[k]; });
+            f.submit();
+        }
+
+        function accKhoa() {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Khóa tài khoản?',
+                html: '<div class="acc-swal-note"><strong>@ten</strong> sẽ bị đăng xuất ngay trên web và ứng dụng, không đăng nhập lại được trong thời gian khóa.'
+                    + '@Html.Raw(laGiaoVien ? "<br>Các khóa học đang bán của giáo viên được <strong>tạm ẩn</strong>; học viên đã mua vẫn học bình thường; yêu cầu rút tiền bị tạm giữ." : "")</div>'
+                    + '<div class="acc-swal-field"><label for="acc-so-ngay">Thời hạn khóa</label>'
+                    + '<select id="acc-so-ngay"><option value="7">7 ngày</option><option value="30">30 ngày</option><option value="0">Vĩnh viễn (đến khi Admin mở)</option></select></div>'
+                    + '<div class="acc-swal-field"><label for="acc-ly-do">Lý do (người dùng sẽ nhận được qua email)</label>'
+                    + '<textarea id="acc-ly-do" maxlength="500" placeholder="Ví dụ: Chia sẻ tài khoản cho nhiều người dùng, vi phạm điều khoản sử dụng"></textarea></div>',
+                showCancelButton: true,
+                confirmButtonText: 'Khóa tài khoản',
+                confirmButtonColor: '#DC2626',
+                cancelButtonText: 'Hủy',
+                focusConfirm: false,
+                preConfirm: function () {
+                    var lyDo = document.getElementById('acc-ly-do').value.trim();
+                    if (lyDo.length < 5) { Swal.showValidationMessage('Nhập lý do khóa (ít nhất 5 ký tự)'); return false; }
+                    return { lyDo: lyDo, soNgay: document.getElementById('acc-so-ngay').value };
+                }
+            }).then(function (r) { if (r.isConfirmed) accGui('acc-lock-form', r.value); });
+        }
+
+        function accMoKhoa() {
+            Swal.fire({
+                icon: 'question',
+                title: 'Mở khóa tài khoản?',
+                html: '<div class="acc-swal-note"><strong>@ten</strong> đăng nhập lại được ngay.'
+                    + '@Html.Raw(laGiaoVien ? "<br>Các khóa học bị tạm ẩn do khóa tài khoản sẽ được hiển thị lại." : "")</div>',
+                input: 'textarea',
+                inputLabel: 'Ghi chú (không bắt buộc, chỉ lưu trong nhật ký)',
+                inputAttributes: { maxlength: 500 },
+                showCancelButton: true,
+                confirmButtonText: 'Mở khóa',
+                cancelButtonText: 'Hủy'
+            }).then(function (r) { if (r.isConfirmed) accGui('acc-unlock-form', { ghiChu: (r.value || '').trim() }); });
+        }
+
+        function accCanhCao() {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Gửi cảnh cáo',
+                html: '<div class="acc-swal-note">Email cảnh cáo gửi tới <strong>@email</strong> và được lưu trong nhật ký. Tài khoản không bị khóa.</div>',
+                input: 'textarea',
+                inputLabel: 'Nội dung cảnh cáo',
+                inputPlaceholder: 'Ví dụ: Khóa học "..." có nội dung sao chép từ nguồn khác, vui lòng chỉnh sửa trong 3 ngày',
+                inputAttributes: { maxlength: 1000 },
+                showCancelButton: true,
+                confirmButtonText: 'Gửi cảnh cáo',
+                confirmButtonColor: '#D97706',
+                cancelButtonText: 'Hủy',
+                inputValidator: function (v) { if (!v || v.trim().length < 10) return 'Nhập nội dung (ít nhất 10 ký tự)'; }
+            }).then(function (r) { if (r.isConfirmed) accGui('acc-warn-form', { noiDung: r.value.trim() }); });
+        }
+
+        function accDatLaiMatKhau() {
+            Swal.fire({
+                icon: 'question',
+                title: 'Đặt lại mật khẩu?',
+                html: '<div class="acc-swal-note">Hệ thống tạo <strong>mật khẩu tạm</strong> và gửi tới <strong>@email</strong>. Bạn sẽ không thấy mật khẩu này.'
+                    + '<br>Mật khẩu cũ hết hiệu lực, người dùng bị đăng xuất khỏi ứng dụng và phải đổi mật khẩu mới ở lần đăng nhập tiếp theo.</div>',
+                showCancelButton: true,
+                confirmButtonText: 'Đặt lại và gửi email',
+                cancelButtonText: 'Hủy'
+            }).then(function (r) { if (r.isConfirmed) accGui('acc-reset-form'); });
+        }
+    </script>
+}

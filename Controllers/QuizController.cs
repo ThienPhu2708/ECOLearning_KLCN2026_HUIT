@@ -28,6 +28,7 @@ namespace ECOLearning.Controllers
             }catch(InvalidOperationException ex){return new HttpStatusCodeResult(403,ex.Message);}
         }
         [HttpPost,ValidateAntiForgeryToken]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public ActionResult Start(string courseId)
         {
             try {return RedirectToAction("Take",new{id=Service.Start(courseId,StudentId).Id});}
@@ -43,16 +44,19 @@ namespace ECOLearning.Controllers
             return View(new QuizTakeViewModel{Attempt=a,Questions=JsonConvert.DeserializeObject<List<QuizSnapshotQuestion>>(a.SnapshotJson),Answers=JsonConvert.DeserializeObject<int[]>(a.AnswersJson ?? "[]"),Review=a.SubmittedAt.HasValue});
         }
         [HttpPost,ValidateAntiForgeryToken]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public ActionResult SaveDraft(int id,int[] answers)
         {
             try{return Json(new{saved=Service.SaveDraft(id,StudentId,answers)});}catch(InvalidOperationException){return new HttpStatusCodeResult(403);}
         }
         [HttpPost,ValidateAntiForgeryToken]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public ActionResult Submit(int id,int[] answers)
         {
             try {Service.Submit(id,StudentId,answers);return RedirectToAction("Take",new{id});}catch(InvalidOperationException){return new HttpStatusCodeResult(403);}
         }
         [HttpPost,ValidateAntiForgeryToken]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public ActionResult ClaimCertificate(string courseId)
         {
             try{Service.ClaimCertificate(courseId,StudentId);return RedirectToAction("Certificate","Learning",new{courseId});}catch(InvalidOperationException ex){TempData["QuizMessage"]=ex.Message;}

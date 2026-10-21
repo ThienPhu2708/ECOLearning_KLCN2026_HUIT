@@ -210,6 +210,44 @@ namespace ECOLearning.Services
             return SendEmailInternal(recipientEmail, displayName, "[E-Learning] Thông báo bảo mật: Mật khẩu tài khoản đã được thay đổi thành công", body);
         }
 
+        // 3b. Thông báo từ Quản trị viên (khóa / mở khóa tài khoản, cảnh cáo, mật khẩu tạm).
+        //     Các đoạn văn và ô nổi bật do hệ thống soạn; dữ liệu người nhập (lý do, họ tên) phải HtmlEncode trước khi truyền vào.
+        public static (bool Success, string Message) SendAdminNoticeEmail(string recipientEmail, string recipientName, string subject,
+            string paragraphsHtml, string highlightTitle = null, string highlightHtml = null, string tone = "info")
+        {
+            string displayName = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(recipientName) ? recipientEmail : recipientName);
+            string mau = tone == "danger" ? "#DC2626" : tone == "warning" ? "#D97706" : tone == "success" ? "#059669" : "#434CE8";
+            string nen = tone == "danger" ? "#FEF2F2" : tone == "warning" ? "#FFFBEB" : tone == "success" ? "#ECFDF5" : "#EEF2FF";
+            string oNoiBat = string.IsNullOrEmpty(highlightHtml) ? "" : $@"
+                        <div style='background: {nen}; border-left: 4px solid {mau}; border-radius: 8px; padding: 16px 18px; margin: 20px 0;'>
+                            {(string.IsNullOrEmpty(highlightTitle) ? "" : $"<div style='font-size: 12px; font-weight: 700; color: {mau}; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;'>{highlightTitle}</div>")}
+                            <div style='font-size: 15px; color: #0F172A;'>{highlightHtml}</div>
+                        </div>";
+
+            string body = $@"
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset='utf-8' /></head>
+            <body style=""font-family: 'Segoe UI', Arial, sans-serif; background-color: #F8FAFC; margin: 0; padding: 20px;"">
+                <div style='max-width: 540px; margin: 0 auto; background: #FFFFFF; border-radius: 16px; overflow: hidden; border: 1px solid #E2E8F0;'>
+                    <div style='background: #434CE8; color: #FFFFFF; padding: 24px; text-align: center;'>
+                        <h1 style='margin: 0; font-size: 22px; font-weight: 800;'>E-Learning<span style='color:#A5B4FC;'>.</span></h1>
+                    </div>
+                    <div style='padding: 32px 28px; color: #0F172A; line-height: 1.6;'>
+                        <div style='font-size: 16px; font-weight: 600; margin-bottom: 12px;'>Xin chào {displayName},</div>
+                        {paragraphsHtml}
+                        {oNoiBat}
+                    </div>
+                    <div style='background: #F1F5F9; padding: 16px 28px; text-align: center; font-size: 12px; color: #64748B; border-top: 1px solid #E2E8F0;'>
+                        Email này được gửi tự động từ Ban quản trị E-Learning. Nếu cần hỗ trợ, vui lòng dùng trang Liên hệ trên website.
+                    </div>
+                </div>
+            </body>
+            </html>";
+
+            return SendEmailInternal(recipientEmail, recipientName, subject, body);
+        }
+
         // 4. Gửi tin nhắn từ Form Liên hệ (Trang Contact) đến hộp thư hỗ trợ của hệ thống
         public static (bool Success, string Message) SendContactMessage(string senderName, string senderEmail, string subject, string content)
         {

@@ -1,0 +1,222 @@
+@using ECOLearning.Services
+@*
+    Admin / Quản lý người dùng: thống kê, tìm kiếm + lọc vai trò / trạng thái, phân trang 20 dòng,
+    tạo tài khoản nhân viên (Marketing / Admin) bằng mật khẩu tạm gửi qua email.
+*@
+@{
+    ViewBag.Title = "Quản lý người dùng";
+    bool chuaKhoiTao = ViewBag.ChuaKhoiTao as bool? ?? false;
+    var ds = ViewBag.DanhSach as List<NguoiDungAdminItem> ?? new List<NguoiDungAdminItem>();
+    var tk = ViewBag.ThongKe as ThongKeNguoiDung ?? new ThongKeNguoiDung();
+    var phanTrang = ViewBag.PhanTrang as ECOLearning.ViewModels.PhanTrangViewModel;
+    string q = ViewBag.Q as string;
+    string role = ViewBag.Role as string;
+    string status = ViewBag.Status as string;
+    var staffForm = TempData["StaffForm"] as string[];
+    Func<string, string> anh = a => string.IsNullOrWhiteSpace(a) ? null : (a.StartsWith("http") ? a : Url.Content("~/" + a.TrimStart('~', '/')));
+    Func<string, string> chuDau = t => string.IsNullOrWhiteSpace(t) ? "?" : t.Trim().Split(' ').Last().Substring(0, 1).ToUpper();
+}
+
+<link rel="stylesheet" href="~/assets/css/admin-users.css?v=1" />
+<link rel="stylesheet" href="~/assets/css/pagination.css?v=1.0" />
+
+<div class="au-head">
+    <div>
+        <h1 class="h2" style="margin-top: 6px;">Quản Lý Người Dùng</h1>
+        <p class="body-2">Tra cứu tài khoản, khóa / mở khóa có thời hạn, đặt lại mật khẩu và tạo tài khoản nhân viên</p>
+    </div>
+    @if (!chuaKhoiTao)
+    {
+        <button type="button" class="btn btn-primary" onclick="moTaoNhanVien()"><i class="bi bi-person-plus-fill me-1"></i> Tạo tài khoản nhân viên</button>
+    }
+</div>
+
+@Html.Partial("_AdminFlash")
+
+@if (chuaKhoiTao)
+{
+    @Html.Partial("_ChuaKhoiTao016")
+}
+else
+{
+    <div class="au-stats">
+        <a href="@Url.Action("Index")" class="card au-stat @(role == null && status == null ? "is-active" : "")"><span><i class="bi bi-people-fill"></i> Tổng tài khoản</span><strong>@tk.TongSo</strong></a>
+        <a href="@Url.Action("Index", new { role = "HocVien" })" class="card au-stat @(role == "HocVien" ? "is-active" : "")"><span><i class="bi bi-mortarboard"></i> Học viên</span><strong>@tk.HocVien</strong></a>
+        <a href="@Url.Action("Index", new { role = "GiaoVien" })" class="card au-stat @(role == "GiaoVien" ? "is-active" : "")"><span><i class="bi bi-person-video3"></i> Giáo viên</span><strong>@tk.GiaoVien</strong></a>
+        <a href="@Url.Action("Index", new { role = "Marketing" })" class="card au-stat @(role == "Marketing" || role == "Admin" ? "is-active" : "")"><span><i class="bi bi-briefcase-fill"></i> Nhân viên</span><strong>@tk.NhanVien</strong><small>Marketing và Quản trị viên</small></a>
+        <a href="@Url.Action("Index", new { status = "locked" })" class="card au-stat @(status == "locked" ? "is-active" : "")"><span><i class="bi bi-lock-fill" style="color: #DC2626;"></i> Đang bị khóa</span><strong style="@(tk.DangKhoa > 0 ? "color: #DC2626;" : "")">@tk.DangKhoa</strong></a>
+    </div>
+
+    <form method="get" action="@Url.Action("Index")" class="au-filter" id="danh-sach">
+        <input type="search" name="q" value="@q" class="form-control au-search" placeholder="Tìm theo họ tên, email, số điện thoại hoặc mã người dùng" maxlength="100" />
+        <select name="role" class="form-control" onchange="this.form.submit()">
+            <option value="">Tất cả vai trò</option>
+            <option value="HocVien" @(role == "HocVien" ? "selected" : "")>Học viên</option>
+            <option value="GiaoVien" @(role == "GiaoVien" ? "selected" : "")>Giáo viên</option>
+            <option value="Marketing" @(role == "Marketing" ? "selected" : "")>Marketing</option>
+            <option value="Admin" @(role == "Admin" ? "selected" : "")>Quản trị viên</option>
+        </select>
+        <select name="status" class="form-control" onchange="this.form.submit()">
+            <option value="">Mọi trạng thái</option>
+            <option value="active" @(status == "active" ? "selected" : "")>Đang hoạt động</option>
+            <option value="locked" @(status == "locked" ? "selected" : "")>Đang bị khóa</option>
+        </select>
+        <button type="submit" class="btn btn-secondary"><i class="bi bi-search"></i> Tìm</button>
+        @if (!string.IsNullOrEmpty(q) || role != null || status != null)
+        {
+            <a href="@Url.Action("Index")" class="btn btn-outline">Bỏ lọc</a>
+        }
+    </form>
+
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="table-responsive">
+            <table class="table au-table">
+                <thead>
+                    <tr>
+                        <th>Người dùng</th>
+                        <th>Vai trò</th>
+                        <th>Số điện thoại</th>
+                        <th class="au-num">Khóa học</th>
+                        <th>Ngày tạo</th>
+                        <th>Trạng thái</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (ds.Count == 0)
+                    {
+                        <tr><td colspan="7" class="au-empty">Không có người dùng nào phù hợp.</td></tr>
+                    }
+                    @foreach (var u in ds)
+                    {
+                        string link = u.VaiTro == AccountAdminService.GiaoVien ? Url.Action("Details", "Teacher", new { id = u.MaNguoiDung }) : Url.Action("Details", new { id = u.MaNguoiDung });
+                        <tr>
+                            <td class="au-wrap">
+                                <div class="au-user">
+                                    @if (anh(u.AnhDaiDien) != null)
+                                    {
+                                        <img class="au-avatar" src="@anh(u.AnhDaiDien)" alt="" loading="lazy" referrerpolicy="no-referrer" />
+                                    }
+                                    else
+                                    {
+                                        <span class="au-avatar">@chuDau(u.HoTen)</span>
+                                    }
+                                    <div>
+                                        <strong>@u.HoTen</strong>
+                                        <div class="au-sub">@u.Email · #@u.MaNguoiDung</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="badge @AdminUserQueryService.MauVaiTro(u.VaiTro)">@AdminUserQueryService.TenVaiTro(u.VaiTro)</span></td>
+                            <td>@(string.IsNullOrEmpty(u.SoDienThoai) ? "-" : u.SoDienThoai)</td>
+                            <td class="au-num">
+                                @if (u.VaiTro == AccountAdminService.GiaoVien)
+                                {
+                                    <span title="Số khóa học giảng dạy">@u.SoKhoaGiangDay <span class="au-sub">giảng dạy</span></span>
+                                }
+                                else
+                                {
+                                    <span title="Số khóa học đã đăng ký">@u.SoKhoaDaDangKy</span>
+                                }
+                            </td>
+                            <td>@(u.NgayTao.HasValue ? u.NgayTao.Value.ToString("dd/MM/yyyy") : "-")</td>
+                            <td class="au-wrap">
+                                @if (u.HoatDong)
+                                {
+                                    <span class="badge badge-success">Hoạt động</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-danger">Đang khóa</span>
+                                    <div class="au-sub">@(u.KhoaDenNgay.HasValue ? "đến " + u.KhoaDenNgay.Value.ToString("dd/MM/yyyy HH:mm") : "vĩnh viễn")</div>
+                                }
+                                @if (u.CanDoiMatKhau)
+                                {
+                                    <div class="au-sub" title="Đang dùng mật khẩu tạm, chưa đổi"><i class="bi bi-key"></i> Mật khẩu tạm</div>
+                                }
+                            </td>
+                            <td style="text-align: right;"><a href="@link" class="btn btn-sm btn-primary">Xem</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    if (phanTrang != null)
+    {
+        <div style="margin-top: 16px;">
+            <div class="au-sub" style="margin-bottom: 8px;">Hiển thị @phanTrang.TuSo–@phanTrang.DenSo trong @phanTrang.TongSo người dùng</div>
+            @{ phanTrang.Neo = "danh-sach"; }
+            @Html.Partial("_Pagination", phanTrang)
+        </div>
+    }
+
+    using (Html.BeginForm("CreateStaff", "User", new { area = "Admin" }, FormMethod.Post, new { id = "staff-form" }))
+    {
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="hoTen" />
+        <input type="hidden" name="email" />
+        <input type="hidden" name="vaiTro" />
+    }
+}
+
+@section Scripts {
+    <style>
+        .acc-swal-field { text-align: left; margin-top: 12px; }
+        .acc-swal-field label { display: block; font-size: 13px; font-weight: 700; color: #0F172A; margin-bottom: 6px; }
+        .acc-swal-field input, .acc-swal-field select { width: 100%; box-sizing: border-box; border: 1px solid #CBD5E1; border-radius: 10px; padding: 9px 12px; font: inherit; font-size: 14px; }
+        .acc-swal-note { text-align: left; font-size: 13px; color: #64748B; background: #F8FAFC; border-radius: 10px; padding: 10px 12px; }
+    </style>
+    <script>
+        function moTaoNhanVien(hoTen, email, vaiTro, loi) {
+            Swal.fire({
+                title: 'Tạo tài khoản nhân viên',
+                html: '<div class="acc-swal-note">Hệ thống tạo <strong>mật khẩu tạm</strong> và gửi tới email nhân viên. Nhân viên phải đổi mật khẩu ở lần đăng nhập đầu tiên.</div>'
+                    + '<div class="acc-swal-field"><label for="nv-ho-ten">Họ và tên</label><input id="nv-ho-ten" maxlength="100" placeholder="Nguyễn Văn A" /></div>'
+                    + '<div class="acc-swal-field"><label for="nv-email">Email đăng nhập</label><input id="nv-email" type="email" maxlength="100" placeholder="nhanvien@gmail.com" /></div>'
+                    + '<div class="acc-swal-field"><label for="nv-vai-tro">Vai trò</label><select id="nv-vai-tro"><option value="Marketing">Nhân viên Marketing</option><option value="Admin">Quản trị viên</option></select></div>',
+                showCancelButton: true,
+                confirmButtonText: 'Tạo và gửi email',
+                cancelButtonText: 'Hủy',
+                focusConfirm: false,
+                didOpen: function () {
+                    document.getElementById('nv-ho-ten').value = hoTen || '';
+                    document.getElementById('nv-email').value = email || '';
+                    if (vaiTro) document.getElementById('nv-vai-tro').value = vaiTro;
+                    // Lỗi từ server (vd. email đã có tài khoản): hiện ngay trong hộp, giữ nguyên dữ liệu đã nhập
+                    if (loi) {
+                        Swal.showValidationMessage(loi);
+                        document.getElementById('nv-email').focus();
+                    }
+                },
+                preConfirm: function () {
+                    var ten = document.getElementById('nv-ho-ten').value.normalize('NFC').trim().replace(/\s+/g, ' ');
+                    var mail = document.getElementById('nv-email').value.trim();
+                    if (ten.length < 2) { Swal.showValidationMessage('Nhập họ và tên (tối thiểu 2 ký tự)'); return false; }
+                    // Cùng quy tắc với server: chỉ chữ cái và khoảng trắng (ký tự như < & bị ASP.NET chặn thành trang lỗi)
+                    if (!/^[\p{L}\s]+$/u.test(ten)) { Swal.showValidationMessage('Họ và tên chỉ được chứa chữ cái, không có chữ số và ký tự đặc biệt'); return false; }
+                    if (!/^[^\s@@]+@@[^\s@@]+\.[^\s@@]{2,}$/.test(mail)) { Swal.showValidationMessage('Email không hợp lệ'); return false; }
+                    return { hoTen: ten, email: mail, vaiTro: document.getElementById('nv-vai-tro').value };
+                }
+            }).then(function (r) {
+                if (!r.isConfirmed) return;
+                var f = document.getElementById('staff-form');
+                f.querySelector('[name=hoTen]').value = r.value.hoTen;
+                f.querySelector('[name=email]').value = r.value.email;
+                f.querySelector('[name=vaiTro]').value = r.value.vaiTro;
+                Swal.fire({ title: 'Đang tạo tài khoản...', allowOutsideClick: false, didOpen: function () { Swal.showLoading(); } });
+                f.submit();
+            });
+        }
+        @if (staffForm != null && staffForm.Length == 4)
+        {
+            // Html.Raw: trong <script> trình duyệt không giải mã entity HTML, nên không để Razor mã hóa tiếng Việt thành &#249;...
+            // JavaScriptStringEncode đã đổi < > ' " thành \uXXXX nên chèn thẳng vẫn an toàn
+            <text>document.addEventListener('DOMContentLoaded', function () {
+                moTaoNhanVien('@Html.Raw(HttpUtility.JavaScriptStringEncode(staffForm[0]))', '@Html.Raw(HttpUtility.JavaScriptStringEncode(staffForm[1]))',
+                    '@Html.Raw(HttpUtility.JavaScriptStringEncode(staffForm[2]))', '@Html.Raw(HttpUtility.JavaScriptStringEncode(staffForm[3]))');
+            });</text>
+        }
+    </script>
+}

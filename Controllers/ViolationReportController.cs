@@ -13,6 +13,7 @@ namespace ECOLearning.Controllers
         // POST: ViolationReport/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public JsonResult Create(string courseId, string loaiViPham, string moTa, string maBaiHoc = null)
         {
             int userId = (Session["UserId"] as int?) ?? 0;

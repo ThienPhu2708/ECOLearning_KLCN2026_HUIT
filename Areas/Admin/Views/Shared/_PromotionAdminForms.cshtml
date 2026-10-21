@@ -1,0 +1,66 @@
+@* Form ẩn + hộp thoại cho nút _PromotionAdminActions (Admin tạm dừng / cho chạy lại khuyến mãi) *@
+@using (Html.BeginForm("Pause", "Marketing", new { area = "Admin" }, FormMethod.Post, new { id = "km-pause-form" }))
+{
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" />
+    <input type="hidden" name="lyDo" />
+    <input type="hidden" name="returnUrl" value="@Request.RawUrl" />
+}
+@using (Html.BeginForm("Resume", "Marketing", new { area = "Admin" }, FormMethod.Post, new { id = "km-resume-form" }))
+{
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" />
+    <input type="hidden" name="ghiChu" />
+    <input type="hidden" name="returnUrl" value="@Request.RawUrl" />
+}
+<style>
+    .acc-btn-danger { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
+    .acc-btn-danger:hover { background: #FEE2E2; }
+    .km-swal-note { text-align: left; font-size: 13px; color: #64748B; background: #F8FAFC; border-radius: 10px; padding: 10px 12px; }
+</style>
+<script>
+    // Tên chương trình do Marketing nhập: mã hóa HTML trước khi chèn vào hộp thoại
+    function kmEsc(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    function kmGui(formId, id, ten, giaTri) {
+        var f = document.getElementById(formId);
+        f.querySelector('[name=id]').value = id;
+        Object.keys(giaTri).forEach(function (k) { f.querySelector('[name=' + k + ']').value = giaTri[k]; });
+        f.submit();
+    }
+
+    function kmTamDung(id, ten) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Tạm dừng chương trình?',
+            html: '<div class="km-swal-note"><strong>' + kmEsc(ten) + '</strong>: mã giảm giá ngừng áp dụng ngay. Nhân viên Marketing thấy lý do, nhận email và <strong>không tự kích hoạt lại</strong> được; chỉ Admin cho chạy lại.</div>',
+            input: 'textarea',
+            inputLabel: 'Lý do (gửi cho nhân viên Marketing)',
+            inputPlaceholder: 'Ví dụ: Mức giảm 90% không giới hạn số tiền, vượt chính sách giảm giá của nền tảng',
+            inputAttributes: { maxlength: 500 },
+            showCancelButton: true,
+            confirmButtonText: 'Tạm dừng',
+            confirmButtonColor: '#DC2626',
+            cancelButtonText: 'Hủy',
+            inputValidator: function (v) { if (!v || v.trim().length < 5) return 'Nhập lý do (ít nhất 5 ký tự)'; }
+        }).then(function (r) { if (r.isConfirmed) kmGui('km-pause-form', id, ten, { lyDo: r.value.trim() }); });
+    }
+
+    function kmChoChayLai(id, ten) {
+        Swal.fire({
+            icon: 'question',
+            title: 'Cho chạy lại chương trình?',
+            html: '<div class="km-swal-note"><strong>' + kmEsc(ten) + '</strong>: mã giảm giá áp dụng lại ngay (nếu chương trình chưa hết hạn).</div>',
+            input: 'textarea',
+            inputLabel: 'Ghi chú (không bắt buộc, lưu trong nhật ký)',
+            inputAttributes: { maxlength: 500 },
+            showCancelButton: true,
+            confirmButtonText: 'Cho chạy lại',
+            cancelButtonText: 'Hủy'
+        }).then(function (r) { if (r.isConfirmed) kmGui('km-resume-form', id, ten, { ghiChu: (r.value || '').trim() }); });
+    }
+</script>

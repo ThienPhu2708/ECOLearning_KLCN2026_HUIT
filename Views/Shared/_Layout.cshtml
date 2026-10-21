@@ -81,9 +81,20 @@
             }
         </style>
 
+        @{
+            // Admin / Marketing xem trang học viên ở chế độ chỉ xem (Services/StaffViewMode.cs)
+            bool chiXem = ECOLearning.Services.StaffViewMode.LaChiXem(Session);
+            string tenVaiTroChiXem = chiXem ? ECOLearning.Services.StaffViewMode.TenVaiTro(Session["Role"] as string) : null;
+        }
+        @if (chiXem)
+        {
+            <link rel="stylesheet" href="@Url.Content("~/assets/css/staff-readonly.css?v=1.0")" />
+        }
+
         @RenderSection("styles", required: false)
     </head>
-    <body style="margin: 0; padding: 0; background-color: #FFFFFF;">
+    <body style="margin: 0; padding: 0; background-color: #FFFFFF;" class="@(chiXem ? "staff-readonly" : null)"
+          data-staff-role="@tenVaiTroChiXem" data-staff-msg="@(chiXem ? ECOLearning.Services.StaffViewMode.ThongBao : null)">
         <!-- Header Navigation (76px, Sticky) -->
         <header class="main-header" style="height: 76px; min-height: 76px; background: #FFFFFF; border-bottom: none; box-shadow: 0 2px 12px 0 rgba(15, 23, 42, 0.04); position: sticky; top: 0; z-index: 50; margin: 0; padding: 0;">
             <div class="safe-container header-inner">
@@ -102,10 +113,18 @@
                                 <a href="@Url.Action("Index", "Course", new { area = "" })" class="nav-link explore-trigger @(ViewContext.RouteData.Values["controller"]?.ToString() == "Course" ? "active" : "")">Khám phá <i class="bi bi-chevron-down"></i></a>
                                 @Html.Action("ExploreMenu", "Navigation", new { area = "" })
                             </div>
-                            <div class="explore-menu" id="mycourses-menu">
-                                <a href="@Url.Action("MyCourses", "Learning", new { area = "" })" class="nav-link explore-trigger @(ViewContext.RouteData.Values["controller"]?.ToString() == "Learning" ? "active" : "")">Khóa học của tôi <i class="bi bi-chevron-down"></i></a>
-                                @Html.Action("MyCoursesMenu", "Navigation", new { area = "" })
-                            </div>
+                            if (chiXem)
+                            {
+                                // Admin / Marketing không có khóa học của tôi: giữ mục trên menu nhưng làm mờ, không mở danh sách
+                                <a href="@Url.Action("MyCourses", "Learning", new { area = "" })" class="nav-link" data-staff-lock>Khóa học của tôi <i class="bi bi-chevron-down"></i></a>
+                            }
+                            else
+                            {
+                                <div class="explore-menu" id="mycourses-menu">
+                                    <a href="@Url.Action("MyCourses", "Learning", new { area = "" })" class="nav-link explore-trigger @(ViewContext.RouteData.Values["controller"]?.ToString() == "Learning" ? "active" : "")">Khóa học của tôi <i class="bi bi-chevron-down"></i></a>
+                                    @Html.Action("MyCoursesMenu", "Navigation", new { area = "" })
+                                </div>
+                            }
                         }
                         else
                         {
@@ -130,7 +149,7 @@
                     var cartList = Session["Cart"] as List<ECOLearning.ViewModels.CartItemViewModel>;
                     int cartBadgeCount = cartList != null ? cartList.Count : 0;
                     <!-- Giỏ hàng -->
-                    <a href="@Url.Action("Index", "Cart", new { area = "" })" class="btn btn-icon btn-secondary" title="Giỏ hàng" style="position: relative; display: inline-flex; align-items: center; justify-content: center;">
+                    <a href="@Url.Action("Index", "Cart", new { area = "" })" class="btn btn-icon btn-secondary" title="Giỏ hàng" @(chiXem ? Html.Raw("data-staff-lock") : null) style="position: relative; display: inline-flex; align-items: center; justify-content: center;">
                         <i class="bi bi-cart3" style="font-size: 18px;"></i>
                         <span id="header-cart-badge" style="position: absolute; top: -4px; right: -4px; background: #434CE8; color: #FFFFFF; font-size: 10px; font-weight: 800; width: 18px; height: 18px; border-radius: 50%; display: @(cartBadgeCount > 0 ? "flex" : "none"); align-items: center; justify-content: center; border: 2px solid #FFFFFF;">@(cartBadgeCount > 0 ? cartBadgeCount.ToString() : "")</span>
                     </a>
@@ -204,6 +223,16 @@
             </div>
         </div>
     </header>
+
+    @if (chiXem)
+    {
+        <div class="staff-banner" role="note">
+            <div class="safe-container staff-banner-inner">
+                <span><i class="bi bi-eye-fill"></i> Bạn đang xem với vai trò <strong>@tenVaiTroChiXem</strong>, <strong>chế độ chỉ xem</strong>: các nút mua, thả tim, lưu mã, đánh giá được làm mờ để không ảnh hưởng số liệu.</span>
+                <a href="@(Session["Role"] as string == "Admin" ? Url.Action("Index", "Dashboard", new { area = "Admin" }) : Url.Action("Index", "Dashboard", new { area = "Marketing" }))"><i class="bi bi-arrow-left"></i> Về trang @tenVaiTroChiXem</a>
+            </div>
+        </div>
+    }
 
     <!-- Main Dynamic Content -->
     <main class="main-content" style="flex: 1 0 auto; margin: 0 !important; padding: 0 !important; background-color: #FFFFFF;">
@@ -349,6 +378,13 @@ window.SEARCH_SUGGEST_URL = '@Url.Action("Suggest", "Search", new { area = "" })
 <script src="@Url.Content("~/assets/js/favorite.js?v=1.2")"></script>
 <script src="@Url.Content("~/assets/js/coupon-wallet.js?v=1.0")"></script>
 <script src="@Url.Content("~/assets/js/search-suggest.js?v=1.1")"></script>
+@* Admin / Marketing xem trang học viên vẫn bị đá ra khi tài khoản đăng nhập nơi khác; trang Đăng nhập hiện pop-up sau khi bị đá *@
+@Html.Partial("_PhienDangNhap")
 @RenderSection("scripts", required: false)
+@if (chiXem)
+{
+    @* Sau mọi script của trang để đánh dấu cả nút do trang tạo ra; chặn bấm ở pha capture nên chạy trước các xử lý gốc *@
+    <script src="@Url.Content("~/assets/js/staff-readonly.js?v=1.0")"></script>
+}
 </body>
 </html>

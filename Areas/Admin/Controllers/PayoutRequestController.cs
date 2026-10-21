@@ -39,7 +39,8 @@ namespace ECOLearning.Areas.Admin.Controllers
                 SELECT p.maPhieuChi AS MaPhieuChi, p.maGiaoVien AS MaGiaoVien, nd.hoTen AS TenGiaoVien, nd.email AS Email,
                        p.soTienYeuCau AS SoTien, p.thucNhan AS ThucNhan, p.ngayYeuCau AS NgayYeuCau, ISNULL(p.trangThai, N'Chờ duyệt') AS TrangThai,
                        p.nganHang AS NganHang, p.soTaiKhoan AS SoTaiKhoan, p.tenChuTaiKhoan AS TenChuTaiKhoan,
-                       p.ngayXuLy AS NgayXuLy, p.maGiaoDichChi AS MaGiaoDichChi, p.lyDoTuChoi AS LyDoTuChoi, ad.hoTen AS NguoiXuLy
+                       p.ngayXuLy AS NgayXuLy, p.maGiaoDichChi AS MaGiaoDichChi, p.lyDoTuChoi AS LyDoTuChoi, ad.hoTen AS NguoiXuLy,
+                       CAST(CASE WHEN nd.trangThai = 0 THEN 1 ELSE 0 END AS BIT) AS GiaoVienBiKhoa
                 FROM dbo.NhanThanhToan p
                 JOIN dbo.NguoiDung nd ON nd.maNguoiDung = p.maGiaoVien
                 LEFT JOIN dbo.NguoiDung ad ON ad.maNguoiDung = p.maAdminXuLy
@@ -60,14 +61,18 @@ namespace ECOLearning.Areas.Admin.Controllers
         {
             int adminId = (Session["UserId"] as int?) ?? 0;
             string maGd = "SBXCHI" + DateTime.Now.ToString("yyMMddHHmmss") + new Random().Next(100, 999);
-            // Chỉ xử lý phiếu còn "Chờ duyệt" (hai Admin bấm cùng lúc thì chỉ một người xử lý được)
+            // Chỉ xử lý phiếu còn "Chờ duyệt" (hai Admin bấm cùng lúc thì chỉ một người xử lý được).
+            // Giáo viên đang bị khóa tài khoản: phiếu bị tạm giữ, chưa chi đến khi mở khóa.
             int n = db.Database.ExecuteSqlCommand(@"
-                UPDATE dbo.NhanThanhToan
+                UPDATE p
                 SET trangThai = @da, ngayXuLy = GETDATE(), maGiaoDichChi = @gd, maAdminXuLy = @ad, lyDoTuChoi = NULL
-                WHERE maPhieuChi = @id AND ISNULL(trangThai, N'Chờ duyệt') = @cho",
+                FROM dbo.NhanThanhToan p
+                INNER JOIN dbo.NguoiDung gv ON gv.maNguoiDung = p.maGiaoVien AND ISNULL(gv.trangThai, 1) = 1
+                WHERE p.maPhieuChi = @id AND ISNULL(p.trangThai, N'Chờ duyệt') = @cho",
                 new SqlParameter("@da", DaChi), new SqlParameter("@gd", maGd), new SqlParameter("@ad", adminId),
                 new SqlParameter("@id", id ?? ""), new SqlParameter("@cho", ChoDuyet));
             if (n == 1) TempData["SuccessMessage"] = "Đã chuyển khoản thử nghiệm phiếu " + id + ". Mã giao dịch: " + maGd + ".";
+            else if (GiaoVienCuaPhieuBiKhoa(id)) TempData["ErrorMessage"] = "Giáo viên của phiếu " + id + " đang bị khóa tài khoản nên phiếu được tạm giữ. Mở khóa giáo viên trước khi chi trả.";
             else TempData["ErrorMessage"] = "Phiếu " + id + " không còn ở trạng thái chờ duyệt.";
             return RedirectToAction("Index", new { status });
         }
@@ -92,6 +97,14 @@ namespace ECOLearning.Areas.Admin.Controllers
             if (n == 1) TempData["SuccessMessage"] = "Đã từ chối phiếu " + id + ". Số tiền đã trở lại số dư khả dụng của giáo viên.";
             else TempData["ErrorMessage"] = "Phiếu " + id + " không còn ở trạng thái chờ duyệt.";
             return RedirectToAction("Index", new { status });
+        }
+
+        private bool GiaoVienCuaPhieuBiKhoa(string id)
+        {
+            return db.Database.SqlQuery<int>(@"
+                SELECT COUNT(*) FROM dbo.NhanThanhToan p
+                INNER JOIN dbo.NguoiDung gv ON gv.maNguoiDung = p.maGiaoVien
+                WHERE p.maPhieuChi = @id AND gv.trangThai = 0", new SqlParameter("@id", id ?? "")).Single() > 0;
         }
 
         protected override void Dispose(bool disposing)
@@ -125,5 +138,6 @@ namespace ECOLearning.Areas.Admin.Controllers
         public string MaGiaoDichChi { get; set; }
         public string LyDoTuChoi { get; set; }
         public string NguoiXuLy { get; set; }
+        public bool GiaoVienBiKhoa { get; set; }
     }
 }

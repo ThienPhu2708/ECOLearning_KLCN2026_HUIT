@@ -21,6 +21,17 @@ namespace ECOLearning.Controllers
             ViewBag.ReturnUrl = returnUrl;
             ViewBag.AuthMode = string.IsNullOrEmpty(mode) ? "login" : mode.ToLower();
 
+            // AccountStatusFilter vừa đăng xuất tài khoản bị Admin khóa
+            if (Request.QueryString["locked"] == "1")
+            {
+                ModelState.AddModelError("", "Tài khoản của bạn đã bị khóa nên phiên làm việc đã kết thúc. Đăng nhập lại để xem lý do và thời hạn khóa.");
+            }
+
+            // AccountStatusFilter vừa đăng xuất phiên Admin / Marketing vì tài khoản đăng nhập ở nơi khác: hiện pop-up (_PhienDangNhap).
+            // phien=da-bao: pop-up đã hiện trên trang cũ, chỉ xóa cookie
+            var phienBiThay = PhienDocQuyenService.DocCookieBiThay(Request, Response);
+            ViewBag.PhienBiThay = Request.QueryString["phien"] == "da-bao" ? null : phienBiThay;
+
             // Nếu học viên đã đăng nhập rồi thì chuyển hướng về Trang chủ
             if (User.Identity.IsAuthenticated || Session["UserId"] != null)
             {
@@ -58,7 +69,19 @@ namespace ECOLearning.Controllers
                 {
                     if (user.trangThai.HasValue && !user.trangThai.Value)
                     {
-                        ModelState.AddModelError("", "Tài khoản của bạn đã bị khóa hoặc chưa được kích hoạt.");
+                        // Hết thời hạn khóa thì tự mở (chỉ khi đúng mật khẩu, tránh lộ thông tin khóa cho người đoán email)
+                        if (PasswordHasher.VerifyPassword(user.matKhau, model.Password))
+                        {
+                            AccountAdminService.MoKhoaHetHanKhiDangNhap(db, user.maNguoiDung);
+                            db.Entry(user).Reload();
+                        }
+                    }
+
+                    if (user.trangThai.HasValue && !user.trangThai.Value)
+                    {
+                        ModelState.AddModelError("", PasswordHasher.VerifyPassword(user.matKhau, model.Password)
+                            ? AccountAdminService.CauBaoKhoa(db, user.maNguoiDung)
+                            : "Tài khoản của bạn đã bị khóa hoặc chưa được kích hoạt.");
                         ViewBag.AuthMode = "login";
                         return View(model);
                     }
@@ -565,6 +588,8 @@ namespace ECOLearning.Controllers
                 {
                     user.matKhau = hashedPassword;
                     db.SaveChanges();
+                    // Người dùng đã tự đặt mật khẩu mới: bỏ yêu cầu đổi mật khẩu tạm do Admin cấp
+                    AccountAdminService.DaDoiMatKhau(db, user.maNguoiDung);
                 }
             }
             catch (Exception ex)
@@ -667,7 +692,12 @@ namespace ECOLearning.Controllers
                 {
                     if (user.trangThai.HasValue && !user.trangThai.Value)
                     {
-                        return Json(new { success = false, message = "Tài khoản của bạn đã bị khóa hoặc chưa được kích hoạt." });
+                        AccountAdminService.MoKhoaHetHanKhiDangNhap(db, user.maNguoiDung);
+                        db.Entry(user).Reload();
+                    }
+                    if (user.trangThai.HasValue && !user.trangThai.Value)
+                    {
+                        return Json(new { success = false, message = AccountAdminService.CauBaoKhoa(db, user.maNguoiDung) });
                     }
 
                     bool isUpdated = false;
@@ -794,11 +824,23 @@ namespace ECOLearning.Controllers
         [HttpGet]
         public ActionResult Logout()
         {
-            FormsAuthentication.SignOut();
-            Session.Clear();
-            Session.Abandon();
-
+            DangXuatHet();
             return RedirectToAction("Index", "Home");
+        }
+
+        // GET: Account/KiemTraPhien - trang Admin / Marketing hỏi mỗi 15 giây (_PhienDangNhap.cshtml).
+        // Phiên đã bị thay thì AccountStatusFilter trả JSON phienBiThay trước khi vào đây.
+        [HttpGet]
+        [OutputCache(NoStore = true, Duration = 0)]
+        public JsonResult KiemTraPhien()
+        {
+            if (Session["UserId"] != null) return Json(new { success = true }, JsonRequestBehavior.AllowGet);
+
+            // Lệnh AJAX khác của trang (vd. đếm chấm đỏ) đã phát hiện phiên bị thay trước lượt hỏi này: thông tin còn trong cookie
+            var moi = PhienDocQuyenService.DocCookieBiThay(Request, Response);
+            return moi == null
+                ? Json(new { success = false }, JsonRequestBehavior.AllowGet)
+                : Json(PhienDocQuyenService.DuLieuAjax(moi, Url.Action("Login", "Account", new { area = "" })), JsonRequestBehavior.AllowGet);
         }
 
         // POST: Account/Logout (UC2: Đăng xuất)
@@ -807,24 +849,36 @@ namespace ECOLearning.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult LogoutPost()
         {
-            FormsAuthentication.SignOut();
-            Session.Clear();
-            Session.Abandon();
-
+            DangXuatHet();
             return RedirectToAction("Index", "Home");
         }
 
         #region Helper Methods
+        // Đăng xuất: thu hồi mã phiên Admin / Marketing (cookie ECO_Phien không khôi phục được nữa) rồi hủy Session
+        private void DangXuatHet()
+        {
+            PhienDocQuyenService.ThuHoi((Session["UserId"] as int?) ?? 0, Session[PhienDocQuyenService.KeySession] as string);
+            PhienDocQuyenService.XoaCookiePhien(Response);
+            FormsAuthentication.SignOut();
+            Session.Clear();
+            Session.Abandon();
+        }
+
         private void SetUserSessionAndAuthCookie(int userId, string fullName, string email, string role, string avatar, bool rememberMe)
         {
             FormsAuthentication.SetAuthCookie(email, rememberMe);
 
+            // Admin / Marketing: phiên mới thay phiên cũ đang mở ở nơi khác (null với vai trò khác);
+            // cookie ECO_Phien để khôi phục Session khi bị mất (để trang lâu, ứng dụng khởi động lại)
+            string maPhien = PhienDocQuyenService.BatDau(db, userId, role, Request);
+            PhienDocQuyenService.GhiCookiePhien(Request, Response, userId, maPhien);
+            Session[PhienDocQuyenService.KeySession] = maPhien;
             Session["UserId"] = userId;
             Session["FullName"] = fullName;
             Session["Email"] = email;
             Session["Role"] = string.IsNullOrEmpty(role) ? "HocVien" : role;
-            Session["Avatar"] = string.IsNullOrEmpty(avatar) ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" : avatar;
-            Session["User"] = db.NguoiDung.Find(userId);
+            Session["Avatar"] = string.IsNullOrEmpty(avatar) ? SessionNguoiDung.AnhDaiDienMacDinh : avatar;
+            Session["User"] = SessionNguoiDung.BanSao(db.NguoiDung.Find(userId));
         }
 
         protected override void Dispose(bool disposing)

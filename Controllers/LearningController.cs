@@ -15,6 +15,7 @@ namespace ECOLearning.Controllers
         private QL_HETHONG_CUNGCAP_KHOAHOCEntities1 db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1();
 
         // GET: Learning/MyCourses?tab=hoan-thanh&trang=2 (UC8: Khóa học của tôi), 12 khóa mỗi trang trong từng tab
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public ActionResult MyCourses(string tab, int trang = 1)
         {
             int currentUserId = (Session["UserId"] as int?) ?? 0;
@@ -22,7 +23,7 @@ namespace ECOLearning.Controllers
             if (currentUser == null && currentUserId > 0)
             {
                 currentUser = db.NguoiDung.Find(currentUserId);
-                Session["User"] = currentUser;
+                Session["User"] = SessionNguoiDung.BanSao(currentUser);
             }
 
             if (currentUser == null)
@@ -171,6 +172,7 @@ namespace ECOLearning.Controllers
         }
 
         // GET: Learning/Favorites — trang quản lý "Khóa học đã tim" (trang riêng, tách khỏi Khóa học đã đăng ký)
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public ActionResult Favorites()
         {
             int userId = (Session["UserId"] as int?) ?? 0;
@@ -202,7 +204,7 @@ namespace ECOLearning.Controllers
                 currentUser = db.NguoiDung.FirstOrDefault(u => u.email == User.Identity.Name);
             if (currentUser == null || currentUser.trangThai == false) return null;
             Session["UserId"] = currentUser.maNguoiDung;
-            Session["User"] = currentUser;
+            Session["User"] = SessionNguoiDung.BanSao(currentUser);
             return currentUser;
         }
         // GET: Learning/Study (UC5: Không gian học tập Video Player & Cây đề cương)
@@ -345,6 +347,7 @@ namespace ECOLearning.Controllers
         // POST: Learning/UpdateProgress: lưu vị trí đang xem (gọi định kỳ khi xem, khi tạm dừng và khi rời trang)
         // và đánh dấu hoàn thành khi đã xem >= 80% thời lượng video.
         [HttpPost, ValidateAntiForgeryToken]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public ActionResult UpdateProgress(string courseId, string lessonId, float? durationWatched, float? totalDuration)
         {
             var currentUser = GetCurrentStudent(courseId);
@@ -375,6 +378,7 @@ namespace ECOLearning.Controllers
 
         // POST: Learning/ResetProgress (Đặt lại toàn bộ tiến độ của khóa học để kiểm thử lại)
         [HttpPost, ValidateAntiForgeryToken]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public ActionResult ResetProgress(string courseId)
         {
             var currentUser = GetCurrentStudent(courseId);

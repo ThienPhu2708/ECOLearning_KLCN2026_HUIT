@@ -48,3 +48,6 @@ Tools/cloudflared*.exe
 # Publish lên hosting (MonsterASP...): file cấu hình chứa mật khẩu deploy / chuỗi kết nối, không đưa lên Git
 *.publishsettings
 Properties/PublishProfiles/
+
+# Nhật ký chẩn đoán (Services/AppLog.cs), không đưa lên Git
+App_Data/logs/

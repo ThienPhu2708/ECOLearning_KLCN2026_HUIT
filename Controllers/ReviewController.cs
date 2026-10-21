@@ -10,6 +10,7 @@ namespace ECOLearning.Controllers
     {
         // POST: Review/SubmitReview (UC6: Đánh giá sao & nhận xét khóa học khi hoàn thành)
         [HttpPost, ValidateAntiForgeryToken]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public ActionResult SubmitReview(string courseId, int rating, string comment)
         {
             int currentUserId = (Session["UserId"] as int?) ?? 0;
@@ -90,6 +91,7 @@ namespace ECOLearning.Controllers
         // POST: Review/Helpful — "Bạn thấy hữu ích?" (helpful = true / false; bấm lại lựa chọn đang có để bỏ)
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public JsonResult Helpful(string reviewId, bool helpful)
         {
             int userId = CurrentUserId;

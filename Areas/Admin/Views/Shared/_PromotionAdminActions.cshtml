@@ -1,0 +1,17 @@
+@model ECOLearning.Services.KhuyenMaiAdminItem
+@*
+    Nút Admin tạm dừng / cho chạy lại một chương trình khuyến mãi (dùng ở danh sách và trang chi tiết Giám sát Marketing).
+    Form và hàm JS dùng chung nằm ở _PromotionAdminForms (render một lần mỗi trang).
+*@
+@{
+    string ten = HttpUtility.JavaScriptStringEncode(Model.ChuongTrinh.TenKhuyenMai);
+    string ma = Model.ChuongTrinh.MaKhuyenMai;
+}
+@if (Model.AdminTamDung)
+{
+    <button type="button" class="btn btn-sm btn-primary" onclick="kmChoChayLai('@ma', '@ten')"><i class="bi bi-play-fill"></i> Cho chạy lại</button>
+}
+else if (Model.TrangThai != "Đã kết thúc")
+{
+    <button type="button" class="btn btn-sm acc-btn-danger" onclick="kmTamDung('@ma', '@ten')"><i class="bi bi-pause-fill"></i> Tạm dừng</button>
+}

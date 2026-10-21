@@ -87,6 +87,7 @@ namespace ECOLearning.Controllers
                     BirthDate = user.ngaySinh,
                     AvatarUrl = string.IsNullOrEmpty(user.anhDaiDien) ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" : user.anhDaiDien,
                     RoleName = string.Equals(user.vaiTro, "Admin", StringComparison.OrdinalIgnoreCase) ? "Quản trị viên" :
+                               string.Equals(user.vaiTro, "Marketing", StringComparison.OrdinalIgnoreCase) ? "Nhân viên Marketing" :
                                (isTeacher ? "Giảng viên" : "Học viên"),
                     IsTeacher = isTeacher,
                     EnrolledCoursesCount = enrolledCount,
@@ -286,10 +287,20 @@ namespace ECOLearning.Controllers
                     return Json(new { success = false, message = "Mật khẩu hiện tại không chính xác!" });
                 }
 
+                if (PasswordHasher.VerifyPassword(user.matKhau, newPassword))
+                {
+                    return Json(new { success = false, message = "Mật khẩu mới phải khác mật khẩu hiện tại!" });
+                }
+
                 user.matKhau = PasswordHasher.HashPassword(newPassword);
                 db.SaveChanges();
 
-                return Json(new { success = true, message = "Đổi mật khẩu tài khoản thành công!" });
+                // Đổi xong mật khẩu tạm do Admin cấp: mở lại toàn bộ trang (AccountStatusFilter)
+                bool laMatKhauTam = Session[AccountStatusFilter.KeyCanDoiMatKhau] as bool? == true;
+                AccountAdminService.DaDoiMatKhau(db, user.maNguoiDung);
+                Session.Remove(AccountStatusFilter.KeyCanDoiMatKhau);
+
+                return Json(new { success = true, message = "Đổi mật khẩu tài khoản thành công!", redirectUrl = laMatKhauTam ? TrangChuTheoVaiTro() : null });
             }
             catch (Exception ex)
             {
@@ -429,6 +440,15 @@ namespace ECOLearning.Controllers
             }
 
             return null;
+        }
+
+        /// <summary>Trang làm việc chính theo vai trò, dùng sau khi đổi xong mật khẩu tạm.</summary>
+        private string TrangChuTheoVaiTro()
+        {
+            string role = Session["Role"]?.ToString();
+            if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase)) return Url.Action("Index", "Dashboard", new { area = "Admin" });
+            if (string.Equals(role, "Marketing", StringComparison.OrdinalIgnoreCase)) return Url.Action("Index", "Dashboard", new { area = "Marketing" });
+            return Url.Action("Index", "Home", new { area = "" });
         }
 
         protected override void Dispose(bool disposing)

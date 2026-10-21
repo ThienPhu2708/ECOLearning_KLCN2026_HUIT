@@ -1,0 +1,13 @@
+@* Thông báo sau thao tác (TempData SuccessMessage / ErrorMessage), cùng kiểu với trang Chi trả giáo viên *@
+@if (TempData["SuccessMessage"] != null)
+{
+    <div style="padding: 12px 16px; background: #ECFDF5; border: 1px solid #10B981; color: #065F46; border-radius: 12px; margin-bottom: 16px; font-size: 14px; font-weight: 600;"><i class="bi bi-check-circle-fill me-1"></i> @TempData["SuccessMessage"]</div>
+}
+@if (TempData["InfoMessage"] != null)
+{
+    <div style="padding: 12px 16px; background: #EEF2FF; border: 1px solid #A5B4FC; color: #3730A3; border-radius: 12px; margin-bottom: 16px; font-size: 14px; font-weight: 600;"><i class="bi bi-info-circle-fill me-1"></i> @TempData["InfoMessage"]</div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div style="padding: 12px 16px; background: #FEF2F2; border: 1px solid #EF4444; color: #991B1B; border-radius: 12px; margin-bottom: 16px; font-size: 14px; font-weight: 600;"><i class="bi bi-x-circle-fill me-1"></i> @TempData["ErrorMessage"]</div>
+}

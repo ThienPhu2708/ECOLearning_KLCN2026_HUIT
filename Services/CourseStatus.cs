@@ -18,6 +18,10 @@ namespace ECOLearning.Services
         public const string TamKhoa = "Tạm khóa";
         public const string KhoaVinhVien = "Khóa vĩnh viễn";
 
+        // Khóa đang bán bị ẩn vì giáo viên bị Admin khóa tài khoản (trạng thái cũ lưu ở bảng KhoaHocTamAn).
+        // Không nằm trong PublishedValues nên mọi trang bán hàng tự loại ra; học viên đã mua vẫn học bình thường.
+        public const string TamAn = "Tạm ẩn";
+
         private static readonly string[] PublishedValues = { DaXuatBan, "Đã duyệt", "Active", "Đang hoạt động" };
         private static readonly string[] PendingValues = { ChoDuyet, "Chờ kiểm duyệt", "Chờ xét duyệt", "Pending" };
         private static readonly string[] NeedsFixValues = { CanSuaDoi, "Từ chối" };
@@ -36,6 +40,7 @@ namespace ECOLearning.Services
             if (NeedsFixValues.Contains(status)) return "Cần sửa đổi";
             if (status == TamKhoa) return "Tạm khóa (vi phạm)";
             if (status == KhoaVinhVien) return "Khóa vĩnh viễn";
+            if (status == TamAn) return "Tạm ẩn (GV bị khóa)";
             return status;
         }
 
@@ -50,6 +55,7 @@ namespace ECOLearning.Services
                 case "Bản nháp": return 4;
                 case "Tạm khóa (vi phạm)": return 5;
                 case "Khóa vĩnh viễn": return 6;
+                case "Tạm ẩn (GV bị khóa)": return 7;
                 default: return 99;
             }
         }
@@ -64,6 +70,7 @@ namespace ECOLearning.Services
                 case "Bản nháp": return "#94A3B8";
                 case "Tạm khóa (vi phạm)": return "#F97316";
                 case "Khóa vĩnh viễn": return "#7F1D1D";
+                case "Tạm ẩn (GV bị khóa)": return "#6B7280";
                 default: return "#64748B";
             }
         }

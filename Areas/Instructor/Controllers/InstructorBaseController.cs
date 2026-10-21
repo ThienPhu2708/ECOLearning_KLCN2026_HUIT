@@ -45,9 +45,12 @@ namespace ECOLearning.Areas.Instructor.Controllers
             var user = db.NguoiDung.Find(userId);
             if (user == null || (user.trangThai.HasValue && !user.trangThai.Value))
             {
+                // Bị Admin khóa: đăng xuất hẳn (cả cookie) và báo trên trang đăng nhập, giống AccountStatusFilter
+                System.Web.Security.FormsAuthentication.SignOut();
                 Session.Clear();
+                Session.Abandon();
                 filterContext.Result = new RedirectToRouteResult(
-                    new RouteValueDictionary(new { controller = "Account", action = "Login", area = "" })
+                    new RouteValueDictionary(new { controller = "Account", action = "Login", area = "", locked = 1 })
                 );
                 return;
             }

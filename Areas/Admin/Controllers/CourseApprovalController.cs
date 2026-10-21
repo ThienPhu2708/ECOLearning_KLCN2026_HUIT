@@ -300,6 +300,13 @@ namespace ECOLearning.Areas.Admin.Controllers
                     return Json(new { success = false, message = "Không tìm thấy khóa học mã " + id });
                 }
 
+                // Giáo viên đang bị khóa tài khoản: khóa học của họ đang tạm ẩn, không xuất bản thêm
+                var gv = db.NguoiDung.Find(k.maGiaoVien);
+                if (gv != null && gv.trangThai == false)
+                {
+                    return Json(new { success = false, message = "Giáo viên của khóa học đang bị khóa tài khoản nên chưa thể xuất bản. Mở khóa giáo viên ở trang Quản lý giáo viên trước." });
+                }
+
                 // Kiểm tra lại nội dung trước khi xuất bản: tài nguyên có thể bị xóa sau khi giáo viên gửi duyệt
                 var thieu = new ECOLearning.Services.CourseContentService(db, Server.MapPath).KiemTraKhoaHoc(k.maKhoaHoc);
                 if (thieu.Any())

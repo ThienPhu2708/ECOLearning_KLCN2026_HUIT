@@ -9,6 +9,7 @@
     var now = DateTime.Now;
     var statuses = new[] { "all", "Đang chạy", "Chưa bắt đầu", "Tạm ngưng", "Đã kết thúc" };
     string returnUrl = Request.RawUrl;
+    var adminTamDung = ViewBag.AdminTamDung as HashSet<string> ?? new HashSet<string>();
 }
 
 <div class="mk-page-head">
@@ -118,6 +119,10 @@
                                 else if (tt == "Tạm ngưng") { <span class="badge badge-warning">Tạm ngưng</span> }
                                 else if (tt == "Chưa bắt đầu") { <span class="badge badge-info">Chưa bắt đầu</span> }
                                 else { <span class="badge badge-secondary">Đã kết thúc</span> }
+                                @if (adminTamDung.Contains(p.MaKhuyenMai))
+                                {
+                                    <div><span class="badge badge-danger" title="Quản trị viên đã tạm dừng, xem lý do ở trang chi tiết"><i class="bi bi-shield-exclamation"></i> Admin tạm dừng</span></div>
+                                }
                             </td>
                             <td>
                                 <div class="mk-actions">
@@ -129,7 +134,11 @@
                                         {
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="returnUrl" value="@returnUrl" />
-                                            if (p.TrangThaiLuu == "TamNgung")
+                                            if (adminTamDung.Contains(p.MaKhuyenMai))
+                                            {
+                                                <button type="button" class="btn btn-secondary btn-sm" disabled title="Đang bị Quản trị viên tạm dừng">Kích hoạt</button>
+                                            }
+                                            else if (p.TrangThaiLuu == "TamNgung")
                                             {
                                                 <button type="submit" name="hanhDong" value="resume" class="btn btn-secondary btn-sm">Kích hoạt</button>
                                             }

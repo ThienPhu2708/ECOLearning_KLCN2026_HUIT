@@ -16,6 +16,7 @@ namespace ECOLearning.Controllers
         // POST: Interest/Save — lưu 1–3 lĩnh vực, thay lựa chọn cũ
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public JsonResult Save(string[] categoryIds)
         {
             int userId = (Session["UserId"] as int?) ?? 0;
@@ -40,6 +41,7 @@ namespace ECOLearning.Controllers
         // POST: Interest/Skip — bỏ qua bước chọn, không tự mở lại
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
         public JsonResult Skip()
         {
             int userId = (Session["UserId"] as int?) ?? 0;

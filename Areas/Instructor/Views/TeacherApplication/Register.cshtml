@@ -181,7 +181,7 @@
                 <div class="tr-section">
                     <div class="tr-section-head"><span class="tr-step">3</span><h2>Tệp bằng cấp / chứng chỉ đính kèm</h2></div>
                     <div class="tr-drop" id="drop-zone" role="button" tabindex="0" aria-describedby="file-name-display"
-                         onclick="document.getElementById('certificateFile').click();"
+                         onclick="if (event.target.id !== 'certificateFile') document.getElementById('certificateFile').click();"
                          onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); document.getElementById('certificateFile').click(); }">
                         <i class="bi bi-file-earmark-arrow-up"></i>
                         <div class="tr-drop-title">Nhấn để tải lên tệp bằng cấp hoặc chứng chỉ chuyên môn</div>
@@ -423,11 +423,57 @@
             stk.value = chiSo(stk.value);
             xemTruoc();
 
-            // Chặn gửi khi chưa chọn ngân hàng (server vẫn kiểm tra lại)
-            document.getElementById('teacher-register-form').addEventListener('submit', function (e) {
+            var form = document.getElementById('teacher-register-form');
+            var attempted = false;
+            // Own validation includes the hidden file input, so the browser cannot silently block submission.
+            form.noValidate = true;
+            function error(id, message) {
+                var input = document.getElementById(id);
+                var container = id === 'certificateFile' ? input.closest('.tr-section') :
+                    id === 'termsAgreed' ? input.closest('.tr-terms') : input.closest('.tr-field');
+                var output = container.querySelector('.tr-error');
+                output.textContent = message;
+                output.id = id + '-error';
+                input.setAttribute('aria-describedby', output.id);
+                input.setAttribute('aria-invalid', message ? 'true' : 'false');
+                input.classList.toggle('is-invalid', !!message);
+                if (id === 'certificateFile') document.getElementById('drop-zone').style.borderColor = message ? '#EF4444' : '';
+                return message ? (id === 'certificateFile' ? document.getElementById('drop-zone') : input) : null;
+            }
+            function validate() {
+                var file = document.getElementById('certificateFile').files[0];
+                var errors = [
+                    error('specialization', document.getElementById('specialization').value.trim() ? '' : 'Vui lòng nhập lĩnh vực chuyên môn.'),
+                    error('bioExperience', bio.value.trim().length >= 50 ? '' : 'Vui lòng giới thiệu bản thân và kinh nghiệm tối thiểu 50 ký tự.'),
+                    error('certificateFile', !file || !file.size ? 'Vui lòng chọn tệp bằng cấp hoặc chứng chỉ.' :
+                        !/\.(pdf|png|jpe?g)$/i.test(file.name) ? 'Chỉ nhận tệp PDF, PNG, JPG hoặc JPEG.' :
+                        file.size > 5 * 1024 * 1024 ? 'Tệp chứng chỉ không được vượt quá 5 MB.' : ''),
+                    picker.bankPicker.value() ? null : document.getElementById('bank-search'),
+                    error('accountNumber', /^\d{6,19}$/.test(chiSo(stk.value)) ? '' : 'Số tài khoản phải gồm 6–19 chữ số.'),
+                    error('accountName', tenChuTaiKhoan(ten.value).length >= 2 ? '' : 'Vui lòng nhập tên chủ tài khoản hợp lệ.'),
+                    error('termsAgreed', document.getElementById('termsAgreed').checked ? '' : 'Vui lòng đồng ý với điều khoản hợp tác giảng dạy.')
+                ].filter(Boolean);
+                picker.querySelector('.bp-error').textContent = picker.bankPicker.value() ? '' : 'Vui lòng chọn ngân hàng trong danh sách.';
+                document.getElementById('bank-search').classList.toggle('is-invalid', !picker.bankPicker.value());
+                return errors;
+            }
+            form.addEventListener('submit', function (e) {
+                attempted = true;
                 ten.value = tenChuTaiKhoan(ten.value);
-                if (!picker.bankPicker.validate()) e.preventDefault();
+                stk.value = chiSo(stk.value);
+                var errors = validate();
+                if (errors.length) {
+                    e.preventDefault();
+                    errors[0].focus({ preventScroll: true });
+                    errors[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
+                }
             });
+            picker.addEventListener('bank:change', function () { if (attempted) validate(); });
+            form.addEventListener('change', function () { if (attempted) validate(); });
+            form.addEventListener('input', function () { if (attempted) validate(); });
+            var serverError = form.querySelector('[role="alert"]');
+            if (serverError) serverError.scrollIntoView({ block: 'center' });
+
         })();
 
         function handleFileSelect(input) {

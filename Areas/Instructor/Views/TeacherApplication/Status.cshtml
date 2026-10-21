@@ -1,89 +1,103 @@
 ﻿@model ECOLearning.Models.TeacherApplication
 @{
-ViewBag.Title = "Trạng Thái Hồ Sơ Giảng Viên | E-Learning";
-Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewBag.Title = "Trạng thái hồ sơ giáo viên | E-Learning";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    bool pending = Model.Status == "Pending";
+    bool approved = Model.Status == "Approved";
+    string statusLabel = pending ? "Đang xét duyệt" : approved ? "Đã phê duyệt" : "Chưa được duyệt";
+    string statusIcon = pending ? "bi-hourglass-split" : approved ? "bi-check2-circle" : "bi-exclamation-circle";
 }
-
-<div style="background-color: var(--bg-body, #F8FAFC); min-height: calc(100vh - 70px); padding: 50px 0;">
-    <div class="container" style="max-width: 720px; margin: 0 auto; padding: 0 20px;">
-
-        <div style="background: #FFFFFF; border-radius: 24px; border: 1px solid #E2E8F0; padding: 44px 36px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.04);">
-
-            @if (Model.Status == "Pending")
-            {
-                <h1 style="font-size: 24px; font-weight: 800; color: #0F172A; margin-bottom: 12px;">
-                    Hồ Sơ Đang Trong Quá Trình Xét Duyệt
-                </h1>
-                <p style="font-size: 15px; color: #475569; line-height: 1.6; max-width: 540px; margin: 0 auto 28px;">
-                    Cảm ơn bạn đã nộp hồ sơ trở thành giáo viên tại E-Learning!<br> Ban quản trị đang tiến hành xác minh thông tin bằng cấp và năng lực chuyên môn của bạn.
-                </p>
-
-                <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px; padding: 20px; text-align: left; margin-bottom: 30px;">
-                    <div style="font-weight: 700; font-size: 14px; color: #334155; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <span>Tóm tắt hồ sơ đã gửi:</span>
-                        <span style="background: #FEF3C7; color: #B45309; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;">Chờ Admin duyệt</span>
-                    </div>
-                    <div style="font-size: 13px; color: #64748B; display: grid; gap: 8px;">
-                        <div>• <strong>Mã hồ sơ:</strong> <code>@Model.ApplicationId</code></div>
-                        <div>• <strong>Chuyên môn:</strong> @Model.Specialization</div>
-                        <div>• <strong>Thời gian nộp:</strong> @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
-                        <div>• <strong>Tệp chứng chỉ:</strong> @Model.CertificateFileName</div>
-                        <div>• <strong>Thời gian phản hồi dự kiến:</strong> Trong vòng 24 - 48 giờ làm việc</div>
-                    </div>
+@section styles {
+    <style>
+        .application-status { background: #f7f9fc; min-height: calc(100vh - 80px); padding: 48px 24px 64px; }
+        .application-status * { box-sizing: border-box; }
+        .application-status .as-wrap { max-width: 880px; margin: 0 auto; }
+        .application-status .as-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 28px rgba(15,23,42,.035); }
+        .application-status .as-intro { padding: 32px; display: flex; align-items: flex-start; gap: 20px; border-bottom: 1px solid #edf0f6; }
+        .application-status .as-icon { width: 60px; height: 60px; border-radius: 18px; background: #eeedff; color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 27px; flex-shrink: 0; }
+        .application-status .as-eyebrow { color: #787b96; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 0 0 8px; }
+        .application-status h1 { font-size: 26px; line-height: 1.3; letter-spacing: -.6px; color: #172033; margin: 0 0 10px; font-weight: 800; }
+        .application-status .as-description { color: #718096; font-size: 14px; line-height: 1.8; margin: 0; max-width: 610px; }
+        .application-status .as-body { padding: 28px 32px 32px; }
+        .application-status .as-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+        .application-status h2 { font-size: 16px; margin: 0; color: #273449; font-weight: 700; }
+        .application-status .as-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; background: #fff7e5; color: #ac6a13; padding: 7px 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+        .application-status .as-badge.approved { background: #edf8f1; color: #278160; }
+        .application-status .as-badge.rejected { background: #fff1f2; color: #be4456; }
+        .application-status dl { margin: 0; }
+        .application-status .as-row { display: grid; grid-template-columns: 164px minmax(0,1fr); gap: 20px; padding: 17px 0; border-bottom: 1px solid #edf0f6; font-size: 14px; line-height: 1.6; }
+        .application-status dt { color: #8290a5; font-weight: 400; }
+        .application-status dd { color: #334155; margin: 0; overflow-wrap: anywhere; font-weight: 500; }
+        .application-status code { font-family: inherit; color: #59627c; font-size: 13px; }
+        .application-status .as-file { display: flex; align-items: flex-start; gap: 10px; }
+        .application-status .as-file i { color: #655ce7; font-size: 18px; flex-shrink: 0; }
+        .application-status .as-note { display: flex; align-items: flex-start; gap: 10px; margin-top: 22px; padding: 14px 16px; background: #f7f7fd; border-radius: 10px; font-size: 13px; line-height: 1.7; color: #787b96; }
+        .application-status .as-note i { color: #7970dd; margin-top: 2px; }
+        .application-status .as-note strong { color: #4d5670; }
+        .application-status .as-reason { background: #fff5f5; color: #a14651; padding: 18px; border-radius: 12px; font-size: 14px; line-height: 1.8; margin-top: 20px; overflow-wrap: anywhere; }
+        .application-status .as-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+        .application-status .as-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 20px; border: 1px solid #e2e8f0; border-radius: 10px; color: #334155; background: #fff; font-size: 14px; font-weight: 600; text-decoration: none; transition: background .15s; }
+        .application-status .as-button:hover { background: #f5f6fc; }
+        .application-status .as-button.primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+        .application-status .as-button.primary:hover { background: #4338ca; }
+        .application-status a:focus-visible { outline: 3px solid #b9b4ff; outline-offset: 3px; }
+        @@media (max-width: 600px) {
+            .application-status { padding: 28px 16px 40px; }
+            .application-status .as-intro { padding: 24px; flex-direction: column; gap: 16px; }
+            .application-status h1 { font-size: 23px; }
+            .application-status .as-body { padding: 24px; }
+            .application-status .as-heading { align-items: flex-start; flex-direction: column; }
+            .application-status .as-row { grid-template-columns: 1fr; gap: 5px; padding: 14px 0; }
+            .application-status .as-actions .as-button { width: 100%; }
+        }
+    </style>
+}
+<div class="application-status">
+    <div class="as-wrap">
+        <section class="as-card" aria-labelledby="application-status-title">
+            <div class="as-intro">
+                <div class="as-icon"><i class="bi @statusIcon" aria-hidden="true"></i></div>
+                <div>
+                    <p class="as-eyebrow">Đăng ký trở thành giáo viên</p>
+                    <h1 id="application-status-title">@(pending ? "Hồ sơ đang được xét duyệt" : approved ? "Hồ sơ đã được phê duyệt" : "Hồ sơ chưa được phê duyệt")</h1>
+                    <p class="as-description">
+                        @if (pending) {
+                            <text>Hồ sơ của bạn đã được gửi thành công. Ban quản trị đang kiểm tra thông tin chuyên môn và chứng chỉ đính kèm.</text>
+                        } else if (approved) {
+                            <text>Chào mừng bạn trở thành giáo viên tại E-Learning. Bạn đã có thể tạo bài giảng và quản lý khóa học của mình.</text>
+                        } else {
+                            <text>Vui lòng xem lý do bên dưới và bổ sung thông tin trước khi gửi lại hồ sơ.</text>
+                        }
+                    </p>
                 </div>
-
-                <div style="display: flex; justify-content: center; gap: 14px;">
-                    <a href="@Url.Action("Index", "Home", new { area = "" })" class="btn btn-outline" style="border-radius: 12px; padding: 12px 24px; font-weight: 600; text-decoration: none;">
-                        Quay về Trang chủ
-                    </a>
+            </div>
+            <div class="as-body">
+                <div class="as-heading">
+                    <h2>Thông tin hồ sơ</h2>
+                    <span class="as-badge @(approved ? "approved" : pending ? "" : "rejected")"><i class="bi @statusIcon" aria-hidden="true"></i> @statusLabel</span>
                 </div>
-            }
-            else if (Model.Status == "Approved")
-            {
-                <h1 style="font-size: 24px; font-weight: 800; color: #0F172A; margin-bottom: 12px;">
-                    Chúc Mừng! Hồ Sơ Của Bạn Đã Được Phê Duyệt
-                </h1>
-                <p style="font-size: 15px; color: #475569; line-height: 1.6; max-width: 540px; margin: 0 auto 28px;">
-                    Tài khoản của bạn đã được nâng cấp chính thức thành <strong>Giảng viên</strong>. Bạn đã có thể bắt đầu xây dựng bài giảng và quản lý khóa học.
-                </p>
-
-                <div style="display: flex; justify-content: center; gap: 14px;">
-                    <a href="@Url.Action("Index", "Dashboard", new { area = "Instructor" })" class="btn" style="background: #434CE8; color: #FFFFFF; border-radius: 12px; padding: 12px 28px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 12px rgba(67, 76, 232, 0.25);">
-                        Truy cập Instructor Dashboard
-                    </a>
+                <dl>
+                    <div class="as-row"><dt>Mã hồ sơ</dt><dd><code>@Model.ApplicationId</code></dd></div>
+                    <div class="as-row"><dt>Chuyên môn</dt><dd>@Model.Specialization</dd></div>
+                    <div class="as-row"><dt>Thời gian gửi</dt><dd>@Model.CreatedAt.ToString("dd/MM/yyyy · HH:mm")</dd></div>
+                    <div class="as-row"><dt>Chứng chỉ đính kèm</dt><dd class="as-file"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>@Model.CertificateFileName</span></dd></div>
+                </dl>
+                @if (pending) {
+                    <div class="as-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Thời gian phản hồi dự kiến: <strong>24–48 giờ làm việc.</strong> Bạn có thể quay lại trang này để theo dõi trạng thái hồ sơ.</span></div>
+                } else if (!approved) {
+                    <div class="as-reason"><strong>Lý do chưa được duyệt</strong><br />@(string.IsNullOrEmpty(Model.RejectionReason) ? "Thông tin hồ sơ hoặc bằng cấp chuyên môn chưa đầy đủ hoặc không hợp lệ." : Model.RejectionReason)</div>
+                }
+                <div class="as-actions">
+                    @if (approved) {
+                        <a class="as-button primary" href="@Url.Action("Index", "Dashboard", new { area = "Instructor" })">Vào trang giáo viên <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                    } else if (!pending) {
+                        <a class="as-button" href="@Url.Action("Index", "Home", new { area = "" })">Về trang chủ</a>
+                        <a class="as-button primary" href="@Url.Action("Register", "TeacherApplication", new { area = "Instructor" })">Chỉnh sửa và gửi lại <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                    } else {
+                        <a class="as-button primary" href="@Url.Action("Index", "Home", new { area = "" })">Về trang chủ <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                    }
                 </div>
-            }
-            else if (Model.Status == "Rejected")
-            {
-                <div style="width: 80px; height: 80px; border-radius: 50%; background: #FEE2E2; color: #EF4444; display: inline-flex; align-items: center; justify-content: center; font-size: 38px; margin-bottom: 20px; box-shadow: 0 8px 20px rgba(239, 68, 68, 0.2);">
-                    <i class="bi bi-x-circle-fill"></i>
-                </div>
-                <h1 style="font-size: 24px; font-weight: 800; color: #0F172A; margin-bottom: 12px;">
-                    Hồ Sơ Chưa Đủ Điều Kiện Phê Duyệt
-                </h1>
-                <p style="font-size: 15px; color: #475569; line-height: 1.6; max-width: 540px; margin: 0 auto 20px;">
-                    Rất tiếc, đơn đăng ký làm Giảng viên của bạn tạm thời chưa được duyệt.
-                </p>
-
-                <div style="background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 14px; padding: 18px 20px; text-align: left; margin-bottom: 28px;">
-                    <div style="font-weight: 700; font-size: 14px; color: #991B1B; margin-bottom: 6px;">
-                        Lý do từ chối từ Ban quản trị:
-                    </div>
-                    <div style="font-size: 14px; color: #7F1D1D; line-height: 1.5;">
-                        @(string.IsNullOrEmpty(Model.RejectionReason) ? "Thông tin hồ sơ/bằng cấp chuyên môn chưa đầy đủ hoặc không hợp lệ." : Model.RejectionReason)
-                    </div>
-                </div>
-
-                <div style="display: flex; justify-content: center; gap: 14px;">
-                    <a href="@Url.Action("Register", "TeacherApplication", new { area = "Instructor" })" class="btn" style="background: #434CE8; color: #FFFFFF; border-radius: 12px; padding: 12px 24px; font-weight: 700; text-decoration: none;">
-                        Nộp lại hồ sơ mới
-                    </a>
-                    <a href="@Url.Action("Index", "Home", new { area = "" })" class="btn btn-outline" style="border-radius: 12px; padding: 12px 24px; font-weight: 600; text-decoration: none;">
-                        Quay về Trang chủ
-                    </a>
-                </div>
-            }
-
-        </div>
+            </div>
+        </section>
     </div>
 </div>

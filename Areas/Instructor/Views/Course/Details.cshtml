@@ -1,4 +1,4 @@
-@model ECOLearning.Models.KhoaHoc
+﻿@model ECOLearning.Models.KhoaHoc
 
 @{
     ViewBag.Title = "Chi tiết khóa học";
@@ -52,7 +52,7 @@
 @@media (max-width:576px) { .course-outline-row { align-items:flex-start; flex-direction:column; gap:8px; } }
 
 #detail-status-badge { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; font-size:14px; line-height:1.4; font-weight:700; border-radius:10px; border:1px solid #CBD5E1; background:#E2E8F0; color:#334155; }
-#detail-status-badge::before { content:''; width:8px; height:8px; border-radius:50%; background:currentColor; }
+#detail-status-badge::before { content:none; }
 #detail-status-badge.badge-warning { background:#FEF3C7; color:#92400E; border-color:#FCD34D; }
 #detail-status-badge.badge-success { background:#DCFCE7; color:#166534; border-color:#86EFAC; }
 #detail-status-badge.badge-danger { background:#FEE2E2; color:#991B1B; border-color:#FCA5A5; }
@@ -339,6 +339,37 @@
     }
 </div>
 
+<section id="course-reviews" style="margin:24px 0;padding:24px;background:var(--bg-surface);border:1px solid var(--border-color);border-radius:16px;">
+    <h3 class="h3">Đánh giá của học viên <span class="caption">(@ViewBag.ReviewCount)</span></h3>
+    <p class="caption" style="margin-top:6px;">Nhận xét về khóa học, mới nhất trước.</p>
+    @if (ViewBag.ReviewCount == 0)
+    {
+        <p style="padding:24px 0;color:var(--text-secondary);">Khóa học chưa có đánh giá.</p>
+    }
+    else
+    {
+        foreach (var review in (System.Collections.Generic.List<ECOLearning.Models.DanhGiaKhoaHoc>)ViewBag.CourseReviews)
+        {
+            <article style="padding:20px 0;border-top:1px solid var(--border-color);margin-top:12px;">
+                <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <strong>@(review.NguoiDung != null ? review.NguoiDung.hoTen : "Học viên")</strong>
+                    <time class="caption">@(review.ngayDanhGia.HasValue ? review.ngayDanhGia.Value.ToString("dd/MM/yyyy HH:mm") : "")</time>
+                </div>
+                <div style="color:#D97706;margin:8px 0;" aria-label="@review.soSao trên 5 sao">@for (int star = 1; star <= 5; star++) {<span>@(star <= review.soSao ? "★" : "☆")</span>} <span class="caption">@review.soSao/5</span></div>
+                <p style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;">@(string.IsNullOrWhiteSpace(review.noiDung) ? "Học viên chỉ chấm sao, chưa viết nhận xét." : review.noiDung)</p>
+            </article>
+        }
+        if (ViewBag.ReviewPages > 1)
+        {
+            <nav aria-label="Trang đánh giá" style="display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:16px;">
+                @if (ViewBag.ReviewPage > 1) {<a class="btn btn-outline btn-sm" href="@Url.Action("Details", new { id = Model.maKhoaHoc, reviewPage = ViewBag.ReviewPage - 1 })#course-reviews">← Trước</a>}
+                <span class="caption">Trang @ViewBag.ReviewPage / @ViewBag.ReviewPages</span>
+                @if (ViewBag.ReviewPage < ViewBag.ReviewPages) {<a class="btn btn-outline btn-sm" href="@Url.Action("Details", new { id = Model.maKhoaHoc, reviewPage = ViewBag.ReviewPage + 1 })#course-reviews">Sau →</a>}
+            </nav>
+        }
+    }
+</section>
+
 <!-- SECTION 3: DYNAMIC ACTION BAR -->
 <div class="action-bar-card course-detail-actions" style="position: sticky; bottom: 24px; z-index: 30; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-2xl); padding: 18px 24px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12); display: flex; align-items: center; justify-content: space-between;">
     @if (isPublished)
@@ -423,6 +454,8 @@
 </div>
 
 <!-- MODAL PREVIEW VIDEO -->
+
+
 <div class="modal-overlay" id="video-preview-modal">
     <div class="modal-container" style="max-width: 720px; overflow: hidden;">
         <div class="modal-header">

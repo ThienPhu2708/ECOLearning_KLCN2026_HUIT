@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using ECOLearning.Models;
@@ -7,7 +7,7 @@ namespace ECOLearning.Services
 {
     /// <summary>
     /// Kiểm tra nội dung giảng dạy trước khi gửi duyệt / xuất bản (kiểm tra ở server).
-    /// Quy tắc nhóm đã chốt: khóa học phải có chương học và bài học; MỖI bài học bắt buộc có video bài giảng
+    /// Khóa học phải có bài học, có thể chia theo chương; MỖI bài học bắt buộc có video bài giảng
     /// (tài liệu là tùy chọn). Video lưu trên máy chủ thì file phải còn tồn tại; video là liên kết ngoài (http/https)
     /// thì đường dẫn phải là URL hợp lệ.
     /// </summary>
@@ -65,7 +65,6 @@ namespace ECOLearning.Services
                 .ToList();
 
             var loi = new List<string>();
-            if (chuong.Count == 0) loi.Add("Khóa học chưa có chương học nào.");
             if (bai.Count == 0) loi.Add("Khóa học chưa có bài học nào.");
             foreach (var c in chuong.Where(c => bai.All(b => b.maChuong != c.maChuong)))
             {

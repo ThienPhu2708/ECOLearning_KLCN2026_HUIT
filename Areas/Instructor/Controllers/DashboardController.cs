@@ -10,7 +10,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
     public class DashboardController : InstructorBaseController
     {
         // GET: Instructor/Dashboard
-        public ActionResult Index()
+        public ActionResult Index(int coursePage = 1)
         {
             int teacherId = CurrentTeacherId;
             var model = new InstructorDashboardViewModel();
@@ -117,9 +117,14 @@ namespace ECOLearning.Areas.Instructor.Controllers
 
             // 7. Danh sách tất cả khóa học để hiển thị bảng cuối trang
             var allDanhMuc = db.DanhMuc.ToList();
+            int coursePages = (int)Math.Ceiling(teacherCourses.Count / 5.0);
+            coursePage = Math.Max(1, Math.Min(coursePage, Math.Max(1, coursePages)));
+            ViewBag.CoursePage = coursePage;
+            ViewBag.CoursePages = coursePages;
+            ViewBag.CourseTotal = teacherCourses.Count;
             model.RecentCourses = teacherCourses
                 .OrderByDescending(k => k.maKhoaHoc)
-                .Take(10)
+                .Skip((coursePage - 1) * 5).Take(5)
                 .Select(k =>
                 {
                     int soHV = enrollments.Count(dk => dk.maKhoaHoc == k.maKhoaHoc);

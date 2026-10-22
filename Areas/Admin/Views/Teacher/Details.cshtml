@@ -105,14 +105,7 @@
                             <td class="au-wrap" style="max-width: 360px;"><strong>@k.TenKhoaHoc</strong><div class="au-sub">@k.MaKhoaHoc</div></td>
                             <td><span class="badge" style="background: @(CourseStatus.GroupColor(nhom))1A; color: @CourseStatus.GroupColor(nhom);">@nhom</span></td>
                             <td>
-                                @if (k.GiaKhuyenMai.HasValue && k.GiaKhuyenMai.Value < k.GiaBan)
-                                {
-                                    <strong>@k.GiaKhuyenMai.Value.ToString("#,##0 đ")</strong><div class="au-sub"><s>@k.GiaBan.ToString("#,##0 đ")</s></div>
-                                }
-                                else
-                                {
-                                    <strong>@(k.GiaBan == 0 ? "Miễn phí" : k.GiaBan.ToString("#,##0 đ"))</strong>
-                                }
+                                <strong>@(k.GiaBan == 0 ? "Miễn phí" : k.GiaBan.ToString("#,##0 đ"))</strong>
                             </td>
                             <td class="au-num">@k.SoHocVien</td>
                             <td>@if (k.SoDanhGia > 0) { <span class="au-stars">★</span> @k.DiemTrungBinh.Value.ToString("0.0") <span class="au-sub">(@k.SoDanhGia)</span> } else { <span class="au-sub">-</span> }</td>

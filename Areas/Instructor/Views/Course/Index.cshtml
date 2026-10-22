@@ -88,8 +88,7 @@
                         else if (item.TrangThai == "Khóa vĩnh viễn")
                         { filterKey = "violation"; badgeClass = "badge-danger"; badgeText = "Khóa vĩnh viễn"; }
 
-                        decimal displayPrice = item.GiaKhuyenMai.HasValue && item.GiaKhuyenMai.Value > 0
-                            ? item.GiaKhuyenMai.Value : item.GiaBan;
+                        decimal displayPrice = item.GiaBan;
 
                         <tr data-filter="@filterKey">
                             <td>
@@ -142,10 +141,6 @@
                                     else
                                     {
                                         <strong>@displayPrice.ToString("#,##0 đ")</strong>
-                                        if (item.GiaKhuyenMai.HasValue && item.GiaKhuyenMai.Value > 0 && item.GiaBan > item.GiaKhuyenMai.Value)
-                                        {
-                                            <div style="font-size: 11px; text-decoration: line-through; color: var(--text-muted);">@item.GiaBan.ToString("#,##0 đ")</div>
-                                        }
                                     }
                                 }
                             </td>

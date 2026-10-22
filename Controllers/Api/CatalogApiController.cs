@@ -79,7 +79,7 @@ namespace ECOLearning.Controllers.Api
             }
             if (!string.IsNullOrWhiteSpace(categoryId)) query = query.Where(k => k.maDanhMuc == categoryId);
             if (!string.IsNullOrWhiteSpace(level)) query = query.Where(k => k.capDo == level);
-            // Giá bán hiện tại = 0 khi giá gốc = 0 (giá giảm chỉ hợp lệ khi > 0, PromotionService.GiaBanHienTai)
+            // Giá khóa học = giaBan (không có giá khuyến mãi theo khóa; giảm giá chỉ qua mã)
             if (price == "free") query = query.Where(k => k.giaBan == 0);
             else if (price == "paid") query = query.Where(k => k.giaBan > 0);
             if (minRating.HasValue && minRating.Value > 0)
@@ -108,12 +108,10 @@ namespace ECOLearning.Controllers.Api
                             .ThenByDescending(k => k.DanhGiaKhoaHoc.Count()).ThenByDescending(k => k.maKhoaHoc);
                         break;
                     case "price_asc":
-                        sapXep = query.OrderBy(k => k.giaKhuyenMai.HasValue && k.giaKhuyenMai.Value > 0 && k.giaKhuyenMai.Value < k.giaBan ? k.giaKhuyenMai.Value : k.giaBan)
-                            .ThenByDescending(k => k.maKhoaHoc);
+                        sapXep = query.OrderBy(k => k.giaBan).ThenByDescending(k => k.maKhoaHoc);
                         break;
                     case "price_desc":
-                        sapXep = query.OrderByDescending(k => k.giaKhuyenMai.HasValue && k.giaKhuyenMai.Value > 0 && k.giaKhuyenMai.Value < k.giaBan ? k.giaKhuyenMai.Value : k.giaBan)
-                            .ThenByDescending(k => k.maKhoaHoc);
+                        sapXep = query.OrderByDescending(k => k.giaBan).ThenByDescending(k => k.maKhoaHoc);
                         break;
                     default: // popular
                         sapXep = query.OrderByDescending(k => Db.DangKyKhoaHoc.Count(d => d.maKhoaHoc == k.maKhoaHoc))

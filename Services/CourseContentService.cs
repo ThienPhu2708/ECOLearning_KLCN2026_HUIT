@@ -29,6 +29,8 @@ namespace ECOLearning.Services
             if (string.IsNullOrWhiteSpace(duongDan)) return false;
             string path = duongDan.Trim();
 
+            if (VideoStorageService.LaR2(path)) return VideoStorageService.TonTai(path);
+
             Uri uri;
             if (path.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || path.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {

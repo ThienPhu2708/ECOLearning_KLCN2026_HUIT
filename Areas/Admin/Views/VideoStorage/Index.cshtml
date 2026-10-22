@@ -1,0 +1,127 @@
+@model ECOLearning.Areas.Admin.Controllers.VideoStorageController.VideoStorageViewModel
+@{
+    ViewBag.Title = "Lưu trữ video";
+    Func<long, string> mb = b => b > 0 ? (b / 1048576d).ToString("#,##0.#") + " MB" : "—";
+}
+
+<style>
+    .vs-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .vs-stat { padding: 18px 20px; }
+    .vs-stat span { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+    .vs-stat strong { display: block; font-size: 22px; font-weight: 800; margin: 6px 0 2px; color: var(--text-heading); }
+    .vs-stat small { color: var(--text-muted); overflow-wrap: anywhere; }
+    .vs-ok { color: #059669 !important; }
+    .vs-bad { color: #DC2626 !important; }
+    .vs-card { padding: 20px 24px; margin-bottom: 20px; }
+    .vs-card h2 { font-size: 16px; font-weight: 700; color: var(--text-heading); margin: 0 0 6px; }
+    .vs-card p { font-size: 13.5px; color: var(--text-secondary); margin: 0 0 12px; }
+    .vs-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .vs-sub { font-size: 12.5px; color: var(--text-muted); }
+    @@media (max-width: 900px) { .vs-stats { grid-template-columns: 1fr; } }
+</style>
+
+<div style="margin-bottom: 24px;">
+    <h1 class="h2" style="margin-top: 6px;">Lưu trữ video</h1>
+    <p class="body-2" style="color: var(--text-secondary);">Video bài học được nén (720p) rồi đưa lên Cloudflare R2; trang này theo dõi hàng đợi và chuyển video cũ trên máy chủ.</p>
+</div>
+
+@Html.Partial("_AdminFlash")
+
+<div class="vs-stats">
+    <div class="card vs-stat">
+        <span>Cloudflare R2</span>
+        <strong class="@(Model.R2DaCauHinh ? "vs-ok" : "vs-bad")">@(Model.R2DaCauHinh ? "Đã cấu hình" : "Chưa cấu hình")</strong>
+        <small>@(Model.R2DaCauHinh ? "Bucket: " + Model.TenBucket : "Điền khóa R2:* trong Secrets.config; trong lúc này video lưu trên máy chủ")</small>
+    </div>
+    <div class="card vs-stat">
+        <span>Nén video (ffmpeg)</span>
+        <strong class="@(Model.FfmpegSanSang ? "vs-ok" : "vs-bad")">@(Model.FfmpegSanSang ? "Sẵn sàng" : "Không dùng được")</strong>
+        <small>@Model.FfmpegThongTin@(Model.FfmpegSanSang ? "" : " — video được đưa lên R2 bản gốc, không nén")</small>
+    </div>
+    <div class="card vs-stat">
+        <span>Bài học có video</span>
+        <strong>@Model.BaiTrenR2 trên R2</strong>
+        <small>@Model.BaiTrenMayChu bài dùng @Model.FileTrenMayChu file còn lưu trên máy chủ</small>
+    </div>
+</div>
+
+<div class="card vs-card">
+    <h2>Chuyển video cũ lên R2</h2>
+    <p>Gom các file trùng nội dung, nén rồi đưa lên R2 từng video một. Xong video nào thì bài học dùng video đó chuyển sang R2 ngay (file gốc trên máy chủ được giữ lại).
+       Câu lệnh tương ứng được ghi vào <code>App_Data/r2-migration.sql</code> để chạy trên CSDL hosting.</p>
+    <div class="vs-actions">
+        @using (Html.BeginForm("ChuyenVideoCu", "VideoStorage", new { area = "Admin" }, FormMethod.Post, new { onsubmit = "return confirm('Đưa " + Model.FileTrenMayChu + " video cũ vào hàng đợi chuyển lên R2?');" }))
+        {
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-primary" @(Model.R2DaCauHinh && Model.FileTrenMayChu > 0 ? "" : "disabled")>Chuyển @Model.FileTrenMayChu video lên R2</button>
+        }
+        @if (Model.CoFileSql)
+        {
+            <a class="btn btn-outline" href="@Url.Action("SqlChuyenDoi", "VideoStorage", new { area = "Admin" })">Tải SQL cho hosting</a>
+        }
+        <a class="btn btn-secondary" href="@Url.Action("Index", "VideoStorage", new { area = "Admin" })">Làm mới</a>
+    </div>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; gap: 12px; flex-wrap: wrap;">
+        <strong style="color: var(--text-heading);">Hàng đợi (@Model.DangCho.Count)</strong>
+        @if (Model.DangCho.Any(c => c.TrangThai == "Lỗi"))
+        {
+            using (Html.BeginForm("ThuLai", "VideoStorage", new { area = "Admin" }, FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline btn-sm">Thử lại video lỗi</button>
+            }
+        }
+    </div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead><tr><th>Video</th><th>Dung lượng gốc</th><th>Trạng thái</th><th>Ghi chú</th><th>Thời điểm</th></tr></thead>
+            <tbody>
+                @foreach (var cv in Model.DangCho)
+                {
+                    <tr>
+                        <td><strong>@cv.TenGoc</strong><div class="vs-sub">@cv.Key@(cv.DuongDanCu != null ? " · " + cv.DuongDanCu.Count + " đường dẫn cũ" : "")</div></td>
+                        <td>@mb(cv.KichThuocGoc)</td>
+                        <td><span class="badge @(cv.TrangThai == "Lỗi" ? "badge-danger" : cv.TrangThai == "Chờ xử lý" ? "badge-warning" : "badge-primary")">@cv.TrangThai</span></td>
+                        <td class="vs-sub">@cv.GhiChu</td>
+                        <td class="vs-sub">@cv.TaoLuc.ToString("dd/MM/yyyy HH:mm")</td>
+                    </tr>
+                }
+                @if (!Model.DangCho.Any())
+                {
+                    <tr><td colspan="5" style="text-align: center; padding: 24px; color: var(--text-muted);">Không có video nào đang chờ.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 16px 20px;"><strong style="color: var(--text-heading);">Đã xử lý gần đây</strong> <span class="vs-sub">(từ lần khởi động gần nhất của ứng dụng; chi tiết trong App_Data/logs)</span></div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead><tr><th>Video</th><th>Gốc</th><th>Trên R2</th><th>Kết quả</th><th>Thời điểm</th></tr></thead>
+            <tbody>
+                @foreach (var kq in Model.LichSu)
+                {
+                    <tr>
+                        <td><strong>@kq.TenGoc</strong><div class="vs-sub">@kq.Key</div></td>
+                        <td>@mb(kq.KichThuocGoc)</td>
+                        <td>@(kq.ThanhCong ? mb(kq.KichThuocLuu) : "—")</td>
+                        <td>
+                            <span class="badge @(kq.ThanhCong ? "badge-success" : "badge-danger")">@(kq.ThanhCong ? (kq.DaNen ? "Đã nén" : "Bản gốc") : "Bỏ qua")</span>
+                            @if (!string.IsNullOrEmpty(kq.GhiChu)) { <div class="vs-sub">@kq.GhiChu</div> }
+                        </td>
+                        <td class="vs-sub">@kq.Luc.ToString("dd/MM/yyyy HH:mm")</td>
+                    </tr>
+                }
+                @if (!Model.LichSu.Any())
+                {
+                    <tr><td colspan="5" style="text-align: center; padding: 24px; color: var(--text-muted);">Chưa có video nào.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

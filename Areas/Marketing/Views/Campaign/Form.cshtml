@@ -1,13 +1,17 @@
 @model ECOLearning.ViewModels.CampaignFormViewModel
+@using ECOLearning.ViewModels
 @{
     bool laSua = Model.LaChinhSua;
     ViewBag.Title = laSua ? "Sửa chiến dịch" : "Tạo chiến dịch";
     var chon = new HashSet<string>(Model.ChuongTrinh ?? new List<string>());
+    var kenhChon = new HashSet<string>(Model.Kenh ?? new List<string>());
     var now = DateTime.Now;
     Func<string, MvcHtmlString> loi = key =>
         ViewData.ModelState.ContainsKey(key) && ViewData.ModelState[key].Errors.Count > 0
             ? new MvcHtmlString("<div class=\"mk-error\">" + System.Web.HttpUtility.HtmlEncode(ViewData.ModelState[key].Errors[0].ErrorMessage) + "</div>")
             : MvcHtmlString.Empty;
+    Func<decimal?, string> soNguyen = v => v.HasValue ? v.Value.ToString("0", System.Globalization.CultureInfo.InvariantCulture) : "";
+    var trangThaiChon = TrangThaiChienDich.ChuyenDuoc(Model.TrangThaiHienTai);
 }
 
 <div class="mk-page-head">
@@ -35,29 +39,45 @@
                 <h2>Thông tin chiến dịch</h2>
                 <div class="form-group">
                     <label class="form-label" for="TenChienDich">Tên chiến dịch <span style="color: #DC2626;">*</span></label>
-                    <input type="text" id="TenChienDich" name="TenChienDich" class="form-control" maxlength="150" value="@Model.TenChienDich" placeholder="VD: Mùa tựu trường 2026" />
+                    <input type="text" id="TenChienDich" name="TenChienDich" class="form-control" maxlength="200" value="@Model.TenChienDich" placeholder="VD: Mùa tựu trường 2026" />
                     @loi("TenChienDich")
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="MucTieu">Mục tiêu</label>
-                    <input type="text" id="MucTieu" name="MucTieu" class="form-control" maxlength="500" value="@Model.MucTieu" placeholder="VD: Tăng 20% học viên mới nhóm Lập trình" />
+                    <textarea id="MucTieu" name="MucTieu" class="form-control" rows="2" maxlength="1000" placeholder="VD: Tăng 20% học viên mới nhóm Lập trình">@Model.MucTieu</textarea>
                     @loi("MucTieu")
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="DoiTuong">Đối tượng hướng đến</label>
-                    <input type="text" id="DoiTuong" name="DoiTuong" class="form-control" maxlength="255" value="@Model.DoiTuong" placeholder="VD: Sinh viên năm nhất, người mới học lập trình" />
+                    <label class="form-label" for="DoiTuong">Đối tượng hướng tới</label>
+                    <input type="text" id="DoiTuong" name="DoiTuong" class="form-control" maxlength="300" value="@Model.DoiTuong" placeholder="VD: Sinh viên năm nhất, người mới học lập trình" />
                     @loi("DoiTuong")
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="NoiDung">Nội dung / kênh triển khai</label>
-                    <textarea id="NoiDung" name="NoiDung" class="form-control" rows="5" maxlength="2000">@Model.NoiDung</textarea>
+                    <label class="form-label">Kênh triển khai <span style="color: #DC2626;">*</span></label>
+                    <div class="mk-choice" style="flex-wrap: wrap;">
+                        @foreach (var k in TrangThaiChienDich.KenhGoiY)
+                        {
+                            <label><input type="checkbox" name="Kenh" value="@k" @(kenhChon.Contains(k) ? "checked" : "") /> <span>@k</span></label>
+                        }
+                    </div>
+                    <input type="text" name="KenhKhac" class="form-control" style="margin-top: 8px;" maxlength="200" value="@Model.KenhKhac" placeholder="Kênh khác (phân tách bằng dấu phẩy)" />
+                    @loi("Kenh")
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="NoiDung">Nội dung triển khai</label>
+                    <textarea id="NoiDung" name="NoiDung" class="form-control" rows="4" maxlength="2000">@Model.NoiDung</textarea>
                     @loi("NoiDung")
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="GhiChu">Ghi chú</label>
+                    <textarea id="GhiChu" name="GhiChu" class="form-control" rows="2" maxlength="1000">@Model.GhiChu</textarea>
+                    @loi("GhiChu")
                 </div>
             </div>
 
             <div class="card mk-section">
                 <h2>Chương trình khuyến mãi liên quan</h2>
-                <p class="mk-hint" style="margin-top: -6px;">Chỉ hiện chương trình chưa kết thúc và chưa thuộc chiến dịch khác. Bỏ chọn chỉ gỡ liên kết, không xóa chương trình.</p>
+                <p class="mk-hint" style="margin-top: -6px;">Chỉ hiện chương trình chưa kết thúc và chưa thuộc chiến dịch khác. Thời gian khuyến mãi phải nằm trong thời gian chiến dịch. Bỏ chọn chỉ gỡ liên kết, không xóa chương trình.</p>
                 <div class="mk-course-list">
                     @foreach (var p in Model.ChuongTrinhLuaChon)
                     {
@@ -78,7 +98,7 @@
 
         <div>
             <div class="card mk-section">
-                <h2>Thời gian</h2>
+                <h2>Thời gian & trạng thái</h2>
                 <div class="form-group">
                     <label class="form-label" for="NgayBatDau">Ngày bắt đầu <span style="color: #DC2626;">*</span></label>
                     <input type="date" id="NgayBatDau" name="NgayBatDau" class="form-control" value="@(Model.NgayBatDau?.ToString("yyyy-MM-dd"))" />
@@ -89,7 +109,44 @@
                     <input type="date" id="NgayKetThuc" name="NgayKetThuc" class="form-control" value="@(Model.NgayKetThuc?.ToString("yyyy-MM-dd"))" />
                     @loi("NgayKetThuc")
                 </div>
+                <div class="form-group">
+                    <label class="form-label" for="TrangThai">Trạng thái</label>
+                    <select id="TrangThai" name="TrangThai" class="form-control">
+                        @foreach (var tt in trangThaiChon)
+                        {
+                            <option value="@tt" @(tt == Model.TrangThai ? "selected" : "")>@TrangThaiChienDich.Ten(tt)</option>
+                        }
+                    </select>
+                    <div class="mk-hint">Tạm dừng / Đã hủy: mọi mã thuộc chiến dịch không lưu, không dùng được.</div>
+                    @loi("TrangThai")
+                </div>
             </div>
+
+            <div class="card mk-section">
+                <h2>Ngân sách & chỉ tiêu</h2>
+                <div class="form-group">
+                    <label class="form-label" for="NganSach">Ngân sách (đ)</label>
+                    <input type="number" id="NganSach" name="NganSach" class="form-control" step="1" min="0" value="@soNguyen(Model.NganSach)" />
+                    @loi("NganSach")
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="ChiPhiThucTe">Chi phí thực tế (đ)</label>
+                    <input type="number" id="ChiPhiThucTe" name="ChiPhiThucTe" class="form-control" step="1" min="0" value="@soNguyen(Model.ChiPhiThucTe)" />
+                    <div class="mk-hint">Dùng tính ROI: tổng chi phí = chi phí thực tế + tiền đã giảm cho học viên.</div>
+                    @loi("ChiPhiThucTe")
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="ChiTieuDoanhThu">Chỉ tiêu doanh thu (đ)</label>
+                    <input type="number" id="ChiTieuDoanhThu" name="ChiTieuDoanhThu" class="form-control" step="1" min="0" value="@soNguyen(Model.ChiTieuDoanhThu)" placeholder="Không đặt" />
+                    @loi("ChiTieuDoanhThu")
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="ChiTieuLuotDung">Chỉ tiêu lượt dùng mã</label>
+                    <input type="number" id="ChiTieuLuotDung" name="ChiTieuLuotDung" class="form-control" step="1" min="0" value="@Model.ChiTieuLuotDung" placeholder="Không đặt" />
+                    @loi("ChiTieuLuotDung")
+                </div>
+            </div>
+
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <a href="@(laSua ? Url.Action("Details", "Campaign", new { id = Model.MaChienDich }) : Url.Action("Index", "Campaign"))" class="btn btn-outline">Hủy</a>
                 <button type="submit" class="btn mk-btn-accent">@(laSua ? "Lưu thay đổi" : "Tạo chiến dịch")</button>

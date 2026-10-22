@@ -81,13 +81,8 @@ namespace ECOLearning.Controllers.Api
                 subTotal = ApiFormat.Money(bg.TamTinh),
                 discount = ApiFormat.Money(bg.TienGiam),
                 total = ApiFormat.Money(bg.TongTien),
-                coupon = bg.UuDai == null ? null : new
-                {
-                    code = bg.UuDai.MaCode,
-                    valid = bg.UuDai.Success,
-                    discount = ApiFormat.Money(bg.TienGiam),
-                    message = bg.UuDai.Success ? "Giảm " + bg.TienGiam.ToString("#,##0").Replace(",", ".") + " đ" : bg.UuDai.Message
-                },
+                // Cùng khung với POST /api/v1/coupons/check (Đặc tả Marketing mục 13)
+                coupon = bg.UuDai == null ? null : CouponJson.KetQuaKiemTra(bg, req.CouponCode),
                 invalidItems = bg.KhongHopLe.Select(x => new { id = x.MaKhoaHoc, reason = x.LyDo }).ToList(),
                 paymentMethods = PaymentService.PhuongThucHopLe.Select(pt =>
                 {
@@ -103,35 +98,7 @@ namespace ECOLearning.Controllers.Api
             });
         }
 
-        // F2. GET /api/v1/coupons/my?courseIds=KH01,KH02
-        [HttpGet, Route("coupons/my")]
-        public ActionResult MyCoupons(string courseIds = null)
-        {
-            var promotions = new PromotionService(Db);
-            if (!promotions.IsInstalled()) return Ok(new object[0]);
-            var ids = (courseIds ?? "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList();
-            List<DongGioHang> dong = null;
-            if (ids.Count > 0)
-            {
-                var bg = new OrderService(Db).TinhBaoGia(CurrentUserId, ids, null);
-                if (bg.Dong.Count > 0) dong = bg.DongGioHang();
-            }
-            var ds = promotions.LayMaChoHocVien(CurrentUserId, dong, null, chiTrongVi: true);
-            return Ok(ds.Select(m => new
-            {
-                code = m.MaCode,
-                title = m.TenKhuyenMai,
-                description = m.MoTaUuDai,
-                discountText = m.GiaTriNgan,
-                note = m.GhiChuGiaTri,
-                conditions = m.DieuKien,
-                startsAt = ApiFormat.Date(m.NgayBatDau),
-                expiresAt = ApiFormat.Date(m.NgayKetThuc),
-                usable = dong != null && m.CoTheApDung,
-                discount = ApiFormat.Money(m.TienGiam),
-                reason = dong == null ? "Thêm khóa học vào giỏ để kiểm tra mã" : m.LyDo
-            }).ToList());
-        }
+        // F2. GET /api/v1/coupons/my: chuyển sang CouponApiController (Đặc tả Marketing mục 13)
 
         // F3. POST /api/v1/orders
         [HttpPost, Route("orders")]
@@ -249,7 +216,7 @@ namespace ECOLearning.Controllers.Api
                 return NotFoundJson("Khóa học hiện không mở đăng ký!", "COURSE_NOT_FOUND");
             if (k.maGiaoVien == CurrentUserId)
                 return Forbidden("Bạn là giáo viên của khóa học này nên không thể tự đăng ký học!", "NOT_ALLOWED");
-            if (PromotionService.GiaBanHienTai(k) > 0)
+            if (k.giaBan > 0)
                 return BadRequest("Khóa học này có học phí. Vui lòng thêm vào giỏ hàng và tiến hành thanh toán!", "NOT_FREE");
             if (Db.DangKyKhoaHoc.Any(d => d.maHocVien == CurrentUserId && d.maKhoaHoc == id))
                 return Fail(409, "ALREADY_OWNED", "Bạn đã đăng ký khóa học này rồi!");

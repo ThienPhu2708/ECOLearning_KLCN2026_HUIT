@@ -127,7 +127,7 @@ namespace ECOLearning.Controllers
 
         /// <summary>
         /// Thêm một khóa vào giỏ (session) sau khi kiểm tra: đang bán, chưa có trong giỏ, không phải khóa mình dạy,
-        /// chưa đăng ký. Giá lấy từ CSDL (PromotionService.GiaBanHienTai) và còn được tính lại khi mở giỏ / thanh toán.
+        /// chưa đăng ký. Giá lấy từ CSDL (giaBan) và còn được tính lại khi mở giỏ / thanh toán.
         /// </summary>
         private bool ThemKhoaVaoGio(string courseId, List<CartItemViewModel> cart, out string message)
         {
@@ -167,7 +167,7 @@ namespace ECOLearning.Controllers
                 CourseName = course.tenKhoaHoc,
                 InstructorName = course.NguoiDung != null ? course.NguoiDung.hoTen : "Giảng viên E-Learning",
                 DurationText = "30 giờ học",
-                Price = PromotionService.GiaBanHienTai(course),
+                Price = course.giaBan,
                 OriginalPrice = course.giaBan,
                 ThumbnailUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia
             });
@@ -239,7 +239,7 @@ namespace ECOLearning.Controllers
             var kq = KiemTraCoupon(couponCode, cart);
             if (!kq.Success)
             {
-                return Json(new { success = false, message = kq.Message });
+                return Json(new { success = false, requireLogin = kq.RequireLogin, message = kq.Message });
             }
 
             decimal subtotal = cart.Sum(i => i.Price);
@@ -459,7 +459,7 @@ namespace ECOLearning.Controllers
             Session["Cart"] = cart;
         }
 
-        /// <summary>Lấy lại giá bán hiện tại từ CSDL (Marketing có thể đổi giá giảm sau khi khóa đã nằm trong giỏ).</summary>
+        /// <summary>Lấy lại giá bán (giaBan) từ CSDL: giáo viên có thể đổi giá sau khi khóa đã nằm trong giỏ.</summary>
         private void CapNhatGia(List<CartItemViewModel> cart)
         {
             if (cart.Count == 0) return;
@@ -470,7 +470,7 @@ namespace ECOLearning.Controllers
                 KhoaHoc k;
                 if (courses.TryGetValue(item.CourseId, out k))
                 {
-                    item.Price = PromotionService.GiaBanHienTai(k);
+                    item.Price = k.giaBan;
                     item.OriginalPrice = k.giaBan;
                 }
             }
@@ -515,8 +515,16 @@ namespace ECOLearning.Controllers
                 Items = cart,
                 AppliedCouponCode = Session[SessionCoupon] as string,
                 AvailableCoupons = LayMaGoiY(cart),
-                IsLoggedIn = ((Session["UserId"] as int?) ?? 0) > 0
+                IsLoggedIn = ((Session["UserId"] as int?) ?? 0) > 0,
+                ThanThietSapMo = LayThanThietSapMo()
             });
+        }
+
+        private List<UuDaiThanThietSapMo> LayThanThietSapMo()
+        {
+            var promotions = new PromotionService(db);
+            if (!promotions.IsInstalled()) return new List<UuDaiThanThietSapMo>();
+            return promotions.LayThanThietSapMo((Session["UserId"] as int?) ?? 0);
         }
 
         // POST: Cart/RemoveCoupon — bỏ mã đang áp dụng (mã vẫn nằm trong ví, chưa tính lượt dùng)

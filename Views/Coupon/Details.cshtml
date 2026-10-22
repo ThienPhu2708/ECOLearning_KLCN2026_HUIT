@@ -82,7 +82,7 @@
                     @if (vi != null)
                     {
                         <div class="cpn-side-row"><span>Ngày lưu</span><span>@vi.NgayLuu.ToString("dd/MM/yyyy HH:mm")</span></div>
-                        <div class="cpn-side-row"><span>Đã dùng</span><span>@vi.LuotCuaToi/@vi.GioiHanMoiHocVien lượt</span></div>
+                        <div class="cpn-side-row"><span>Đã dùng</span><span>@vi.LuotCuaToi@(vi.GioiHanMoiHocVien.HasValue ? "/" + vi.GioiHanMoiHocVien.Value : "") lượt</span></div>
                     }
                     <div class="cpn-side-row"><span>Hạn dùng</span><span>@p.NgayKetThuc.ToString("HH:mm dd/MM/yyyy")</span></div>
                     @if (vi == null && !Model.CoTheLuu)

@@ -9,7 +9,7 @@
 <div class="mk-page-head">
     <div>
         <h1 class="h2">Ưu đãi học viên thân thiết</h1>
-        <p>Coupon riêng cho học viên đạt tiêu chí (số khóa đã đăng ký, tổng chi tiêu). Học viên chưa đạt tiêu chí nhập mã sẽ bị từ chối.</p>
+        <p>Lọc các chương trình khuyến mãi dành cho học viên thân thiết (cùng form với khuyến mãi thường). Tiêu chí: số khóa đã mua và/hoặc tổng chi tiêu. Học viên đạt tiêu chí mới thấy mã để lưu vào ví; chưa đạt thấy mục "Ưu đãi thân thiết sắp mở" kèm tiến độ.</p>
     </div>
     <a href="@Url.Action("Create", "Promotion", new { doiTuong = "ThanThiet" })" class="btn mk-btn-accent"><i class="bi bi-plus-lg me-1"></i> Tạo ưu đãi thân thiết</a>
 </div>
@@ -24,7 +24,7 @@
     <div class="mk-field">
         <label for="status">Trạng thái</label>
         <select id="status" name="status" class="form-control">
-            @foreach (var s in new[] { "all", "Đang chạy", "Chưa bắt đầu", "Tạm ngưng", "Đã kết thúc" })
+            @foreach (var s in new[] { "all", "Đang chạy", "Chưa bắt đầu", "Tạm ngưng", "Hết lượt", "Đã kết thúc" })
             {
                 <option value="@(s == "all" ? "" : s)" @(currentStatus == s ? "selected" : "")>@(s == "all" ? "Tất cả" : s)</option>
             }
@@ -57,7 +57,7 @@
                         <td><span class="mk-code">@p.MaCode</span></td>
                         <td><strong style="color: #E11D48;">@p.MoTaUuDai</strong></td>
                         <td>
-                            @if (p.SoKhoaToiThieu.HasValue) { <div>Từ <strong>@p.SoKhoaToiThieu</strong> khóa đã đăng ký</div> }
+                            @if (p.SoKhoaToiThieu.HasValue) { <div>Đã mua từ <strong>@p.SoKhoaToiThieu</strong> khóa học</div> }
                             @if (p.ChiTieuToiThieu.HasValue) { <div>Chi tiêu từ <strong>@p.ChiTieuToiThieu.Value.ToString("N0") đ</strong></div> }
                         </td>
                         <td style="white-space: nowrap;">@p.NgayBatDau.ToString("dd/MM/yyyy") – @p.NgayKetThuc.ToString("dd/MM/yyyy")</td>
@@ -66,6 +66,7 @@
                             @if (tt == "Đang chạy") { <span class="badge badge-success">Đang chạy</span> }
                             else if (tt == "Tạm ngưng") { <span class="badge badge-warning">Tạm ngưng</span> }
                             else if (tt == "Chưa bắt đầu") { <span class="badge badge-info">Chưa bắt đầu</span> }
+                            else if (tt == "Hết lượt") { <span class="badge badge-danger">Hết lượt</span> }
                             else { <span class="badge badge-secondary">Đã kết thúc</span> }
                         </td>
                         <td>

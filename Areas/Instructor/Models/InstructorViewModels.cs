@@ -46,7 +46,6 @@ namespace ECOLearning.Areas.Instructor.Models
         public string AnhBia { get; set; }
         public string TenDanhMuc { get; set; }
         public decimal GiaBan { get; set; }
-        public decimal? GiaKhuyenMai { get; set; }
         public int SoHocVien { get; set; }
         public string TrangThai { get; set; }
         public DateTime? NgayTao { get; set; }
@@ -63,7 +62,6 @@ namespace ECOLearning.Areas.Instructor.Models
         public string MoTaNgan { get; set; }
         public string MucTieuDauRa { get; set; }
         public decimal GiaBan { get; set; }
-        public decimal? GiaKhuyenMai { get; set; }
         public string CapDo { get; set; }
         public string MaDanhMuc { get; set; }
         public string AnhBia { get; set; }

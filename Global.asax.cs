@@ -17,6 +17,24 @@ namespace ECOLearning
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
             ECOLearning.Services.AppLog.KhoiDong();
+            // Chạy tiếp các video đang chờ nén / đẩy lên R2 trước khi ứng dụng khởi động lại
+            ECOLearning.Services.VideoStorageService.KhoiDong();
+        }
+
+        // CORS cho API ứng dụng (/api/...): app Flutter chạy trên Chrome gọi khác nguồn. Xác thực bằng header Authorization
+        // (không dùng cookie) nên cho mọi nguồn; yêu cầu preflight OPTIONS trả 204 ngay, không vào controller
+        protected void Application_BeginRequest()
+        {
+            if (!Request.Path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)) return;
+            Response.Headers["Access-Control-Allow-Origin"] = "*";
+            Response.Headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept";
+            Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS";
+            Response.Headers["Access-Control-Max-Age"] = "86400";
+            if (string.Equals(Request.HttpMethod, "OPTIONS", StringComparison.OrdinalIgnoreCase))
+            {
+                Response.StatusCode = 204;
+                CompleteRequest();
+            }
         }
 
         // Session vừa có (trước mọi controller): Admin / Marketing mất Session vì để trang lâu hoặc ứng dụng khởi động lại

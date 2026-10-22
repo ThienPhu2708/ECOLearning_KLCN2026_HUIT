@@ -23,3 +23,6 @@ IF COL_LENGTH('dbo.NguoiDung', 'phienTrinhDuyet') IS NULL
 GO
 
 PRINT N'017: đã bổ sung cột mã phiên đăng nhập cho NguoiDung (một phiên cho mỗi tài khoản Admin / Marketing).';
+
+
+

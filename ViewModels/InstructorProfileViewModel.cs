@@ -58,6 +58,6 @@ namespace ECOLearning.ViewModels
         public int SoDanhGia { get; set; }
         public double DiemDanhGia { get; set; }
 
-        public decimal GiaHienTai => Course.giaKhuyenMai.HasValue ? Course.giaKhuyenMai.Value : Course.giaBan;
+        public decimal GiaHienTai => Course.giaBan;
     }
 }

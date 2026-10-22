@@ -20,8 +20,13 @@ namespace ECOLearning.Services
 
         public static int? LaySoGiay(string duongDanVideo)
         {
-            if (string.IsNullOrWhiteSpace(duongDanVideo)
-                || !duongDanVideo.StartsWith(ThuMucVideo, StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(duongDanVideo)) return null;
+            // Video trên R2: độ dài lưu khi tải lên (hàng đợi hoặc metadata của object)
+            if (duongDanVideo.StartsWith(VideoStorageService.TienToR2, StringComparison.OrdinalIgnoreCase))
+            {
+                return VideoStorageService.SoGiay(duongDanVideo);
+            }
+            if (!duongDanVideo.StartsWith(ThuMucVideo, StringComparison.OrdinalIgnoreCase))
             {
                 return null;
             }
@@ -50,6 +55,19 @@ namespace ECOLearning.Services
 
             HttpRuntime.Cache.Insert(khoa, ketQua, null, DateTime.UtcNow.AddHours(6), Cache.NoSlidingExpiration);
             return ketQua > 0 ? (int?)ketQua : null;
+        }
+
+        /// <summary>Độ dài (giây) của một file MP4 / MOV / M4V bất kỳ trên đĩa, null nếu không đọc được. Không cache.</summary>
+        public static int? DocSoGiayFile(string duongDanFile)
+        {
+            try
+            {
+                double? giay = DocMp4(duongDanFile);
+                if (giay.HasValue && giay.Value > 0 && giay.Value < 24 * 3600) return (int)Math.Round(giay.Value);
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            return null;
         }
 
         private static double? DocMp4(string path)

@@ -5,6 +5,7 @@
     var luot = ViewBag.LuotSuDung as List<ECOLearning.ViewModels.LuotSuDungUuDai> ?? new List<ECOLearning.ViewModels.LuotSuDungUuDai>();
     string tt = Model.TrangThaiHienThi(DateTime.Now);
     string lyDoAdmin = ViewBag.LyDoAdminTamDung as string;
+    bool xoaDuoc = ViewBag.XoaDuoc as bool? == true;
 }
 
 <div class="mk-page-head">
@@ -16,22 +17,24 @@
             @if (tt == "Đang chạy") { <span class="badge badge-success">Đang chạy</span> }
             else if (tt == "Tạm ngưng") { <span class="badge badge-warning">Tạm ngưng</span> }
             else if (tt == "Chưa bắt đầu") { <span class="badge badge-info">Chưa bắt đầu</span> }
+            else if (tt == "Hết lượt") { <span class="badge badge-danger">Hết lượt</span> }
             else { <span class="badge badge-secondary">Đã kết thúc</span> }
             @if (Model.LaThanThiet) { <span class="badge badge-warning"><i class="bi bi-award"></i> Học viên thân thiết</span> }
+            <span class="badge @(Model.CongKhai ? "badge-primary" : "badge-secondary")">@(Model.CongKhai ? "Mã công khai" : "Mã riêng")</span>
         </p>
     </div>
+    <div class="mk-actions">
     @if (tt != "Đã kết thúc")
     {
-        <div class="mk-actions">
             <a href="@Url.Action("Edit", "Promotion", new { id = Model.MaKhuyenMai })" class="btn btn-outline"><i class="bi bi-pencil me-1"></i> Sửa</a>
-            @using (Html.BeginForm("ChangeStatus", "Promotion", new { id = Model.MaKhuyenMai }, FormMethod.Post))
+            using (Html.BeginForm("ChangeStatus", "Promotion", new { id = Model.MaKhuyenMai }, FormMethod.Post))
             {
                 @Html.AntiForgeryToken()
                 if (lyDoAdmin != null)
                 {
                     <button type="button" class="btn btn-secondary" disabled title="Chương trình đang bị Quản trị viên tạm dừng">Kích hoạt lại</button>
                 }
-                else if (Model.TrangThaiLuu == "TamNgung")
+                else if (Model.DangTamNgung)
                 {
                     <button type="submit" name="hanhDong" value="resume" class="btn btn-secondary">Kích hoạt lại</button>
                 }
@@ -40,13 +43,21 @@
                     <button type="submit" name="hanhDong" value="pause" class="btn btn-secondary">Tạm ngừng</button>
                 }
             }
-            @using (Html.BeginForm("ChangeStatus", "Promotion", new { id = Model.MaKhuyenMai }, FormMethod.Post, new { onsubmit = "return confirm('Kết thúc chương trình? Mã sẽ không dùng được nữa, lịch sử sử dụng được giữ nguyên.');" }))
+            using (Html.BeginForm("ChangeStatus", "Promotion", new { id = Model.MaKhuyenMai }, FormMethod.Post, new { onsubmit = "return confirm('Kết thúc chương trình ngay? Ngày kết thúc được đặt về hôm qua và mã bị tắt; lịch sử sử dụng được giữ nguyên.');" }))
             {
                 @Html.AntiForgeryToken()
                 <button type="submit" name="hanhDong" value="end" class="btn btn-danger">Kết thúc</button>
             }
-        </div>
     }
+    @if (xoaDuoc)
+    {
+        using (Html.BeginForm("Delete", "Promotion", new { id = Model.MaKhuyenMai }, FormMethod.Post, new { onsubmit = "return confirm('Xóa hẳn chương trình và mã " + Model.MaCode + "? Chưa có đơn hàng nào dùng mã này nên có thể xóa.');" }))
+        {
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline" style="color: #DC2626; border-color: #FCA5A5;"><i class="bi bi-trash3 me-1"></i> Xóa</button>
+        }
+    }
+    </div>
 </div>
 
 @Html.Partial("_Flash")
@@ -62,12 +73,23 @@
         </div>
     </div>
 }
+@if (Model.ChienDichChan && tt != "Đã kết thúc")
+{
+    <div class="mk-flash" style="background: #FFFBEB; border-left: 4px solid #F59E0B; color: #92400E;">
+        <span><i class="bi bi-pause-circle-fill me-1"></i> Chiến dịch "@Model.TenChienDich" đang @(Model.TrangThaiChienDich == "DaHuy" ? "bị hủy" : "tạm dừng") nên mã này không lưu, không dùng được.</span>
+    </div>
+}
 
 <div class="mk-stats">
     <div class="card mk-stat">
         <div class="mk-stat-label">Lượt sử dụng</div>
         <div class="mk-stat-value">@Model.SoLuotDaDung@(Model.GioiHanLuotDung.HasValue ? " / " + Model.GioiHanLuotDung.Value : "")</div>
-        <div class="mk-stat-note">@(Model.GioiHanLuotDung.HasValue ? "Giới hạn tổng lượt" : "Không giới hạn tổng lượt")</div>
+        <div class="mk-stat-note">@(Model.GioiHanLuotDung.HasValue ? "Giới hạn tổng lượt" : "Không giới hạn tổng lượt") · đơn đã thanh toán</div>
+    </div>
+    <div class="card mk-stat">
+        <div class="mk-stat-label">Học viên đã lưu mã</div>
+        <div class="mk-stat-value">@Model.SoHocVienDaLuu</div>
+        <div class="mk-stat-note">Số mã đang nằm trong ví học viên</div>
     </div>
     <div class="card mk-stat">
         <div class="mk-stat-label">Tổng tiền đã giảm</div>
@@ -92,7 +114,7 @@
                 <dt>Thời gian</dt>
                 <dd>@Model.NgayBatDau.ToString("dd/MM/yyyy") – @Model.NgayKetThuc.ToString("dd/MM/yyyy")</dd>
                 <dt>Mỗi học viên</dt>
-                <dd>Tối đa @Model.GioiHanMoiHocVien lượt</dd>
+                <dd>@(Model.GioiHanMoiHocVien.HasValue ? "Tối đa " + Model.GioiHanMoiHocVien.Value + " lượt" : "Không giới hạn")</dd>
                 <dt>Đối tượng</dt>
                 <dd>@Model.MoTaDoiTuong
                     @if (Model.LaThanThiet)
@@ -103,7 +125,7 @@
                 <dt>Phạm vi</dt>
                 <dd>@Model.MoTaPhamVi</dd>
                 <dt>Hiển thị</dt>
-                <dd>@(Model.CongKhai ? "Công khai: học viên thấy mã ở trang chủ / Mã giảm giá của tôi và lưu vào ví" : "Mã kín: chỉ ai được gửi mã mới dùng được")</dd>
+                <dd>@(Model.CongKhai ? "Mã công khai: hiện trong danh sách Thu thập mã, ai đủ điều kiện cũng lưu được" : "Mã riêng: không hiện ở đâu, Marketing gửi mã cho học viên, học viên nhập mã để lưu hoặc dùng")</dd>
                 @if (!string.IsNullOrEmpty(Model.ChinhSach))
                 {
                     <dt>Chính sách</dt>
@@ -163,9 +185,13 @@
     <div>
         <div class="card mk-section">
             <h2>Khóa học áp dụng</h2>
-            @if (Model.PhamVi != "KhoaHoc")
+            @if (Model.PhamVi == "DanhMuc")
             {
-                <p class="mk-muted" style="margin: 0;">Áp dụng cho toàn bộ khóa học.</p>
+                <p class="mk-muted" style="margin: 0;">Các khóa học thuộc danh mục <strong>@(Model.TenDanhMucApDung ?? Model.MaDanhMucApDung)</strong>.</p>
+            }
+            else if (Model.PhamVi != "KhoaHoc")
+            {
+                <p class="mk-muted" style="margin: 0;">Toàn sàn: áp dụng cho mọi khóa học có phí.</p>
             }
             else
             {

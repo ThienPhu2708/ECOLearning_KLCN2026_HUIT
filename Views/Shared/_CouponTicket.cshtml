@@ -18,6 +18,11 @@
         }
     </div>
     <div class="cpn-body">
+        <div class="cpn-tags">
+            <span class="cpn-tag @(m.CongKhai ? "" : "is-private")">@(m.CongKhai ? "Mã công khai" : "Mã riêng")</span>
+            @if (m.SapHetHan) { <span class="cpn-tag is-warn">Sắp hết hạn</span> }
+            @if (m.ChuaBatDau) { <span class="cpn-tag is-info">Chưa bắt đầu</span> }
+        </div>
         <div class="cpn-title">@m.MoTaUuDai</div>
         <div class="cpn-name"><span class="cpn-code">@m.MaCode</span> @m.TenKhuyenMai</div>
         <div class="cpn-cond">@string.Join(" · ", m.DieuKien)</div>
@@ -32,7 +37,7 @@
             }
             else
             {
-                <span class="cpn-exp">HSD @m.NgayKetThuc.ToString("dd/MM/yyyy")@(m.ConLai.HasValue && m.ConLai.Value <= 20 ? " · còn " + m.ConLai.Value + " lượt" : "")</span>
+                <span class="cpn-exp">@(m.ChuaBatDau ? "Từ " + m.NgayBatDau.ToString("dd/MM/yyyy") + " · " : "")HSD @m.NgayKetThuc.ToString("dd/MM/yyyy")@(m.ConLai.HasValue ? " · còn " + m.ConLai.Value + " lượt" : "")</span>
             }
             <div class="cpn-actions">
                 @if (Model.HienChiTiet)

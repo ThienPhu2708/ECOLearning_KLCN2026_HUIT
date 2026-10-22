@@ -18,7 +18,6 @@ namespace ECOLearning.Areas.Admin.Models
         public string TenDanhMuc { get; set; }
         public DateTime? NgayGui { get; set; }
         public decimal HocPhi { get; set; }
-        public decimal? GiaKhuyenMai { get; set; }
         public int SoVideo { get; set; }
         public int SoTaiLieu { get; set; }
         public string TrangThai { get; set; }
@@ -102,7 +101,6 @@ namespace ECOLearning.Areas.Admin.Models
         public string EmailGiaoVien { get; set; }
         public string TenDanhMuc { get; set; }
         public decimal HocPhi { get; set; }
-        public decimal? GiaKhuyenMai { get; set; }
         public string MoTa { get; set; }
         public string MoTaNgan { get; set; }
         public string MucTieuDauRa { get; set; }

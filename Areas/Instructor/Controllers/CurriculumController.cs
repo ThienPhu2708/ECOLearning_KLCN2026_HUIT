@@ -395,26 +395,16 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 return Json(new { success = false, message = "Chỉ chấp nhận tệp video MP4/AVI/WEBM." });
             }
 
-            string uploadFolder = Server.MapPath("~/Uploads/Videos/");
-            if (!System.IO.Directory.Exists(uploadFolder))
-                System.IO.Directory.CreateDirectory(uploadFolder);
+            // Cloudflare R2 qua hàng đợi nén (chưa cấu hình R2 thì lưu trong assets/uploads/videos)
+            string relativeUrl = ECOLearning.Services.VideoStorageService.Luu(videoFile);
 
-            string safeFileName = RemoveDiacritics(System.IO.Path.GetFileNameWithoutExtension(videoFile.FileName));
-            string fileName = safeFileName + "_" + DateTime.Now.ToString("yyMMddHHmmss") + ext;
-            string filePath = System.IO.Path.Combine(uploadFolder, fileName);
-            
-            // Save file
-            videoFile.SaveAs(filePath);
-
-            string relativeUrl = "/Uploads/Videos/" + fileName;
-            
             // Update lesson
             lesson.duongDanVideo = relativeUrl;
             lesson.thoiLuong = duration > 0 ? duration : 0;
             
             db.SaveChanges();
 
-            return Json(new { success = true, message = "Đã tải lên video thành công!", videoUrl = relativeUrl });
+            return Json(new { success = true, message = "Đã tải lên video thành công!", videoUrl = ECOLearning.Services.VideoStorageService.LinkPhat(relativeUrl) });
         }
 
         // POST: Instructor/Curriculum/RemoveVideo

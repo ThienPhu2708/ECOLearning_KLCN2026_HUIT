@@ -131,7 +131,6 @@ namespace ECOLearning.Areas.Instructor.Controllers
                         AnhBia = k.anhBia,
                         TenDanhMuc = tenDM,
                         GiaBan = k.giaBan,
-                        GiaKhuyenMai = k.giaKhuyenMai,
                         SoHocVien = soHV,
                         TrangThai = k.trangThai ?? "BanNhap"
                     };

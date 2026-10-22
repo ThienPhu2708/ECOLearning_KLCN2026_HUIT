@@ -7,6 +7,8 @@
         .ToList();
     bool gioTrong = Model.Items == null || Model.Items.Count == 0;
     int soDungDuoc = gioTrong ? 0 : ds.Count(m => m.CoTheApDung);
+    // Gợi ý sẵn mã giảm nhiều nhất cho giỏ hiện tại nhưng không tự áp (đặc tả Marketing mục 9)
+    string maGoiY = gioTrong ? null : ds.Where(m => m.CoTheApDung && m.TienGiam > 0).OrderByDescending(m => m.TienGiam).Select(m => m.MaCode).FirstOrDefault();
 }
 <div class="cp-list" data-usable="@soDungDuoc">
     @if (!Model.IsLoggedIn)
@@ -38,9 +40,13 @@
                     }
                 </div>
                 <div class="cp-item-body">
+                    @if (m.MaCode == maGoiY && !dangDung)
+                    {
+                        <div style="display: inline-block; font-size: 11px; font-weight: 700; color: #047857; background: #ECFDF5; border-radius: 9999px; padding: 1px 8px; margin-bottom: 3px;"><i class="bi bi-stars"></i> Gợi ý: giảm nhiều nhất</div>
+                    }
                     <div class="cp-item-title">@m.MoTaUuDai</div>
                     <div class="cp-item-name"><span class="cp-code">@m.MaCode</span> @m.TenKhuyenMai</div>
-                    <div class="cp-cond">@string.Join(" · ", m.DieuKien) · HSD @m.NgayKetThuc.ToString("dd/MM/yyyy")</div>
+                    <div class="cp-cond">@string.Join(" · ", m.DieuKien) · @(m.ChuaBatDau ? "Từ " + m.NgayBatDau.ToString("dd/MM/yyyy") + " · " : "")HSD @m.NgayKetThuc.ToString("dd/MM/yyyy")</div>
                     @if (dungDuoc && m.TienGiam > 0)
                     {
                         <div class="cp-save">Giảm @m.TienGiam.ToString("N0") đ cho giỏ hàng này</div>
@@ -66,5 +72,15 @@
                 </div>
             </div>
         }
+    }
+    @if (Model.ThanThietSapMo.Any())
+    {
+        <div style="margin-top: 12px; padding: 10px 12px; border: 1px dashed #FCD34D; background: #FFFBEB; border-radius: 12px;">
+            <div style="font-weight: 700; font-size: 13px; color: #92400E; margin-bottom: 4px;"><i class="bi bi-award"></i> Ưu đãi thân thiết sắp mở</div>
+            @foreach (var u in Model.ThanThietSapMo)
+            {
+                <div style="font-size: 13px; color: #78350F;"><strong>@u.GiaTriNgan</strong> · @u.TenKhuyenMai: @u.TienDo</div>
+            }
+        </div>
     }
 </div>

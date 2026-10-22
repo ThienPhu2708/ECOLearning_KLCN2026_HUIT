@@ -71,7 +71,7 @@ namespace ECOLearning.Services
                     MaKhoaHoc = k.maKhoaHoc,
                     TenKhoaHoc = k.tenKhoaHoc,
                     AnhBia = k.anhBia,
-                    Gia = PromotionService.GiaBanHienTai(k),
+                    Gia = k.giaBan,
                     GiaGoc = k.giaBan
                 });
             }
@@ -115,7 +115,7 @@ namespace ECOLearning.Services
                 return KetQuaTaoDon.Loi(400, "CART_EMPTY", "Giỏ hàng của bạn đang rỗng!");
             var soHuu = bg.KhongHopLe.FirstOrDefault(k => k.LyDo == "Bạn đã sở hữu khóa học này");
             if (soHuu != null)
-                return KetQuaTaoDon.Loi(409, "ALREADY_OWNED", "Bạn đã sở hữu khóa học " + soHuu.MaKhoaHoc + ". Vui lòng xóa khỏi giỏ hàng!");
+                return KetQuaTaoDon.Loi(409, "COURSE_OWNED", "Bạn đã sở hữu khóa học " + soHuu.MaKhoaHoc + ". Vui lòng xóa khỏi giỏ hàng!");
             if (bg.KhongHopLe.Count > 0)
                 return KetQuaTaoDon.Loi(400, "COURSE_UNAVAILABLE", bg.KhongHopLe[0].LyDo + " (" + bg.KhongHopLe[0].MaKhoaHoc + "). Vui lòng xóa khỏi giỏ hàng!");
 

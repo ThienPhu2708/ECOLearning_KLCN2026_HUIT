@@ -1,116 +1,87 @@
 ﻿@model ECOLearning.Areas.Marketing.Models.MarketingDashboardViewModel
 @{
     ViewBag.Title = "Dashboard Marketing";
+    var now = DateTime.Now;
 }
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; gap: 16px; flex-wrap: wrap;">
     <div>
-        <h1 class="h2" style="margin-top: 6px;">Tổng Quan Chiến Dịch Tiếp Thị</h1>
-        <p class="body-2" style="color: var(--text-secondary);">Giám sát hiệu quả chương trình khuyến mại, lượt sử dụng coupon và doanh thu kích cầu</p>
+        <h1 class="h2" style="margin-top: 6px;">Tổng quan Marketing</h1>
+        <p class="body-2" style="color: var(--text-secondary);">Khuyến mãi đang chạy, chiến dịch đang triển khai và hiệu quả mã giảm giá (chỉ tính đơn đã thanh toán có dùng mã)</p>
     </div>
     <div style="display: flex; gap: 10px;">
-        <a href="@Url.Action("Index", "Promotion", new { area = "Marketing" })" class="btn btn-primary">
-            + Quản lý Voucher & KM
-        </a>
+        <a href="@Url.Action("Create", "Promotion", new { area = "Marketing" })" class="btn btn-primary">+ Tạo khuyến mãi</a>
+        <a href="@Url.Action("Index", "CampaignReport", new { area = "Marketing" })" class="btn btn-outline">Báo cáo chi tiết</a>
     </div>
 </div>
 
-<!-- 3 MARKETING KPI CARDS COMPLIANT WITH 3.3.1.5 -->
-<div class="grid-12" style="margin-bottom: 32px;">
+@if (ViewBag.ChuaKhoiTao as bool? == true)
+{
+    <div class="mk-flash mk-flash-error" role="alert"><span><i class="bi bi-exclamation-triangle-fill me-1"></i> Chưa khởi tạo dữ liệu Marketing: chạy Database/Migrations 008, 009 và 018.</span></div>
+}
 
-    <!-- Card 1: Active Campaigns -->
-    <div class="col-4">
-        <div class="card" style="padding: 24px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Chiến dịch đang chạy</span>
-                <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(16, 185, 129, 0.1); color: #10B981; display: flex; align-items: center; justify-content: center;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                    </svg>
-                </div>
-            </div>
-            <div style="font-size: 30px; font-weight: 800; color: #10B981; margin-bottom: 4px;">
-                @Model.ActiveCampaignsCount.ToString("00") chiến dịch
-            </div>
-            <span class="caption" style="color: var(--text-muted);">Chương trình trong thời gian áp dụng</span>
-        </div>
+<div class="mk-stats">
+    <div class="card mk-stat">
+        <div class="mk-stat-label">Khuyến mãi đang chạy</div>
+        <div class="mk-stat-value" style="color: #10B981;">@Model.ActiveCampaignsCount</div>
+        <div class="mk-stat-note">Trong thời gian áp dụng, đang bật</div>
     </div>
-
-    <!-- Card 2: Coupons Used -->
-    <div class="col-4">
-        <div class="card" style="padding: 24px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Tổng lượt coupon đã dùng</span>
-                <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(225, 29, 72, 0.1); color: #E11D48; display: flex; align-items: center; justify-content: center;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-                    </svg>
-                </div>
-            </div>
-            <div style="font-size: 30px; font-weight: 800; color: #E11D48; margin-bottom: 4px;">
-                @Model.TotalCouponsUsed.ToString("#,##0") lượt
-            </div>
-            <span class="caption" style="color: var(--status-success); font-weight: 600;">Chỉ tính đơn hàng đã thanh toán</span>
-        </div>
+    <div class="card mk-stat">
+        <div class="mk-stat-label">Chiến dịch đang triển khai</div>
+        <div class="mk-stat-value">@Model.ChienDichDangTrienKhai</div>
     </div>
-
-    <!-- Card 3: Driven Revenue -->
-    <div class="col-4">
-        <div class="card" style="padding: 24px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                <span class="caption" style="color: var(--text-secondary); font-weight: 600;">Doanh thu kích cầu</span>
-                <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(59, 130, 246, 0.1); color: #3B82F6; display: flex; align-items: center; justify-content: center;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="1" x2="12" y2="23"></line>
-                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                    </svg>
-                </div>
-            </div>
-            <div style="font-size: 30px; font-weight: 800; color: var(--text-heading); margin-bottom: 4px;">
-                @Model.DrivenRevenue.ToString("#,##0 đ")
-            </div>
-            <span class="caption" style="color: var(--text-muted);">Từ các đơn hàng có mã ưu đãi</span>
-        </div>
+    <div class="card mk-stat">
+        <div class="mk-stat-label">Lượt dùng mã tháng @now.Month</div>
+        <div class="mk-stat-value" style="color: #E11D48;">@Model.TotalCouponsUsed.ToString("#,##0")</div>
     </div>
-
+    <div class="card mk-stat">
+        <div class="mk-stat-label">Doanh thu tháng @now.Month</div>
+        <div class="mk-stat-value">@Model.DrivenRevenue.ToString("#,##0 đ")</div>
+        <div class="mk-stat-note">Từ các đơn có mã, sau giảm</div>
+    </div>
+    <div class="card mk-stat">
+        <div class="mk-stat-label">Tiền giảm tháng @now.Month</div>
+        <div class="mk-stat-value">@Model.TienGiamThangNay.ToString("#,##0 đ")</div>
+    </div>
 </div>
 
-<!-- TREND CHART & TOP COUPONS -->
-<div class="grid-12">
-
-    <!-- Biểu đồ xu hướng sử dụng coupon -->
+<div class="grid-12" style="margin-bottom: 24px;">
     <div class="col-8">
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <div>
-                    <h3 class="h3">Xu Hướng Sử Dụng Coupon</h3>
-                    <span class="caption">Lượng mã khuyến mãi được học viên áp dụng qua các tháng trong năm</span>
+                    <h3 class="h3">Lượt dùng mã và doanh thu</h3>
+                    <span class="caption">12 tháng năm @now.Year</span>
                 </div>
-                <span class="badge badge-primary" style="background: #FFE4E6; color: #E11D48;">Năm @DateTime.Now.Year</span>
             </div>
-            <div id="marketing-coupon-chart"></div>
+            @if (Model.CouponUsageChartData.Sum() == 0)
+            {
+                <p class="mk-muted" style="margin: 0;">Năm nay chưa có đơn hàng đã thanh toán nào dùng mã.</p>
+            }
+            else
+            {
+                <div id="marketing-coupon-chart"></div>
+            }
         </div>
     </div>
 
-    <!-- Top Coupon hiệu quả -->
     <div class="col-4">
         <div class="card">
-            <h3 class="h3" style="margin-bottom: 6px;">Coupon Nổi Bật</h3>
-            <span class="caption" style="display: block; margin-bottom: 16px;">Các mã giảm giá được sử dụng nhiều nhất</span>
-
-            @if (Model.TopCoupons != null && Model.TopCoupons.Any())
+            <h3 class="h3" style="margin-bottom: 6px;">Top 5 mã dùng nhiều</h3>
+            <span class="caption" style="display: block; margin-bottom: 16px;">Toàn thời gian, đơn đã thanh toán</span>
+            @if (Model.TopCoupons.Any())
             {
-                <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; flex-direction: column; gap: 10px;">
                     @foreach (var cp in Model.TopCoupons)
                     {
-                        <div style="padding: 12px 14px; background: var(--bg-canvas, #F8FAFC); border-radius: var(--radius-xl); border: 1px dashed rgba(225, 29, 72, 0.3); display: flex; justify-content: space-between; align-items: center;">
-                            <div>
+                        <div style="padding: 10px 12px; background: var(--bg-canvas, #F8FAFC); border-radius: var(--radius-xl); border: 1px dashed rgba(225, 29, 72, 0.3); display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                            <div style="min-width: 0;">
                                 <span class="badge badge-primary" style="background: #FFE4E6; color: #E11D48; font-weight: 700; font-size: 13px; letter-spacing: 0.05em;">@cp.MaCode</span>
                                 <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">@cp.TenKhuyenMai</div>
                             </div>
-                            <div style="text-align: right;">
+                            <div style="text-align: right; flex-shrink: 0;">
                                 <strong style="font-size: 13px; color: var(--text-heading);">@cp.SoLuongDung lượt</strong>
-                                <div style="font-size: 11px; color: var(--status-success); font-weight: 600;">@cp.MoTaUuDai</div>
+                                <div style="font-size: 11px; color: var(--text-muted);">@cp.DoanhThu.ToString("#,##0 đ")</div>
                             </div>
                         </div>
                     }
@@ -118,29 +89,70 @@
             }
             else
             {
-                <div style="text-align: center; color: var(--text-secondary); padding: 32px 16px;">
-                    <p class="body-2">Chưa có mã khuyến mãi nào được tạo.</p>
-                </div>
+                <p class="body-2" style="color: var(--text-secondary); text-align: center; padding: 24px 8px;">Chưa có mã nào được dùng.</p>
             }
         </div>
     </div>
+</div>
 
+<div class="grid-12">
+    <div class="col-6">
+        <div class="card">
+            <h3 class="h3" style="margin-bottom: 6px;">Mã cần chú ý</h3>
+            <span class="caption" style="display: block; margin-bottom: 16px;">Đang chạy, hết hạn trong 7 ngày hoặc đã dùng từ 80% lượt</span>
+            @if (Model.MaCanChuY.Any())
+            {
+                <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px;">
+                    @foreach (var m in Model.MaCanChuY)
+                    {
+                        <li style="display: flex; justify-content: space-between; gap: 10px; font-size: 14px;">
+                            <a href="@Url.Action("Details", "Promotion", new { id = m.MaKhuyenMai })"><span class="mk-code">@m.MaCode</span> @m.TenKhuyenMai</a>
+                            <span style="color: #B45309; white-space: nowrap;">@m.LyDo</span>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p class="body-2" style="color: var(--text-secondary);">Không có mã nào sắp hết hạn hoặc sắp hết lượt.</p>
+            }
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="card">
+            <h3 class="h3" style="margin-bottom: 6px;">Chiến dịch sắp kết thúc</h3>
+            <span class="caption" style="display: block; margin-bottom: 16px;">5 chiến dịch đang triển khai có ngày kết thúc gần nhất</span>
+            @if (Model.ChienDichSapKetThuc.Any())
+            {
+                <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px;">
+                    @foreach (var c in Model.ChienDichSapKetThuc)
+                    {
+                        <li style="display: flex; justify-content: space-between; gap: 10px; font-size: 14px;">
+                            <a href="@Url.Action("Details", "Campaign", new { id = c.MaChienDich })">@c.TenChienDich</a>
+                            <span style="color: var(--text-muted); white-space: nowrap;">đến @c.NgayKetThuc.ToString("dd/MM/yyyy")</span>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p class="body-2" style="color: var(--text-secondary);">Không có chiến dịch nào đang triển khai.</p>
+            }
+        </div>
+    </div>
 </div>
 
 @section Scripts {
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const usageData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.CouponUsageChartData));
-        const chartLabels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartLabels));
-
-        if (window.Charts && typeof Charts.renderLineChart === 'function') {
-            Charts.renderLineChart('marketing-coupon-chart', {
-                data: usageData,
-                labels: chartLabels,
-                color: '#E11D48',
-                fillColor: 'rgba(225, 29, 72, 0.06)'
-            });
-        }
+        if (!document.getElementById('marketing-coupon-chart') || !window.Charts || typeof Charts.renderDualLineChart !== 'function') return;
+        Charts.renderDualLineChart('marketing-coupon-chart', {
+            labels: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartLabels)),
+            series: [
+                { name: 'Lượt dùng mã', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.CouponUsageChartData)), color: '#E11D48', fillColor: 'rgba(225, 29, 72, 0.06)', unit: 'lượt' },
+                { name: 'Doanh thu (đ)', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RevenueChartData)), color: '#2563EB', fillColor: 'rgba(37, 99, 235, 0.05)', unit: 'đ' }
+            ]
+        });
     });
 </script>
 }

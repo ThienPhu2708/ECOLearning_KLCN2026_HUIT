@@ -203,3 +203,25 @@
 .cpn-history th { text-align: left; color: #64748B; font-weight: 600; padding: 8px 6px; border-bottom: 1px solid #E2E8F0; }
 .cpn-history td { padding: 10px 6px; border-bottom: 1px solid #F1F5F9; color: #0F172A; }
 .cpn-history .num { text-align: right; white-space: nowrap; }
+
+/* Nhãn trên thẻ mã (đặc tả Marketing mục 8): Mã công khai / Mã riêng, Sắp hết hạn, Chưa bắt đầu */
+.cpn-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+.cpn-tag { font-size: 11px; font-weight: 700; border-radius: 9999px; padding: 1px 8px; background: #F1F5F9; color: #475569; white-space: nowrap; }
+.cpn-tag.is-private { background: #F5F3FF; color: #6D28D9; }
+.cpn-tag.is-warn { background: #FFF7ED; color: #C2410C; }
+.cpn-tag.is-info { background: #EFF6FF; color: #1D4ED8; }
+
+/* Ô "Nhập mã" trong ví: lưu mã riêng Marketing gửi */
+.cpn-redeem { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.cpn-redeem input { flex: 1 1 220px; max-width: 320px; text-transform: uppercase; font-weight: 700; letter-spacing: .03em; }
+.cpn-flash { padding: 10px 14px; border-radius: 12px; font-size: 14px; margin-bottom: 14px; }
+.cpn-flash.is-ok { background: #ECFDF5; color: #047857; }
+.cpn-flash.is-error { background: #FEF2F2; color: #B91C1C; }
+
+/* Ưu đãi thân thiết sắp mở: tiến độ, chưa lộ mã */
+.cpn-loyal { margin-top: 24px; }
+.cpn-loyal h2 { font-size: 17px; font-weight: 800; color: #0F172A; margin: 0 0 10px; }
+.cpn-loyal-item { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 1px dashed #FCD34D; background: #FFFBEB; border-radius: 14px; margin-bottom: 8px; }
+.cpn-loyal-value { min-width: 64px; text-align: center; font-weight: 800; font-size: 18px; color: #B45309; }
+.cpn-loyal-name { font-weight: 700; color: #0F172A; font-size: 14px; }
+.cpn-loyal-progress { font-size: 13px; color: #92400E; }

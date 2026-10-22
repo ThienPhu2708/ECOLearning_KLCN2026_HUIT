@@ -235,8 +235,7 @@
                             btnClass = "btn-secondary";
                         }
 
-                        decimal displayPrice = course.GiaKhuyenMai.HasValue && course.GiaKhuyenMai.Value > 0
-                            ? course.GiaKhuyenMai.Value : course.GiaBan;
+                        decimal displayPrice = course.GiaBan;
 
                         <tr>
                             <td>

@@ -69,7 +69,7 @@ namespace ECOLearning.Services
             {
                 int? thuc = VideoDuration.LaySoGiay(b.duongDanVideo);
                 if (!thuc.HasValue && doDaiTrinhPhat > 0 && laBaiDau
-                    && !string.IsNullOrEmpty(b.duongDanVideo) && b.duongDanVideo.StartsWith(VideoDuration.ThuMucVideo, StringComparison.OrdinalIgnoreCase))
+                    && VideoStorageService.LaVideoTaiLen(b.duongDanVideo))
                 {
                     thuc = (int)Math.Round(doDaiTrinhPhat);
                 }

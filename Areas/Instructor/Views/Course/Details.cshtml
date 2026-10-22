@@ -202,7 +202,7 @@
                 <div class="caption" style="color: var(--text-muted); margin-bottom: 10px; line-height: 1.5;">Giá bán niêm yết:</div>
                 <div style="display: flex; align-items: baseline; gap: 12px;">
                     @{
-                        decimal displayPrice = Model.giaKhuyenMai.HasValue && Model.giaKhuyenMai.Value > 0 ? Model.giaKhuyenMai.Value : Model.giaBan;
+                        decimal displayPrice = Model.giaBan;
                     }
                     @if (displayPrice == 0)
                     {
@@ -211,10 +211,6 @@
                     else
                     {
                         <span style="display: inline-block; font-size: 28px; line-height: 1.3; font-weight: 800; color: var(--primary);" id="detail-price">@displayPrice.ToString("#,##0 đ")</span>
-                        if (Model.giaKhuyenMai.HasValue && Model.giaKhuyenMai.Value > 0 && Model.giaBan > Model.giaKhuyenMai.Value)
-                        {
-                            <span style="font-size: 16px; text-decoration: line-through; color: var(--text-muted);" id="detail-orig-price">@Model.giaBan.ToString("#,##0 đ")</span>
-                        }
                     }
                 </div>
             </div>
@@ -291,7 +287,7 @@
                                 <div class="course-outline-name">
                                     @if (!string.IsNullOrWhiteSpace(bai.duongDanVideo))
                                     {
-                                        <a class="course-outline-play" href="@bai.duongDanVideo" data-title="@bai.tenBaiHoc" onclick="previewVideo(this.getAttribute('href'), this.dataset.title); return false;" title="Xem video" aria-label="Xem video">
+                                        <a class="course-outline-play" href="@ECOLearning.Services.VideoStorageService.LinkPhat(bai.duongDanVideo)" data-title="@bai.tenBaiHoc" onclick="previewVideo(this.getAttribute('href'), this.dataset.title); return false;" title="Xem video" aria-label="Xem video">
                                             <svg width="18" height="18" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="currentColor"/><path d="M6.3 4.6L11 8L6.3 11.4Z" fill="white"/></svg>
                                         </a>
                                     }

@@ -51,3 +51,6 @@ Properties/PublishProfiles/
 
 # Nhật ký chẩn đoán (Services/AppLog.cs), không đưa lên Git
 App_Data/logs/
+# Video chờ nén / đẩy lên R2 và câu lệnh SQL chuyển video cũ (Admin > Lưu trữ video)
+App_Data/video-tmp/
+App_Data/r2-migration.sql

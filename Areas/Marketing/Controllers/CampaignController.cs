@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Services;
 using ECOLearning.ViewModels;
@@ -7,8 +8,9 @@ using ECOLearning.ViewModels;
 namespace ECOLearning.Areas.Marketing.Controllers
 {
     /// <summary>
-    /// Chiến dịch Marketing: theo dõi mục tiêu / thời gian / đối tượng và gắn các chương trình khuyến mãi liên quan.
-    /// Không trùng chức năng CRUD khuyến mãi; kết thúc chiến dịch chỉ đổi trạng thái, giữ chương trình và giao dịch cũ.
+    /// Chiến dịch Marketing (đặc tả mục 4): mục tiêu, đối tượng, kênh, ngân sách / chi phí / chỉ tiêu, thời gian và 5 trạng thái
+    /// Kế hoạch → Đang triển khai → (Tạm dừng) → Hoàn thành, hoặc Đã hủy. Gắn các chương trình khuyến mãi liên quan;
+    /// trang chi tiết có lượt dùng, tiền giảm, doanh thu, % đạt chỉ tiêu và ROI.
     /// </summary>
     public class CampaignController : MarketingBaseController
     {
@@ -50,7 +52,13 @@ namespace ECOLearning.Areas.Marketing.Controllers
         public ActionResult Create()
         {
             if (!DaKhoiTao) return View("~/Areas/Marketing/Views/Shared/_ChuaKhoiTao.cshtml");
-            return HienThiForm(new CampaignFormViewModel { NgayBatDau = DateTime.Today, NgayKetThuc = DateTime.Today.AddDays(30) });
+            return HienThiForm(new CampaignFormViewModel
+            {
+                NgayBatDau = DateTime.Today,
+                NgayKetThuc = DateTime.Today.AddDays(30),
+                NganSach = 0,
+                ChiPhiThucTe = 0
+            });
         }
 
         // POST: Marketing/Campaign/Create
@@ -86,9 +94,9 @@ namespace ECOLearning.Areas.Marketing.Controllers
             var service = Service;
             var c = service.LayTheoMa(id);
             if (c == null) return HttpNotFound();
-            if (c.TrangThaiLuu == "KetThuc")
+            if (c.DaKetThuc)
             {
-                TempData["Error"] = "Chiến dịch đã kết thúc nên không thể chỉnh sửa.";
+                TempData["Error"] = "Chiến dịch đã " + c.TrangThaiHienThi.ToLower() + " nên không thể chỉnh sửa.";
                 return RedirectToAction("Details", new { id });
             }
             return HienThiForm(service.TaoFormTu(c));
@@ -103,9 +111,9 @@ namespace ECOLearning.Areas.Marketing.Controllers
             var service = Service;
             var c = service.LayTheoMa(id);
             if (c == null) return HttpNotFound();
-            if (c.TrangThaiLuu == "KetThuc")
+            if (c.DaKetThuc)
             {
-                TempData["Error"] = "Chiến dịch đã kết thúc nên không thể chỉnh sửa.";
+                TempData["Error"] = "Chiến dịch đã " + c.TrangThaiHienThi.ToLower() + " nên không thể chỉnh sửa.";
                 return RedirectToAction("Details", new { id });
             }
 
@@ -128,24 +136,28 @@ namespace ECOLearning.Areas.Marketing.Controllers
             }
         }
 
-        // POST: Marketing/Campaign/End/CD...
+        // POST: Marketing/Campaign/ChangeStatus/CD... — trangThai: DangTrienKhai / TamDung / HoanThanh / DaHuy
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult End(string id)
+        public ActionResult ChangeStatus(string id, string trangThai)
         {
             if (!DaKhoiTao) return View("~/Areas/Marketing/Views/Shared/_ChuaKhoiTao.cshtml");
-            var c = Service.LayTheoMa(id);
-            if (c == null) return HttpNotFound();
-            if (c.TrangThaiLuu == "KetThuc")
-            {
-                TempData["Error"] = "Chiến dịch đã kết thúc trước đó.";
-            }
-            else
-            {
-                Service.KetThuc(id);
-                TempData["Success"] = "Đã kết thúc chiến dịch \"" + c.TenChienDich + "\". Các chương trình khuyến mãi và giao dịch liên quan được giữ nguyên.";
-            }
+            bool ok;
+            string message = Service.DoiTrangThai(id, trangThai, out ok);
+            TempData[ok ? "Success" : "Error"] = message;
             return RedirectToAction("Details", new { id });
+        }
+
+        // POST: Marketing/Campaign/Delete/CD... — chỉ khi chưa gắn khuyến mãi nào
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Delete(string id)
+        {
+            if (!DaKhoiTao) return View("~/Areas/Marketing/Views/Shared/_ChuaKhoiTao.cshtml");
+            bool ok;
+            string message = Service.Xoa(id, out ok);
+            TempData[ok ? "Success" : "Error"] = message;
+            return ok ? RedirectToAction("Index") : RedirectToAction("Details", new { id });
         }
 
         private void DocNgayForm(CampaignFormViewModel f)

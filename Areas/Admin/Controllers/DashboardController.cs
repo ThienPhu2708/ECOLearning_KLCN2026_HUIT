@@ -73,7 +73,6 @@ namespace ECOLearning.Areas.Admin.Controllers
                     TenDanhMuc = k.DanhMuc != null ? k.DanhMuc.tenDanhMuc : "Khác",
                     NgayGui = kiemDuyet != null ? kiemDuyet.ngayGui : (DateTime?)null,
                     HocPhi = k.giaBan,
-                    GiaKhuyenMai = k.giaKhuyenMai,
                     SoVideo = videoCount,
                     SoTaiLieu = documentCount,
                     TrangThai = k.trangThai

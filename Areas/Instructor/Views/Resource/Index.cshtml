@@ -158,9 +158,13 @@ function filterLibrary() {
     });
 
 }
+// Video lưu trên Cloudflare R2 ("r2:videos/...") phát qua VideoStream/Play; đường dẫn khác giữ nguyên
+function videoPlayUrl(url) {
+    return url && url.indexOf('r2:') === 0 ? '@Url.Content("~/VideoStream/Play")?src=' + encodeURIComponent(url) : url;
+}
 function previewLibraryVideo(button) {
     document.getElementById('library-video-title').textContent = button.dataset.name;
-    var video = document.getElementById('library-video'); video.src = button.dataset.url;
+    var video = document.getElementById('library-video'); video.src = videoPlayUrl(button.dataset.url);
     document.getElementById('library-preview').showModal(); video.play().catch(function() {});
 }
 document.getElementById('library-preview').addEventListener('close', function() { var video = document.getElementById('library-video'); video.pause(); video.removeAttribute('src'); video.load(); });

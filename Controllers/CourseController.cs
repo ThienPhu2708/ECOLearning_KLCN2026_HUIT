@@ -54,11 +54,11 @@ namespace ECOLearning.Controllers
             // 3. Lọc theo Mức giá (Miễn phí / Có phí)
             if (isFree.HasValue && isFree.Value && (isPaid == null || !isPaid.Value))
             {
-                query = query.Where(k => k.giaBan == 0 || (k.giaKhuyenMai.HasValue && k.giaKhuyenMai.Value == 0));
+                query = query.Where(k => k.giaBan == 0);
             }
             else if (isPaid.HasValue && isPaid.Value && (isFree == null || !isFree.Value))
             {
-                query = query.Where(k => k.giaBan > 0 && (!k.giaKhuyenMai.HasValue || k.giaKhuyenMai.Value > 0));
+                query = query.Where(k => k.giaBan > 0);
             }
 
             // 4. Lọc theo Cấp độ (Mọi cấp độ, Cơ bản, Trung cấp, Nâng cao)
@@ -78,11 +78,11 @@ namespace ECOLearning.Controllers
             IOrderedQueryable<KhoaHoc> sorted;
             if (sort == "price-asc")
             {
-                sorted = query.OrderBy(k => k.giaKhuyenMai.HasValue ? k.giaKhuyenMai.Value : k.giaBan).ThenByDescending(k => k.maKhoaHoc);
+                sorted = query.OrderBy(k => k.giaBan).ThenByDescending(k => k.maKhoaHoc);
             }
             else if (sort == "price-desc")
             {
-                sorted = query.OrderByDescending(k => k.giaKhuyenMai.HasValue ? k.giaKhuyenMai.Value : k.giaBan).ThenByDescending(k => k.maKhoaHoc);
+                sorted = query.OrderByDescending(k => k.giaBan).ThenByDescending(k => k.maKhoaHoc);
             }
             else
             {
@@ -312,10 +312,8 @@ namespace ECOLearning.Controllers
                 return Json(new { success = false, message = "Bạn là giáo viên của khóa học này nên không thể tự đăng ký học!" });
             }
 
-            // Kiểm tra giá: chỉ cho phép đăng ký trực tiếp nếu giá = 0 hoặc khuyến mãi = 0
-            decimal effectivePrice = (course.giaKhuyenMai.HasValue && course.giaKhuyenMai.Value >= 0 && course.giaKhuyenMai.Value < course.giaBan)
-                ? course.giaKhuyenMai.Value
-                : course.giaBan;
+            // Kiểm tra giá: chỉ cho phép đăng ký trực tiếp khóa miễn phí (giá khóa học = giaBan)
+            decimal effectivePrice = course.giaBan;
 
             if (effectivePrice > 0)
             {

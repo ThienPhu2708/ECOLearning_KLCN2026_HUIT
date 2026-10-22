@@ -44,16 +44,9 @@
         else if (System.Text.RegularExpressions.Regex.IsMatch(vidUrl, @"^[a-zA-Z0-9_-]{11}$")) { ytId = vidUrl; }
     }
 
-    // Video nội bộ: phát qua VideoStream/Play (không dùng Session) để hỗ trợ HTTP Range Request đúng chuẩn
-    // (static file trên IIS Express không phục vụ đúng Range, gây hiện tượng có tiếng nhưng hình đứng)
-    const string localVideoPrefix = "/assets/uploads/videos/";
-    string activeVideoSrc = "";
-    if (activeLesson != null && !string.IsNullOrEmpty(activeLesson.duongDanVideo))
-    {
-        activeVideoSrc = activeLesson.duongDanVideo.StartsWith(localVideoPrefix)
-            ? Url.Action("Play", "VideoStream", new { file = activeLesson.duongDanVideo.Substring(localVideoPrefix.Length) })
-            : activeLesson.duongDanVideo;
-    }
+    // Video tải lên (máy chủ hoặc Cloudflare R2): phát qua VideoStream/Play (không dùng Session) để hỗ trợ HTTP Range Request
+    // đúng chuẩn; video R2 được chuyển hướng sang link ký có hạn dùng
+    string activeVideoSrc = activeLesson != null ? ECOLearning.Services.VideoStorageService.LinkPhat(activeLesson.duongDanVideo) : "";
 }
 
 @section styles {

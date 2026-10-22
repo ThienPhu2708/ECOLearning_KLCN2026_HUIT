@@ -57,7 +57,7 @@
 <div class="au-info-grid">
     <div class="card au-info"><span>Ưu đãi</span><b style="color: #E11D48;">@p.MoTaUuDai</b>@if (p.DonHangToiThieu.HasValue) { <div class="au-sub">Đơn từ @p.DonHangToiThieu.Value.ToString("#,##0") đ</div> }</div>
     <div class="card au-info"><span>Thời gian</span><b>@p.NgayBatDau.ToString("dd/MM/yyyy") – @p.NgayKetThuc.ToString("dd/MM/yyyy")</b></div>
-    <div class="card au-info"><span>Lượt dùng</span><b>@p.SoLuotDaDung@(p.GioiHanLuotDung.HasValue ? " / " + p.GioiHanLuotDung.Value : "")</b><div class="au-sub">Tối đa @p.GioiHanMoiHocVien lượt / học viên</div></div>
+    <div class="card au-info"><span>Lượt dùng</span><b>@p.SoLuotDaDung@(p.GioiHanLuotDung.HasValue ? " / " + p.GioiHanLuotDung.Value : "")</b><div class="au-sub">@(p.GioiHanMoiHocVien.HasValue ? "Tối đa " + p.GioiHanMoiHocVien.Value + " lượt / học viên" : "Không giới hạn lượt / học viên")</div></div>
     <div class="card au-info"><span>Đã giảm / Doanh thu sau giảm</span><b>@p.TongTienGiam.ToString("#,##0") đ</b><div class="au-sub">/ @p.DoanhThuSauGiam.ToString("#,##0") đ</div></div>
     <div class="card au-info"><span>Phạm vi</span><b>@p.MoTaPhamVi</b></div>
     <div class="card au-info"><span>Chiến dịch</span><b>@(p.TenChienDich ?? "Không thuộc chiến dịch")</b></div>

@@ -9,7 +9,7 @@
     <div>
         <a href="@Url.Action("Index", "Loyalty")" class="mk-muted" style="text-decoration: none;"><i class="bi bi-arrow-left"></i> Ưu đãi học viên thân thiết</a>
         <h1 class="h2">Học viên đủ điều kiện: @Model.TenKhuyenMai</h1>
-        <p>Tiêu chí: @Model.MoTaDoiTuong. Mã <span class="mk-code">@Model.MaCode</span>, mỗi học viên tối đa @Model.GioiHanMoiHocVien lượt.</p>
+        <p>Tiêu chí: @Model.MoTaDoiTuong. Mã <span class="mk-code">@Model.MaCode</span>, @(Model.GioiHanMoiHocVien.HasValue ? "mỗi học viên tối đa " + Model.GioiHanMoiHocVien.Value + " lượt" : "không giới hạn số lần mỗi học viên").</p>
     </div>
 </div>
 
@@ -36,7 +36,7 @@
             <thead>
                 <tr>
                     <th>Học viên</th>
-                    <th style="text-align: right;">Số khóa đã đăng ký</th>
+                    <th style="text-align: right;">Số khóa đã mua</th>
                     <th style="text-align: right;">Tổng chi tiêu</th>
                     <th>Kết quả</th>
                     <th style="text-align: right;">Đã dùng mã</th>
@@ -51,7 +51,7 @@
                         <td style="text-align: right;">@h.SoKhoa</td>
                         <td style="text-align: right;">@h.ChiTieu.ToString("N0") đ</td>
                         <td>@if (dat) { <span class="badge badge-success">Đạt</span> } else { <span class="badge badge-secondary">Chưa đạt</span> }</td>
-                        <td style="text-align: right;">@h.SoLuotDaDung / @Model.GioiHanMoiHocVien</td>
+                        <td style="text-align: right;">@h.SoLuotDaDung@(Model.GioiHanMoiHocVien.HasValue ? " / " + Model.GioiHanMoiHocVien.Value : "")</td>
                     </tr>
                 }
                 @if (!hocVien.Any())
@@ -62,6 +62,6 @@
         </table>
     </div>
     <div style="padding: 14px 22px; border-top: 1px solid var(--border-color);" class="mk-muted">
-        Số khóa tính theo đăng ký thành công (gồm khóa miễn phí); chi tiêu chỉ tính đơn hàng đã thanh toán, không tính đơn chờ hoặc thất bại.
+        Số khóa = số khóa học khác nhau đã mua trong các đơn đã thanh toán (khóa miễn phí đăng ký trực tiếp không tính); chi tiêu = tổng tiền các đơn đã thanh toán (sau giảm), không tính đơn chờ hoặc thất bại.
     </div>
 </div>

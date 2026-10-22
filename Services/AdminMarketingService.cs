@@ -59,7 +59,7 @@ namespace ECOLearning.Services
                 DoanhThuSauGiam = ds.Sum(d => d.ChuongTrinh.DoanhThuSauGiam),
                 TongLuotDung = ds.Sum(d => d.ChuongTrinh.SoLuotDaDung),
                 ChienDichDangMo = db.Database.SqlQuery<int>(
-                    "SELECT COUNT(*) FROM dbo.ChienDich WHERE trangThai = N'HoatDong' AND ngayKetThuc >= CAST(GETDATE() AS DATE)").Single(),
+                    "SELECT COUNT(*) FROM dbo.ChienDich WHERE trangThai = N'DangTrienKhai' AND ngayKetThuc >= CAST(GETDATE() AS DATE)").Single(),
                 NhanVien = NhanVienMarketing()
             };
 

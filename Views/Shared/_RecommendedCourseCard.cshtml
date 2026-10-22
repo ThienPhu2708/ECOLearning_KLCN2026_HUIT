@@ -4,7 +4,7 @@
     string thumbUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
     string teacherName = course.NguoiDung != null ? course.NguoiDung.hoTen : "";
     string categoryName = course.DanhMuc != null ? course.DanhMuc.tenDanhMuc : "";
-    decimal actualPrice = course.giaKhuyenMai.HasValue ? course.giaKhuyenMai.Value : course.giaBan;
+    decimal actualPrice = course.giaBan; // giá khóa học = giaBan, giảm giá chỉ qua mã khuyến mãi
     decimal oldPrice = course.giaBan;
     bool hasRatings = Model.SoDanhGia > 0;
     string detailUrl = Url.Action("Details", "Course", new { id = course.maKhoaHoc });

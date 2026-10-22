@@ -18,6 +18,9 @@ namespace ECOLearning.ViewModels
         /// <summary>Đã đăng nhập (khách chưa có ví mã, chỉ nhập tay được).</summary>
         public bool IsLoggedIn { get; set; }
 
+        /// <summary>Ưu đãi thân thiết học viên chưa đạt tiêu chí (hiện tiến độ, không lộ mã).</summary>
+        public List<UuDaiThanThietSapMo> ThanThietSapMo { get; set; } = new List<UuDaiThanThietSapMo>();
+
         public List<CartItemViewModel> Items { get; set; }
         public decimal SubTotal { get; set; }
         public decimal DiscountAmount { get; set; }

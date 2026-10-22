@@ -106,7 +106,7 @@ namespace ECOLearning.Services
                 .FirstOrDefault();
 
             kq.KhoaHoc = db.Database.SqlQuery<KhoaHocCuaGiaoVien>(@"
-                SELECT k.maKhoaHoc AS MaKhoaHoc, k.tenKhoaHoc AS TenKhoaHoc, k.trangThai AS TrangThai, k.giaBan AS GiaBan, k.giaKhuyenMai AS GiaKhuyenMai,
+                SELECT k.maKhoaHoc AS MaKhoaHoc, k.tenKhoaHoc AS TenKhoaHoc, k.trangThai AS TrangThai, k.giaBan AS GiaBan,
                        (SELECT COUNT(*) FROM dbo.DangKyKhoaHoc dk WHERE dk.maKhoaHoc = k.maKhoaHoc) AS SoHocVien,
                        (SELECT CAST(AVG(CAST(dg.soSao AS FLOAT)) AS FLOAT) FROM dbo.DanhGiaKhoaHoc dg WHERE dg.maKhoaHoc = k.maKhoaHoc) AS DiemTrungBinh,
                        (SELECT COUNT(*) FROM dbo.DanhGiaKhoaHoc dg WHERE dg.maKhoaHoc = k.maKhoaHoc) AS SoDanhGia
@@ -278,7 +278,6 @@ namespace ECOLearning.Services
         public string TenKhoaHoc { get; set; }
         public string TrangThai { get; set; }
         public decimal GiaBan { get; set; }
-        public decimal? GiaKhuyenMai { get; set; }
         public int SoHocVien { get; set; }
         public double? DiemTrungBinh { get; set; }
         public int SoDanhGia { get; set; }

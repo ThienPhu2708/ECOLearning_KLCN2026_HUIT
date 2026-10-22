@@ -46,18 +46,59 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="AWSSDK.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=885c28607f98e604, processorArchitecture=MSIL">
+      <HintPath>packages\AWSSDK.Core.4.0.102.13\lib\net472\AWSSDK.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="AWSSDK.S3, Version=4.0.0.0, Culture=neutral, PublicKeyToken=885c28607f98e604, processorArchitecture=MSIL">
+      <HintPath>packages\AWSSDK.S3.4.0.104.6\lib\net472\AWSSDK.S3.dll</HintPath>
+    </Reference>
+    <Reference Include="CliWrap, Version=3.10.5.0, Culture=neutral, PublicKeyToken=337a390ad141274e, processorArchitecture=MSIL">
+      <HintPath>packages\CliWrap.3.10.5\lib\netstandard2.0\CliWrap.dll</HintPath>
+    </Reference>
     <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>packages\EntityFramework.6.5.2\lib\net45\EntityFramework.dll</HintPath>
     </Reference>
     <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>packages\EntityFramework.6.5.2\lib\net45\EntityFramework.SqlServer.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=10.0.0.8, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.Bcl.AsyncInterfaces.10.0.8\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.CodeDom, Version=10.0.0.10, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\System.CodeDom.10.0.10\lib\net462\System.CodeDom.dll</HintPath>
+    </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.Memory, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\System.Memory.4.6.3\lib\net462\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Numerics.Vectors.4.6.1\lib\net462\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
+    <Reference Include="System.Text.Encodings.Web, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\System.Text.Encodings.Web.8.0.0\lib\net462\System.Text.Encodings.Web.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Json, Version=8.0.0.6, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\System.Text.Json.8.0.6\lib\net462\System.Text.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.4.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\System.Threading.Tasks.Extensions.4.6.3\lib\net462\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
+    </Reference>
     <Reference Include="System.Web.DynamicData" />
     <Reference Include="System.Web.Entity" />
     <Reference Include="System.Web.ApplicationServices" />
@@ -143,6 +184,7 @@
     <Compile Include="Services\AdminTeacherService.cs" />
     <Compile Include="Services\AdminMarketingService.cs" />
     <Compile Include="Areas\Admin\Controllers\TeacherController.cs" />
+    <Compile Include="Areas\Admin\Controllers\VideoStorageController.cs" />
     <Compile Include="Areas\Admin\Controllers\MarketingController.cs" />
     <Compile Include="App_Start\AccountStatusFilter.cs" />
     <Compile Include="Services\AccountAdminService.cs" />
@@ -183,7 +225,6 @@
     <Compile Include="Areas\Marketing\Controllers\PromotionController.cs" />
     <Compile Include="Areas\Marketing\Controllers\LoyaltyController.cs" />
     <Compile Include="Areas\Marketing\Controllers\CampaignController.cs" />
-    <Compile Include="Areas\Marketing\Controllers\CoursePriceController.cs" />
     <Compile Include="Areas\Marketing\Controllers\CampaignReportController.cs" />
     <Compile Include="Areas\Marketing\Models\MarketingViewModels.cs" />
     <Compile Include="Areas\Marketing\Models\MarketingReportModels.cs" />
@@ -227,6 +268,8 @@
     <Compile Include="Services\BankDirectory.cs" />
     <Compile Include="Services\CategoryImageService.cs" />
     <Compile Include="Services\VideoDuration.cs" />
+    <Compile Include="Services\R2Storage.cs" />
+    <Compile Include="Services\VideoStorageService.cs" />
     <Compile Include="Services\PaymentService.cs" />
     <Compile Include="Services\AdminPendingService.cs" />
     <Compile Include="Services\VnPayService.cs" />
@@ -252,6 +295,7 @@
     <Compile Include="Controllers\Api\CatalogApiController.cs" />
     <Compile Include="Controllers\Api\RecommendationApiController.cs" />
     <Compile Include="Controllers\Api\OrderApiController.cs" />
+    <Compile Include="Controllers\Api\CouponApiController.cs" />
     <Compile Include="Controllers\Api\LearningApiController.cs" />
     <Compile Include="Controllers\Api\QuizApiController.cs" />
     <Compile Include="Services\Api\ApiTokenService.cs" />
@@ -438,6 +482,7 @@
     <Content Include="assets\css\admin-users.css" />
     <Content Include="Database\Migrations\016_QuanTri_NguoiDung.sql" />
     <Content Include="Database\Migrations\017_PhienDangNhap_DocQuyen.sql" />
+    <Content Include="Database\Migrations\018_Marketing_DacTa.sql" />
     <Content Include="Content\bootstrap-grid.min.css" />
     <Content Include="Content\bootstrap-grid.rtl.css" />
     <Content Include="Content\bootstrap-grid.rtl.min.css" />
@@ -549,6 +594,7 @@
     <Content Include="Areas\Admin\Views\Shared\_LayoutAdmin.cshtml" />
     <Content Include="Areas\Admin\Views\Dashboard\Index.cshtml" />
     <Content Include="Areas\Admin\Views\Category\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\VideoStorage\Index.cshtml" />
     <Content Include="Areas\Admin\Views\ViolationReport\Index.cshtml" />
     <Content Include="Areas\Admin\Views\ViolationReport\Detail.cshtml" />
     <None Include="Database\Migrations\001_KhuyenNghi_ChoPhepGiaoVien.sql" />
@@ -593,7 +639,6 @@
     <Content Include="Areas\Marketing\Views\Campaign\Index.cshtml" />
     <Content Include="Areas\Marketing\Views\Campaign\Form.cshtml" />
     <Content Include="Areas\Marketing\Views\Campaign\Details.cshtml" />
-    <Content Include="Areas\Marketing\Views\CoursePrice\Index.cshtml" />
     <Content Include="Areas\Marketing\Views\Shared\_Flash.cshtml" />
     <Content Include="Areas\Marketing\Views\Shared\_ChuaKhoiTao.cshtml" />
     <Content Include="Areas\Marketing\Views\CampaignReport\Index.cshtml" />
@@ -633,13 +678,10 @@
     <Content Include="assets\js\bank-picker.js" />
     <Content Include="assets\js\explore-menu.js" />
     <Content Include="Views\User\_TeacherCourseCard.cshtml" />
-
-
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
     <Folder Include="Views\Admin\" />
-    <Folder Include="Views\Home\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\bootstrap.rtl.min.css.map" />
@@ -740,6 +782,10 @@
     <Content Include="assets\uploads\certificates\cert_13_20260929134334.jpg" />
     <Content Include="assets\uploads\certificates\cert_8_20260922230320.jpg" />
     <Content Include="assets\uploads\certificates\cert_8_20260929101748.pdf" />
+  </ItemGroup>
+  <ItemGroup>
+    <Analyzer Include="packages\AWSSDK.S3.4.0.104.6\analyzers\dotnet\cs\AWSSDK.S3.CodeAnalysis.dll" />
+    <Analyzer Include="packages\AWSSDK.S3.4.0.104.6\analyzers\dotnet\cs\SharedAnalysisCode.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != '' and Exists('$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets')" />

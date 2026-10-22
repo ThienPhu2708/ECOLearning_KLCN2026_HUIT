@@ -68,21 +68,11 @@
                 </div>
             </div>
             <div class="col-6">
-                @* Giáo viên chỉ nhập giá gốc; giá khuyến mãi do Marketing quản lý tập trung (Marketing / Giá khuyến mãi khóa học) *@
+                @* Giá khóa học = giá bán; không có giá khuyến mãi theo từng khóa. Giảm giá chỉ qua mã khuyến mãi của Marketing *@
                 <div class="form-group">
-                    <label class="form-label">Giá khuyến mãi</label>
-                    <div style="padding: 11px 14px; border: 1px dashed var(--border-color, #E2E8F0); border-radius: 10px; background: var(--bg-canvas, #F8FAFC); font-size: 14px;">
-                        @if (Model.GiaKhuyenMai.HasValue && Model.GiaKhuyenMai.Value > 0 && Model.GiaKhuyenMai.Value < Model.GiaBan)
-                        {
-                            <strong>@Model.GiaKhuyenMai.Value.ToString("N0") đ</strong>
-                        }
-                        else
-                        {
-                            <span style="color: #64748B;">Không có</span>
-                        }
-                    </div>
-                    <div style="font-size: 12px; color: #64748B; margin-top: 5px;">
-                        <i class="bi bi-info-circle me-1"></i> Giá khuyến mãi và mã giảm giá do bộ phận Marketing quản lý. Giáo viên chỉ đặt giá gốc.
+                    <label class="form-label">Giảm giá</label>
+                    <div style="padding: 11px 14px; border: 1px dashed var(--border-color, #E2E8F0); border-radius: 10px; background: var(--bg-canvas, #F8FAFC); font-size: 14px; color: #64748B;">
+                        <i class="bi bi-info-circle me-1"></i> Học viên mua theo đúng giá bán. Giảm giá chỉ áp dụng qua mã khuyến mãi do bộ phận Marketing phát hành.
                     </div>
                 </div>
             </div>

@@ -7,8 +7,11 @@
         new { Key = "codung", Ten = "Có thể dùng", So = Model.CoTheDung.Count },
         new { Key = "dadung", Ten = "Đã dùng", So = Model.DaDung.Count },
         new { Key = "hethan", Ten = "Hết hiệu lực", So = Model.HetHieuLuc.Count },
-        new { Key = "thuthap", Ten = "Thu thập thêm", So = Model.CoTheThuThap.Count }
+        new { Key = "thuthap", Ten = "Thu thập mã", So = Model.CoTheThuThap.Count }
     };
+    string thanhCong = TempData["CouponSuccess"] as string;
+    string loi = TempData["CouponError"] as string;
+    string maNhap = TempData["CouponInput"] as string;
 }
 
 <main class="cpn-page">
@@ -16,9 +19,18 @@
         <div class="cpn-page-head">
             <div>
                 <h1>Mã giảm giá của tôi</h1>
-                <p>Mã đã lưu dùng được ở bước thanh toán: mở mục <strong>Mã khuyến mãi</strong> trong giỏ hàng và chọn Áp dụng. Mã đã lưu không thể xóa.</p>
+                <p>Lưu mã vào ví, đến giỏ hàng chỉ cần chọn mã ở mục <strong>Mã giảm giá</strong>. Mỗi đơn hàng dùng tối đa 1 mã. Mã đã lưu không thể xóa.</p>
             </div>
         </div>
+
+        @using (Html.BeginForm("Redeem", "Coupon", FormMethod.Post, new { @class = "cpn-redeem" }))
+        {
+            @Html.AntiForgeryToken()
+            <input type="text" name="code" class="form-control" maxlength="30" placeholder="Nhập mã Marketing gửi cho bạn" value="@maNhap" aria-label="Nhập mã giảm giá" required />
+            <button type="submit" class="btn btn-primary">Lưu vào ví</button>
+        }
+        @if (thanhCong != null) { <div class="cpn-flash is-ok" role="status"><i class="bi bi-check-circle-fill me-1"></i> @thanhCong</div> }
+        @if (loi != null) { <div class="cpn-flash is-error" role="alert"><i class="bi bi-exclamation-circle-fill me-1"></i> @loi</div> }
 
         <nav class="cpn-tabs" aria-label="Lọc mã giảm giá">
             @foreach (var t in tabs)
@@ -33,7 +45,7 @@
         {
             if (Model.CoTheThuThap.Count == 0)
             {
-                <div class="cpn-empty"><i class="bi bi-ticket-perforated"></i>Hiện chưa có mã khuyến mãi mới. Bạn đã lưu hết các mã đang có.</div>
+                <div class="cpn-empty"><i class="bi bi-ticket-perforated"></i>Hiện chưa có mã công khai mới. Bạn đã lưu hết các mã đang có.</div>
             }
             else
             {
@@ -62,7 +74,7 @@
                     }
                     else if (Model.Tab == "dadung")
                     {
-                        <span>Bạn chưa dùng mã nào.</span>
+                        <span>Bạn chưa dùng hết lượt của mã nào.</span>
                     }
                     else
                     {
@@ -79,7 +91,7 @@
                         string dongPhu = null;
                         if (v.TrangThai == "CoTheDung")
                         {
-                            if (v.LuotCuaToi > 0) { dongPhu = "Đã dùng " + v.LuotCuaToi + "/" + v.GioiHanMoiHocVien + " lượt"; }
+                            if (v.LuotCuaToi > 0 && v.GioiHanMoiHocVien.HasValue) { dongPhu = "Đã dùng " + v.LuotCuaToi + "/" + v.GioiHanMoiHocVien.Value + " lượt của bạn"; }
                         }
                         else if (v.TrangThai == "SapDienRa")
                         {
@@ -88,6 +100,10 @@
                         else
                         {
                             nhan = v.NhanTrangThai;
+                            if (v.TrangThai == "DaDung" && v.LichSu.Any())
+                            {
+                                dongPhu = string.Join("; ", v.LichSu.Take(3).Select(l => l.NgaySuDung.ToString("dd/MM/yyyy") + " · đơn " + l.MaDonHang + " · giảm " + l.TienGiam.ToString("N0") + " đ"));
+                            }
                         }
                         @Html.Partial("_CouponTicket", new ECOLearning.ViewModels.TheMaGiamGiaModel
                         {
@@ -101,6 +117,23 @@
                     }
                 </div>
             }
+        }
+
+        @if ((Model.Tab == "thuthap" || Model.Tab == "codung") && Model.ThanThietSapMo.Any())
+        {
+            <section class="cpn-loyal" aria-label="Ưu đãi thân thiết sắp mở">
+                <h2><i class="bi bi-award"></i> Ưu đãi thân thiết sắp mở</h2>
+                @foreach (var u in Model.ThanThietSapMo)
+                {
+                    <div class="cpn-loyal-item">
+                        <div class="cpn-loyal-value">@u.GiaTriNgan</div>
+                        <div>
+                            <div class="cpn-loyal-name">@u.TenKhuyenMai</div>
+                            <div class="cpn-loyal-progress">@u.TienDo</div>
+                        </div>
+                    </div>
+                }
+            </section>
         }
     </div>
 </main>

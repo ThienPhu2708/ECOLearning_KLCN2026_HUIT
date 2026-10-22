@@ -51,7 +51,6 @@ namespace ECOLearning.Areas.Instructor.Controllers
                     AnhBia = k.anhBia ?? "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=300&auto=format&fit=crop&q=80",
                     TenDanhMuc = k.DanhMuc != null ? k.DanhMuc.tenDanhMuc : "Chung",
                     GiaBan = k.giaBan,
-                    GiaKhuyenMai = k.giaKhuyenMai,
                     SoHocVien = studentCount,
                     TrangThai = k.trangThai ?? "Bản nháp",
                     NgayTao = DateTime.Now,
@@ -187,7 +186,8 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 return Json(new { success = false, message = "Định dạng tệp không được hỗ trợ." });
             if (kind == "document" && file.ContentLength > 50 * 1024 * 1024)
                 return Json(new { success = false, message = "Tài liệu không được lớn hơn 50MB." });
-            string url = SaveCourseFile(file, kind == "video" ? "~/assets/uploads/videos/" : "~/Uploads/CourseResources/");
+            // Video: lên Cloudflare R2 qua hàng đợi nén (VideoStorageService), chưa cấu hình R2 thì lưu trên máy chủ như trước
+            string url = kind == "video" ? VideoStorageService.Luu(file) : SaveCourseFile(file, "~/Uploads/CourseResources/");
             string token = Guid.NewGuid().ToString("N");
             string name = System.IO.Path.GetFileName(file.FileName);
             ResourceController.Register(Server, CurrentTeacherId, kind, name, url, file.ContentLength);
@@ -232,10 +232,6 @@ namespace ECOLearning.Areas.Instructor.Controllers
                     ModelState.Remove("GiaBan");
                 }
             }
-
-            // Giáo viên không tự đặt giá khuyến mãi (Marketing quản lý): bỏ qua mọi giá trị gửi lên
-            model.GiaKhuyenMai = null;
-            ModelState.Remove("GiaKhuyenMai");
 
             if (string.IsNullOrWhiteSpace(model.TenKhoaHoc))
             {
@@ -320,7 +316,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
             {
                 var input = lessons[i];
                 string lessonId = courseId + "_" + (i + 1);
-                string videoUrl = !string.IsNullOrEmpty(input.VideoToken) ? CourseUploads[input.VideoToken][1] : SaveCourseFile(input.VideoFile, "~/assets/uploads/videos/");
+                string videoUrl = !string.IsNullOrEmpty(input.VideoToken) ? CourseUploads[input.VideoToken][1] : (input.VideoFile != null && input.VideoFile.ContentLength > 0 ? VideoStorageService.Luu(input.VideoFile) : null);
                 db.BaiHoc.Add(new BaiHoc {
                     maBaiHoc = lessonId,
                     maChuong = input.ChapterIndex.HasValue ? chapterIds[input.ChapterIndex.Value] : null,
@@ -403,7 +399,6 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 MoTaNgan = course.moTaNgan,
                 MucTieuDauRa = course.mucTieuDauRa,
                 GiaBan = course.giaBan,
-                GiaKhuyenMai = course.giaKhuyenMai,
                 CapDo = course.capDo,
                 MaDanhMuc = course.maDanhMuc,
                 AnhBia = course.anhBia,
@@ -467,10 +462,6 @@ namespace ECOLearning.Areas.Instructor.Controllers
                     ModelState.Remove("GiaBan");
                 }
             }
-
-            // Giá khuyến mãi do Marketing quản lý: giữ nguyên giá trị hiện có, bỏ qua giá trị giáo viên gửi lên
-            model.GiaKhuyenMai = course.giaKhuyenMai;
-            ModelState.Remove("GiaKhuyenMai");
 
             if (string.IsNullOrWhiteSpace(model.TenKhoaHoc))
             {
@@ -540,8 +531,6 @@ namespace ECOLearning.Areas.Instructor.Controllers
             course.moTaNgan = model.MoTaNgan;
             course.mucTieuDauRa = model.MucTieuDauRa;
             course.giaBan = model.GiaBan;
-            // Giá gốc giảm xuống dưới giá khuyến mãi do Marketing đặt thì giá khuyến mãi không còn hợp lệ: bỏ đi
-            if (course.giaKhuyenMai.HasValue && course.giaKhuyenMai.Value >= course.giaBan) course.giaKhuyenMai = null;
             course.capDo = model.CapDo ?? "Cơ bản";
             course.maDanhMuc = model.MaDanhMuc;
             if (!string.IsNullOrWhiteSpace(model.AnhBia))

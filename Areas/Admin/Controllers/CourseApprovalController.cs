@@ -105,7 +105,6 @@ namespace ECOLearning.Areas.Admin.Controllers
                     TenDanhMuc = k.DanhMuc != null ? k.DanhMuc.tenDanhMuc : "Chưa phân loại",
                     NgayGui = kiemDuyet != null ? kiemDuyet.ngayGui : null,
                     HocPhi = k.giaBan,
-                    GiaKhuyenMai = k.giaKhuyenMai,
                     SoVideo = videoCount,
                     SoTaiLieu = documentCount,
                     TrangThai = k.trangThai
@@ -180,7 +179,6 @@ namespace ECOLearning.Areas.Admin.Controllers
                 EmailGiaoVien = k.NguoiDung != null ? k.NguoiDung.email : "N/A",
                 TenDanhMuc = k.DanhMuc != null ? k.DanhMuc.tenDanhMuc : "Chưa phân loại",
                 HocPhi = k.giaBan,
-                GiaKhuyenMai = k.giaKhuyenMai,
                 MoTa = k.moTa,
                 MoTaNgan = k.moTaNgan,
                 MucTieuDauRa = k.mucTieuDauRa,
@@ -208,7 +206,7 @@ namespace ECOLearning.Areas.Admin.Controllers
                             {
                                 MaBaiHoc = bh.maBaiHoc,
                                 TenBaiHoc = bh.tenBaiHoc,
-                                VideoUrl = bh.duongDanVideo,
+                                VideoUrl = ECOLearning.Services.VideoStorageService.LinkPhat(bh.duongDanVideo),
                                 ThoiLuong = bh.thoiLuong,
                                 CoXemThu = bh.choXemThu
                             };
@@ -255,7 +253,7 @@ namespace ECOLearning.Areas.Admin.Controllers
                     {
                         MaBaiHoc = bh.maBaiHoc,
                         TenBaiHoc = bh.tenBaiHoc,
-                        VideoUrl = bh.duongDanVideo,
+                        VideoUrl = ECOLearning.Services.VideoStorageService.LinkPhat(bh.duongDanVideo),
                         ThoiLuong = bh.thoiLuong,
                         CoXemThu = bh.choXemThu
                     };

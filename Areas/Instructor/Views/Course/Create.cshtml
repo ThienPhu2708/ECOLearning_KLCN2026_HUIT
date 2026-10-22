@@ -760,12 +760,16 @@ function addLesson(containerId, initialTitle) {
     return div;
 }
 
+// Video lưu trên Cloudflare R2 ("r2:videos/...") phát qua VideoStream/Play; đường dẫn khác giữ nguyên
+function videoPlayUrl(url) {
+    return url && url.indexOf('r2:') === 0 ? '@Url.Content("~/VideoStream/Play")?src=' + encodeURIComponent(url) : url;
+}
 function libraryVideoDuration(url) {
     return new Promise(function(resolve) {
         var player = document.createElement('video'), done = false;
         function finish(value) { if (done) return; done = true; player.removeAttribute('src'); player.load(); resolve(value); }
         player.preload = 'metadata'; player.onloadedmetadata = function() { finish(Number.isFinite(player.duration) ? Math.round(player.duration) : 0); };
-        player.onerror = function() { finish(0); }; player.src = url;
+        player.onerror = function() { finish(0); }; player.src = videoPlayUrl(url);
         setTimeout(function() { finish(0); }, 10000);
     });
 }
@@ -835,7 +839,7 @@ function previewLessonVideo(url, name) {
     var dialog = document.getElementById('video-preview-dialog');
     var player = document.getElementById('video-preview-player');
     document.getElementById('video-preview-title').textContent = name;
-    player.src = url;
+    player.src = videoPlayUrl(url);
     dialog.showModal();
     player.play().catch(function() {});
 }
@@ -853,7 +857,7 @@ function renderVideo(lesson, uploaded, duration) {
     lesson.dataset.videoToken = uploaded.token; lesson.dataset.videoDuration = duration;
     lesson.dataset.videoName = uploaded.name; lesson.dataset.videoUrl = uploaded.url;
     var status = document.getElementById(lesson.id + '-status'); status.textContent = '';
-    var link = document.createElement('a'); link.href = uploaded.url; link.setAttribute('aria-label', 'Xem nhanh video ' + uploaded.name);
+    var link = document.createElement('a'); link.href = videoPlayUrl(uploaded.url); link.setAttribute('aria-label', 'Xem nhanh video ' + uploaded.name);
     link.onclick = function(event) { event.preventDefault(); previewLessonVideo(uploaded.url, uploaded.name); };
     link.className = 'lesson-video-link';
     var play = document.createElement('span'); play.className = 'lesson-play-icon'; play.setAttribute('aria-hidden', 'true');

@@ -50,6 +50,7 @@ namespace ECOLearning.Areas.Marketing.Controllers
 
             ViewBag.KhoaHoc = Service.LayKhoaHocApDung(id);
             ViewBag.LuotSuDung = Service.LayLuotSuDung(id);
+            ViewBag.XoaDuoc = !Service.DaCoDonHang(p);
             ViewBag.LyDoAdminTamDung = AdminMarketingService.LyDoAdminTamDung(db, id);
             ViewBag.BreadcrumbCurrent = "Chi tiết chương trình";
             return View(p);
@@ -160,6 +161,18 @@ namespace ECOLearning.Areas.Marketing.Controllers
             return RedirectToAction("Details", new { id });
         }
 
+        // POST: Marketing/Promotion/Delete/KM... — chỉ khi chưa có đơn hàng nào dùng mã (đặc tả mục 7); có rồi thì dùng "Kết thúc"
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Delete(string id)
+        {
+            if (!Service.IsInstalled()) return ChuaKhoiTao();
+            bool ok;
+            string message = Service.Xoa(id, out ok);
+            TempData[ok ? "Success" : "Error"] = message;
+            return ok ? RedirectToAction("Index") : RedirectToAction("Details", new { id });
+        }
+
         // ------------------------------------------------------------------ hỗ trợ
 
         private void DocNgayForm(PromotionFormViewModel f)
@@ -186,11 +199,12 @@ namespace ECOLearning.Areas.Marketing.Controllers
                 foreach (var k in service.LayKhoaHocApDung(f.MaKhuyenMai).Where(k => f.KhoaHocLuaChon.All(x => x.MaKhoaHoc != k.MaKhoaHoc)))
                     f.KhoaHocLuaChon.Add(k);
             }
+            f.DanhMucLuaChon = service.LayDanhMucLuaChon();
             f.ChienDichLuaChon = service.LayChienDichDangMo();
             if (!string.IsNullOrEmpty(f.MaChienDich) && f.ChienDichLuaChon.All(c => c.MaChienDich != f.MaChienDich))
             {
                 var cd = new CampaignService(db).LayTheoMa(f.MaChienDich);
-                if (cd != null) f.ChienDichLuaChon.Add(new LuaChonChienDich { MaChienDich = cd.MaChienDich, TenChienDich = cd.TenChienDich });
+                if (cd != null) f.ChienDichLuaChon.Add(new LuaChonChienDich { MaChienDich = cd.MaChienDich, TenChienDich = cd.TenChienDich, NgayBatDau = cd.NgayBatDau, NgayKetThuc = cd.NgayKetThuc });
             }
             ViewBag.BreadcrumbCurrent = f.LaChinhSua ? "Sửa chương trình" : "Tạo chương trình";
             return View("Form", f);

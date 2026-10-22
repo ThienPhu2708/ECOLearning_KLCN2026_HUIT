@@ -229,9 +229,10 @@ namespace ECOLearning.Controllers.Api
             videoType = "none";
             if (string.IsNullOrWhiteSpace(duongDanVideo)) return;
             string dd = duongDanVideo.Trim();
-            if (dd.StartsWith(ECOLearning.Services.VideoDuration.ThuMucVideo, StringComparison.OrdinalIgnoreCase))
+            // Video tải lên (máy chủ hoặc R2): phát qua /VideoStream/Play; video R2 được chuyển hướng sang link ký có hạn dùng
+            if (ECOLearning.Services.VideoStorageService.LaVideoTaiLen(dd))
             {
-                videoUrl = AbsoluteUrl("/VideoStream/Play?file=" + Uri.EscapeDataString(dd.Substring(ECOLearning.Services.VideoDuration.ThuMucVideo.Length)));
+                videoUrl = AbsoluteUrl(ECOLearning.Services.VideoStorageService.LinkPhat(dd));
                 videoType = "file";
                 return;
             }

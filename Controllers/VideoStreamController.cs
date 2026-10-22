@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Web.Mvc;
 using System.Web.SessionState;
+using ECOLearning.Services;
 
 namespace ECOLearning.Controllers
 {
@@ -15,8 +16,21 @@ namespace ECOLearning.Controllers
     {
         // GET: /VideoStream/Play?file=... (Phát video nội bộ có hỗ trợ HTTP Range Request để tua/streaming mượt,
         // vì IIS Express không phục vụ đúng Range cho static file, gây hiện tượng có tiếng nhưng hình đứng)
-        public ActionResult Play(string file)
+        // GET: /VideoStream/Play?src=r2:videos/... (video trên Cloudflare R2: còn chờ đẩy lên thì phát từ file tạm,
+        // đã lên thì chuyển hướng sang link ký có hạn dùng 6 giờ; trình phát tự xin link mới khi tải lại)
+        public ActionResult Play(string file, string src)
         {
+            if (!string.IsNullOrEmpty(src))
+            {
+                string key = src.StartsWith(VideoStorageService.TienToR2, StringComparison.OrdinalIgnoreCase) ? src.Substring(VideoStorageService.TienToR2.Length) : null;
+                if (!VideoStorageService.LaKeyHopLe(key)) return new HttpStatusCodeResult(400, "Đường dẫn video không hợp lệ");
+                string tam = VideoStorageService.FileTamDangCho(key);
+                if (tam != null) return PhatFile(tam);
+                if (!R2Storage.DaCauHinh) return HttpNotFound();
+                Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+                return Redirect(R2Storage.LinkXem(key, TimeSpan.FromHours(6)));
+            }
+
             if (string.IsNullOrEmpty(file) || file.Contains("..") || file.Contains("/") || file.Contains("\\"))
             {
                 return new HttpStatusCodeResult(400, "Tên file không hợp lệ");
@@ -29,17 +43,12 @@ namespace ECOLearning.Controllers
             {
                 return HttpNotFound();
             }
+            return PhatFile(fullPath);
+        }
 
-            string ext = Path.GetExtension(fullPath).ToLowerInvariant();
-            string contentType;
-            switch (ext)
-            {
-                case ".webm": contentType = "video/webm"; break;
-                case ".mov": contentType = "video/quicktime"; break;
-                case ".mkv": contentType = "video/x-matroska"; break;
-                case ".ogv": contentType = "video/ogg"; break;
-                default: contentType = "video/mp4"; break;
-            }
+        private ActionResult PhatFile(string fullPath)
+        {
+            string contentType = VideoStorageService.LoaiNoiDung(Path.GetExtension(fullPath));
 
             long totalLength = new FileInfo(fullPath).Length;
             long start = 0;
@@ -79,7 +88,7 @@ namespace ECOLearning.Controllers
             const int bufferSize = 65536;
             byte[] buffer = new byte[bufferSize];
 
-            using (var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
             {
                 stream.Seek(start, SeekOrigin.Begin);
                 long bytesRemaining = contentLength;

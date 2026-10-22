@@ -1061,7 +1061,60 @@ giáo viên / Admin / Marketing / API đều 200.
 
 ---
 
-## 27. Việc còn lại / cần quyết định
+## 27. Marketing theo đặc tả nghiệp vụ đã chốt (mới, **chưa commit**)
+
+Theo "Đặc tả luồng Marketing và API mã giảm giá" (Minh Thư). Giữ **tên cột của 008 / 009** (không đổi sang cấu trúc 007 của đặc tả), chỉ bổ sung phần còn
+thiếu bằng `Database/Migrations/018_Marketing_DacTa.sql`. Ánh xạ tên: `loaiGiam` = `loaiUuDai`, `donToiThieu` = `donHangToiThieu`,
+`soLuotToiDa` = `MaGiamGia.gioiHanLuotDung`, `soLuotMoiNguoi` = `MaGiamGia.gioiHanMoiHocVien`, `laUuDaiThanThiet` = `doiTuong = ThanThiet`,
+`tongChiToiThieu` = `chiTieuToiThieu`, `phamVi ToanSan` = `TatCa`, bảng `ChienDichMarketing` = `ChienDich`, `tongTienGoc / tienGiam` của đơn = `SuDungUuDai`.
+
+- **Bỏ giá khuyến mãi theo khóa** (mục 1, 12): xóa trang "Giá khuyến mãi khóa học" (`CoursePriceController`). Giá ở mọi nơi (trang khóa học, thẻ khóa,
+  tìm kiếm, sắp xếp / lọc giá, giỏ hàng, đơn hàng, API, khu giáo viên, Admin) = `giaBan`; không còn chỗ nào đọc `giaKhuyenMai` (cột giữ nguyên trong CSDL).
+- **Áp mã** (mục 9): `PromotionService.KiemTraCoupon` là hàm `Check()` duy nhất cho web và API, đúng 13 bước và câu thông báo của đặc tả (hết hạn → tạm ngưng
+  → chưa bắt đầu → chiến dịch tạm dừng / hủy → hết lượt → cần đăng nhập (`requireLogin`) → hết lượt của mình → thân thiết → giỏ trống → phạm vi → đơn tối thiểu).
+  Giảm % làm tròn, có trần; thêm phạm vi **danh mục**; số lượt mỗi người để trống = không giới hạn.
+- **Ví mã** (mục 8): lưu được cả mã "Chưa bắt đầu"; mã riêng chỉ lưu qua ô **"Nhập mã"** trong ví (`Coupon/Redeem`) hoặc API; mã nhập tay ở giỏ vào ví
+  **khi đơn đã thanh toán** (trước đây vào ví lúc tạo đơn). Tab Có thể dùng (đang chạy trước, hạn gần trước, nhãn "Sắp hết hạn") / Đã dùng (kèm lịch sử đơn) /
+  Hết hiệu lực (kèm lý do) / Thu thập mã; nhãn Mã công khai / Mã riêng; khối **"Ưu đãi thân thiết sắp mở"** ở ví và giỏ hàng. Giỏ hàng gợi ý mã giảm nhiều nhất, không tự áp.
+- **Thân thiết** (mục 6): số khóa = số khóa khác nhau đã mua trong đơn đã thanh toán (không tính khóa miễn phí đăng ký trực tiếp). Menu "Ưu đãi thân thiết"
+  giữ lại như bộ lọc của danh sách khuyến mãi, dùng chung form.
+- **Chiến dịch** (mục 4): kênh, ngân sách, chi phí thực tế, chỉ tiêu doanh thu / lượt dùng, ghi chú; 5 trạng thái với bước chuyển hợp lệ; % đạt chỉ tiêu, ROI;
+  sửa thời gian mà có khuyến mãi nằm ngoài khoảng mới thì báo lỗi; khuyến mãi phải nằm trong thời gian chiến dịch; xóa chỉ khi chưa gắn khuyến mãi.
+- **Khuyến mãi** (mục 5, 7): giảm số tiền ≤ đơn tối thiểu, lượt mỗi người ≤ tổng lượt; trạng thái hiển thị thêm "Hết lượt"; **kết thúc sớm** = ngày kết thúc hôm qua
+  + tắt mã; **xóa** khi chưa có đơn hàng nào dùng mã; trang chi tiết có số học viên đã lưu mã.
+- **Báo cáo, Dashboard** (mục 11): mặc định 30 ngày, nút 7 ngày / 30 ngày / Tháng này / Năm nay; KPI lượt dùng (kèm số học viên, lượt thân thiết), doanh thu,
+  tiền giảm, giá trị đơn trung bình, tỷ lệ đơn có mã; biểu đồ lượt dùng + doanh thu theo ngày / tháng / năm; bảng theo chiến dịch (ROI), theo khuyến mãi,
+  chi tiết từng lượt; CSV theo bộ lọc. Dashboard: khuyến mãi đang chạy, chiến dịch đang triển khai (5 sắp kết thúc), số liệu tháng này, 12 tháng, top 5 mã,
+  5 mã sắp hết hạn / sắp hết lượt. Đơn đã thanh toán = `Đã thanh toán`, `Hoàn tất`, `Success`.
+- **API cho app** (mục 13, `Controllers/Api/CouponApiController.cs`): `POST coupons/check`, `GET coupons/collectable`, `POST coupons/{code}/save`,
+  `GET coupons/wallet`, `GET coupons/my` (viết lại, có `bestCode`), `GET coupons/{code}`; `cart/quote` trả khối `coupon` giống `coupons/check`;
+  `orders` trả `COUPON_INVALID`, đã sở hữu khóa đổi sang `COURSE_OWNED`. Mã lỗi `COUPON_NOT_SAVABLE`, `COUPON_NOT_FOUND`, `CART_EMPTY`. Bật **CORS** cho `/api/...`.
+- **Không theo đặc tả (giữ quyết định mục 26.3)**: Admin không vào khu Marketing ở chế độ chỉ xem; Admin giám sát và tạm dừng ở `/Admin/Marketing`.
+- **Kiểm thử**: gọi thật vào web và API (IIS Express): 96/96 đạt (13 bước kiểm tra mã, lưu mã, ví, chọn mã ở giỏ, `cart/quote`, `orders`, CORS, các trang học viên /
+  Marketing / Admin / giáo viên, form chiến dịch và khuyến mãi, kết thúc sớm, xóa); đơn 0đ dùng mã nhập tay → mã vào ví sau khi thanh toán. Dữ liệu test đã xóa.
+
+## 28. Lưu video bài học trên Cloudflare R2, nén bằng ffmpeg (mới, **chưa commit**)
+
+- **Cấu hình**: khóa `R2:AccountId`, `R2:BucketName`, `R2:AccessKeyId`, `R2:SecretAccessKey`, `R2:PublicUrl` trong `Secrets.config` (mẫu ở `Secrets.config.example`,
+  không đưa lên Git). Chưa điền thì video vẫn lưu trong `assets/uploads/videos` như trước. Thư viện `AWSSDK.S3` v4 (R2 cần `ForcePathStyle`, vùng `auto`,
+  tắt checksum mặc định của SDK).
+- **Luồng tải lên** (`Services/VideoStorageService.cs`, `Services/R2Storage.cs`): giáo viên tải video (trình tạo khóa học, thư viện tài nguyên) → file nằm tạm trong
+  `App_Data/video-tmp` → hàng đợi nền (mỗi lần một video) nén bằng `App_Data/ffmpeg.exe` (720p, H.264 CRF 28, AAC 96k, `faststart`) → đẩy lên R2 → xóa file tạm.
+  ffmpeg không chạy được, nén lỗi, quá 45 phút hoặc bản nén không nhỏ hơn thì đẩy **bản gốc**. `BaiHoc.duongDanVideo` lưu `r2:videos/{id}.mp4` ngay khi tải lên;
+  độ dài video lưu trong metadata `duration` của object. Mỗi việc có file `.job.json`, ứng dụng khởi động lại thì chạy tiếp (nén lỗi 2 lần thì đẩy bản gốc).
+- **Phát video**: `/VideoStream/Play?src=r2:...` phát từ file tạm khi còn chờ, đã lên R2 thì chuyển hướng sang link ký có hạn 6 giờ (bucket để riêng tư).
+  Trang khóa học, trang học, API app, trang duyệt khóa của Admin, khu giáo viên đều đi qua `VideoStorageService.LinkPhat`. Kiểm tra gửi duyệt / phê duyệt
+  (`CourseContentService.VideoHopLe`) và tiến độ học (`VideoDuration`) hiểu đường dẫn `r2:`.
+- **Admin > Lưu trữ video** (`Areas/Admin/Controllers/VideoStorageController.cs`): trạng thái R2 và ffmpeg, hàng đợi, lịch sử, nút **Chuyển video cũ lên R2**
+  (gom file trùng nội dung theo MD5, nén, tải lên; xong video nào thì đổi đường dẫn bài học trong CSDL đó và ghi câu `UPDATE` vào `App_Data/r2-migration.sql`,
+  nút "Tải SQL cho hosting"). File gốc trên máy chủ được giữ lại.
+- **Kiểm thử** (IIS Express + bucket thật): tải video 13,8 MB → `r2:videos/...`, phát ngay từ file tạm (206), lên R2, 302 sang link ký, R2 trả 206 với Range,
+  metadata `duration` = 317 giây, thư viện có `PlayUrl`, đường dẫn sai → 400, video cũ vẫn phát: 15/15 đạt. Object test và tài khoản test đã xóa.
+  Phần **nén** chưa chạy thử vì `App_Data/ffmpeg.exe` hiện là bản shared thiếu DLL (trang Admin báo rõ).
+- **Lên hosting**: thêm khóa R2 vào `Secrets.config` trên hosting và tải `ffmpeg.exe` (bản static) vào `App_Data` bằng File Manager (cả hai không đi theo Publish).
+  Chạy `r2-migration.sql` trên CSDL hosting sau khi đã chuyển video cũ ở máy local.
+
+## 29. Việc còn lại / cần quyết định
 
 | Việc | Ghi chú |
 | :--- | :--- |
@@ -1087,5 +1140,6 @@ giáo viên / Admin / Marketing / API đều 200.
 | Video cũ trong Git | Xem mục 6 |
 | Màu khu vực giáo viên | Layout / Dashboard / Payout / Analytics / Student của khu vực giáo viên còn dùng `#0D9488`; đổi nếu muốn đồng bộ toàn hệ thống |
 | Header chưa co giãn trên điện thoại | Ở màn hình ~390 px trang bị tràn ngang (có từ trước, không thuộc phần tìm kiếm) |
-| Khóa có `giaKhuyenMai = 0` (dữ liệu cũ) | Thẻ khóa học / trang chi tiết hiện "0 đ" / "Miễn phí" nhưng giá thanh toán bỏ qua giá 0 (tính giá gốc). Nên sửa dữ liệu hoặc thống nhất một quy tắc |
-| Hướng triển khai thật cho video | Azure Blob Storage / AWS S3 + link có thời hạn (đưa vào báo cáo như hướng phát triển) |
+| Khóa có `giaKhuyenMai` (dữ liệu cũ) | **Đã xử lý** (mục 27): không còn đọc `giaKhuyenMai`, giá = `giaBan`. Khóa từng có giá giảm nay hiện giá gốc; Marketing tạo mã nếu muốn giảm tiếp |
+| Chạy migration 018 trên hosting | Chạy **cùng lúc** với bản publish có mục 27 (code cũ ghi trạng thái chiến dịch `HoatDong` sẽ bị từ chối sau 018) |
+| Video trên R2 | **Đã làm** (mục 28). Còn: thay `App_Data/ffmpeg.exe` bằng bản static rồi bấm "Chuyển video cũ lên R2"; `VideoStream/Play` chưa kiểm tra quyền xem (giống video cũ: ai có link đều xem được); xóa video khỏi thư viện chưa xóa object trên R2 |

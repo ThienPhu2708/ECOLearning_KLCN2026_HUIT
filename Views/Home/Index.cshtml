@@ -571,7 +571,7 @@ if (interestPicker != null)
                     string thumbUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
                     string teacherName = course.NguoiDung != null ? course.NguoiDung.hoTen : "ThS. Nguyễn Văn An";
                     string categoryName = course.DanhMuc != null ? course.DanhMuc.tenDanhMuc : "Lập trình Web & CNTT";
-                    decimal actualPrice = course.giaKhuyenMai.HasValue ? course.giaKhuyenMai.Value : course.giaBan;
+                    decimal actualPrice = course.giaBan; // giá khóa học = giaBan, giảm giá chỉ qua mã khuyến mãi
                     decimal oldPrice = course.giaBan;
                     bool hasRatings = course.DanhGiaKhoaHoc != null && course.DanhGiaKhoaHoc.Count > 0;
                     int enrollCount;

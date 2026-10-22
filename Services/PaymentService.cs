@@ -267,6 +267,8 @@ namespace ECOLearning.Services
                     new SqlParameter("@ok", thanhCong),
                     new SqlParameter("@pt", (object)phuongThuc ?? DBNull.Value),
                     new SqlParameter("@dh", maDon));
+                // Mã nhập tay ở giỏ hàng vào ví khi đơn đã thanh toán (đặc tả Marketing mục 10)
+                if (thanhCong) PromotionService.ThemMaVaoViKhiDaThanhToan(db, maDon);
                 tx.Commit();
             }
 
@@ -289,6 +291,7 @@ namespace ECOLearning.Services
                 db.Database.ExecuteSqlCommand(
                     "UPDATE dbo.DonHang SET trangThai = @tt, ngayThanhToan = GETDATE(), phuongThuc = N'Miễn phí' WHERE maDonHang = @dh",
                     new SqlParameter("@tt", DaThanhToan), new SqlParameter("@dh", maDonHang));
+                PromotionService.ThemMaVaoViKhiDaThanhToan(db, maDonHang);
                 tx.Commit();
             }
             GhiNhatKy(maDonHang, "TAO_DON", null, null, null, "Đơn 0đ, ghi danh không qua cổng");

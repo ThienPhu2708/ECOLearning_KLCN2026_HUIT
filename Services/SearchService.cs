@@ -148,7 +148,7 @@ namespace ECOLearning.Services
                 .Where(k => TrangThaiDangBan.Contains(k.trangThai))
                 .Select(k => new
                 {
-                    k.maKhoaHoc, k.tenKhoaHoc, k.moTa, k.moTaNgan, k.anhBia, k.capDo, k.giaBan, k.giaKhuyenMai, k.maDanhMuc,
+                    k.maKhoaHoc, k.tenKhoaHoc, k.moTa, k.moTaNgan, k.anhBia, k.capDo, k.giaBan, k.maDanhMuc,
                     TenDanhMuc = k.DanhMuc != null ? k.DanhMuc.tenDanhMuc : null,
                     k.maGiaoVien,
                     TenGiaoVien = k.NguoiDung.hoTen,
@@ -192,8 +192,8 @@ namespace ECOLearning.Services
                     TenDanhMuc = k.TenDanhMuc,
                     MaGiaoVien = k.maGiaoVien,
                     TenGiaoVien = k.TenGiaoVien,
-                    // Cùng quy tắc với giá thanh toán (PromotionService.GiaBanHienTai)
-                    GiaHienTai = k.giaKhuyenMai.HasValue && k.giaKhuyenMai.Value > 0 && k.giaKhuyenMai.Value < k.giaBan ? k.giaKhuyenMai.Value : k.giaBan,
+                    // Giá khóa học = giaBan (giảm giá chỉ qua mã khuyến mãi), cùng giá thanh toán
+                    GiaHienTai = k.giaBan,
                     SoHocVien = hv,
                     SoDanhGia = dg != null ? dg.SoLuong : 0,
                     DiemDanhGia = dg != null ? dg.TrungBinh : 0,

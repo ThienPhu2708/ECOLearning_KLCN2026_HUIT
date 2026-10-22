@@ -59,15 +59,17 @@
                             <option value="">Không thuộc chiến dịch nào</option>
                             @foreach (var c in Model.ChienDichLuaChon)
                             {
-                                <option value="@c.MaChienDich" @(c.MaChienDich == Model.MaChienDich ? "selected" : "")>@c.TenChienDich</option>
+                                <option value="@c.MaChienDich" @(c.MaChienDich == Model.MaChienDich ? "selected" : "")>@c.TenChienDich (@c.NgayBatDau.ToString("dd/MM") – @c.NgayKetThuc.ToString("dd/MM/yyyy"))</option>
                             }
                         </select>
+                        <div class="mk-hint">Thời gian khuyến mãi phải nằm trong thời gian chiến dịch. Chiến dịch hoàn thành / đã hủy không gắn thêm được.</div>
                         @loi("MaChienDich")
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="DieuKienApDung">Ghi chú điều kiện (hiển thị nội bộ)</label>
-                    <input type="text" id="DieuKienApDung" name="DieuKienApDung" class="form-control" maxlength="255" value="@Model.DieuKienApDung" placeholder="VD: Dành cho học viên đăng ký trong tháng 10" />
+                    <label class="form-label" for="DieuKienApDung">Mô tả (nội bộ)</label>
+                    <input type="text" id="DieuKienApDung" name="DieuKienApDung" class="form-control" maxlength="500" value="@Model.DieuKienApDung" placeholder="VD: Dành cho học viên đăng ký trong tháng 10" />
+                    @loi("DieuKienApDung")
                 </div>
             </div>
 
@@ -93,7 +95,7 @@
                     <div class="form-group">
                         <label class="form-label" for="DonHangToiThieu">Giá trị đơn tối thiểu (đ)</label>
                         <input type="number" id="DonHangToiThieu" name="DonHangToiThieu" class="form-control" step="1" min="0" value="@soNguyen(Model.DonHangToiThieu)" placeholder="Không yêu cầu" />
-                        <div class="mk-hint">Tính trên tổng giá các khóa được áp dụng trong giỏ.</div>
+                        <div class="mk-hint">Tính trên tổng giá các khóa thuộc phạm vi trong giỏ. Giảm số tiền thì không được lớn hơn giá trị này.</div>
                         @loi("DonHangToiThieu")
                     </div>
                 </div>
@@ -103,9 +105,21 @@
                 <h2>Phạm vi khóa học</h2>
                 <div class="form-group">
                     <div class="mk-choice" role="radiogroup" aria-label="Phạm vi">
-                        <label><input type="radio" name="PhamVi" value="TatCa" @(Model.PhamVi != "KhoaHoc" ? "checked" : "") /> <span>Toàn bộ khóa học</span></label>
+                        <label><input type="radio" name="PhamVi" value="TatCa" @(Model.PhamVi != "KhoaHoc" && Model.PhamVi != "DanhMuc" ? "checked" : "") /> <span>Toàn sàn</span></label>
+                        <label><input type="radio" name="PhamVi" value="DanhMuc" @(Model.PhamVi == "DanhMuc" ? "checked" : "") /> <span>Một danh mục</span></label>
                         <label><input type="radio" name="PhamVi" value="KhoaHoc" @(Model.PhamVi == "KhoaHoc" ? "checked" : "") /> <span>Chỉ các khóa được chọn</span></label>
                     </div>
+                </div>
+                <div class="form-group" id="grp-danh-muc" @(Model.PhamVi == "DanhMuc" ? "" : "hidden")>
+                    <label class="form-label" for="MaDanhMucApDung">Danh mục áp dụng <span style="color: #DC2626;">*</span></label>
+                    <select id="MaDanhMucApDung" name="MaDanhMucApDung" class="form-control">
+                        <option value="">Chọn danh mục</option>
+                        @foreach (var d in Model.DanhMucLuaChon)
+                        {
+                            <option value="@d.MaDanhMuc" @(d.MaDanhMuc == Model.MaDanhMucApDung ? "selected" : "")>@d.TenDanhMuc</option>
+                        }
+                    </select>
+                    @loi("MaDanhMucApDung")
                 </div>
                 <div id="grp-khoa-hoc" @(Model.PhamVi == "KhoaHoc" ? "" : "hidden")>
                     <div class="mk-course-list">
@@ -150,11 +164,11 @@
                     @loi("GioiHanLuotDung")
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="GioiHanMoiHocVien">Số lượt mỗi học viên <span style="color: #DC2626;">*</span></label>
-                    <input type="number" id="GioiHanMoiHocVien" name="GioiHanMoiHocVien" class="form-control" step="1" min="1" value="@Model.GioiHanMoiHocVien" />
+                    <label class="form-label" for="GioiHanMoiHocVien">Số lượt mỗi học viên</label>
+                    <input type="number" id="GioiHanMoiHocVien" name="GioiHanMoiHocVien" class="form-control" step="1" min="1" value="@Model.GioiHanMoiHocVien" placeholder="Không giới hạn" />
                     @loi("GioiHanMoiHocVien")
                 </div>
-                <div class="mk-hint">Mỗi đơn hàng chỉ áp dụng một mã, không cộng dồn nhiều ưu đãi.</div>
+                <div class="mk-hint">Không lớn hơn tổng lượt dùng. Có giới hạn mỗi học viên thì học viên phải đăng nhập mới dùng được mã. Mỗi đơn hàng chỉ áp dụng một mã, không cộng dồn.</div>
             </div>
 
             <div class="card mk-section">
@@ -167,7 +181,7 @@
                 </div>
                 <div id="grp-than-thiet" @(Model.DoiTuong == "ThanThiet" ? "" : "hidden")>
                     <div class="form-group">
-                        <label class="form-label" for="SoKhoaToiThieu">Đã đăng ký tối thiểu (khóa)</label>
+                        <label class="form-label" for="SoKhoaToiThieu">Số khóa đã mua tối thiểu</label>
                         <input type="number" id="SoKhoaToiThieu" name="SoKhoaToiThieu" class="form-control" step="1" min="1" value="@Model.SoKhoaToiThieu" />
                         @loi("SoKhoaToiThieu")
                     </div>
@@ -176,7 +190,7 @@
                         <input type="number" id="ChiTieuToiThieu" name="ChiTieuToiThieu" class="form-control" step="1" min="1" value="@soNguyen(Model.ChiTieuToiThieu)" />
                         @loi("ChiTieuToiThieu")
                     </div>
-                    <div class="mk-hint">Cần ít nhất một tiêu chí. Có cả hai thì học viên phải đạt cả hai. Chỉ tính đăng ký thành công và đơn đã thanh toán.</div>
+                    <div class="mk-hint">Cần ít nhất một tiêu chí; có cả hai thì học viên phải đạt cả hai. Số khóa = số khóa khác nhau đã mua trong đơn đã thanh toán (khóa miễn phí đăng ký trực tiếp không tính); chi tiêu = tổng tiền các đơn đã thanh toán (sau giảm). Học viên chưa đạt thấy mục "Ưu đãi thân thiết sắp mở" kèm tiến độ, chưa thấy mã.</div>
                 </div>
             </div>
 
@@ -186,8 +200,8 @@
                     <input type="checkbox" name="CongKhai" value="true" @(Model.CongKhai ? "checked" : "") style="margin-top: 3px;" />
                     <input type="hidden" name="CongKhai" value="false" />
                     <span>
-                        <strong>Công khai mã</strong>
-                        <span class="mk-hint" style="display: block; margin-top: 2px;">Mã hiện ở mục "Mã khuyến mãi" trên trang chủ và trang "Mã giảm giá của tôi" để học viên lưu vào ví, rồi chọn ở bước thanh toán. Mã thân thiết chỉ hiện với học viên đã đạt tiêu chí. Bỏ chọn nếu muốn gửi mã riêng (email, mạng xã hội); học viên vẫn nhập tay được.</span>
+                        <strong>Hiện trong danh sách Thu thập mã</strong> (mã công khai)
+                        <span class="mk-hint" style="display: block; margin-top: 2px;">Mã hiện ở trang chủ, trang khóa học và tab "Thu thập mã" để học viên lưu vào ví, rồi chọn ở giỏ hàng. Mã thân thiết chỉ hiện với học viên đã đạt tiêu chí. Bỏ chọn = mã riêng: không hiện ở đâu, Marketing gửi mã cho học viên (email, Zalo…), học viên nhập mã ở ví hoặc giỏ hàng.</span>
                     </span>
                 </label>
                 <div class="form-group" style="margin-top: 14px;">
@@ -220,6 +234,7 @@
                 document.getElementById('GiaTriUuDai').max = soTien ? '' : '100';
                 document.getElementById('grp-giam-toi-da').hidden = soTien;
                 document.getElementById('grp-khoa-hoc').hidden = value('PhamVi') !== 'KhoaHoc';
+                document.getElementById('grp-danh-muc').hidden = value('PhamVi') !== 'DanhMuc';
                 document.getElementById('grp-than-thiet').hidden = value('DoiTuong') !== 'ThanThiet';
             }
             form.addEventListener('change', sync);

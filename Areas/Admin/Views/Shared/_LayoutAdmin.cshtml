@@ -166,6 +166,10 @@
                     Chi trả giáo viên
                     @ChamDo("payouts", choXuLy.ChiTra, "phiếu chi")
                 </a>
+                <a href="@Url.Action("Index", "VideoStorage", new { area = "Admin" })" class="sidebar-item @(currentController == "VideoStorage" ? "active" : "")">
+                    <i class="bi bi-cloud-arrow-up" style="font-size: 17px; width: 18px; text-align: center;"></i>
+                    Lưu trữ video
+                </a>
             </nav>
 
             <div class="sidebar-footer">

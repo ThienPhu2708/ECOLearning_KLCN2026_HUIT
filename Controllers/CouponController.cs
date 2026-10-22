@@ -84,8 +84,26 @@ namespace ECOLearning.Controllers
                 return Json(new { success = false, message = "Chức năng mã giảm giá chưa sẵn sàng." });
             }
 
-            var kq = service.LuuMa(UserId, code);
+            // Nút "Lưu mã" trong danh sách: chỉ mã công khai
+            var kq = service.LuuMa(UserId, code, tuDanhSach: true);
             return Json(new { success = kq.Success, alreadySaved = kq.DaCoTrongVi, message = kq.Message });
+        }
+
+        // POST: Coupon/Redeem — ô "Nhập mã" trong ví: lưu được cả mã riêng Marketing gửi (học viên đã biết mã)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
+        public ActionResult Redeem(string code)
+        {
+            if (UserId <= 0) return RedirectToAction("Login", "Account", new { returnUrl = Url.Action("Index", "Coupon") });
+            var service = new PromotionService(db);
+            if (!service.IsInstalled()) return View("ChuaKhoiTao");
+            if (!CoViMa) return View("KhongHoTro");
+
+            var kq = service.LuuMa(UserId, code, tuDanhSach: false);
+            TempData[kq.Success && !kq.DaCoTrongVi ? "CouponSuccess" : "CouponError"] = kq.Message;
+            TempData["CouponInput"] = kq.Success ? null : code;
+            return RedirectToAction("Index", new { tab = "codung" });
         }
 
         protected override void Dispose(bool disposing)

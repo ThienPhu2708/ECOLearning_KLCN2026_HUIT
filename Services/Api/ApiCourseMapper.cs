@@ -57,7 +57,6 @@ namespace ECOLearning.Services.Api
             public string AnhBia { get; set; }
             public string CapDo { get; set; }
             public decimal GiaBan { get; set; }
-            public decimal? GiaKhuyenMai { get; set; }
             public int SoDanhGia { get; set; }
             public double DiemDanhGia { get; set; }
             public int SoBai { get; set; }
@@ -73,7 +72,7 @@ namespace ECOLearning.Services.Api
             var rows = db.Database.SqlQuery<Row>(@"
                 SELECT k.maKhoaHoc AS MaKhoaHoc, k.tenKhoaHoc AS TenKhoaHoc, k.maDanhMuc AS MaDanhMuc, dm.tenDanhMuc AS TenDanhMuc,
                        u.hoTen AS TenGiaoVien, u.anhDaiDien AS AnhGiaoVien, k.anhBia AS AnhBia, k.capDo AS CapDo,
-                       k.giaBan AS GiaBan, k.giaKhuyenMai AS GiaKhuyenMai,
+                       k.giaBan AS GiaBan,
                        ISNULL(dg.soLuong, 0) AS SoDanhGia, ISNULL(dg.diem, 0) AS DiemDanhGia,
                        ISNULL(bh.soBai, 0) AS SoBai, ISNULL(bh.tongGiay, 0) AS TongGiay,
                        ISNULL(dk.soHocVien, 0) AS SoHocVien
@@ -98,7 +97,8 @@ namespace ECOLearning.Services.Api
 
         private CourseSummaryDto ToDto(Row r)
         {
-            decimal giaHienTai = PromotionService.GiaBanHienTai(new KhoaHoc { giaBan = r.GiaBan, giaKhuyenMai = r.GiaKhuyenMai });
+            // Giá khóa học = giaBan; giảm giá chỉ qua mã khuyến mãi (OriginalPrice giữ để không đổi khung JSON của app)
+            decimal giaHienTai = r.GiaBan;
             return new CourseSummaryDto
             {
                 Id = r.MaKhoaHoc,
@@ -117,7 +117,7 @@ namespace ECOLearning.Services.Api
                 LessonsCount = r.SoBai,
                 DurationSeconds = r.TongGiay,
                 StudentsCount = r.SoHocVien,
-                Tag = giaHienTai > 0 && giaHienTai < r.GiaBan ? "Giảm giá" : null
+                Tag = null
             };
         }
     }

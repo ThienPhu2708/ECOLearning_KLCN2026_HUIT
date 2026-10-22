@@ -5,13 +5,21 @@
     var chienDich = ViewBag.ChienDich as List<ECOLearning.ViewModels.ChienDichItem> ?? new List<ECOLearning.ViewModels.ChienDichItem>();
     string tu = Model.TuNgay.ToString("yyyy-MM-dd");
     string den = Model.DenNgay.ToString("yyyy-MM-dd");
-    int maxChart = Model.ChartData.Count > 0 ? Math.Max(1, Model.ChartData.Max()) : 1;
+    var homNay = DateTime.Today;
+    var nhanh = new[]
+    {
+        new { Ten = "7 ngày", Tu = homNay.AddDays(-6), Den = homNay },
+        new { Ten = "30 ngày", Tu = homNay.AddDays(-29), Den = homNay },
+        new { Ten = "Tháng này", Tu = new DateTime(homNay.Year, homNay.Month, 1), Den = homNay },
+        new { Ten = "Năm nay", Tu = new DateTime(homNay.Year, 1, 1), Den = homNay }
+    };
+    Func<decimal?, string> phanTram = v => v.HasValue ? v.Value.ToString("0.#") + "%" : "—";
 }
 
 <div class="mk-page-head">
     <div>
         <h1 class="h2">Báo cáo hiệu quả Marketing</h1>
-        <p>Chỉ tính đơn hàng đã thanh toán có dùng ưu đãi trong khoảng ngày đã chọn (theo thời điểm dùng mã).</p>
+        <p>Chỉ tính đơn hàng đã thanh toán có dùng mã, theo ngày thanh toán. Doanh thu toàn sàn xem ở báo cáo của Quản trị viên.</p>
     </div>
     @if (Model.ThongBaoLoi == null)
     {
@@ -30,16 +38,6 @@
         <label for="denNgay">Đến ngày</label>
         <input type="date" id="denNgay" name="denNgay" class="form-control" value="@den" required />
     </div>
-    <div class="mk-field" style="min-width: 220px;">
-        <label for="khuyenMai">Chương trình</label>
-        <select id="khuyenMai" name="khuyenMai" class="form-control">
-            <option value="">Tất cả chương trình</option>
-            @foreach (var p in chuongTrinh)
-            {
-                <option value="@p.MaKhuyenMai" @(p.MaKhuyenMai == Model.MaKhuyenMai ? "selected" : "")>@p.TenKhuyenMai (@p.MaCode)</option>
-            }
-        </select>
-    </div>
     <div class="mk-field" style="min-width: 200px;">
         <label for="chienDich">Chiến dịch</label>
         <select id="chienDich" name="chienDich" class="form-control">
@@ -50,7 +48,25 @@
             }
         </select>
     </div>
+    <div class="mk-field" style="min-width: 220px;">
+        <label for="khuyenMai">Khuyến mãi</label>
+        <select id="khuyenMai" name="khuyenMai" class="form-control">
+            <option value="">Tất cả khuyến mãi</option>
+            @foreach (var p in chuongTrinh)
+            {
+                <option value="@p.MaKhuyenMai" @(p.MaKhuyenMai == Model.MaKhuyenMai ? "selected" : "")>@p.TenKhuyenMai (@p.MaCode)</option>
+            }
+        </select>
+    </div>
     <button type="submit" class="btn mk-btn-accent btn-sm" style="height: 38px;">Xem báo cáo</button>
+    <div style="flex-basis: 100%; display: flex; gap: 8px; flex-wrap: wrap;">
+        @foreach (var n in nhanh)
+        {
+            bool dangChon = n.Tu == Model.TuNgay && n.Den == Model.DenNgay;
+            <a href="@Url.Action("Index", "CampaignReport", new { tuNgay = n.Tu.ToString("yyyy-MM-dd"), denNgay = n.Den.ToString("yyyy-MM-dd"), chienDich = Model.MaChienDich, khuyenMai = Model.MaKhuyenMai })"
+               class="btn btn-sm @(dangChon ? "btn-secondary" : "btn-outline")">@n.Ten</a>
+        }
+    </div>
 </form>
 
 @if (Model.ThongBaoLoi != null)
@@ -60,37 +76,77 @@
 else
 {
     <div class="mk-stats">
-        <div class="card mk-stat"><div class="mk-stat-label">Chương trình trong phạm vi</div><div class="mk-stat-value">@Model.SoChuongTrinh</div></div>
-        <div class="card mk-stat"><div class="mk-stat-label">Lượt dùng ưu đãi</div><div class="mk-stat-value">@Model.SoLuotDung</div><div class="mk-stat-note">= @Model.SoDonHang đơn hàng thành công</div></div>
-        <div class="card mk-stat"><div class="mk-stat-label">Doanh thu trước giảm</div><div class="mk-stat-value">@Model.DoanhThuTruocGiam.ToString("N0") đ</div></div>
-        <div class="card mk-stat"><div class="mk-stat-label">Tổng tiền ưu đãi</div><div class="mk-stat-value" style="color: #E11D48;">@Model.TienGiam.ToString("N0") đ</div></div>
-        <div class="card mk-stat"><div class="mk-stat-label">Doanh thu sau giảm</div><div class="mk-stat-value">@Model.DoanhThuSauGiam.ToString("N0") đ</div></div>
+        <div class="card mk-stat">
+            <div class="mk-stat-label">Lượt dùng mã</div>
+            <div class="mk-stat-value">@Model.SoLuotDung</div>
+            <div class="mk-stat-note">@Model.SoHocVien học viên · @Model.SoLuotThanThiet lượt ưu đãi thân thiết</div>
+        </div>
+        <div class="card mk-stat"><div class="mk-stat-label">Doanh thu từ đơn có mã</div><div class="mk-stat-value">@Model.DoanhThuSauGiam.ToString("N0") đ</div><div class="mk-stat-note">Sau giảm</div></div>
+        <div class="card mk-stat"><div class="mk-stat-label">Tổng tiền đã giảm</div><div class="mk-stat-value" style="color: #E11D48;">@Model.TienGiam.ToString("N0") đ</div></div>
+        <div class="card mk-stat"><div class="mk-stat-label">Giá trị đơn trung bình</div><div class="mk-stat-value">@Model.GiaTriDonTrungBinh.ToString("N0") đ</div></div>
+        <div class="card mk-stat">
+            <div class="mk-stat-label">Tỷ lệ đơn có dùng mã</div>
+            <div class="mk-stat-value">@Model.TyLeDonCoMa.ToString("0.#")%</div>
+            <div class="mk-stat-note">@Model.SoLuotDung / @Model.TongDonDaThanhToan đơn đã thanh toán</div>
+        </div>
     </div>
 
     <div class="card mk-section">
-        <h2>Lượt dùng ưu đãi @(Model.ChartTheoThang ? "theo tháng" : "theo ngày")</h2>
+        <h2>Lượt dùng và doanh thu theo @Model.ChartDonVi</h2>
         @if (Model.SoLuotDung == 0)
         {
-            <p class="mk-muted" style="margin: 0;">Không có lượt dùng ưu đãi nào trong khoảng ngày đã chọn.</p>
+            <p class="mk-muted" style="margin: 0;">Không có lượt dùng mã nào trong khoảng ngày đã chọn.</p>
         }
         else
         {
-            <div class="mk-bars" role="img" aria-label="Biểu đồ lượt dùng ưu đãi">
-                @for (int i = 0; i < Model.ChartData.Count; i++)
-                {
-                    int v = Model.ChartData[i];
-                    <div class="mk-bar" style="height: @(v == 0 ? 0 : Math.Max(4, v * 100 / maxChart))%;" title="@Model.ChartLabels[i]: @v lượt"></div>
-                }
-            </div>
-            <div class="mk-bar-labels">
-                <span>@Model.ChartLabels.First()</span>
-                <span>@Model.ChartLabels.Last()</span>
-            </div>
+            <div id="report-chart"></div>
         }
     </div>
 
-    <div class="card" style="padding: 0; overflow: hidden;">
-        <div style="padding: 18px 22px 6px;"><h2 style="font-size: 15px; font-weight: 800; margin: 0;">Kết quả theo chương trình</h2></div>
+    if (Model.MaKhuyenMai == null)
+    {
+        <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 20px;">
+            <div style="padding: 18px 22px 6px;"><h2 style="font-size: 15px; font-weight: 800; margin: 0;">Theo chiến dịch</h2></div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Chiến dịch</th>
+                            <th>Trạng thái</th>
+                            <th style="text-align: right;">Lượt dùng</th>
+                            <th style="text-align: right;">Tiền giảm</th>
+                            <th style="text-align: right;">Doanh thu</th>
+                            <th style="text-align: right;">Chi phí thực tế</th>
+                            <th style="text-align: right;">% chỉ tiêu</th>
+                            <th style="text-align: right;">ROI</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model.ChienDichRows)
+                        {
+                            <tr>
+                                <td><a href="@Url.Action("Details", "Campaign", new { id = c.MaChienDich })" style="font-weight: 700;">@c.TenChienDich</a></td>
+                                <td>@c.TrangThai</td>
+                                <td style="text-align: right;">@c.SoLuotDung</td>
+                                <td style="text-align: right; color: #E11D48;">@c.TienGiam.ToString("N0") đ</td>
+                                <td style="text-align: right; font-weight: 700;">@c.DoanhThu.ToString("N0") đ</td>
+                                <td style="text-align: right;">@c.ChiPhiThucTe.ToString("N0") đ</td>
+                                <td style="text-align: right;">@phanTram(c.PhanTramDatChiTieu)</td>
+                                <td style="text-align: right;">@phanTram(c.Roi)</td>
+                            </tr>
+                        }
+                        @if (!Model.ChienDichRows.Any())
+                        {
+                            <tr><td colspan="8" class="mk-empty"><i class="bi bi-megaphone"></i>Không có chiến dịch nào trong phạm vi lọc.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 20px;">
+        <div style="padding: 18px 22px 6px;"><h2 style="font-size: 15px; font-weight: 800; margin: 0;">Theo khuyến mãi</h2></div>
         <div class="table-responsive">
             <table class="table">
                 <thead>
@@ -109,6 +165,7 @@ else
                     {
                         <tr>
                             <td><a href="@Url.Action("Details", "Promotion", new { id = r.MaKhuyenMai })" style="font-weight: 700;">@r.TenKhuyenMai</a> <span class="mk-code" style="font-size: 11.5px;">@r.MaCode</span>
+                                @if (r.LaThanThiet) { <span class="badge badge-warning" style="font-size: 10.5px;">Thân thiết</span> }
                                 @if (!string.IsNullOrEmpty(r.TenChienDich)) { <div class="mk-muted"><i class="bi bi-megaphone"></i> @r.TenChienDich</div> }
                             </td>
                             <td>@r.MoTaUuDai</td>
@@ -127,4 +184,57 @@ else
             </table>
         </div>
     </div>
+
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 18px 22px 6px;"><h2 style="font-size: 15px; font-weight: 800; margin: 0;">Chi tiết từng lượt dùng (@Model.ChiTiet.Count)</h2></div>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Ngày thanh toán</th>
+                        <th>Đơn hàng</th>
+                        <th>Học viên</th>
+                        <th>Mã</th>
+                        <th style="text-align: right;">Tiền giảm</th>
+                        <th style="text-align: right;">Tổng đơn</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var l in Model.ChiTiet)
+                    {
+                        <tr>
+                            <td>@l.NgaySuDung.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td><span class="mk-code">@l.MaDonHang</span></td>
+                            <td>@l.HoTen<div class="mk-muted">@l.Email</div></td>
+                            <td><span class="mk-code">@l.MaCode</span></td>
+                            <td style="text-align: right; color: #E11D48;">- @l.TienGiam.ToString("N0") đ</td>
+                            <td style="text-align: right; font-weight: 700;">@l.TongDonHang.ToString("N0") đ</td>
+                        </tr>
+                    }
+                    @if (!Model.ChiTiet.Any())
+                    {
+                        <tr><td colspan="6" class="mk-empty"><i class="bi bi-receipt"></i>Không có lượt dùng mã nào trong kỳ.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    @if (Model.ThongBaoLoi == null && Model.SoLuotDung > 0)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                if (!window.Charts || typeof Charts.renderDualLineChart !== 'function') return;
+                Charts.renderDualLineChart('report-chart', {
+                    labels: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartLabels)),
+                    series: [
+                        { name: 'Lượt dùng mã', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartData)), color: '#E11D48', fillColor: 'rgba(225, 29, 72, 0.06)', unit: 'lượt' },
+                        { name: 'Doanh thu (đ)', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartDoanhThu)), color: '#2563EB', fillColor: 'rgba(37, 99, 235, 0.05)', unit: 'đ' }
+                    ]
+                });
+            });
+        </script>
+    }
 }

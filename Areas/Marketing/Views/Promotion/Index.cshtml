@@ -7,7 +7,7 @@
     string tuNgay = ViewBag.TuNgay as string;
     string denNgay = ViewBag.DenNgay as string;
     var now = DateTime.Now;
-    var statuses = new[] { "all", "Đang chạy", "Chưa bắt đầu", "Tạm ngưng", "Đã kết thúc" };
+    var statuses = new[] { "all", "Đang chạy", "Chưa bắt đầu", "Tạm ngưng", "Hết lượt", "Đã kết thúc" };
     string returnUrl = Request.RawUrl;
     var adminTamDung = ViewBag.AdminTamDung as HashSet<string> ?? new HashSet<string>();
 }
@@ -118,6 +118,7 @@
                                 @if (tt == "Đang chạy") { <span class="badge badge-success">Đang chạy</span> }
                                 else if (tt == "Tạm ngưng") { <span class="badge badge-warning">Tạm ngưng</span> }
                                 else if (tt == "Chưa bắt đầu") { <span class="badge badge-info">Chưa bắt đầu</span> }
+                                else if (tt == "Hết lượt") { <span class="badge badge-danger">Hết lượt</span> }
                                 else { <span class="badge badge-secondary">Đã kết thúc</span> }
                                 @if (adminTamDung.Contains(p.MaKhuyenMai))
                                 {
@@ -138,7 +139,7 @@
                                             {
                                                 <button type="button" class="btn btn-secondary btn-sm" disabled title="Đang bị Quản trị viên tạm dừng">Kích hoạt</button>
                                             }
-                                            else if (p.TrangThaiLuu == "TamNgung")
+                                            else if (p.DangTamNgung)
                                             {
                                                 <button type="submit" name="hanhDong" value="resume" class="btn btn-secondary btn-sm">Kích hoạt</button>
                                             }

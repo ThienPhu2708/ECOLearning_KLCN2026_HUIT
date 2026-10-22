@@ -16,6 +16,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
         public long Size { get; set; }
         public int Duration { get; set; }
         public List<string> Courses { get; set; } = new List<string>();
+        /// <summary>Link phát cho thẻ video (video trên R2 đi qua VideoStream/Play). Không lưu vào file thư viện.</summary>
+        [JsonIgnore]
+        public string PlayUrl { get { return ECOLearning.Services.VideoStorageService.LinkPhat(Url); } }
     }
     public class ResourceController : InstructorBaseController
     {
@@ -29,6 +32,23 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 if (!files.Any(f => f.Url == url)) files.Add(new LibraryFile { Id = Guid.NewGuid().ToString("N"), Kind = kind, Name = name, Url = url, Size = size });
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 System.IO.File.WriteAllText(path, JsonConvert.SerializeObject(files));
+            }
+        }
+        /// <summary>Video cũ được chuyển lên R2: đổi đường dẫn trong thư viện của mọi giáo viên.</summary>
+        public static void DoiDuongDanTep(string cu, string moi)
+        {
+            string thuMuc = System.Web.Hosting.HostingEnvironment.MapPath("~/App_Data/");
+            if (thuMuc == null || !Directory.Exists(thuMuc)) return;
+            lock (LibraryLock)
+            {
+                foreach (string path in Directory.GetFiles(thuMuc, "ResourceLibrary_*.json"))
+                {
+                    var files = JsonConvert.DeserializeObject<List<LibraryFile>>(System.IO.File.ReadAllText(path));
+                    if (files == null || !files.Any(f => f.Url == cu)) continue;
+                    if (files.Any(f => f.Url == moi)) files.RemoveAll(f => f.Url == cu);
+                    else foreach (var f in files.Where(f => f.Url == cu)) f.Url = moi;
+                    System.IO.File.WriteAllText(path, JsonConvert.SerializeObject(files));
+                }
             }
         }
         private List<LibraryFile> FilesForTeacher()
@@ -50,6 +70,10 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 if (file.Url.StartsWith("/") && !file.Url.StartsWith("//")) {
                     string physical = Server.MapPath("~" + file.Url);
                     if (System.IO.File.Exists(physical)) file.Size = new FileInfo(physical).Length;
+                }
+                else if (ECOLearning.Services.VideoStorageService.LaR2(file.Url)) {
+                    long? size = ECOLearning.Services.VideoStorageService.KichThuoc(file.Url);
+                    if (size.HasValue) file.Size = size.Value;
                 }
             }
             return files.OrderBy(f => f.Name).ToList();

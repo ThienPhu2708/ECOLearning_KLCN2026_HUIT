@@ -1,0 +1,63 @@
+﻿@model ECOLearning.Services.CourseRevisionRow
+@{
+    ViewBag.Title = "Kiểm duyệt bản sửa khóa học";
+    ViewBag.BreadcrumbCurrent = "Kiểm duyệt bản sửa";
+    var draft = Model.Read(); var input = draft.Model;
+    var live = (ECOLearning.Models.KhoaHoc)ViewBag.LiveCourse;
+    var lessons = (System.Collections.Generic.List<ECOLearning.Models.BaiHoc>)ViewBag.LiveLessons;
+    var fields = new[] {
+        Tuple.Create("Tên khóa học", live.tenKhoaHoc, input.TenKhoaHoc),
+        Tuple.Create("Giá bán", live.giaBan.ToString("#,##0 đ"), input.GiaBan.ToString("#,##0 đ")),
+        Tuple.Create("Cấp độ", live.capDo, input.CapDo),
+        Tuple.Create("Danh mục", (string)ViewBag.LiveCategory, (string)ViewBag.DraftCategory),
+        Tuple.Create("Giới thiệu ngắn", live.moTaNgan, input.MoTaNgan),
+        Tuple.Create("Mô tả khóa học", live.moTa, input.MoTa),
+        Tuple.Create("Mục tiêu đầu ra", live.mucTieuDauRa, input.MucTieuDauRa)
+    };
+    int changes = fields.Count(f => (f.Item2 ?? "") != (f.Item3 ?? "")) + (live.anhBia != input.AnhBia ? 1 : 0);
+    Func<int,string> duration = seconds => (seconds / 60) + " phút " + (seconds % 60) + " giây";
+}
+<style>
+.rv-page{max-width:1200px;margin:0 auto;color:#172033}.rv-back{display:inline-flex;gap:8px;align-items:center;color:#64748B;font-size:13px;text-decoration:none;margin-bottom:18px}.rv-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:22px}.rv-head h1{font-size:26px;font-weight:800;margin:0 0 8px;letter-spacing:-.6px}.rv-head p{font-size:13px;color:#64748B;line-height:1.6;margin:0}.rv-tag{padding:8px 12px;border-radius:9px;font-size:12px;font-weight:600;background:#FFF7E5;color:#A16207}.rv-card{background:#fff;border:1px solid #E2E8F0;border-radius:16px;overflow:hidden;margin-bottom:22px}.rv-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 24px;border-bottom:1px solid #EDF0F5;flex-wrap:wrap}.rv-card h2{font-size:17px;font-weight:700;margin:0}.rv-note{color:#64748B;font-size:12px;line-height:1.6}.rv-scroll{overflow-x:auto}.rv-table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:620px}.rv-table th{text-align:left;padding:14px 20px;font-size:12px;background:#F8FAFC;color:#64748B;font-weight:600}.rv-table th:first-child{width:20%}.rv-table th:last-child{background:#F2F0FF;color:#5145B5}.rv-table td{vertical-align:top;border-top:1px solid #EDF0F5;padding:18px 20px;font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}.rv-table td:first-child{font-size:12px;font-weight:600;color:#64748B}.rv-change{background:#FFFBEB;box-shadow:inset 3px 0 #F5BF45}.rv-cover{width:100%;max-width:240px;height:135px;object-fit:cover;border-radius:10px;display:block}.rv-columns{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:22px}.rv-column{min-width:0}.rv-column-title{font-size:12px;font-weight:700;color:#64748B;margin-bottom:14px;display:flex;gap:8px;align-items:center}.rv-column-title.is-new{color:#5145B5}.rv-count{padding:3px 8px;border-radius:6px;background:#F1F5F9;font-size:11px}.rv-lesson{border:1px solid #E2E8F0;border-radius:12px;padding:16px;margin-bottom:12px}.rv-lesson.is-new{border-color:#DCD8FF}.rv-lesson strong{display:block;font-size:14px;line-height:1.6;margin-bottom:6px}.rv-lesson p{font-size:12px;color:#64748B;line-height:1.7;margin:4px 0}.rv-lesson summary{font-size:12px;color:#5145B5;cursor:pointer;padding-top:10px}.rv-lesson video{width:100%;max-height:260px;border-radius:8px;margin-top:12px;background:#101525}.rv-file{display:block;font-size:12px;color:#5145B5;padding-top:10px;overflow-wrap:anywhere}.rv-decision{padding:22px 24px}.rv-decision label{display:block;font-size:13px;font-weight:600;margin-bottom:10px}.rv-actions{display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}.rv-error{border:1px solid #FECACA;background:#FFF1F2;color:#B91C1C;border-radius:12px;padding:14px;margin-bottom:20px;font-size:13px}@@media(max-width:760px){.rv-columns{grid-template-columns:1fr}.rv-head h1{font-size:22px}.rv-card-head,.rv-decision{padding:18px}.rv-actions .btn{flex:1}}
+
+.dashboard-main .rv-page table.rv-table{table-layout:fixed;width:100%;min-width:620px}
+.dashboard-main .rv-page table.rv-table th,.dashboard-main .rv-page table.rv-table td{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;overflow:hidden;text-overflow:clip}
+.rv-cell-text{display:block;max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+</style>
+<div class="rv-page">
+<a class="rv-back" href="@Url.Action("Index", "CourseApproval", new { statusFilter = "Revisions" })"><i class="bi bi-arrow-left"></i> Kiểm duyệt khóa học</a>
+<header class="rv-head"><div><h1>Kiểm duyệt bản sửa khóa học</h1><p>@live.tenKhoaHoc · Mã @Model.CourseId</p></div><span class="rv-tag">@(Model.Status == "Pending" ? "Chờ duyệt bản sửa" : Model.Status)</span></header>
+@if(TempData["ErrorMessage"] != null){<div class="rv-error" role="alert">@TempData["ErrorMessage"]</div>}
+<section class="rv-card">
+ <div class="rv-card-head"><h2>Thông tin khóa học</h2><span class="rv-note">@(changes) mục thay đổi · Ô màu vàng là nội dung đã sửa</span></div>
+ <div class="rv-scroll"><table class="rv-table"><thead><tr><th>Nội dung</th><th>Đang hoạt động</th><th>Bản sửa gửi duyệt</th></tr></thead><tbody>
+ @foreach(var field in fields){
+  <tr><td>@field.Item1</td><td><div class="rv-cell-text">@(string.IsNullOrWhiteSpace(field.Item2) ? "—" : field.Item2)</div></td><td class="@(field.Item2 != field.Item3 ? "rv-change" : "")"><div class="rv-cell-text">@(string.IsNullOrWhiteSpace(field.Item3) ? "—" : field.Item3)</div></td></tr>
+ }
+ <tr><td>Ảnh bìa</td><td>@if(!string.IsNullOrWhiteSpace(live.anhBia)){<img class="rv-cover" src="@Url.Content(live.anhBia)" alt="Ảnh bìa đang hoạt động"/>}</td><td class="@(live.anhBia != input.AnhBia ? "rv-change" : "")">@if(!string.IsNullOrWhiteSpace(input.AnhBia)){<img class="rv-cover" src="@Url.Content(input.AnhBia)" alt="Ảnh bìa bản sửa"/>}</td></tr>
+ </tbody></table></div>
+</section>
+<section class="rv-card">
+ <div class="rv-card-head"><h2>Đề cương và bài giảng</h2><span class="rv-note">Mở từng bài để kiểm tra video và tài liệu</span></div>
+ <div class="rv-columns">
+  <div class="rv-column"><div class="rv-column-title">Đang hoạt động <span class="rv-count">@lessons.Count bài</span></div>
+  @foreach(var lesson in lessons){<article class="rv-lesson"><strong>@lesson.tenBaiHoc</strong><p>@(lesson.ChuongHoc != null ? lesson.ChuongHoc.tenChuong : "Không chia chương")</p><p>@duration(lesson.thoiLuong ?? 0) · @(lesson.choXemThu == true ? "Cho xem thử" : "Không xem thử")</p>
+   @if(!string.IsNullOrWhiteSpace(lesson.duongDanVideo)){<details><summary>Xem video hiện tại</summary><video controls preload="none" src="@Url.Content(ECOLearning.Services.VideoStorageService.LinkPhat(lesson.duongDanVideo))"></video></details>}
+   @foreach(var file in lesson.TaiNguyen){<a class="rv-file" href="@Url.Content(file.duongDan)" target="_blank" rel="noopener"><i class="bi bi-file-earmark-text"></i> @file.tenTaiNguyen</a>}
+  </article>}
+  </div>
+  <div class="rv-column"><div class="rv-column-title is-new">Bản sửa gửi duyệt <span class="rv-count">@input.Lessons.Count bài</span></div>
+  @foreach(var lesson in input.Lessons){<article class="rv-lesson is-new"><strong>@lesson.Title</strong><p>@(lesson.ChapterIndex.HasValue ? input.Chapters[lesson.ChapterIndex.Value].Title : "Không chia chương")</p><p>@duration(lesson.Duration) · @(lesson.Preview ? "Cho xem thử" : "Không xem thử")</p>
+   @if(!string.IsNullOrEmpty(lesson.VideoToken) && draft.Uploads.ContainsKey(lesson.VideoToken)){var video=draft.Uploads[lesson.VideoToken];<details><summary>Xem video bản sửa</summary><video controls preload="none" src="@Url.Content(ECOLearning.Services.VideoStorageService.LinkPhat(video[1]))"></video></details>}
+   @foreach(var token in lesson.AttachmentTokens){var file=draft.Uploads[token];<a class="rv-file" href="@Url.Content(file[1])" target="_blank" rel="noopener"><i class="bi bi-file-earmark-text"></i> @file[2]</a>}
+  </article>}
+  </div>
+ </div>
+</section>
+@if(Model.Status == "Pending"){
+<form class="rv-card rv-decision" method="post" action="@Url.Action("Review")">
+ @Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.CourseId"/><input type="hidden" name="version" value="@Model.Version"/>
+ <label for="revision-reason">Phản hồi cho giảng viên</label><textarea id="revision-reason" name="reason" maxlength="2000" class="form-control" rows="3" placeholder="Nhập lý do nếu cần từ chối bản sửa..."></textarea>
+ <div class="rv-actions"><button type="submit" class="btn btn-outline" name="decision" value="reject">Từ chối bản sửa</button><button type="submit" class="btn btn-primary" name="decision" value="approve"><i class="bi bi-check2"></i> Duyệt và áp dụng</button></div>
+</form>}
+</div>

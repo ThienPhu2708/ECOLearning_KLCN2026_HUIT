@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
@@ -220,17 +220,18 @@ namespace ECOLearning.Controllers.Api
                 ORDER BY c.IssuedAt DESC",
                 new SqlParameter("@u", CurrentUserId),
                 new SqlParameter("@c", (object)courseId ?? DBNull.Value)).ToList();
+            var snapshots = new CourseRevisionService(Db, Server.MapPath).Certificates(CurrentUserId);
             var thoiLuong = new ApiCourseMapper(Db, AbsoluteUrl).Map(rows.Select(r => r.CourseId)).ToDictionary(c => c.Id, c => c);
             return rows.Select(r => (object)new
             {
                 code = r.Code,
                 courseId = r.CourseId,
-                courseTitle = r.CourseTitle,
-                instructor = r.Instructor,
-                studentName = r.StudentName,
+                courseTitle = snapshots.ContainsKey(r.CourseId) ? snapshots[r.CourseId].CourseTitle : r.CourseTitle,
+                instructor = snapshots.ContainsKey(r.CourseId) ? snapshots[r.CourseId].Instructor : r.Instructor,
+                studentName = snapshots.ContainsKey(r.CourseId) ? snapshots[r.CourseId].StudentName : r.StudentName,
                 issuedAt = ApiFormat.DateFromUtc(r.IssuedAt),
                 score = r.BestScore,
-                durationSeconds = thoiLuong.ContainsKey(r.CourseId) ? thoiLuong[r.CourseId].DurationSeconds : 0,
+                durationSeconds = snapshots.ContainsKey(r.CourseId) ? snapshots[r.CourseId].DurationSeconds : thoiLuong.ContainsKey(r.CourseId) ? thoiLuong[r.CourseId].DurationSeconds : 0,
                 imageUrl = thoiLuong.ContainsKey(r.CourseId) ? thoiLuong[r.CourseId].ImageUrl : null
             }).ToList();
         }

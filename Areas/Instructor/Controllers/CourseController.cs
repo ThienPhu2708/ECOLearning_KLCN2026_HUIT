@@ -31,6 +31,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 query = query.Where(k => k.trangThai == status);
             }
 
+            var revisions = new CourseRevisionService(db, Server.MapPath).ForTeacher(teacherId);
             var courses = query.OrderByDescending(k => k.maKhoaHoc).ToList();
 
             var model = courses.Select(k => {
@@ -48,6 +49,8 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 return new InstructorCourseItem
                 {
                     MaKhoaHoc = k.maKhoaHoc,
+                    RevisionStatus = revisions.ContainsKey(k.maKhoaHoc) ? revisions[k.maKhoaHoc].Status : null,
+                    RevisionVersion = revisions.ContainsKey(k.maKhoaHoc) ? revisions[k.maKhoaHoc].Version : null,
                     TenKhoaHoc = k.tenKhoaHoc,
                     AnhBia = k.anhBia ?? "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=300&auto=format&fit=crop&q=80",
                     TenDanhMuc = k.DanhMuc != null ? k.DanhMuc.tenDanhMuc : "Chung",
@@ -367,6 +370,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
             int reviewCount = reviews.Count();
             int reviewPages = (int)Math.Ceiling(reviewCount / 10.0);
             reviewPage = Math.Max(1, Math.Min(reviewPage, Math.Max(1, reviewPages)));
+            ViewBag.CourseRevision = new CourseRevisionService(db, Server.MapPath).Get(id);
             ViewBag.CourseReviews = reviews.Include(d => d.NguoiDung).OrderByDescending(d => d.ngayDanhGia)
                 .ThenByDescending(d => d.maDanhGia).Skip((reviewPage - 1) * 10).Take(10).ToList();
             ViewBag.ReviewCount = reviewCount;
@@ -431,6 +435,19 @@ namespace ECOLearning.Areas.Instructor.Controllers
                     input.AttachmentTokens.Add(token);
                 }
                 model.Lessons.Add(input);
+            }
+            var revision = new CourseRevisionService(db, Server.MapPath).Get(id);
+            model.RevisionVersion = revision?.Version;
+            if (revision != null && revision.Status == "Pending") {
+                TempData["ErrorMessage"] = "Bản sửa đang chờ Admin duyệt. Hủy gửi duyệt trước khi sửa tiếp.";
+                return RedirectToAction("Details", new { id });
+            }
+            if (revision != null && (revision.Status == "Draft" || revision.Status == "Rejected")) {
+                var saved = revision.Read();
+                model = saved.Model; model.RevisionVersion = revision.Version;
+                model.TrangThai = course.trangThai; model.Categories = BuildCategoryOptions(course.maDanhMuc);
+                foreach (var upload in saved.Uploads) CourseUploads[upload.Key] = upload.Value;
+                ViewBag.RevisionReason = revision.Reason;
             }
             ViewBag.BreadcrumbCurrent = "Chỉnh sửa khóa học";
             return View("Create", model);
@@ -508,44 +525,24 @@ namespace ECOLearning.Areas.Instructor.Controllers
 
             if (model.CoverImageFile != null && model.CoverImageFile.ContentLength > 0)
                 model.AnhBia = SaveCourseFile(model.CoverImageFile, "~/Content/Uploads/CourseImages/");
-            var chapterIds = new List<string>();
-            for (int i = 0; i < chapters.Count; i++) {
-                var input = chapters[i];
-                var chapter = existingChapters.FirstOrDefault(c => c.maChuong == input.Id);
-                if (chapter == null) { chapter = new ChuongHoc { maChuong = "CH" + Guid.NewGuid().ToString("N").Substring(0,18), maKhoaHoc = course.maKhoaHoc }; db.ChuongHoc.Add(chapter); }
-                chapter.tenChuong = input.Title.Trim(); chapter.thuTu = i + 1; chapterIds.Add(chapter.maChuong);
-            }
-            int nextSequence = 1;
-            for (int i = 0; i < lessons.Count; i++) {
-                var input = lessons[i]; var lesson = existingLessons.FirstOrDefault(l => l.maBaiHoc == input.Id);
-                if (lesson == null) {
-                    while (existingLessons.Any(l => l.maBaiHoc == course.maKhoaHoc + "_" + nextSequence)) nextSequence++;
-                    lesson = new BaiHoc { maBaiHoc = course.maKhoaHoc + "_" + nextSequence++ }; db.BaiHoc.Add(lesson);
+            if (CourseRevisionService.Published(course.trangThai) || course.DangKyKhoaHoc.Any()
+                || new CourseRevisionService(db, Server.MapPath).Get(course.maKhoaHoc) != null) {
+                try {
+                    if (string.IsNullOrWhiteSpace(model.AnhBia)) model.AnhBia = course.anhBia;
+                    model.Chapters = chapters; model.Lessons = lessons;
+                    new CourseRevisionService(db, Server.MapPath).Save(course, model, CourseUploads, actionType == "submit");
+                    TempData["SuccessMessage"] = actionType == "submit"
+                        ? "Đã gửi bản sửa cho Admin duyệt. Nội dung đang hoạt động được giữ nguyên."
+                        : "Đã lưu bản nháp. Nội dung đang hoạt động chưa thay đổi.";
+                    return RedirectToAction("Details", new { id = course.maKhoaHoc });
+                } catch (InvalidOperationException error) {
+                    ModelState.AddModelError("", error.Message);
+                    model.Categories = BuildCategoryOptions(course.maDanhMuc);
+                    model.TrangThai = course.trangThai;
+                    return View("Create", model);
                 }
-                lesson.maChuong = input.ChapterIndex.HasValue ? chapterIds[input.ChapterIndex.Value] : null;
-                lesson.tenBaiHoc = input.Title.Trim(); lesson.thuTu = i + 1; lesson.choXemThu = input.Preview; lesson.thoiLuong = Math.Max(0,input.Duration);
-                lesson.duongDanVideo = string.IsNullOrEmpty(input.VideoToken) ? null : CourseUploads[input.VideoToken][1];
-                var wantedResources = (input.AttachmentTokens ?? new List<string>()).Select(token => CourseUploads[token]).ToList();
-                foreach (var resource in lesson.TaiNguyen.ToList())
-                    if (!wantedResources.Any(r => r[1] == resource.duongDan && r[2] == resource.tenTaiNguyen)) db.TaiNguyen.Remove(resource);
-                foreach (var resource in wantedResources)
-                    if (!lesson.TaiNguyen.Any(r => r.duongDan == resource[1] && r.tenTaiNguyen == resource[2]))
-                        db.TaiNguyen.Add(new TaiNguyen { maTaiNguyen = "TN" + Guid.NewGuid().ToString("N").Substring(0,18), maBaiHoc = lesson.maBaiHoc, tenTaiNguyen = resource[2], duongDan = resource[1], loaiTaiNguyen = System.IO.Path.GetExtension(resource[2]) });
             }
-            foreach (var lesson in deletedLessons) { db.TaiNguyen.RemoveRange(lesson.TaiNguyen.ToList()); db.BaiHoc.Remove(lesson); }
-            foreach (var chapter in existingChapters.Where(c => !chapters.Any(input => input.Id == c.maChuong))) db.ChuongHoc.Remove(chapter);
-
-            course.tenKhoaHoc = model.TenKhoaHoc.Trim();
-            course.moTa = model.MoTa;
-            course.moTaNgan = model.MoTaNgan;
-            course.mucTieuDauRa = model.MucTieuDauRa;
-            course.giaBan = model.GiaBan;
-            course.capDo = model.CapDo ?? "Cơ bản";
-            course.maDanhMuc = model.MaDanhMuc;
-            if (!string.IsNullOrWhiteSpace(model.AnhBia))
-            {
-                course.anhBia = model.AnhBia.Trim();
-            }
+            CourseRevisionService.ApplyContent(db, course, model, CourseUploads);
 
             if (actionType == "submit")
             {
@@ -587,6 +584,12 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 return RedirectToAction("Details", new { id = course.maKhoaHoc });
             }
 
+
+            var revisionService = new CourseRevisionService(db, Server.MapPath);
+            if (CourseRevisionService.Published(course.trangThai) || revisionService.Get(id) != null) {
+                TempData["ErrorMessage"] = "Mở Chỉnh sửa thông tin để gửi bản nháp cần duyệt. Khóa đang hoạt động được giữ nguyên.";
+                return RedirectToAction("Edit", new { id });
+            }
 
             // Kiểm tra nội dung đã lưu: có chương, có bài, mỗi bài có video còn tồn tại (CourseContentService)
             var thieu = new CourseContentService(db, Server.MapPath).KiemTraKhoaHoc(course.maKhoaHoc);
@@ -633,6 +636,13 @@ namespace ECOLearning.Areas.Instructor.Controllers
         }
 
         // POST: Instructor/Course/Delete/5
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult CancelRevision(string id, string version) {
+            try { new CourseRevisionService(db, Server.MapPath).Cancel(id, CurrentTeacherId, version); }
+            catch (InvalidOperationException error) { TempData["ErrorMessage"] = error.Message; }
+            return RedirectToAction("Details", new { id });
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult Delete(string id)

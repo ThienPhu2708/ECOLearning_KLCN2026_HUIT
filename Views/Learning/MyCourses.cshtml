@@ -370,7 +370,12 @@
                             if (quizStates != null) { quizStates.TryGetValue(item.MaKhoaHoc, out quizState); }
                             string quizLabel = quizState == null ? "Chưa có kết quả quiz" : quizState.IssuedAt.HasValue ? "Đã cấp chứng chỉ" : quizState.Passed ? "Đã đạt quiz · Có thể nhận chứng chỉ" : quizState.HasOpenAttempt ? "Đang làm quiz" : quizState.Attempts > 0 ? "Quiz chưa đạt" : "Chưa làm quiz";
                             string studyUrl = Url.Action("Study", "Learning", new { courseId = item.MaKhoaHoc });
-                            string certUrl = Url.Action("Index", "Quiz", new { courseId = item.MaKhoaHoc });
+                            bool hasCertificate = quizState != null && quizState.IssuedAt.HasValue;
+                            string certUrl = hasCertificate
+                                ? Url.Action("Certificate", "Learning", new { courseId = item.MaKhoaHoc })
+                                : Url.Action("Index", "Quiz", new { courseId = item.MaKhoaHoc });
+                            string quizActionLabel = hasCertificate ? "Xem chứng chỉ" : quizState != null && quizState.Passed ? "Xem kết quả quiz" : "Làm Quizz ngay";
+                            string quizActionIcon = hasCertificate ? "bi-award" : quizState != null && quizState.Passed ? "bi-clipboard-check" : "bi-pencil-square";
                             string completeDate = item.NgayHoanThanh.HasValue ? item.NgayHoanThanh.Value.ToString("dd/MM/yyyy") : DateTime.Now.ToString("dd/MM/yyyy");
 
                             <div>
@@ -405,7 +410,7 @@
                                         </div>
 
                                         <div class="completed-course-actions">
-                                            <a href="@certUrl" class="btn btn-primary completed-quiz-action"><i class="bi bi-pencil-square" aria-hidden="true"></i> Làm Quizz ngay <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                                            <a href="@certUrl" class="btn btn-primary completed-quiz-action"><i class="bi @quizActionIcon" aria-hidden="true"></i> @quizActionLabel <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
                                             <a href="@studyUrl" class="btn btn-outline completed-review-action"><i class="bi bi-play-circle" aria-hidden="true"></i> Xem lại</a>
                                         </div>
                                     </div>

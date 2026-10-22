@@ -139,7 +139,7 @@
 
         <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px; border-top: 1px solid var(--border-color); padding-top: 20px;">
             <a href="@Url.Action("Index", "Course", new { area = "Instructor" })" class="btn btn-secondary">Hủy</a>
-            <button type="submit" name="actionType" value="save" class="btn btn-primary">Lưu thay đổi</button>
+            <button type="submit" name="actionType" value="save" class="btn btn-primary">Lưu bản nháp</button>
             @if (Model.TrangThai == "Bản nháp" || Model.TrangThai == "Cần sửa đổi")
             {
                 <button type="submit" name="actionType" value="submit" class="btn btn-outline">Lưu & Gửi duyệt</button>

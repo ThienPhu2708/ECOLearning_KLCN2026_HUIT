@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -128,6 +128,10 @@ FROM dbo.DangKyKhoaHoc d JOIN dbo.KhoaHoc k ON k.maKhoaHoc=d.maKhoaHoc JOIN dbo.
 OUTER APPLY(SELECT TOP 1 Score,Correct,Total FROM dbo.QuizAttempt a WHERE a.CourseId=k.maKhoaHoc AND a.StudentId=d.maHocVien AND a.SubmittedAt IS NOT NULL ORDER BY Score DESC,Id DESC) best
 LEFT JOIN dbo.QuizCertificate cert ON cert.CourseId=k.maKhoaHoc AND cert.StudentId=d.maHocVien
 WHERE k.maGiaoVien=@t AND (@c IS NULL OR k.maKhoaHoc=@c) AND (@student IS NULL OR d.maHocVien=@student) ORDER BY k.tenKhoaHoc,n.hoTen",P("@t",teacher),P("@c",string.IsNullOrEmpty(course)?null:course),P("@student",student)).ToList();
+            if(db.Database.SqlQuery<int>("SELECT CASE WHEN OBJECT_ID('dbo.CourseCompletionProtection') IS NULL THEN 0 ELSE 1 END").Single()==1) {
+                var protectedRows=new HashSet<string>(db.Database.SqlQuery<string>("SELECT CourseId+':'+CAST(StudentId AS VARCHAR(20)) FROM dbo.CourseCompletionProtection").ToList());
+                foreach(var row in rows) row.CompletedBeforeRevision=protectedRows.Contains(row.CourseId+":"+row.StudentId);
+            }
             if(!string.IsNullOrWhiteSpace(search)) rows=rows.Where(r=>r.Name.IndexOf(search,StringComparison.OrdinalIgnoreCase)>=0 || r.Email.IndexOf(search,StringComparison.OrdinalIgnoreCase)>=0).ToList();
             return rows;
         }

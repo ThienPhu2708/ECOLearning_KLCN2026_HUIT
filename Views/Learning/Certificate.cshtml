@@ -1,4 +1,4 @@
-@{
+﻿@{
     ViewBag.Title = "Chứng chỉ tốt nghiệp - E-Learning";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var course = ViewBag.Course as ECOLearning.Models.KhoaHoc;
@@ -7,6 +7,8 @@
     string studentName = student != null ? student.hoTen : "Học viên";
     string courseName = course != null ? course.tenKhoaHoc : "Khóa học E-Learning";
     string teacherName = (course != null && course.NguoiDung != null) ? course.NguoiDung.hoTen : "Hội đồng Giảng viên";
+    var snapshot = ViewBag.CertificateSnapshot as ECOLearning.Services.CourseCertificateSnapshot;
+    if (snapshot != null) { courseName = snapshot.CourseTitle; teacherName = snapshot.Instructor; studentName = snapshot.StudentName; }
 }
 
 <style>

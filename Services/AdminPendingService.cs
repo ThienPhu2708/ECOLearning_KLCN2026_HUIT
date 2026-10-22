@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Data.SqlClient;
 using System.Linq;
 using ECOLearning.Models;
@@ -26,7 +26,7 @@ namespace ECOLearning.Services
         {
             return new AdminPendingCounts
             {
-                KhoaHoc = An(() => db.KhoaHoc.Count(k => k.trangThai == "Chờ duyệt" || k.trangThai == "Chờ kiểm duyệt" || k.trangThai == "Pending")),
+                KhoaHoc = An(() => db.KhoaHoc.Count(k => k.trangThai == "Chờ duyệt" || k.trangThai == "Chờ kiểm duyệt" || k.trangThai == "Pending")) + An(() => new CourseRevisionService(db, null).Pending().Count),
                 GiaoVien = An(() => TeacherApplicationService.GetAll().Count(a => a.Status == "Pending")),
                 ViPham = An(DemViPham),
                 ChiTra = An(() => db.Database.SqlQuery<int>(

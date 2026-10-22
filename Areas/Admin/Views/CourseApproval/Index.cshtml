@@ -1,4 +1,4 @@
-@model IEnumerable<ECOLearning.Areas.Admin.Models.PendingCourseItem>
+﻿@model IEnumerable<ECOLearning.Areas.Admin.Models.PendingCourseItem>
 @{
     ViewBag.Title = "Kiểm Duyệt Khóa Học";
     string currentStatus = ViewBag.StatusFilter as string ?? "Pending";
@@ -62,6 +62,10 @@
             <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin", statusFilter = "Pending", search = searchKeyword, category = selectedCategory, fromDate = fromDate, toDate = toDate, sort = sort })"
                class="btn btn-sm @(currentStatus.Equals("Pending", StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-outline")" style="font-weight: 600;">
                 Chờ duyệt <span class="badge badge-warning" style="margin-left: 6px;">@ViewBag.PendingCount</span>
+            </a>
+            <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin", statusFilter = "Revisions", search = searchKeyword, category = selectedCategory, fromDate = fromDate, toDate = toDate, sort = sort })"
+               class="btn btn-sm @(currentStatus.Equals("Revisions", StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-outline")" style="font-weight:600;">
+                Duyệt bản sửa <span class="badge badge-warning" style="margin-left:6px;">@ViewBag.PendingRevisions</span>
             </a>
             <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin", statusFilter = "Approved", search = searchKeyword, category = selectedCategory, fromDate = fromDate, toDate = toDate, sort = sort })"
                class="btn btn-sm @(currentStatus.Equals("Approved", StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-outline")" style="font-weight: 600;">
@@ -166,6 +170,9 @@
                                 }
                             </td>
                             <td style="text-align: center;">
+                                @if (currentStatus.Equals("Revisions", StringComparison.OrdinalIgnoreCase)) {
+                                    <a class="btn btn-primary btn-sm" href="@Url.Action("Details", "CourseRevision", new { id = item.MaKhoaHoc })">Kiểm duyệt bản sửa</a>
+                                } else {
                                 <button type="button" 
                                         class="btn btn-primary btn-sm btn-open-approval"
                                         data-id="@item.MaKhoaHoc"
@@ -174,6 +181,7 @@
                                         onclick="handleOpenApproval(this)">
                                     Kiểm duyệt
                                 </button>
+                                }
                             </td>
                         </tr>
                     }

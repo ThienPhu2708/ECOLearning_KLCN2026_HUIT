@@ -171,6 +171,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 string extension = Path.GetExtension(file.Url);
                 if (!string.IsNullOrEmpty(extension) && !name.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) name += extension;
                 if (name.Length > 200) return Json(new { success = false, message = "Tên tệp quá dài." });
+                if (courses.Any(c => ECOLearning.Services.CourseRevisionService.Published(c.trangThai) && usingLessons.Any(l =>
+                    l.ChuongHoc != null ? l.ChuongHoc.maKhoaHoc == c.maKhoaHoc : l.maBaiHoc.StartsWith(c.maKhoaHoc + "_"))))
+                    return Json(new { success = false, message = "Tệp đang được khóa đã xuất bản sử dụng. Thay đổi tài liệu cần gửi duyệt qua bản sửa khóa học." });
                 foreach (var lesson in usingLessons)
                     foreach (var resource in lesson.TaiNguyen.Where(t => t.duongDan == url)) resource.tenTaiNguyen = name;
                 db.SaveChanges();

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -318,6 +318,20 @@ namespace ECOLearning.Controllers.Api
                 courseRating = the?.Rating ?? 0,
                 courseReviewCount = the?.ReviewCount ?? 0
             }, "Cảm ơn bạn đã đánh giá khóa học!");
+        }
+
+        // DELETE /api/v1/courses/{id}/reviews: only the authenticated student's review.
+        [HttpDelete, Route("courses/{id}/reviews"), ApiAuthorize]
+        public ActionResult DeleteMyReview(string id)
+        {
+            int userId = CurrentUserId;
+            var reviews = Db.DanhGiaKhoaHoc.Where(d => d.maHocVien == userId && d.maKhoaHoc == id).ToList();
+            if (reviews.Count > 0)
+            {
+                Db.DanhGiaKhoaHoc.RemoveRange(reviews);
+                Db.SaveChanges();
+            }
+            return Ok(new { deleted = true }, "Đã xóa đánh giá của bạn.");
         }
 
         // B5. GET /api/v1/search/suggest?q=

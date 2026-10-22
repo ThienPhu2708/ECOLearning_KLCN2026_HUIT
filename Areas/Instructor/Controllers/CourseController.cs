@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Areas.Instructor.Models;
@@ -156,12 +157,11 @@ namespace ECOLearning.Areas.Instructor.Controllers
         }
 
         /// <summary>
-        /// Điều kiện gửi duyệt (CourseContentService): có chương, có bài học, mỗi chương có bài và MỖI bài học có video.
+        /// Điều kiện gửi duyệt (CourseContentService): có bài học, mỗi chương được tạo có bài và MỖI bài học có video.
         /// Liệt kê bài còn thiếu để giáo viên bổ sung.
         /// </summary>
         private void KiemTraNoiDungGuiDuyet(List<CourseChapterInput> chapters, List<CourseLessonInput> lessons, Func<CourseLessonInput, bool> coVideo)
         {
-            if (chapters.Count == 0) ModelState.AddModelError("", "Khóa học cần ít nhất một chương học trước khi gửi duyệt.");
             if (lessons.Count == 0) ModelState.AddModelError("", "Khóa học cần ít nhất một bài học trước khi gửi duyệt.");
             for (int i = 0; i < chapters.Count; i++)
             {
@@ -355,7 +355,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
             return RedirectToAction("Index");
         }
 
-        public ActionResult Details(string id)
+        public ActionResult Details(string id, int reviewPage = 1)
         {
             if (string.IsNullOrEmpty(id)) return HttpNotFound();
 
@@ -363,6 +363,15 @@ namespace ECOLearning.Areas.Instructor.Controllers
             var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == id && k.maGiaoVien == teacherId);
             if (course == null) return HttpNotFound();
 
+            var reviews = db.DanhGiaKhoaHoc.Where(d => d.maKhoaHoc == id);
+            int reviewCount = reviews.Count();
+            int reviewPages = (int)Math.Ceiling(reviewCount / 10.0);
+            reviewPage = Math.Max(1, Math.Min(reviewPage, Math.Max(1, reviewPages)));
+            ViewBag.CourseReviews = reviews.Include(d => d.NguoiDung).OrderByDescending(d => d.ngayDanhGia)
+                .ThenByDescending(d => d.maDanhGia).Skip((reviewPage - 1) * 10).Take(10).ToList();
+            ViewBag.ReviewCount = reviewCount;
+            ViewBag.ReviewPage = reviewPage;
+            ViewBag.ReviewPages = reviewPages;
             ViewBag.BreadcrumbCurrent = "Chi tiết khóa học";
             ViewBag.UnchapteredLessons = db.BaiHoc
                 .Where(b => b.maChuong == null && b.maBaiHoc.StartsWith(course.maKhoaHoc + "_"))

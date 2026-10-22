@@ -191,7 +191,7 @@
 <div class="card" style="margin-bottom: 32px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <div>
-            <h3 class="h3">Khóa học đang phụ trách</h3>
+            <h3 class="h3" id="dashboard-courses">Khóa học đang phụ trách</h3>
             <span class="caption">Quản lý nội dung, kiểm duyệt và số lượng học viên</span>
         </div>
         <a href="@Url.Action("Index", "Course", new { area = "Instructor" })" class="btn btn-outline btn-sm">Xem tất cả khóa học →</a>
@@ -257,6 +257,19 @@
                 </tbody>
             </table>
         </div>
+        if (ViewBag.CoursePages > 1)
+        {
+            <nav aria-label="Trang khóa học đang phụ trách" style="display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin-top:20px;">
+                @if (ViewBag.CoursePage > 1) {<a class="btn btn-outline btn-sm" href="@Url.Action("Index", new { coursePage = ViewBag.CoursePage - 1 })#dashboard-courses">← Trước</a>}
+                @for (int page = Math.Max(1, (int)ViewBag.CoursePage - 2); page <= Math.Min((int)ViewBag.CoursePages, (int)ViewBag.CoursePage + 2); page++)
+                {
+                    if (page == ViewBag.CoursePage) {<span class="btn btn-primary btn-sm" aria-current="page">@page</span>}
+                    else {<a class="btn btn-outline btn-sm" href="@Url.Action("Index", new { coursePage = page })#dashboard-courses">@page</a>}
+                }
+                <span class="caption">/ @ViewBag.CoursePages trang</span>
+                @if (ViewBag.CoursePage < ViewBag.CoursePages) {<a class="btn btn-outline btn-sm" href="@Url.Action("Index", new { coursePage = ViewBag.CoursePage + 1 })#dashboard-courses">Sau →</a>}
+            </nav>
+        }
     }
     else
     {

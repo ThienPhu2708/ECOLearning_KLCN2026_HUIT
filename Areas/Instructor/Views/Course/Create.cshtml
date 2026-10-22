@@ -1,4 +1,4 @@
-@model ECOLearning.Areas.Instructor.Models.CourseCreateOrEditViewModel
+﻿@model ECOLearning.Areas.Instructor.Models.CourseCreateOrEditViewModel
 @{
     bool isEditing = !string.IsNullOrEmpty(Model.MaKhoaHoc);
     // Khóa học bị tạm khóa do vi phạm: nút gửi = lưu rồi sang trang Xử lý vi phạm (không gửi kiểm duyệt)
@@ -445,6 +445,7 @@
         <span class="lesson-upload-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="m10 8 6 4-6 4z"/></svg></span>
         <span><strong>Chọn video từ máy tính</strong><small>MP4, WebM, MOV, MKV, M4V hoặc OGV · Chọn 1 video</small></span>
     </label>
+    <button type="button" class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="openContentLibrary('video')">Chọn video từ thư viện tài nguyên</button>
     <div id="lesson-content-video-selection" class="lesson-upload-selection" aria-live="polite"></div>
 </div>
 <div class="form-group">
@@ -454,6 +455,7 @@
         <span class="lesson-upload-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span>
         <span><strong>Chọn tài liệu từ máy tính</strong><small>Có thể chọn nhiều tài liệu cùng lúc</small></span>
     </label>
+    <button type="button" class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="openContentLibrary('document')">Chọn tài liệu từ thư viện tài nguyên</button>
     <div id="lesson-content-documents-selection" class="lesson-upload-selection" aria-live="polite"></div>
 </div>
 <p id="lesson-content-status" role="status" class="caption"></p>
@@ -774,7 +776,26 @@ function libraryVideoDuration(url) {
     });
 }
 var libraryPickerFiles = [], libraryPickerLesson = null;
-async function openLibraryPicker(lessonId) {
+var contentLibraryVideo = null, contentLibraryDocuments = [], libraryPickerForContent = false;
+function openContentLibrary(kind) {
+    openLibraryPicker(contentLessonId, kind, true);
+}
+function renderContentLibrarySelection() {
+    renderLessonFileSelection(document.getElementById('lesson-content-video'));
+    renderLessonFileSelection(document.getElementById('lesson-content-documents'));
+    function add(id, file) {
+        var row = document.createElement('div');
+        row.textContent = file.name + ' · Từ thư viện';
+        document.getElementById(id).appendChild(row);
+    }
+    if (contentLibraryVideo) add('lesson-content-video-selection', contentLibraryVideo);
+    contentLibraryDocuments.forEach(function(file) { add('lesson-content-documents-selection', file); });
+}
+async function openLibraryPicker(lessonId, kind, forContent) {
+    libraryPickerForContent = !!forContent;
+    var filter = document.getElementById('wizard-library-kind');
+    filter.value = kind || ''; filter.disabled = !!kind;
+    document.getElementById('wizard-library-search').value = '';
     libraryPickerLesson = document.getElementById(lessonId);
     document.getElementById('wizard-library').showModal();
     document.getElementById('wizard-library-files').textContent = 'Đang tải thư viện...';
@@ -798,7 +819,17 @@ function renderLibraryPicker() {
                 var response = await fetch('@Url.Action("Select", "Resource", new { area = "Instructor" })', {method:'POST', body:data}); var uploaded = await response.json();
                 if (!uploaded.success) throw new Error(uploaded.message);
                 if (!libraryPickerLesson || !libraryPickerLesson.isConnected) return;
-                if (file.Kind === 'video') { var seconds = uploaded.duration || await libraryVideoDuration(uploaded.url); renderVideo(libraryPickerLesson, uploaded, seconds); }
+                if (libraryPickerForContent) {
+                    if (file.Kind === 'video') {
+                        uploaded.duration = uploaded.duration || await libraryVideoDuration(uploaded.url);
+                        contentLibraryVideo = uploaded;
+                        document.getElementById('lesson-content-video').value = '';
+                    } else if (!contentLibraryDocuments.some(function(item) { return item.url === uploaded.url; })) {
+                        contentLibraryDocuments.push(uploaded);
+                    }
+                    renderContentLibrarySelection();
+                }
+                else if (file.Kind === 'video') { var seconds = uploaded.duration || await libraryVideoDuration(uploaded.url); renderVideo(libraryPickerLesson, uploaded, seconds); }
                 else { libraryPickerLesson.attachments = libraryPickerLesson.attachments || []; if (!libraryPickerLesson.attachments.some(function(item) {return item.url === uploaded.url;})) libraryPickerLesson.attachments.push(uploaded); renderAttachments(libraryPickerLesson); }
                 document.getElementById('wizard-library').close();
             } catch (error) { showToast(error.message, 'error'); } finally { button.disabled = false; pendingUploads--; }
@@ -881,10 +912,11 @@ function renderLessonFileSelection(input) {
     });
 }
 ['lesson-content-video', 'lesson-content-documents'].forEach(function(id) {
-    document.getElementById(id).addEventListener('change', function() { renderLessonFileSelection(this); });
+    document.getElementById(id).addEventListener('change', function() { if (this.id === 'lesson-content-video') contentLibraryVideo = null; renderContentLibrarySelection(); });
 });
 function openLessonContent(id) {
 contentLessonId = id;
+contentLibraryVideo = null; contentLibraryDocuments = [];
 document.getElementById('lesson-content-video').value = '';
 document.getElementById('lesson-content-documents').value = '';
 renderLessonFileSelection(document.getElementById('lesson-content-video'));
@@ -895,13 +927,13 @@ document.getElementById('lesson-content-dialog').showModal();
 async function confirmLessonContent() {
 var lesson = document.getElementById(contentLessonId), video = document.getElementById('lesson-content-video').files[0];
 var documents = Array.from(document.getElementById('lesson-content-documents').files), status = document.getElementById('lesson-content-status');
-if (!lesson || (!video && !documents.length)) { status.textContent = 'Vui lòng chọn video hoặc tài liệu.'; return; }
+if (!lesson || (!video && !documents.length && !contentLibraryVideo && !contentLibraryDocuments.length)) { status.textContent = 'Vui lòng chọn video hoặc tài liệu.'; return; }
 var confirm = document.getElementById('content-confirm'), cancel = document.getElementById('content-cancel'), dialog = document.getElementById('lesson-content-dialog');
 confirm.disabled = cancel.disabled = true;
 function preventClose(event) { event.preventDefault(); }
 dialog.addEventListener('cancel', preventClose);
 try {
-var videoResult = null, duration = 0, attachments = [];
+var videoResult = contentLibraryVideo, duration = contentLibraryVideo ? contentLibraryVideo.duration : 0, attachments = contentLibraryDocuments.slice();
 if (video) {
 videoResult = await uploadLessonFile(video, 'video', function(percent) { status.textContent = 'Đang tải video: ' + percent + '%'; });
 duration = await videoDuration(video);
@@ -909,7 +941,10 @@ duration = await videoDuration(video);
 for (var file of documents) { status.textContent = 'Đang tải tài liệu: ' + file.name; attachments.push(await uploadLessonFile(file, 'document')); }
 if (!lesson.isConnected) return;
 if (videoResult) { renderVideo(lesson, videoResult, duration); document.getElementById('warn-no-video').style.display = 'none'; }
-lesson.attachments = (lesson.attachments || []).concat(attachments);
+lesson.attachments = lesson.attachments || [];
+attachments.forEach(function(item) {
+    if (!lesson.attachments.some(function(existing) { return existing.url === item.url; })) lesson.attachments.push(item);
+});
 renderAttachments(lesson); dialog.close(); showToast('Đã thêm nội dung bài học.', 'success');
 } catch (error) { status.textContent = error.message; }
 finally { confirm.disabled = cancel.disabled = false; dialog.removeEventListener('cancel', preventClose); }

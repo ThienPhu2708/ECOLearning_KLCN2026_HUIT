@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
@@ -170,7 +170,7 @@ namespace ECOLearning.Controllers.Api
             {
                 courseId = khoa.maKhoaHoc,
                 title = khoa.tenKhoaHoc,
-                progress = tatCa.Count == 0 ? 0 : Math.Min(100, (int)Math.Floor(100.0 * soXong / tatCa.Count)),
+                progress = learning.ProtectedCompletions(CurrentUserId).Contains(courseId) ? 100 : tatCa.Count == 0 ? 0 : Math.Min(100, (int)Math.Floor(100.0 * soXong / tatCa.Count)),
                 completedLessons = soXong,
                 totalLessons = tatCa.Count,
                 currentLessonId = baiMo?.maBaiHoc,

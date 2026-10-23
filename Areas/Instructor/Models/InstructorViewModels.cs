@@ -41,6 +41,8 @@ namespace ECOLearning.Areas.Instructor.Models
 
     public class InstructorCourseItem
     {
+        public string RevisionStatus { get; set; }
+        public string RevisionVersion { get; set; }
         public string MaKhoaHoc { get; set; }
         public string TenKhoaHoc { get; set; }
         public string AnhBia { get; set; }
@@ -66,6 +68,7 @@ namespace ECOLearning.Areas.Instructor.Models
         public string MaDanhMuc { get; set; }
         public string AnhBia { get; set; }
         public string TrangThai { get; set; }
+        public string RevisionVersion { get; set; }
         public List<CourseChapterInput> Chapters { get; set; } = new List<CourseChapterInput>();
         public List<CourseLessonInput> Lessons { get; set; } = new List<CourseLessonInput>();
         public System.Web.HttpPostedFileBase CoverImageFile { get; set; }

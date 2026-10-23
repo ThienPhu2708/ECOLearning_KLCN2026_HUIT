@@ -1,0 +1,14 @@
+﻿@model System.Collections.Generic.List<ECOLearning.Services.CourseRevisionRow>
+@{ ViewBag.Title = "Duyệt bản sửa khóa học"; }
+<h2 class="h2">Bản sửa khóa học chờ duyệt (@Model.Count)</h2>
+<p>Nội dung đang hoạt động chỉ thay đổi sau khi Admin phê duyệt bản sửa.</p>
+<a class="btn btn-outline" href="@Url.Action("Index", "CourseApproval")">Kiểm duyệt khóa học</a>
+@if (TempData["SuccessMessage"] != null) { <p role="status">@TempData["SuccessMessage"]</p> }
+@if (!Model.Any()) { <p style="padding:24px;">Chưa có bản sửa chờ duyệt.</p> }
+@foreach (var row in Model) {
+ var draft = row.Read().Model;
+ <div style="padding:20px;margin-top:16px;background:white;border:1px solid #E2E8F0;border-radius:14px;display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+  <div><strong>@draft.TenKhoaHoc</strong><div>@row.CourseId · Gửi lúc @(row.SubmittedAt.HasValue ? row.SubmittedAt.Value.ToString("dd/MM/yyyy HH:mm") : "")</div></div>
+  <a class="btn btn-primary" href="@Url.Action("Details", new { id = row.CourseId })">Xem bản sửa</a>
+ </div>
+}

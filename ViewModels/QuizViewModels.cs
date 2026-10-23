@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
@@ -96,8 +96,9 @@ namespace ECOLearning.ViewModels
         public DateTime? RequestedAt { get; set; }
         public DateTime? IssuedAt { get; set; }
         public string Code { get; set; }
-        public bool LessonsDone => TotalLessons > 0 && CompletedLessons >= TotalLessons;
-        public int Progress => TotalLessons == 0 ? 0 : Math.Min(100, (int)Math.Floor(100.0 * CompletedLessons / TotalLessons));
+        public bool CompletedBeforeRevision { get; set; }
+        public bool LessonsDone => CompletedBeforeRevision || (TotalLessons > 0 && CompletedLessons >= TotalLessons);
+        public int Progress => CompletedBeforeRevision ? 100 : TotalLessons == 0 ? 0 : Math.Min(100, (int)Math.Floor(100.0 * CompletedLessons / TotalLessons));
         public string QuizStatus => Passed ? "Đã đạt" : HasOpenAttempt ? "Đang làm" : Attempts > 0 ? "Chưa đạt" : !LessonsDone ? "Chưa đủ điều kiện làm" : "Chưa làm";
         public string CertificateStatus => IssuedAt.HasValue ? "Đã cấp" : LessonsDone && Passed ? "Đủ điều kiện nhận" : "Chưa đủ điều kiện";
     }

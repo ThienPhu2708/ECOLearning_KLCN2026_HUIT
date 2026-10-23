@@ -71,6 +71,7 @@
 @using (Html.BeginForm(isEditing ? "Edit" : "Create", "Course", new { area = "Instructor" }, FormMethod.Post, new { id = "course-wizard-form", enctype = "multipart/form-data", novalidate = "novalidate" }))
 {
     @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.RevisionVersion)
     @Html.HiddenFor(m => m.MaKhoaHoc)
     @Html.ValidationSummary(false, "", new { @class = "form-feedback-error" })
 
@@ -167,7 +168,7 @@
                     <div class="form-group">
                         <label class="form-label">Giá bán (VNĐ) <span class="required">*</span></label>
                         <input type="text" id="gia-ban-display" class="form-control" placeholder="Ví dụ: 799,000" autocomplete="off" required />
-                        @Html.HiddenFor(m => m.GiaBan, new { id = "GiaBan-hidden" })
+                        <input type="hidden" name="GiaBan" id="GiaBan-hidden" value="@Model.GiaBan.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" />
                         <div id="err-price" class="form-feedback-error" style="display:none;">Vui lòng nhập giá bán hợp lệ!</div>
                     </div>
 
@@ -182,7 +183,7 @@
         <div class="step-footer">
             <a href="@Url.Action("Index", "Course", new { area = "Instructor" })" class="btn btn-secondary">Hủy bỏ</a>
             <div style="display:flex; gap:10px;">
-                <button type="submit" name="actionType" value="draft" class="btn btn-outline">@(isEditing ? "Lưu thay đổi" : "Lưu bản nháp")</button>
+                <button type="submit" name="actionType" value="draft" class="btn btn-outline">Lưu bản nháp</button>
                 <button type="button" class="btn btn-primary" onclick="proceedToStep2()">Tiếp tục</button>
             </div>
         </div>
@@ -258,7 +259,7 @@
         <div class="step-footer">
             <button type="button" class="btn btn-secondary" onclick="jumpToStep(1)">← Quay lại Bước 1</button>
             <div style="display:flex; gap:10px;">
-                <button type="submit" name="actionType" value="draft" class="btn btn-outline">@(isEditing ? "Lưu thay đổi" : "Lưu bản nháp")</button>
+                <button type="submit" name="actionType" value="draft" class="btn btn-outline">Lưu bản nháp</button>
                 <button type="button" class="btn btn-primary" onclick="proceedToStep3()">Tiếp tục</button>
             </div>
         </div>
@@ -320,7 +321,7 @@
         <div class="step-footer">
             <button type="button" class="btn btn-secondary" onclick="jumpToStep(2)">← Quay lại Bước 2</button>
             <div style="display:flex; gap:10px;">
-                <button type="submit" name="actionType" value="draft" class="btn btn-outline">@(isEditing ? "Lưu thay đổi" : "Lưu bản nháp")</button>
+                <button type="submit" name="actionType" value="draft" class="btn btn-outline">Lưu bản nháp</button>
                 <button type="submit" name="actionType" value="submit" id="btn-submit" class="btn btn-primary"
                         onclick="return confirmSubmit()">@(isViolationLocked ? "Lưu & gửi phản hồi vi phạm" : "Gửi xét duyệt khóa học")</button>
             </div>

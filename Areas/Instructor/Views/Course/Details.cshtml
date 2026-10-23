@@ -140,6 +140,18 @@
     </div>
 }
 
+@{ var revision = ViewBag.CourseRevision as ECOLearning.Services.CourseRevisionRow; }
+@if (revision != null && revision.Status != "Approved") {
+    <div style="padding:18px 22px;margin-bottom:20px;border:1px solid #C7D2FE;background:#EEF2FF;border-radius:14px;">
+        <strong>@(revision.Status == "Pending" ? "Bản sửa đang chờ Admin duyệt" : revision.Status == "Rejected" ? "Bản sửa cần chỉnh lại" : "Có bản nháp chỉnh sửa")</strong>
+        <p style="margin:8px 0;">Bản đang hoạt động vẫn được giữ nguyên cho học viên.</p>
+        @if (!string.IsNullOrWhiteSpace(revision.Reason)) { <p>Lý do: @revision.Reason</p> }
+        @if (revision.Status == "Pending") {
+            <form method="post" action="@Url.Action("CancelRevision")">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.maKhoaHoc"/><input type="hidden" name="version" value="@revision.Version"/><button class="btn btn-outline btn-sm" type="submit">Hủy gửi duyệt bản sửa</button></form>
+        } else { <a class="btn btn-outline btn-sm" href="@Url.Action("Edit", new { id = Model.maKhoaHoc })">Tiếp tục sửa bản nháp</a> }
+    </div>
+}
+
 <!-- SECTION 1: OVERVIEW CARD -->
 <div class="card" style="margin-bottom: 24px;">
 <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 16px;">

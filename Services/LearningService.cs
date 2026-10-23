@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
@@ -163,6 +163,7 @@ namespace ECOLearning.Services
                 .Distinct()
                 .Count();
             double percent = lessonIds.Count == 0 ? 0 : Math.Round(100.0 * done / lessonIds.Count, 2);
+            if (ProtectedCompletions(studentId).Contains(courseId)) percent = 100;
 
             var row = db.TienDoHocTap.FirstOrDefault(t => t.maHocVien == studentId && t.maKhoaHoc == courseId);
             if (row == null)
@@ -233,7 +234,18 @@ namespace ECOLearning.Services
                     td.NgayHoanThanh = ds.Where(b => ngayXong.ContainsKey(b.maBaiHoc)).Max(b => ngayXong[b.maBaiHoc]);
                 td.LanHocGanNhat = ds.Where(b => lanHoc.ContainsKey(b.maBaiHoc)).Select(b => lanHoc[b.maBaiHoc]).DefaultIfEmpty(null).Max();
             }
+            foreach (string completedCourse in ProtectedCompletions(studentId)) {
+                TienDoKhoaHoc frozen;
+                if (ketQua.TryGetValue(completedCourse, out frozen)) {
+                    frozen.DaHoanThanhTruoc = true;
+                    frozen.PhanTram = 100;
+                }
+            }
             return ketQua;
+        }
+        public HashSet<string> ProtectedCompletions(int studentId) {
+            if (db.Database.SqlQuery<int>("SELECT CASE WHEN OBJECT_ID('dbo.CourseCompletionProtection') IS NULL THEN 0 ELSE 1 END").Single() == 0) return new HashSet<string>();
+            return new HashSet<string>(db.Database.SqlQuery<string>("SELECT CourseId FROM dbo.CourseCompletionProtection WHERE StudentId=@p0", studentId).ToList());
         }
     }
 
@@ -259,6 +271,7 @@ namespace ECOLearning.Services
         public string TenBaiTiepTheo { get; set; }
         public DateTime? NgayHoanThanh { get; set; }
         public DateTime? LanHocGanNhat { get; set; }
-        public bool DaHoanThanh => TongSoBai > 0 && SoBaiXong >= TongSoBai;
+        public bool DaHoanThanhTruoc { get; set; }
+        public bool DaHoanThanh => DaHoanThanhTruoc || (TongSoBai > 0 && SoBaiXong >= TongSoBai);
     }
 }

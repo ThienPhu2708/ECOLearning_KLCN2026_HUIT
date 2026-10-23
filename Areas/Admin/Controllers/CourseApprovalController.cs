@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
@@ -37,6 +37,9 @@ namespace ECOLearning.Areas.Admin.Controllers
             int rejectedCount = db.KhoaHoc.Count(k => k.trangThai == "Cần sửa đổi" || k.trangThai == "Từ chối");
             int allCount = db.KhoaHoc.Count();
 
+            bool revisionTab = string.Equals(statusFilter, "Revisions", StringComparison.OrdinalIgnoreCase);
+            var pendingRevisions = new ECOLearning.Services.CourseRevisionService(db, Server.MapPath).Pending();
+            if (revisionTab) { query = query.Where(k => false); targetCourse = null; }
             // Filter by status tab
             if (string.Equals(statusFilter, "Pending", StringComparison.OrdinalIgnoreCase))
             {
@@ -111,6 +114,28 @@ namespace ECOLearning.Areas.Admin.Controllers
                 };
             }).ToList();
 
+            if (revisionTab) {
+                var categoryNames = db.DanhMuc.ToDictionary(c => c.maDanhMuc, c => c.tenDanhMuc);
+                var teacherNames = db.NguoiDung.ToDictionary(u => u.maNguoiDung, u => u.hoTen);
+                model = pendingRevisions.Where(r => string.IsNullOrWhiteSpace(category) || r.Read().Model.MaDanhMuc == category).Select(r => {
+                    var draft = r.Read().Model;
+                    return new PendingCourseItem {
+                        MaKhoaHoc = r.CourseId, TenKhoaHoc = draft.TenKhoaHoc,
+                        TenGiaoVien = teacherNames.ContainsKey(r.TeacherId) ? teacherNames[r.TeacherId] : "Giáo viên",
+                        TenDanhMuc = categoryNames.ContainsKey(draft.MaDanhMuc) ? categoryNames[draft.MaDanhMuc] : "Chưa phân loại",
+                        NgayGui = r.SubmittedAt, HocPhi = draft.GiaBan,
+                        SoVideo = draft.Lessons.Count(l => !string.IsNullOrEmpty(l.VideoToken)),
+                        SoTaiLieu = draft.Lessons.Sum(l => l.AttachmentTokens.Count), TrangThai = "Chờ duyệt bản sửa"
+                    };
+                }).ToList();
+                if (!string.IsNullOrWhiteSpace(search)) {
+                    string keyword = search.Trim();
+                    model = model.Where(m => m.TenKhoaHoc.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0
+                        || m.MaKhoaHoc.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0
+                        || m.TenGiaoVien.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+                }
+            }
+
             // Filter by submitted date range (ngày gửi duyệt). Khóa học chưa từng gửi duyệt bị loại khi có lọc ngày.
             if (fromDate.HasValue)
             {
@@ -137,6 +162,7 @@ namespace ECOLearning.Areas.Admin.Controllers
                 }
             }
 
+            ViewBag.PendingRevisions = pendingRevisions.Count;
             ViewBag.Categories = db.DanhMuc.OrderBy(c => c.tenDanhMuc).ToList();
             ViewBag.Category = category ?? "";
             ViewBag.FromDate = fromDate.HasValue ? fromDate.Value.ToString("yyyy-MM-dd") : "";
@@ -298,6 +324,9 @@ namespace ECOLearning.Areas.Admin.Controllers
                     return Json(new { success = false, message = "Không tìm thấy khóa học mã " + id });
                 }
 
+                if (ECOLearning.Services.CourseRevisionService.Published(k.trangThai))
+                    return Json(new { success = false, message = "Khóa đang hoạt động. Vào Duyệt bản sửa khóa học để xử lý phiên bản gửi duyệt." });
+
                 // Giáo viên đang bị khóa tài khoản: khóa học của họ đang tạm ẩn, không xuất bản thêm
                 var gv = db.NguoiDung.Find(k.maGiaoVien);
                 if (gv != null && gv.trangThai == false)
@@ -376,6 +405,8 @@ namespace ECOLearning.Areas.Admin.Controllers
                 }
 
                 // Cập nhật trạng thái khóa học thành "Cần sửa đổi"
+                if (ECOLearning.Services.CourseRevisionService.Published(k.trangThai))
+                    return Json(new { success = false, message = "Khóa đang hoạt động. Từ chối bản sửa trong mục Duyệt bản sửa khóa học." });
                 k.trangThai = "Cần sửa đổi";
 
                 // Lưu lý do từ chối vào CSDL

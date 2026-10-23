@@ -35,6 +35,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
             if (course == null) {
                 context.Result = Json(new { success = false, message = "Không tìm thấy khóa học hoặc bạn không có quyền chỉnh sửa." }); return;
             }
+            if (ECOLearning.Services.CourseRevisionService.Published(course.trangThai) || course.DangKyKhoaHoc.Any()) {
+                context.Result = Json(new { success = false, message = "Khóa đã xuất bản cần duyệt bản sửa. Vào Quản lý khóa học → Chỉnh sửa thông tin để lưu bản nháp và gửi Admin duyệt." }); return;
+            }
             if (course.trangThai == "Chờ duyệt" || course.trangThai == "ChoDuyet")
                 context.Result = Json(new { success = false, message = "Khóa học đang chờ duyệt. Vui lòng hủy yêu cầu duyệt trước khi chỉnh sửa." });
         }

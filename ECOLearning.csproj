@@ -276,6 +276,8 @@
     <Compile Include="Services\CampaignService.cs" />
     <Compile Include="Services\RevenueService.cs" />
     <Compile Include="Services\CourseContentService.cs" />
+    <Compile Include="Services\CourseRevisionService.cs" />
+    <Compile Include="Areas\Admin\Controllers\CourseRevisionController.cs" />
     <Compile Include="Services\SlugHelper.cs" />
     <Compile Include="Services\SystemReportPdfService.cs" />
     <Compile Include="Models\ViolationReportModels.cs" />
@@ -786,6 +788,11 @@
   <ItemGroup>
     <Analyzer Include="packages\AWSSDK.S3.4.0.104.6\analyzers\dotnet\cs\AWSSDK.S3.CodeAnalysis.dll" />
     <Analyzer Include="packages\AWSSDK.S3.4.0.104.6\analyzers\dotnet\cs\SharedAnalysisCode.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Areas\Admin\Views\CourseRevision\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\CourseRevision\Details.cshtml" />
+    <Content Include="Database\Migrations\019_CourseRevision.sql" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != '' and Exists('$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets')" />

@@ -16,7 +16,7 @@
     int totalCount = allLessons.Count;
     int completedCount = completedLessonIds.Count;
     int percentCompleted = totalCount > 0 ? (int)Math.Floor((double)completedCount / totalCount * 100) : 0;
-    if (percentCompleted > 100) { percentCompleted = 100; }
+    if (percentCompleted > 100 || ViewBag.ProtectedCompletion == true) { percentCompleted = 100; }
 
     int activeIndex = allLessons.FindIndex(b => b.maBaiHoc == (activeLesson != null ? activeLesson.maBaiHoc : ""));
     var prevLesson = activeIndex > 0 ? allLessons[activeIndex - 1] : null;
@@ -1087,7 +1087,7 @@
         function updateCourseProgressUI() {
             var total = courseLessons.length, completed = getCompletedCount();
             var percent = total > 0 ? Math.floor((completed / total) * 100) : 0;
-            if (percent > 100) percent = 100;
+            if (percent > 100 || @(ViewBag.ProtectedCompletion == true ? "true" : "false")) percent = 100;
             var textEl = document.getElementById('header-progress-text');
             var barEl  = document.getElementById('header-progress-bar');
             if (textEl) textEl.innerText = percent + '% (' + completed + '/' + total + ' bài)';

@@ -32,6 +32,7 @@ namespace ECOLearning.Controllers
             }
 
             int userId = currentUser.maNguoiDung;
+            var protectedCompletions = new LearningService(db).ProtectedCompletions(userId);
 
             var enrollments = db.DangKyKhoaHoc
                 .Where(d => d.maHocVien == userId)
@@ -97,7 +98,7 @@ namespace ECOLearning.Controllers
                 var completedLessons = allLessons.Where(b => ngayXongTheoBai.ContainsKey(b.MaBaiHoc)).ToList();
                 int completedCount = completedLessons.Count;
                 int progressPercent = (totalLessons > 0) ? (int)Math.Floor((double)completedCount / totalLessons * 100) : 0;
-                if (progressPercent > 100) progressPercent = 100;
+                if (progressPercent > 100 || protectedCompletions.Contains(course.maKhoaHoc)) progressPercent = 100;
 
                 // Xác định bài học tiếp theo (bài đầu tiên chưa hoàn thành)
                 var nextLesson = allLessons.FirstOrDefault(b => !ngayXongTheoBai.ContainsKey(b.MaBaiHoc)) ?? allLessons.FirstOrDefault();
@@ -308,6 +309,7 @@ namespace ECOLearning.Controllers
                     .FirstOrDefault() ?? 0;
             }
             ViewBag.ResumeSeconds = Math.Max(0, resumeSeconds);
+            ViewBag.ProtectedCompletion = new LearningService(db).ProtectedCompletions(viewer.maNguoiDung).Contains(courseId);
 
             bool hasSubmittedReview = false;
             if (currentUser != null)
@@ -445,6 +447,8 @@ namespace ECOLearning.Controllers
             ViewBag.CourseId = courseId;
             ViewBag.CertificateCode = certificateState.Code;
             ViewBag.CertificateIssuedAt = certificateState.IssuedAt;
+            CourseCertificateSnapshot snapshot;
+            if (new CourseRevisionService(db, Server.MapPath).Certificates(currentUser.maNguoiDung).TryGetValue(courseId, out snapshot)) ViewBag.CertificateSnapshot = snapshot;
 
             return View();
         }

@@ -3,10 +3,10 @@
     ViewBag.Title = "Quản Lý Khóa Học";
 
     int totalAll       = Model != null ? Model.Count : 0;
-    int totalDraft     = Model != null ? Model.Count(x => x.TrangThai == "BanNhap"  || x.TrangThai == "Bản nháp") : 0;
-    int totalPending   = Model != null ? Model.Count(x => x.TrangThai == "ChoDuyet" || x.TrangThai == "Chờ duyệt") : 0;
+    int totalDraft     = Model != null ? Model.Count(x => x.TrangThai == "BanNhap"  || x.TrangThai == "Bản nháp" || x.RevisionStatus == "Draft") : 0;
+    int totalPending   = Model != null ? Model.Count(x => x.TrangThai == "ChoDuyet" || x.TrangThai == "Chờ duyệt" || x.RevisionStatus == "Pending") : 0;
     int totalPublished = Model != null ? Model.Count(x => x.TrangThai == "DaDuyet"  || x.TrangThai == "Đã xuất bản" || x.TrangThai == "Đã duyệt") : 0;
-    int totalRejected  = Model != null ? Model.Count(x => x.TrangThai == "TuChoi"   || x.TrangThai == "Từ chối" || x.TrangThai == "Cần sửa đổi") : 0;
+    int totalRejected  = Model != null ? Model.Count(x => x.TrangThai == "TuChoi"   || x.TrangThai == "Từ chối" || x.TrangThai == "Cần sửa đổi" || x.RevisionStatus == "Rejected") : 0;
     int totalViolation = Model != null ? Model.Count(x => x.TrangThai == "Tạm khóa" || x.TrangThai == "Khóa vĩnh viễn") : 0;
 }
 
@@ -90,7 +90,8 @@
 
                         decimal displayPrice = item.GiaBan;
 
-                        <tr data-filter="@filterKey">
+                        string revisionFilter = item.RevisionStatus == "Draft" ? "draft" : item.RevisionStatus == "Pending" ? "pending" : item.RevisionStatus == "Rejected" ? "rejected" : "";
+                        <tr data-filter="@(filterKey + " " + revisionFilter)">
                             <td>
                                 <a href="@Url.Action("Details", "Course", new { area = "Instructor", id = item.MaKhoaHoc })">
                                     <img src="@(string.IsNullOrEmpty(item.AnhBia) ? "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=120&auto=format&fit=crop&q=80" : item.AnhBia)"
@@ -101,25 +102,12 @@
                             <td class="cell-wrap">
                                 <a href="@Url.Action("Details", "Course", new { area = "Instructor", id = item.MaKhoaHoc })" style="text-decoration: none;">
                                     <strong style="color: var(--text-heading); display: block; max-width: 260px;">@item.TenKhoaHoc</strong>
+                                    @if (!string.IsNullOrEmpty(item.RevisionStatus)) {
+                                        <span class="badge badge-warning" style="margin-top:6px;">@(item.RevisionStatus == "Draft" ? "Có bản nháp chỉnh sửa" : item.RevisionStatus == "Pending" ? "Bản sửa chờ duyệt" : "Bản sửa cần chỉnh lại")</span>
+                                    }
                                 </a>
                                 <div class="caption" style="color: var(--text-muted); margin-top: 4px;">
-                                    @if (filterKey == "published")
-                                    {
-                                        <text>@item.SoBaiHoc bài học</text>
-                                    }
-                                    else if (filterKey == "pending")
-                                    {
-                                        <text>Đang đợi Admin duyệt</text>
-                                    }
-                                    else if (filterKey == "draft")
-                                    {
-                                        <text>Chưa gửi duyệt</text>
-                                        if (!item.CoVideo)
-                                        {
-                                            <text> • Cần bổ sung video</text>
-                                        }
-                                    }
-                                    else if (filterKey == "rejected")
+                                    @if (filterKey == "rejected")
                                     {
                                         <span style="color: #DC2626;">Bị từ chối: @item.LyDoTuChoi</span>
                                     }
@@ -158,12 +146,23 @@
                                             <i class="bi bi-flag-fill"></i>
                                         </a>
                                     }
-                                    @if (filterKey == "draft" || filterKey == "rejected" || item.TrangThai == "Tạm khóa")
+                                    @if (filterKey == "draft" || filterKey == "rejected" || item.TrangThai == "Tạm khóa" || item.RevisionStatus == "Draft" || item.RevisionStatus == "Rejected")
                                     {
                                     <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = item.MaKhoaHoc })" class="btn btn-secondary btn-sm" style="width: 36px; padding: 0;" title="Sửa khóa học">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
 
+                                    }
+
+                                    @if (item.RevisionStatus == "Pending")
+                                    {
+                                        using (Html.BeginForm("CancelRevision", "Course", new { area = "Instructor" }, FormMethod.Post, new { style = "display:inline;" }))
+                                        {
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.MaKhoaHoc" />
+                                            <input type="hidden" name="version" value="@item.RevisionVersion" />
+                                            <button type="submit" class="btn btn-outline btn-sm" style="width:36px;padding:0;" title="Hủy gửi duyệt bản sửa" aria-label="Hủy gửi duyệt bản sửa" onclick="return instructorConfirmSubmit(this, 'Hủy gửi duyệt bản sửa để chỉnh lại? Khóa đang xuất bản vẫn giữ nguyên.');"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i></button>
+                                        }
                                     }
 
                                     @if (filterKey == "pending")
@@ -210,7 +209,7 @@
 
             var filter = this.getAttribute('data-filter');
             document.querySelectorAll('#course-table-body tr').forEach(function (row) {
-                if (filter === 'all' || row.getAttribute('data-filter') === filter) {
+                if (filter === 'all' || (row.getAttribute('data-filter') || '').split(' ').includes(filter)) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';

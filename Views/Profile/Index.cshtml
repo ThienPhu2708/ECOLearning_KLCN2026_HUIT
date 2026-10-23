@@ -1,4 +1,4 @@
-@model ECOLearning.ViewModels.StudentProfileViewModel
+﻿@model ECOLearning.ViewModels.StudentProfileViewModel
 
 @{
     ViewBag.Title = "Quản lý Hồ sơ cá nhân | E-Learning Platform";
@@ -476,6 +476,9 @@
                 success: function (res) {
                     if (res.success) {
                         document.getElementById('avatar-preview').src = res.avatarUrl;
+                        document.querySelectorAll('[data-current-user-avatar]').forEach(function (avatar) {
+                            avatar.src = res.avatarUrl;
+                        });
                         showToast(res.message, 'success');
                     } else {
                         showToast(res.message, 'error');

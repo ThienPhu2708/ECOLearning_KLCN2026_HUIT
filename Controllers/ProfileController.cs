@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Web;
@@ -39,6 +39,11 @@ namespace ECOLearning.Controllers
                 {
                     return RedirectToAction("Login", "Account");
                 }
+
+                // Refresh the web session after profile changes made through the mobile API.
+                Session["Avatar"] = string.IsNullOrWhiteSpace(user.anhDaiDien)
+                    ? SessionNguoiDung.AnhDaiDienMacDinh : user.anhDaiDien;
+                Session["User"] = SessionNguoiDung.BanSao(user);
 
                 // Thống kê tiến độ học tập từ CSDL (dựa trên TienDoBaiHoc — bảng theo dõi tiến độ thật của hệ thống,
                 // không dùng TienDoHocTap vì bảng này không được bất kỳ luồng nghiệp vụ nào ghi dữ liệu)

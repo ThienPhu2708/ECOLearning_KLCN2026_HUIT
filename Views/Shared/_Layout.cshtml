@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
     <head>
         <meta charset="utf-8" />
@@ -199,7 +199,7 @@
 
                     <div style="display: flex; align-items: center; gap: 10px; padding-left: 10px; border-left: 1px solid var(--border-color);">
                         <a href="@Url.Action("Index", "Profile", new { area = "" })" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit;">
-                            <img src="@userAvatar"
+                            <img data-current-user-avatar src="@userAvatar"
                             alt="Avatar"
                             style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary);" />
                             <div style="line-height: 1.2;">
@@ -308,7 +308,7 @@
             @if (User.Identity.IsAuthenticated || Session["UserId"] != null)
             {
                 <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 14px; text-align: left;">
-                    <img src="@(Session["Avatar"]?.ToString() ?? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80")" alt="Avatar" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid #434CE8; flex-shrink: 0;" />
+                    <img data-current-user-avatar src="@(Session["Avatar"]?.ToString() ?? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80")" alt="Avatar" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid #434CE8; flex-shrink: 0;" />
                     <div style="flex: 1; line-height: 1.3;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
                             <strong style="font-size: 14px; color: #0F172A;">@(Session["FullName"]?.ToString() ?? User.Identity.Name)</strong>

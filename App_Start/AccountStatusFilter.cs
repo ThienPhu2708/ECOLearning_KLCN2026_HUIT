@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Web.Mvc;
 using System.Web.Security;
@@ -62,6 +62,10 @@ namespace ECOLearning
                         DangXuatDoThayPhien(filterContext, userId);
                         return;
                     }
+                    session["Avatar"] = string.IsNullOrWhiteSpace(tt.Avatar)
+                        ? SessionNguoiDung.AnhDaiDienMacDinh : tt.Avatar;
+                    var sessionUser = session["User"] as NguoiDung;
+                    if (sessionUser != null) sessionUser.anhDaiDien = tt.Avatar;
                     session[keyLanKiemTra] = DateTime.UtcNow;
                     if (!string.IsNullOrEmpty(tt.VaiTro) && !string.Equals(tt.VaiTro, session["Role"]?.ToString(), StringComparison.OrdinalIgnoreCase))
                     {
@@ -145,7 +149,7 @@ namespace ECOLearning
 
                     string cotDoiMatKhau = coCotDoiMatKhau == true ? "canDoiMatKhau" : "CAST(0 AS BIT)";
                     string cotPhien = PhienDocQuyenService.DaCaiDat(db) ? "maPhien" : "CAST(NULL AS VARCHAR(32))";
-                    string sql = "SELECT CAST(ISNULL(trangThai, 1) AS BIT) AS HoatDong, vaiTro AS VaiTro, " + cotDoiMatKhau + " AS CanDoiMatKhau, "
+                    string sql = "SELECT CAST(ISNULL(trangThai, 1) AS BIT) AS HoatDong, vaiTro AS VaiTro, anhDaiDien AS Avatar, " + cotDoiMatKhau + " AS CanDoiMatKhau, "
                         + cotPhien + " AS MaPhien FROM dbo.NguoiDung WHERE maNguoiDung = @p0";
                     // Không còn dòng nào: tài khoản đã bị xóa, coi như bị khóa
                     return db.Database.SqlQuery<TrangThaiPhien>(sql, userId).FirstOrDefault() ?? new TrangThaiPhien { HoatDong = false };
@@ -163,6 +167,7 @@ namespace ECOLearning
         {
             public bool HoatDong { get; set; }
             public string VaiTro { get; set; }
+            public string Avatar { get; set; }
             public bool CanDoiMatKhau { get; set; }
             public string MaPhien { get; set; }
         }

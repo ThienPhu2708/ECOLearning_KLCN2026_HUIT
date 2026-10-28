@@ -1,6 +1,6 @@
 @model ECOLearning.ViewModels.TheMaGiamGiaModel
 @* Thẻ mã giảm giá dùng chung: trang chủ, Mã giảm giá của tôi, chi tiết mã, trang khóa học.
-   Nút "Lưu mã" (data-coupon-collect) do assets/js/coupon-wallet.js xử lý: hỏi xác nhận rồi lưu, không hoàn tác. *@
+   Nút "Lưu mã" (data-coupon-collect) do assets/js/coupon-wallet.js xử lý: bấm là lưu ngay, rồi thành "Đã lưu" (xám, khóa). *@
 @{
     var m = Model.Ma;
     string linkChiTiet = Url.Action("Details", "Coupon", new { area = "", code = m.MaCode });
@@ -52,11 +52,11 @@
                 {
                     if (m.DaLuu)
                     {
-                        <span class="cpn-btn cpn-btn-saved"><i class="bi bi-check2"></i> Đã lưu</span>
+                        <button type="button" class="cpn-btn cpn-btn-saved" disabled><i class="bi bi-check2"></i> Đã lưu</button>
                     }
                     else
                     {
-                        <button type="button" class="cpn-btn cpn-btn-primary" data-coupon-collect data-code="@m.MaCode" data-label="@m.MoTaUuDai">Lưu mã</button>
+                        <button type="button" class="cpn-btn cpn-btn-primary" data-coupon-collect data-code="@m.MaCode">Lưu mã</button>
                     }
                 }
             </div>

@@ -1,0 +1,24 @@
+/* Card có bộ lọc riêng ở Dashboard và Báo cáo hệ thống (Admin). Biểu đồ: assets/js/admin-charts.js */
+.ad-chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.ad-filter { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ad-seg { display: inline-flex; background: #F1F5F9; border-radius: 10px; padding: 3px; }
+.ad-seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #475569; cursor: pointer; }
+.ad-seg button.active { background: #FFFFFF; color: #434CE8; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); }
+.ad-filter select, .ad-card-filter select, .ad-card-filter input { height: 32px; padding: 0 8px; border: 1px solid #E2E8F0; border-radius: 8px; font-size: 12.5px; background: #FFFFFF; max-width: 190px; }
+.ad-legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: #475569; margin-bottom: 6px; }
+.ad-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.ad-legend b { color: #0F172A; }
+.ad-swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.ad-chart { min-height: 260px; }
+.ad-empty { text-align: center; color: var(--text-secondary); padding: 24px; font-size: 13.5px; }
+.ad-rank td { vertical-align: middle; }
+.ad-rank .no { width: 28px; height: 28px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; background: #EEF2FF; color: #434CE8; }
+.ad-rank a { color: inherit; text-decoration: none; }
+.ad-rank a:hover strong { color: #434CE8; }
+.ad-sub { font-size: 12.5px; color: var(--text-secondary); }
+.ad-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.ad-card-filter { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.ad-bar { flex: 1; height: 8px; background: #F1F5F9; border-radius: 4px; overflow: hidden; }
+.ad-bar > div { height: 100%; }
+.ad-bar-row { display: flex; align-items: center; gap: 10px; }
+.ad-bar-row:hover .ad-bar { box-shadow: 0 0 0 2px #E0E7FF; }

@@ -134,11 +134,14 @@ namespace ECOLearning.Controllers.Api
             // Thời lượng theo độ dài thật của file video (giống trang Study)
             learning.DongBoThoiLuong(tatCa);
             var tienDo = TienDoCacBai(tatCa.Select(b => b.maBaiHoc));
+            var soTaiLieu = new LessonDocumentService(Db).DemTheoBai(tatCa.Select(b => b.maBaiHoc).ToList());
 
             Func<BaiHoc, object> bai = b =>
             {
                 TienDoBai td;
                 tienDo.TryGetValue(b.maBaiHoc, out td);
+                int soTl;
+                soTaiLieu.TryGetValue(b.maBaiHoc, out soTl);
                 return new
                 {
                     id = b.maBaiHoc,
@@ -146,7 +149,8 @@ namespace ECOLearning.Controllers.Api
                     durationSeconds = b.thoiLuong ?? 0,
                     isPreview = b.choXemThu == true,
                     isCompleted = td != null && td.Xong,
-                    lastPositionSeconds = td?.ViTri ?? 0
+                    lastPositionSeconds = td?.ViTri ?? 0,
+                    documentsCount = soTl
                 };
             };
             var dsChuong = chuong.Select(c => new
@@ -173,6 +177,7 @@ namespace ECOLearning.Controllers.Api
                 progress = learning.ProtectedCompletions(CurrentUserId).Contains(courseId) ? 100 : tatCa.Count == 0 ? 0 : Math.Min(100, (int)Math.Floor(100.0 * soXong / tatCa.Count)),
                 completedLessons = soXong,
                 totalLessons = tatCa.Count,
+                totalDocuments = soTaiLieu.Values.Sum(),
                 currentLessonId = baiMo?.maBaiHoc,
                 chapters = dsChuong,
                 quiz = new
@@ -204,6 +209,7 @@ namespace ECOLearning.Controllers.Api
             TienDoCacBai(new[] { bai.maBaiHoc }).TryGetValue(bai.maBaiHoc, out td);
             string url, loai;
             VideoCuaBai(bai.duongDanVideo, out url, out loai);
+            var taiLieu = new LessonDocumentService(Db).LayTheoCacBai(new[] { bai.maBaiHoc });
             return Ok(new
             {
                 id = bai.maBaiHoc,
@@ -214,7 +220,8 @@ namespace ECOLearning.Controllers.Api
                 lastPositionSeconds = td?.ViTri ?? 0,
                 isCompleted = td != null && td.Xong,
                 previousLessonId = viTri > 0 ? tatCa[viTri - 1].maBaiHoc : null,
-                nextLessonId = viTri < tatCa.Count - 1 ? tatCa[viTri + 1].maBaiHoc : null
+                nextLessonId = viTri < tatCa.Count - 1 ? tatCa[viTri + 1].maBaiHoc : null,
+                documents = taiLieu.Select(t => DocumentJson(t, courseId, bai.tenBaiHoc)).ToList()
             });
         }
 
@@ -235,6 +242,202 @@ namespace ECOLearning.Controllers.Api
                 positionSeconds = kq.Position,
                 courseProgress = kq.PhanTramKhoaHoc
             });
+        }
+
+        // ------------------------------------------------------------------ G5–G9. Ghi chú bài học
+        // Dùng chung bảng GhiChuBaiHoc với trang học trên web (LessonNoteService): ghi chú tạo trên app hiện trên web và ngược lại.
+
+        public class NoteRequest
+        {
+            public double? PositionSeconds { get; set; }
+            public string Content { get; set; }
+        }
+
+        private object NoteJson(LessonNoteService.GhiChu g, string courseId, Dictionary<string, string> tenBai = null)
+        {
+            string ten;
+            return new
+            {
+                id = g.MaGhiChu,
+                courseId,
+                lessonId = g.MaBaiHoc,
+                lessonTitle = tenBai != null && tenBai.TryGetValue(g.MaBaiHoc, out ten) ? ten : null,
+                positionSeconds = g.ThoiDiemGiay,
+                content = g.NoiDung,
+                createdAt = ApiFormat.Date(g.NgayTao),
+                updatedAt = ApiFormat.Date(g.NgayCapNhat)
+            };
+        }
+
+        private ActionResult NoteFail(LessonNoteService.KetQua kq)
+        {
+            if (kq.Code == "NOTE_NOT_FOUND") return NotFoundJson(kq.Message, kq.Code);
+            if (kq.Code == "NOTES_NOT_INSTALLED") return Fail(503, kq.Code, kq.Message);
+            return BadRequest(kq.Message, kq.Code, kq.Code == "NOTE_EMPTY" || kq.Code == "NOTE_TOO_LONG"
+                ? new Dictionary<string, string> { { "content", kq.Message } } : null);
+        }
+
+        // Khóa học chứa ghi chú (để trả courseId và kiểm tra quyền học khi sửa / xóa)
+        private string KhoaCuaBai(string lessonId)
+        {
+            var bai = Db.BaiHoc.Where(b => b.maBaiHoc == lessonId).Select(b => new { b.maChuong, khoa = b.ChuongHoc != null ? b.ChuongHoc.maKhoaHoc : null }).FirstOrDefault();
+            if (bai == null) return null;
+            if (bai.khoa != null) return bai.khoa;
+            int gach = lessonId.IndexOf('_');
+            return gach > 0 ? lessonId.Substring(0, gach) : null;
+        }
+
+        // G5. GET /api/v1/learning/{courseId}/notes?lessonId= : ghi chú của học viên trong cả khóa (hoặc một bài), theo thứ tự bài rồi mốc thời gian
+        [HttpGet, Route("learning/{courseId}/notes")]
+        public ActionResult CourseNotes(string courseId, string lessonId = null)
+        {
+            KhoaHoc khoa;
+            var loi = KiemTraQuyenHoc(courseId, out khoa);
+            if (loi != null) return loi;
+
+            var bai = new LearningService(Db).LayBaiHoc(courseId);
+            if (!string.IsNullOrEmpty(lessonId) && !bai.Any(b => b.maBaiHoc == lessonId))
+                return NotFoundJson("Không tìm thấy bài học.", "LESSON_NOT_FOUND");
+            var tenBai = bai.GroupBy(b => b.maBaiHoc).ToDictionary(g => g.Key, g => g.First().tenBaiHoc);
+            var maBai = string.IsNullOrEmpty(lessonId) ? bai.Select(b => b.maBaiHoc).ToList() : new List<string> { lessonId };
+            var ghiChu = new LessonNoteService(Db).LayTheoCacBai(CurrentUserId, maBai);
+            return Ok(new { total = ghiChu.Count, items = ghiChu.Select(g => NoteJson(g, courseId, tenBai)) });
+        }
+
+        // G6. GET /api/v1/learning/{courseId}/lessons/{lessonId}/notes
+        [HttpGet, Route("learning/{courseId}/lessons/{lessonId}/notes")]
+        public ActionResult LessonNotes(string courseId, string lessonId)
+        {
+            return CourseNotes(courseId, lessonId);
+        }
+
+        // G7. POST /api/v1/learning/{courseId}/lessons/{lessonId}/notes  { positionSeconds, content }
+        [HttpPost, Route("learning/{courseId}/lessons/{lessonId}/notes")]
+        public ActionResult AddNote(string courseId, string lessonId)
+        {
+            KhoaHoc khoa;
+            var loi = KiemTraQuyenHoc(courseId, out khoa);
+            if (loi != null) return loi;
+            var bai = new LearningService(Db).LayBaiHoc(courseId).FirstOrDefault(b => b.maBaiHoc == lessonId);
+            if (bai == null) return NotFoundJson("Không tìm thấy bài học.", "LESSON_NOT_FOUND");
+
+            var req = Body<NoteRequest>();
+            var kq = new LessonNoteService(Db).Them(CurrentUserId, lessonId, req.PositionSeconds ?? 0, req.Content);
+            if (!kq.Success) return NoteFail(kq);
+            return Ok(NoteJson(kq.GhiChu, courseId, new Dictionary<string, string> { { bai.maBaiHoc, bai.tenBaiHoc } }), kq.Message);
+        }
+
+        // G8. PUT /api/v1/notes/{noteId}  { content, positionSeconds? }
+        [HttpPut, Route("notes/{noteId:int}")]
+        public ActionResult UpdateNote(int noteId)
+        {
+            var service = new LessonNoteService(Db);
+            var cu = service.Lay(CurrentUserId, noteId);
+            if (cu == null) return NotFoundJson("Không tìm thấy ghi chú.", "NOTE_NOT_FOUND");
+            string courseId = KhoaCuaBai(cu.MaBaiHoc);
+            KhoaHoc khoa;
+            var loi = KiemTraQuyenHoc(courseId, out khoa);
+            if (loi != null) return loi;
+
+            var req = Body<NoteRequest>();
+            var kq = service.Sua(CurrentUserId, noteId, req.Content, req.PositionSeconds);
+            if (!kq.Success) return NoteFail(kq);
+            return Ok(NoteJson(kq.GhiChu, courseId), kq.Message);
+        }
+
+        // G9. DELETE /api/v1/notes/{noteId}
+        [HttpDelete, Route("notes/{noteId:int}")]
+        public ActionResult DeleteNote(int noteId)
+        {
+            var service = new LessonNoteService(Db);
+            var cu = service.Lay(CurrentUserId, noteId);
+            if (cu == null) return NotFoundJson("Không tìm thấy ghi chú.", "NOTE_NOT_FOUND");
+            var kq = service.Xoa(CurrentUserId, noteId);
+            if (!kq.Success) return NoteFail(kq);
+            return Ok(new { id = noteId }, kq.Message);
+        }
+
+        // ------------------------------------------------------------------ G10–G12. Tài liệu bài học
+        // Cùng bảng TaiNguyen với trang học trên web: giáo viên tải tài liệu lên là app thấy ngay, không cần đồng bộ riêng.
+        // Tải tệp qua G12 (cần token + đã ghi danh), không trả đường dẫn tệp tĩnh.
+
+        private object DocumentJson(LessonDocumentService.TaiLieu t, string courseId, string lessonTitle)
+        {
+            string tai = AbsoluteUrl("/api/v1/documents/" + Uri.EscapeDataString(t.MaTaiLieu) + "/download");
+            return new
+            {
+                id = t.MaTaiLieu,
+                courseId,
+                lessonId = t.MaBaiHoc,
+                lessonTitle,
+                title = t.TenHienThi,
+                fileName = t.TenTep,
+                fileType = t.LoaiTep,
+                mimeType = t.Mime,
+                sizeBytes = t.KichThuoc,
+                uploadedAt = ApiFormat.Date(t.NgayTaiLen),
+                isAvailable = t.CoSan,
+                canPreview = t.XemTrucTiep,
+                downloadUrl = tai,
+                previewUrl = t.XemTrucTiep ? tai + "?inline=true" : null
+            };
+        }
+
+        // G10. GET /api/v1/learning/{courseId}/documents?lessonId= : tài liệu cả khóa theo thứ tự bài (hoặc một bài)
+        [HttpGet, Route("learning/{courseId}/documents")]
+        public ActionResult CourseDocuments(string courseId, string lessonId = null)
+        {
+            KhoaHoc khoa;
+            var loi = KiemTraQuyenHoc(courseId, out khoa);
+            if (loi != null) return loi;
+
+            var bai = new LearningService(Db).LayBaiHoc(courseId);
+            if (!string.IsNullOrEmpty(lessonId) && !bai.Any(b => b.maBaiHoc == lessonId))
+                return NotFoundJson("Không tìm thấy bài học.", "LESSON_NOT_FOUND");
+            var tenBai = bai.GroupBy(b => b.maBaiHoc).ToDictionary(g => g.Key, g => g.First().tenBaiHoc);
+            var maBai = string.IsNullOrEmpty(lessonId) ? bai.Select(b => b.maBaiHoc).Distinct().ToList() : new List<string> { lessonId };
+
+            var ds = new LessonDocumentService(Db).LayTheoCacBai(maBai);
+            string ten;
+            return Ok(new
+            {
+                courseId = khoa.maKhoaHoc,
+                total = ds.Count,
+                items = ds.Select(t => DocumentJson(t, courseId, tenBai.TryGetValue(t.MaBaiHoc, out ten) ? ten : null)).ToList()
+            });
+        }
+
+        // G11. GET /api/v1/learning/{courseId}/lessons/{lessonId}/documents
+        [HttpGet, Route("learning/{courseId}/lessons/{lessonId}/documents")]
+        public ActionResult LessonDocuments(string courseId, string lessonId)
+        {
+            return CourseDocuments(courseId, lessonId);
+        }
+
+        // G12. GET /api/v1/documents/{documentId}/download?inline=true|false : trả nội dung tệp (inline=true để mở xem pdf / txt)
+        [HttpGet, Route("documents/{documentId}/download")]
+        public ActionResult DownloadDocument(string documentId, bool inline = false)
+        {
+            var service = new LessonDocumentService(Db);
+            var tl = service.Lay(documentId);
+            if (tl == null) return NotFoundJson("Không tìm thấy tài liệu.", "DOCUMENT_NOT_FOUND");
+
+            // Tài liệu phải thuộc một bài của khóa đã ghi danh
+            string courseId = KhoaCuaBai(tl.MaBaiHoc);
+            if (courseId == null) return NotFoundJson("Không tìm thấy tài liệu.", "DOCUMENT_NOT_FOUND");
+            KhoaHoc khoa;
+            var loi = KiemTraQuyenHoc(courseId, out khoa);
+            if (loi != null) return loi;
+
+            if (tl.LaLienKetNgoai) return Redirect(tl.DuongDan);
+            if (tl.DuongDanVatLy == null)
+                return NotFoundJson("Tệp tài liệu không còn trên máy chủ. Vui lòng báo giáo viên tải lại.", "FILE_NOT_FOUND");
+
+            bool moXem = inline && tl.XemTrucTiep;
+            Response.AppendHeader("Content-Disposition", (moXem ? "inline" : "attachment")
+                + "; filename=\"" + LessonDocumentService.TenTepAscii(tl.TenTep) + "\"; filename*=UTF-8''" + Uri.EscapeDataString(tl.TenTep));
+            Response.Cache.SetCacheability(System.Web.HttpCacheability.Private);
+            return new FilePathResult(tl.DuongDanVatLy, tl.Mime);
         }
     }
 }

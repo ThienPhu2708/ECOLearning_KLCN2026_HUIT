@@ -61,7 +61,9 @@ namespace ECOLearning.Areas.Admin.Controllers
                 return RedirectToAction("Details", "Teacher", new { id });
             }
 
-            ViewBag.BreadcrumbCurrent = "Quản lý người dùng / " + model.HoTen;
+            ViewBag.BreadcrumbParent = "Quản lý người dùng";
+            ViewBag.BreadcrumbParentUrl = Url.Action("Index");
+            ViewBag.BreadcrumbCurrent = model.HoTen;
             ViewBag.LaChinhMinh = id == AdminId;
             return View(model);
         }

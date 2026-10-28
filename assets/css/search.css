@@ -93,3 +93,25 @@
 .sr-pager a:hover { border-color: #434CE8; color: #434CE8; }
 .sr-pager .is-current { background: #434CE8; border-color: #434CE8; color: #FFFFFF; }
 .sr-pager .is-gap { border: none; background: none; min-width: 20px; }
+
+/* Giáo viên khớp tên (SearchService.TimGiaoVien): nhãn trong dropdown gợi ý và khối "Giáo viên" ở trang kết quả */
+.ss-hint { font-size: 11.5px; font-weight: 600; color: #B45309; margin-bottom: 1px; }
+.sr-teachers { margin: 18px 0 8px; }
+.sr-teachers-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.sr-teachers-head h2 { font-size: 17px; font-weight: 800; color: #0F172A; margin: 0; }
+.sr-teachers-head p { margin: 0; font-size: 13.5px; color: #64748B; }
+.sr-didyoumean { margin: 0 0 10px; padding: 10px 14px; border-radius: 12px; background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; font-size: 14px; }
+.sr-didyoumean a { color: #434CE8; font-weight: 700; text-decoration: none; }
+.sr-teacher-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.sr-teacher { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid #E2E8F0; border-radius: 14px; background: #FFFFFF; text-decoration: none; color: inherit; transition: border-color .15s, box-shadow .15s; }
+.sr-teacher:hover { border-color: #C7D2FE; box-shadow: 0 4px 14px rgba(67, 76, 232, 0.08); }
+.sr-teacher img, .sr-teacher .sr-teacher-fallback { width: 52px; height: 52px; flex: 0 0 52px; border-radius: 50%; object-fit: cover; background: #EEF2FF; }
+.sr-teacher .sr-teacher-fallback { display: flex; align-items: center; justify-content: center; color: #434CE8; font-weight: 800; font-size: 18px; }
+.sr-teacher-body { min-width: 0; }
+.sr-teacher-name { font-weight: 800; color: #0F172A; font-size: 15px; }
+.sr-teacher-role { font-size: 12.5px; color: #475569; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-teacher-stats { font-size: 12.5px; color: #64748B; margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+.sr-teacher-stats .bi-star-fill { color: #F59E0B; }
+.sr-teacher.is-extra { display: none; }
+.sr-teachers.is-open .sr-teacher.is-extra { display: flex; }
+.sr-teachers-more { margin-top: 10px; background: none; border: 0; color: #434CE8; font-weight: 700; cursor: pointer; padding: 4px 0; font-size: 14px; }

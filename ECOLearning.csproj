@@ -236,6 +236,7 @@
     <Compile Include="ViewModels\CartItemViewModel.cs" />
     <Compile Include="ViewModels\CartViewModel.cs" />
     <Compile Include="ViewModels\SearchViewModels.cs" />
+    <Compile Include="ViewModels\HomeSectionViewModels.cs" />
     <Compile Include="ViewModels\RelatedCourseViewModels.cs" />
     <Compile Include="ViewModels\CourseReviewViewModels.cs" />
     <Compile Include="ViewModels\TeacherRegisterViewModels.cs" />
@@ -261,6 +262,10 @@
     <Compile Include="Services\PromotionService.ViMa.cs" />
     <Compile Include="Services\SearchService.cs" />
     <Compile Include="Services\SearchText.cs" />
+    <Compile Include="Services\GeminiClient.cs" />
+    <Compile Include="Services\GroqClient.cs" />
+    <Compile Include="Services\ChatbotCongCu.cs" />
+    <Compile Include="Services\ChatbotService.cs" />
     <Compile Include="Services\RelatedCourseService.cs" />
     <Compile Include="Services\InstructorProfileService.cs" />
     <Compile Include="Services\CourseReviewService.cs" />
@@ -276,6 +281,8 @@
     <Compile Include="Services\CampaignService.cs" />
     <Compile Include="Services\RevenueService.cs" />
     <Compile Include="Services\CourseContentService.cs" />
+    <Compile Include="Services\CourseLifecycleService.cs" />
+    <Compile Include="Services\CourseOutcomes.cs" />
     <Compile Include="Services\CourseRevisionService.cs" />
     <Compile Include="Areas\Admin\Controllers\CourseRevisionController.cs" />
     <Compile Include="Services\SlugHelper.cs" />
@@ -299,14 +306,19 @@
     <Compile Include="Controllers\Api\OrderApiController.cs" />
     <Compile Include="Controllers\Api\CouponApiController.cs" />
     <Compile Include="Controllers\Api\LearningApiController.cs" />
+    <Compile Include="Controllers\Api\HomeApiController.cs" />
     <Compile Include="Controllers\Api\QuizApiController.cs" />
     <Compile Include="Services\Api\ApiTokenService.cs" />
     <Compile Include="Services\Api\ApiOtpService.cs" />
     <Compile Include="Services\Api\ApiCourseMapper.cs" />
     <Compile Include="Services\LearningService.cs" />
+    <Compile Include="Services\LessonNoteService.cs" />
+    <Compile Include="Services\LessonDocumentService.cs" />
+    <Compile Include="Services\HomeSectionService.cs" />
     <Compile Include="Services\OrderService.cs" />
     <Compile Include="Areas\Admin\Controllers\PayoutRequestController.cs" />
     <Compile Include="Controllers\SearchController.cs" />
+    <Compile Include="Controllers\ChatbotController.cs" />
     <Compile Include="Controllers\CategoryController.cs" />
     <Compile Include="Areas\Instructor\Controllers\ViolationController.cs" />
     <Compile Include="Controllers\ProfileController.cs" />
@@ -469,6 +481,8 @@
     <Content Include="Content\bootstrap-grid.css" />
     <Content Include="assets\css\staff-readonly.css" />
     <Content Include="assets\js\staff-readonly.js" />
+    <Content Include="assets\js\outcome-field.js" />
+    <Content Include="Areas\Instructor\Views\Course\_CourseLifecycleActions.cshtml" />
     <Content Include="Areas\Admin\Views\Teacher\Index.cshtml" />
     <Content Include="Areas\Admin\Views\Teacher\Details.cshtml" />
     <Content Include="Areas\Admin\Views\Marketing\Index.cshtml" />
@@ -557,11 +571,14 @@
     <Content Include="assets\css\coupon.css" />
     <Content Include="assets\css\pagination.css" />
     <Content Include="assets\css\search.css" />
+    <Content Include="assets\css\chat-bubble.css" />
     <Content Include="assets\css\course-reviews.css" />
     <Content Include="assets\css\bank-picker.css" />
     <Content Include="assets\css\variables.css" />
     <Content Include="assets\js\app.js" />
     <Content Include="assets\js\charts.js" />
+    <Content Include="assets\js\admin-charts.js" />
+    <Content Include="assets\css\admin-report.css" />
     <Content Include="assets\js\data.js" />
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\Account\Login.cshtml" />
@@ -588,6 +605,7 @@
     <Content Include="Views\Shared\_RecommendedCourseCard.cshtml" />
     <Content Include="Views\Shared\_ExploreMenu.cshtml" />
     <Content Include="Views\Home\_HeroCarousel.cshtml" />
+    <Content Include="Views\Home\_HomeCourseSlider.cshtml" />
     <Content Include="assets\images\banners\hero_section.jpg" />
     <Content Include="assets\images\banners\banner_goi_y.jpg" />
     <Content Include="assets\images\banners\banner_hoc_linh_hoat.jpg" />
@@ -596,7 +614,6 @@
     <Content Include="Areas\Admin\Views\Shared\_LayoutAdmin.cshtml" />
     <Content Include="Areas\Admin\Views\Dashboard\Index.cshtml" />
     <Content Include="Areas\Admin\Views\Category\Index.cshtml" />
-    <Content Include="Areas\Admin\Views\VideoStorage\Index.cshtml" />
     <Content Include="Areas\Admin\Views\ViolationReport\Index.cshtml" />
     <Content Include="Areas\Admin\Views\ViolationReport\Detail.cshtml" />
     <None Include="Database\Migrations\001_KhuyenNghi_ChoPhepGiaoVien.sql" />
@@ -665,17 +682,20 @@
     <Content Include="Views\Coupon\ChuaKhoiTao.cshtml" />
     <Content Include="Views\Coupon\KhongHoTro.cshtml" />
     <Content Include="Views\Search\Index.cshtml" />
+    <Content Include="Views\Chatbot\Index.cshtml" />
     <Content Include="Views\Course\_RelatedCourses.cshtml" />
     <Content Include="Views\Course\_InstructorInfo.cshtml" />
     <Content Include="Views\Course\_ReviewItem.cshtml" />
     <Content Include="Views\Course\_ReviewSection.cshtml" />
     <Content Include="Views\Course\Reviews.cshtml" />
     <Content Include="Views\Shared\_CourseCard.cshtml" />
+    <Content Include="Views\Shared\_ChatBubble.cshtml" />
     <Content Include="Views\Category\Index.cshtml" />
     <Content Include="Views\Shared\_MyCoursesMenu.cshtml" />
     <Content Include="assets\js\favorite.js" />
     <Content Include="assets\js\coupon-wallet.js" />
     <Content Include="assets\js\search-suggest.js" />
+    <Content Include="assets\js\chat-bubble.js" />
     <Content Include="assets\js\course-reviews.js" />
     <Content Include="assets\js\bank-picker.js" />
     <Content Include="assets\js\explore-menu.js" />
@@ -793,6 +813,7 @@
     <Content Include="Areas\Admin\Views\CourseRevision\Index.cshtml" />
     <Content Include="Areas\Admin\Views\CourseRevision\Details.cshtml" />
     <Content Include="Database\Migrations\019_CourseRevision.sql" />
+    <Content Include="Database\Migrations\020_GhiChuBaiHoc.sql" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != '' and Exists('$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets')" />

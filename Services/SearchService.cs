@@ -27,7 +27,8 @@ namespace ECOLearning.Services
     {
         public const int SoTuKhoaGoiY = 7;
         public const int SoKhoaHocGoiY = 5;
-        public const int SoGiaoVienGoiY = 2;
+        public const int SoGiaoVienGoiY = 3;
+        public const int SoGiaoVienKetQua = 20;
         public const int SoKetQuaMoiTrang = 12;
         public const int DoDaiToiDa = 100;
 
@@ -81,8 +82,34 @@ namespace ECOLearning.Services
             public string HoTen { get; set; }
             public string AnhDaiDien { get; set; }
             public string[] Tu { get; set; }
+            /// <summary>Các chữ của họ tên, chữ thường còn dấu (để nhận ra người gõ đúng cả dấu).</summary>
+            public string[] TuCoDau { get; set; }
+            public string HoTenKhongDau { get; set; }
+            /// <summary>Danh mục có nhiều khóa nhất của giáo viên, giúp phân biệt người trùng tên.</summary>
+            public string ChuyenMon { get; set; }
             public int SoKhoaHoc { get; set; }
             public int SoHocVien { get; set; }
+            public int SoDanhGia { get; set; }
+            public double DiemDanhGia { get; set; }
+        }
+
+        /// <summary>Mức khớp tên giáo viên, số nhỏ khớp tốt hơn. Từ PhatAm trở đi là khớp gần đúng.</summary>
+        public enum MucKhopTen
+        {
+            DungCoDau = 0,
+            DungKhongDau = 1,
+            GoDo = 2,
+            PhatAm = 3,
+            GoSai = 4,
+            GiongCaCum = 5
+        }
+
+        public class KetQuaGiaoVien
+        {
+            public GiaoVienChiMuc GiaoVien { get; set; }
+            public MucKhopTen Muc { get; set; }
+            public double Diem { get; set; }
+            public bool GanDung => Muc >= MucKhopTen.PhatAm;
         }
 
         public class DanhMucChiMuc
@@ -214,17 +241,29 @@ namespace ECOLearning.Services
                 ThemCumTuTuTen(cumTu, k.tenKhoaHoc, hv);
             }
 
-            // Giáo viên có khóa đang bán
+            // Giáo viên có khóa đang bán (kèm chuyên môn, học viên, đánh giá để phân biệt người trùng tên)
             cm.GiaoVien = khoa.Where(k => k.GiaoVienHoatDong && !string.IsNullOrWhiteSpace(k.TenGiaoVien))
                 .GroupBy(k => k.maGiaoVien)
-                .Select(g => new GiaoVienChiMuc
+                .Select(g =>
                 {
-                    MaGiaoVien = g.Key,
-                    HoTen = g.First().TenGiaoVien,
-                    AnhDaiDien = g.First().AnhGiaoVien,
-                    Tu = TuDuyNhat(g.First().TenGiaoVien),
-                    SoKhoaHoc = g.Count(),
-                    SoHocVien = g.Sum(x => soHocVien.ContainsKey(x.maKhoaHoc) ? soHocVien[x.maKhoaHoc] : 0)
+                    int soDanhGia = g.Sum(x => danhGia.ContainsKey(x.maKhoaHoc) ? danhGia[x.maKhoaHoc].SoLuong : 0);
+                    double tongSao = g.Sum(x => danhGia.ContainsKey(x.maKhoaHoc) ? danhGia[x.maKhoaHoc].TrungBinh * danhGia[x.maKhoaHoc].SoLuong : 0);
+                    string ten = g.First().TenGiaoVien;
+                    return new GiaoVienChiMuc
+                    {
+                        MaGiaoVien = g.Key,
+                        HoTen = ten,
+                        AnhDaiDien = g.First().AnhGiaoVien,
+                        Tu = TuDuyNhat(ten),
+                        TuCoDau = SearchText.HienThi(ten).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries),
+                        HoTenKhongDau = SearchText.KhongDau(ten),
+                        ChuyenMon = g.Where(x => !string.IsNullOrEmpty(x.TenDanhMuc)).GroupBy(x => x.TenDanhMuc)
+                            .OrderByDescending(d => d.Count()).Select(d => d.Key).FirstOrDefault(),
+                        SoKhoaHoc = g.Count(),
+                        SoHocVien = g.Sum(x => soHocVien.ContainsKey(x.maKhoaHoc) ? soHocVien[x.maKhoaHoc] : 0),
+                        SoDanhGia = soDanhGia,
+                        DiemDanhGia = soDanhGia > 0 ? Math.Round(tongSao / soDanhGia, 1) : 0
+                    };
                 })
                 .ToList();
 
@@ -397,7 +436,7 @@ namespace ECOLearning.Services
         {
             public List<string> TuKhoa { get; set; } = new List<string>();
             public List<KhoaHocChiMuc> KhoaHoc { get; set; } = new List<KhoaHocChiMuc>();
-            public List<GiaoVienChiMuc> GiaoVien { get; set; } = new List<GiaoVienChiMuc>();
+            public List<KetQuaGiaoVien> GiaoVien { get; set; } = new List<KetQuaGiaoVien>();
         }
 
         /// <summary>Mọi từ của câu tìm đều khớp một từ của cụm (từ cuối khớp tiền tố, từ dài cho phép gõ sai).</summary>
@@ -411,7 +450,7 @@ namespace ECOLearning.Services
             return true;
         }
 
-        /// <summary>Tối đa 7 từ khóa, 5 khóa học chưa sở hữu, 2 giáo viên khớp câu đang gõ.</summary>
+        /// <summary>Tối đa 7 từ khóa, 5 khóa học chưa sở hữu, 3 giáo viên khớp câu đang gõ.</summary>
         public KetQuaGoiY GoiY(string cauTim, int userId)
         {
             var kq = new KetQuaGoiY();
@@ -457,16 +496,71 @@ namespace ECOLearning.Services
             kq.KhoaHoc = XepHang(cm, cau, BoQuaKhoaDaSoHuu(userId), out motPhan)
                 .Take(SoKhoaHocGoiY).Select(x => x.Key).ToList();
 
-            // --- Giáo viên: tên khớp mọi từ (gõ "nguyen van" ra "Nguyễn Văn An")
-            kq.GiaoVien = cm.GiaoVien
-                .Select(g => new { g, khop = q.Select((t, i) => SearchText.KhopTotNhat(g.Tu, t, true, t.Length >= 4)).ToList() })
-                .Where(x => x.khop.All(d => d > 0))
-                .OrderByDescending(x => x.khop.Sum())
-                .ThenByDescending(x => x.g.SoHocVien)
-                .Take(SoGiaoVienGoiY)
-                .Select(x => x.g)
-                .ToList();
+            // --- Giáo viên: tên khớp đúng hoặc gần đúng (TimGiaoVien)
+            kq.GiaoVien = TimGiaoVien(cm, cauTim, SoGiaoVienGoiY);
             return kq;
+        }
+
+        // ================================================================== tìm giáo viên theo tên
+
+        /// <summary>
+        /// Giáo viên có tên khớp câu tìm, xếp theo mức khớp: đúng cả dấu → đúng khi bỏ dấu → gõ dở → cùng cách phát âm
+        /// ("Tran Min" ↔ "Trần Minh") → gõ sai 1–2 ký tự / đảo chữ → giống cả cụm họ tên. Mọi chữ gõ vào phải khớp một chữ
+        /// của tên (trừ mức giống cả cụm). Có người khớp đúng / gõ dở thì bỏ các kết quả gần đúng để không lẫn người khác.
+        /// Cùng mức thì người nhiều học viên, đánh giá cao đứng trước.
+        /// </summary>
+        public List<KetQuaGiaoVien> TimGiaoVien(ChiMuc cm, string cauTim, int toiDa)
+        {
+            string cau = SearchText.KhongDau(cauTim);
+            if (cau.Length > DoDaiToiDa) cau = cau.Substring(0, DoDaiToiDa).Trim();
+            var q = SearchText.Tach(cau);
+            if (q.Length == 0) return new List<KetQuaGiaoVien>();
+            var qCoDau = SearchText.HienThi(cauTim).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            bool goCoDau = cau != string.Join(" ", qCoDau);
+
+            var ketQua = new List<KetQuaGiaoVien>();
+            foreach (var g in cm.GiaoVien)
+            {
+                MucKhopTen muc = MucKhopTen.DungKhongDau;
+                double diem = 0;
+                bool khopHet = true;
+                for (int i = 0; i < q.Length; i++)
+                {
+                    bool tienTo = i == q.Length - 1 || q[i].Length >= 2;
+                    double d = SearchText.KhopTotNhat(g.Tu, q[i], tienTo, choPhatAm: true);
+                    if (d <= 0) { khopHet = false; break; }
+                    diem += d;
+                    var mucTu = d >= SearchText.KhopDung ? MucKhopTen.DungKhongDau
+                        : d >= SearchText.KhopTienTo ? MucKhopTen.GoDo
+                        : d >= SearchText.KhopPhatAm ? MucKhopTen.PhatAm : MucKhopTen.GoSai;
+                    if (mucTu > muc) muc = mucTu;
+                }
+
+                if (khopHet)
+                {
+                    if (muc == MucKhopTen.DungKhongDau && goCoDau && qCoDau.All(t => g.TuCoDau.Contains(t)))
+                        muc = MucKhopTen.DungCoDau;
+                }
+                else
+                {
+                    // Gõ thiếu / sai một âm tiết ngắn: chấp nhận khi cả cụm giống tên thật (từ 2 chữ trở lên)
+                    double giong = q.Length >= 2 ? SearchText.DoGiongCum(cau, g.HoTenKhongDau) : 0;
+                    if (giong < 0.6) continue;
+                    muc = MucKhopTen.GiongCaCum;
+                    diem = giong * q.Length;
+                }
+                ketQua.Add(new KetQuaGiaoVien { GiaoVien = g, Muc = muc, Diem = diem });
+            }
+
+            if (ketQua.Any(x => !x.GanDung)) ketQua = ketQua.Where(x => !x.GanDung).ToList();
+            return ketQua
+                .OrderBy(x => x.Muc)
+                .ThenByDescending(x => x.Diem)
+                .ThenByDescending(x => x.GiaoVien.SoHocVien)
+                .ThenByDescending(x => x.GiaoVien.DiemDanhGia)
+                .ThenBy(x => x.GiaoVien.HoTen)
+                .Take(toiDa)
+                .ToList();
         }
 
         /// <summary>Từ khóa đã có người tìm và có kết quả, chứa từ đầu tiên của câu đang gõ.</summary>
@@ -592,6 +686,24 @@ namespace ECOLearning.Services
             bool motPhan;
             var xepHang = XepHang(cm, f.Q, boQua, out motPhan);
             f.KhopMotPhan = motPhan;
+
+            // Giáo viên có tên khớp (chỉ ở trang 1): khối "Giáo viên" đầu trang, hoặc "Có phải bạn muốn tìm giáo viên…?" khi chỉ khớp gần đúng
+            if (f.Trang <= 1)
+            {
+                var giaoVien = TimGiaoVien(cm, f.Q, SoGiaoVienKetQua);
+                f.GiaoVienGanDung = giaoVien.Count > 0 && giaoVien.All(x => x.GanDung);
+                f.GiaoVien = giaoVien.Select(x => new GiaoVienTimKiem
+                {
+                    MaGiaoVien = x.GiaoVien.MaGiaoVien,
+                    HoTen = x.GiaoVien.HoTen,
+                    AnhDaiDien = x.GiaoVien.AnhDaiDien,
+                    ChuyenMon = x.GiaoVien.ChuyenMon,
+                    SoKhoaHoc = x.GiaoVien.SoKhoaHoc,
+                    SoHocVien = x.GiaoVien.SoHocVien,
+                    SoDanhGia = x.GiaoVien.SoDanhGia,
+                    DiemDanhGia = x.GiaoVien.DiemDanhGia
+                }).ToList();
+            }
 
             // Danh mục có tên khớp câu tìm
             string cau = SearchText.KhongDau(f.Q);

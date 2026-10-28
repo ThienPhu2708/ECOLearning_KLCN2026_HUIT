@@ -1,9 +1,11 @@
 ﻿@model ECOLearning.Services.CourseRevisionRow
 @{
     ViewBag.Title = "Kiểm duyệt bản sửa khóa học";
-    ViewBag.BreadcrumbCurrent = "Kiểm duyệt bản sửa";
+    ViewBag.BreadcrumbParent = "Kiểm duyệt khóa học";
+    ViewBag.BreadcrumbParentUrl = Url.Action("Index", "CourseApproval", new { area = "Admin", statusFilter = "Revisions" });
     var draft = Model.Read(); var input = draft.Model;
     var live = (ECOLearning.Models.KhoaHoc)ViewBag.LiveCourse;
+    ViewBag.BreadcrumbCurrent = "Bản sửa: " + live.tenKhoaHoc;
     var lessons = (System.Collections.Generic.List<ECOLearning.Models.BaiHoc>)ViewBag.LiveLessons;
     var fields = new[] {
         Tuple.Create("Tên khóa học", live.tenKhoaHoc, input.TenKhoaHoc),
@@ -25,7 +27,6 @@
 .rv-cell-text{display:block;max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
 </style>
 <div class="rv-page">
-<a class="rv-back" href="@Url.Action("Index", "CourseApproval", new { statusFilter = "Revisions" })"><i class="bi bi-arrow-left"></i> Kiểm duyệt khóa học</a>
 <header class="rv-head"><div><h1>Kiểm duyệt bản sửa khóa học</h1><p>@live.tenKhoaHoc · Mã @Model.CourseId</p></div><span class="rv-tag">@(Model.Status == "Pending" ? "Chờ duyệt bản sửa" : Model.Status)</span></header>
 @if(TempData["ErrorMessage"] != null){<div class="rv-error" role="alert">@TempData["ErrorMessage"]</div>}
 <section class="rv-card">

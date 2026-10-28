@@ -378,6 +378,92 @@ namespace ECOLearning.Controllers
         private int? DongBoThoiLuong(IEnumerable<BaiHoc> lessons, float doDaiTrinhPhat = 0f)
             => new LearningService(db).DongBoThoiLuong(lessons, doDaiTrinhPhat);
 
+        // ==================== GHI CHÚ BÀI HỌC ====================
+        // Lưu trên máy chủ (bảng GhiChuBaiHoc, LessonNoteService), dùng chung với API ứng dụng /api/v1/learning/{courseId}/notes
+        // nên ghi chú tạo trên web hiện trên app và ngược lại.
+
+        /// <summary>Học viên đã ghi danh và bài thuộc khóa; trả lỗi JSON nếu không (giáo viên / Admin xem thử thì không có ghi chú).</summary>
+        private JsonResult KiemTraGhiChu(string courseId, string lessonId, out int studentId)
+        {
+            studentId = 0;
+            var currentUser = GetCurrentStudent(courseId);
+            if (currentUser == null)
+                return Json(new { success = false, message = "Vui lòng đăng nhập để dùng ghi chú." }, JsonRequestBehavior.AllowGet);
+            if (string.IsNullOrEmpty(courseId) || !db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == courseId && d.maHocVien == currentUser.maNguoiDung))
+                return Json(new { success = false, preview = true, message = "Ghi chú chỉ dành cho học viên đã đăng ký khóa học." }, JsonRequestBehavior.AllowGet);
+            if (!string.IsNullOrEmpty(lessonId) && !new LearningService(db).LayBaiHoc(courseId).Any(b => b.maBaiHoc == lessonId))
+                return Json(new { success = false, message = "Không tìm thấy bài học." }, JsonRequestBehavior.AllowGet);
+            studentId = currentUser.maNguoiDung;
+            return null;
+        }
+
+        private static object GhiChuJson(LessonNoteService.GhiChu g)
+        {
+            return new { id = g.MaGhiChu, time = g.ThoiDiemGiay, text = g.NoiDung, createdAt = g.NgayTao.ToString("o") };
+        }
+
+        // GET: Learning/Notes?courseId=&lessonId=
+        [HttpGet]
+        public JsonResult Notes(string courseId, string lessonId)
+        {
+            int studentId;
+            var loi = KiemTraGhiChu(courseId, lessonId, out studentId);
+            if (loi != null) return loi;
+            Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+            var ghiChu = new LessonNoteService(db).LayTheoBai(studentId, lessonId);
+            return Json(new { success = true, notes = ghiChu.Select(GhiChuJson) }, JsonRequestBehavior.AllowGet);
+        }
+
+        // POST: Learning/AddNote (ghi chú tại mốc thời gian đang xem)
+        [HttpPost, ValidateAntiForgeryToken]
+        [StaffReadOnly]
+        public JsonResult AddNote(string courseId, string lessonId, string time, string text)
+        {
+            int studentId;
+            var loi = KiemTraGhiChu(courseId, lessonId, out studentId);
+            if (loi != null) return loi;
+            // Mốc giây đọc theo dấu chấm thập phân (currentTime của video), không theo văn hóa vi-VN của ứng dụng
+            double giay;
+            if (!double.TryParse(time, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out giay)) giay = 0;
+            var kq = new LessonNoteService(db).Them(studentId, lessonId, giay, text);
+            return kq.Success ? Json(new { success = true, message = kq.Message, note = GhiChuJson(kq.GhiChu) }) : Json(new { success = false, message = kq.Message });
+        }
+
+        // POST: Learning/DeleteNote
+        [HttpPost, ValidateAntiForgeryToken]
+        [StaffReadOnly]
+        public JsonResult DeleteNote(string courseId, int id)
+        {
+            int studentId;
+            var loi = KiemTraGhiChu(courseId, null, out studentId);
+            if (loi != null) return loi;
+            var kq = new LessonNoteService(db).Xoa(studentId, id);
+            return Json(new { success = kq.Success, message = kq.Message });
+        }
+
+        public class GhiChuTrinhDuyet
+        {
+            public double time { get; set; }
+            public string text { get; set; }
+        }
+
+        // POST: Learning/ImportNotes: chuyển ghi chú cũ trong localStorage của trình duyệt lên máy chủ (một lần cho mỗi bài)
+        [HttpPost, ValidateAntiForgeryToken]
+        [StaffReadOnly]
+        [ValidateInput(false)]
+        public JsonResult ImportNotes(string courseId, string lessonId, string notes)
+        {
+            int studentId;
+            var loi = KiemTraGhiChu(courseId, lessonId, out studentId);
+            if (loi != null) return loi;
+            List<GhiChuTrinhDuyet> ds;
+            try { ds = Newtonsoft.Json.JsonConvert.DeserializeObject<List<GhiChuTrinhDuyet>>(notes ?? "[]") ?? new List<GhiChuTrinhDuyet>(); }
+            catch (Newtonsoft.Json.JsonException) { return Json(new { success = false, message = "Dữ liệu ghi chú không hợp lệ." }); }
+            int them = new LessonNoteService(db).NhapTuTrinhDuyet(studentId, lessonId,
+                ds.Where(g => g != null).Select(g => new KeyValuePair<double, string>(g.time, g.text)));
+            return Json(new { success = true, imported = them });
+        }
+
         // POST: Learning/ResetProgress (Đặt lại toàn bộ tiến độ của khóa học để kiểm thử lại)
         [HttpPost, ValidateAntiForgeryToken]
         [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)

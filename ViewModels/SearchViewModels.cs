@@ -42,7 +42,25 @@ namespace ECOLearning.ViewModels
         /// <summary>Khóa phổ biến (khi không có kết quả).</summary>
         public List<CourseCardViewModel> KhoaPhoBien { get; set; } = new List<CourseCardViewModel>();
 
+        /// <summary>Giáo viên có tên khớp từ khóa (trang 1), đã xếp hạng (SearchService.TimGiaoVien).</summary>
+        public List<GiaoVienTimKiem> GiaoVien { get; set; } = new List<GiaoVienTimKiem>();
+
+        /// <summary>Không ai khớp đúng, chỉ có người tên gần giống: hiện "Có phải bạn muốn tìm giáo viên …?".</summary>
+        public bool GiaoVienGanDung { get; set; }
+
         public bool CoBoLoc => !string.IsNullOrEmpty(DanhMuc) || !string.IsNullOrEmpty(CapDo) || !string.IsNullOrEmpty(Gia) || Diem.HasValue;
+    }
+
+    public class GiaoVienTimKiem
+    {
+        public int MaGiaoVien { get; set; }
+        public string HoTen { get; set; }
+        public string AnhDaiDien { get; set; }
+        public string ChuyenMon { get; set; }
+        public int SoKhoaHoc { get; set; }
+        public int SoHocVien { get; set; }
+        public int SoDanhGia { get; set; }
+        public double DiemDanhGia { get; set; }
     }
 
     public class BoLocMuc
@@ -79,6 +97,10 @@ namespace ECOLearning.ViewModels
         public string Ten { get; set; }
         public string Anh { get; set; }
         public int SoKhoaHoc { get; set; }
+        public string ChuyenMon { get; set; }
+
+        /// <summary>Tên chỉ gần giống câu đang gõ (theo phát âm / gõ sai), dropdown ghi "Có phải".</summary>
+        public bool GanDung { get; set; }
         public string Url { get; set; }
     }
 }

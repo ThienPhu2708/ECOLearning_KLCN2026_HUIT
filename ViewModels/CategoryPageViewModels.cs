@@ -12,6 +12,15 @@ namespace ECOLearning.ViewModels
         public double DiemDanhGia { get; set; }
 
         public decimal GiaHienTai => Course.giaBan;
+
+        /// <summary>Nhãn góc ảnh do nơi gọi chọn (vd. "Mới", "Đánh giá cao"); null thì thẻ tự chọn như cũ.</summary>
+        public string Nhan { get; set; }
+        /// <summary>"moi" / "danhgia" / "banchay": màu của nhãn.</summary>
+        public string NhanKieu { get; set; }
+        /// <summary>Dòng ghi chú nhỏ dưới tên giáo viên (vd. "Ra mắt 19/10/2026", "Đã xem hôm qua").</summary>
+        public string GhiChu { get; set; }
+        /// <summary>true: không tự gắn "Top Trending" / "Đánh giá cao", chỉ hiện <see cref="Nhan"/> (các mục ở trang chủ).</summary>
+        public bool ChiNhanChiDinh { get; set; }
     }
 
     /// <summary>Danh mục / cấp độ kèm số khóa, dùng cho các nút lọc trên trang danh mục.</summary>

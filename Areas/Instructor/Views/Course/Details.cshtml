@@ -21,6 +21,16 @@
         });
     }
     var outlineLessons = outlineChapters.SelectMany(c => c.BaiHoc).ToList();
+    bool isPaused = Model.trangThai == ECOLearning.Services.CourseStatus.TamNgung;
+    // Nút Tạm ngưng / Mở bán lại / Xóa (partial _CourseLifecycleActions)
+    var lifecycleItem = new ECOLearning.Areas.Instructor.Models.InstructorCourseItem
+    {
+        MaKhoaHoc = Model.maKhoaHoc,
+        TenKhoaHoc = Model.tenKhoaHoc,
+        TrangThai = Model.trangThai ?? "Bản nháp",
+        SoHocVien = Model.DangKyKhoaHoc != null ? Model.DangKyKhoaHoc.Count : 0,
+        RevisionStatus = (ViewBag.CourseRevision as ECOLearning.Services.CourseRevisionRow)?.Status
+    };
 }
 
 <style>
@@ -179,6 +189,10 @@
                 else if (Model.trangThai == "Khóa vĩnh viễn")
                 {
                     badgeClass = "badge-danger"; badgeText = "Khóa vĩnh viễn";
+                }
+                else if (isPaused)
+                {
+                    badgeClass = "badge-warning"; badgeText = "Tạm ngưng bán";
                 }
             }
         </div>
@@ -396,6 +410,25 @@
             }
             <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = Model.maKhoaHoc })" class="btn btn-outline">Chỉnh sửa thông tin</a>
             <a href="@Url.Action("Index", "Analytics", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline">Báo cáo thống kê</a>
+            @Html.Partial("_CourseLifecycleActions", lifecycleItem)
+        </div>
+    }
+    else if (isPaused)
+    {
+        <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+            <div style="font-size: 24px; color: #0284C7;"><i class="bi bi-pause-circle-fill"></i></div>
+            <div>
+                <strong style="color: var(--text-heading); font-size: 15px;">Khóa học đang tạm ngưng bán</strong>
+                <div class="caption">Khóa học bị ẩn khỏi trang bán, không ai mua thêm được. Học viên đã mua vẫn học bình thường. Mở bán lại để tiếp tục bán hoặc chỉnh sửa.</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            @if (Model.DangKyKhoaHoc != null && Model.DangKyKhoaHoc.Any())
+            {
+                <a href="@Url.Action("CourseStudents", "Student", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline"><i class="bi bi-people" aria-hidden="true"></i> Xem học viên</a>
+            }
+            <a href="@Url.Action("Index", "Analytics", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline">Báo cáo thống kê</a>
+            @Html.Partial("_CourseLifecycleActions", lifecycleItem)
         </div>
     }
     else if (Model.trangThai == "ChoDuyet" || Model.trangThai == "Chờ duyệt")
@@ -453,7 +486,7 @@
             {
                 <a href="@Url.Action("CourseStudents", "Student", new { area = "Instructor", courseId = Model.maKhoaHoc })" class="btn btn-outline"><i class="bi bi-people" aria-hidden="true"></i> Xem học viên</a>
             }
-            <button class="btn btn-danger" onclick="instructorNotice('Tính năng xóa đang phát triển!');">Xóa khóa học</button>
+            @Html.Partial("_CourseLifecycleActions", lifecycleItem)
             <a href="@Url.Action("Edit", "Course", new { area = "Instructor", id = Model.maKhoaHoc })" class="btn btn-outline">Chỉnh sửa thông tin</a>
             
             <form action="@Url.Action("SubmitForApproval", "Course", new { area = "Instructor" })" method="post" style="display:inline;">

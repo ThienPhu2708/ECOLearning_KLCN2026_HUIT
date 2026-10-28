@@ -1,17 +1,13 @@
 /* Lưu mã giảm giá vào "Mã giảm giá của tôi".
-   Nút: <button data-coupon-collect data-code="BLF2026" data-label="Giảm 25%">Lưu mã</button>
-   Bấm → hộp thoại xác nhận (Views/Shared/_CouponCollectModal.cshtml) → POST Coupon/Collect.
-   Lưu xong mọi nút cùng mã trên trang chuyển thành "Đã lưu". Không có thao tác hoàn tác. */
+   Nút: <button data-coupon-collect data-code="BLF2026">Lưu mã</button>
+   Bấm là lưu ngay (POST Coupon/Collect, không hỏi xác nhận). Lưu xong mọi nút cùng mã trên trang chuyển thành "Đã lưu"
+   màu xám, không bấm lại được. Lỗi thì nút trở lại "Lưu mã" và hiện thông báo. Không có thao tác hoàn tác. */
 (function () {
-    var MODAL_ID = 'coupon-collect-modal';
-    var pendingCode = null;
-    var lastTrigger = null;
-
-    function modal() { return document.getElementById(MODAL_ID); }
-    function part(sel) { var m = modal(); return m ? m.querySelector(sel) : null; }
+    var FORM_ID = 'coupon-collect-form';
 
     function token() {
-        var input = part('input[name="__RequestVerificationToken"]') || document.querySelector('input[name="__RequestVerificationToken"]');
+        var f = document.getElementById(FORM_ID);
+        var input = f ? f.querySelector('input[name="__RequestVerificationToken"]') : null;
         return input ? input.value : '';
     }
 
@@ -19,56 +15,44 @@
         return (window.COUPON_LOGIN_URL || '/Account/Login') + '?returnUrl=' + encodeURIComponent(location.pathname + location.search);
     }
 
-    function showError(msg) {
-        var err = part('[data-cpn-error]');
-        if (!err) return;
-        err.textContent = msg || '';
-        err.style.display = msg ? 'block' : 'none';
+    function thongBao(msg) {
+        if (typeof window.showToast === 'function') window.showToast(msg, 'error');
+        else alert(msg);
     }
 
-    function setBusy(busy) {
-        var ok = part('[data-cpn-ok]');
-        if (!ok) return;
-        ok.disabled = busy;
-        ok.textContent = busy ? 'Đang lưu...' : 'Lưu mã';
+    function cacNut(code) {
+        return Array.prototype.filter.call(document.querySelectorAll('[data-coupon-collect]'), function (b) {
+            return b.getAttribute('data-code') === code;
+        });
     }
 
-    function open(btn) {
-        pendingCode = btn.getAttribute('data-code');
-        lastTrigger = btn;
-        part('[data-cpn-code]').textContent = pendingCode;
-        part('[data-cpn-label]').textContent = btn.getAttribute('data-label') || '';
-        showError('');
-        setBusy(false);
-        if (typeof openModal === 'function') openModal(MODAL_ID);
-        else modal().classList.add('active');
-        var ok = part('[data-cpn-ok]');
-        if (ok) ok.focus();
+    function dangLuu(code, busy) {
+        cacNut(code).forEach(function (b) {
+            b.disabled = busy;
+            b.setAttribute('aria-busy', busy ? 'true' : 'false');
+            b.textContent = busy ? 'Đang lưu...' : 'Lưu mã';
+        });
     }
 
-    function close() {
-        if (typeof closeModal === 'function') closeModal(MODAL_ID);
-        else modal().classList.remove('active');
-        if (lastTrigger && document.body.contains(lastTrigger)) lastTrigger.focus();
-        pendingCode = null;
-    }
-
-    function markSaved(code) {
-        document.querySelectorAll('[data-coupon-collect]').forEach(function (b) {
-            if (b.getAttribute('data-code') !== code) return;
-            var s = document.createElement('span');
-            s.className = 'cpn-btn cpn-btn-saved';
+    function daLuu(code) {
+        cacNut(code).forEach(function (b) {
+            var s = document.createElement('button');
+            s.type = 'button';
+            s.className = b.className.replace('cpn-btn-primary', '').trim() + ' cpn-btn-saved';
+            s.disabled = true;
             s.innerHTML = '<i class="bi bi-check2"></i> Đã lưu';
             b.replaceWith(s);
         });
         document.dispatchEvent(new CustomEvent('coupon:saved', { detail: { code: code } }));
     }
 
-    function submit() {
-        if (!pendingCode) return;
-        var code = pendingCode;
-        setBusy(true);
-        showError('');
+    function luu(btn) {
+        var code = btn.getAttribute('data-code');
+        if (!code || btn.disabled) return;
+        // Khách / tài khoản không dùng mã (không có token trên trang): đăng nhập trước
+        if (!document.getElementById(FORM_ID)) { window.location.href = loginUrl(); return; }
+
+        dangLuu(code, true);
         var body = new URLSearchParams();
         body.append('code', code);
         body.append('__RequestVerificationToken', token());
@@ -81,31 +65,19 @@
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 if (res.requireLogin) { window.location.href = loginUrl(); return; }
-                if (!res.success) { setBusy(false); showError(res.message); return; }
-                lastTrigger = null;
-                close();
-                markSaved(code);
+                if (!res.success) { dangLuu(code, false); thongBao(res.message || 'Không lưu được mã, vui lòng thử lại.'); return; }
+                daLuu(code); // gồm cả trường hợp mã đã có trong ví (alreadySaved)
             })
             .catch(function () {
-                setBusy(false);
-                showError('Không lưu được mã, vui lòng thử lại.');
+                dangLuu(code, false);
+                thongBao('Không lưu được mã, vui lòng thử lại.');
             });
     }
 
     document.addEventListener('click', function (e) {
         var btn = e.target.closest('[data-coupon-collect]');
-        if (btn) {
-            e.preventDefault();
-            if (!modal()) { window.location.href = loginUrl(); return; }
-            open(btn);
-            return;
-        }
-        if (e.target.closest('#' + MODAL_ID + ' [data-cpn-cancel]')) close();
-        else if (e.target.closest('#' + MODAL_ID + ' [data-cpn-ok]')) submit();
-    });
-
-    document.addEventListener('keydown', function (e) {
-        var m = modal();
-        if (e.key === 'Escape' && m && m.classList.contains('active')) close();
+        if (!btn) return;
+        e.preventDefault();
+        luu(btn);
     });
 })();

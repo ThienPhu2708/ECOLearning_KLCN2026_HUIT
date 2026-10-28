@@ -1,0 +1,59 @@
+@model ECOLearning.Areas.Instructor.Models.InstructorCourseItem
+@using ECOLearning.Services
+@*
+    Nút Tạm ngưng bán / Mở bán lại / Xóa khóa học (CourseLifecycleService).
+    ViewData["Compact"] = true: nút biểu tượng cho bảng danh sách; mặc định: nút có chữ cho thanh thao tác ở trang chi tiết.
+*@
+@{
+    bool compact = ViewData["Compact"] as bool? == true;
+    bool coTheTamNgung = CourseLifecycleService.CoTheTamNgung(Model.TrangThai) && Model.RevisionStatus != "Pending";
+    bool dangTamNgung = Model.TrangThai == CourseStatus.TamNgung;
+    bool coTheXoa = CourseLifecycleService.LyDoKhongXoa(Model.TrangThai) == null;
+    string nho = compact ? "btn-sm" : "";
+    string vuong = compact ? "width:36px;padding:0;" : "";
+    string xoaThongBao = Model.SoHocVien > 0
+        ? "Khóa học \"" + Model.TenKhoaHoc + "\" có " + Model.SoHocVien + " học viên. Khóa học sẽ ngừng bán vĩnh viễn và không còn trong danh sách của bạn; học viên đã mua vẫn học bình thường, doanh thu và báo cáo được giữ nguyên. Không thể hoàn tác."
+        : "Xóa vĩnh viễn khóa học \"" + Model.TenKhoaHoc + "\" cùng toàn bộ chương và bài học? Video, tài liệu vẫn còn trong Thư viện tài nguyên. Không thể hoàn tác.";
+}
+@if (coTheTamNgung)
+{
+    using (Html.BeginForm("Pause", "Course", new { area = "Instructor", id = Model.MaKhoaHoc }, FormMethod.Post, new { style = "display:inline;" }))
+    {
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-outline @nho" style="@vuong" title="Tạm ngưng bán" aria-label="Tạm ngưng bán"
+                data-confirm-title="Tạm ngưng bán khóa học?"
+                data-confirm-message="@("Khóa học \"" + Model.TenKhoaHoc + "\" sẽ bị ẩn khỏi trang chủ, tìm kiếm và không ai mua thêm được. Học viên đã mua vẫn học bình thường. Bạn có thể mở bán lại bất cứ lúc nào, không cần chờ duyệt.")"
+                data-confirm-accept="Tạm ngưng"
+                onclick="return instructorConfirmAction(this);">
+            <i class="bi bi-pause-circle" aria-hidden="true"></i>@(compact ? "" : " Tạm ngưng bán")
+        </button>
+    }
+}
+@if (dangTamNgung)
+{
+    using (Html.BeginForm("Resume", "Course", new { area = "Instructor", id = Model.MaKhoaHoc }, FormMethod.Post, new { style = "display:inline;" }))
+    {
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-primary @nho" style="@vuong" title="Mở bán lại" aria-label="Mở bán lại"
+                data-confirm-title="Mở bán lại khóa học?"
+                data-confirm-message="@("Khóa học \"" + Model.TenKhoaHoc + "\" sẽ hiển thị và được bán lại ngay.")"
+                data-confirm-accept="Mở bán lại"
+                onclick="return instructorConfirmAction(this);">
+            <i class="bi bi-play-circle" aria-hidden="true"></i>@(compact ? "" : " Mở bán lại")
+        </button>
+    }
+}
+@if (coTheXoa)
+{
+    using (Html.BeginForm("Delete", "Course", new { area = "Instructor", id = Model.MaKhoaHoc }, FormMethod.Post, new { style = "display:inline;" }))
+    {
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn @(compact ? "btn-outline" : "btn-danger") @nho" style="@vuong@(compact ? "color:#DC2626;" : "")" title="Xóa khóa học" aria-label="Xóa khóa học"
+                data-confirm-title="Xóa khóa học?"
+                data-confirm-message="@xoaThongBao"
+                data-confirm-accept="Xóa khóa học" data-confirm-danger
+                onclick="return instructorConfirmAction(this);">
+            <i class="bi bi-trash" aria-hidden="true"></i>@(compact ? "" : " Xóa khóa học")
+        </button>
+    }
+}

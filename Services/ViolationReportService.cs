@@ -357,8 +357,9 @@ namespace ECOLearning.Services
 
             string currentStatus = GetCourseStatus(courseId);
             if (currentStatus == null) return "Không tìm thấy khóa học!";
-            if (!CourseStatus.IsPublished(currentStatus))
-                return "Chỉ có thể tạm khóa khóa học đang được bán (đã xuất bản). Trạng thái hiện tại: " + currentStatus;
+            // Khóa giáo viên tự tạm ngưng vẫn khóa được, để không né xử lý vi phạm bằng cách tạm ngưng
+            if (!CourseStatus.IsPublished(currentStatus) && currentStatus != CourseStatus.TamNgung)
+                return "Chỉ có thể tạm khóa khóa học đang bán hoặc đang tạm ngưng bán. Trạng thái hiện tại: " + currentStatus;
 
             using (var tx = db.Database.BeginTransaction())
             {
@@ -405,8 +406,8 @@ namespace ECOLearning.Services
             string currentStatus = GetCourseStatus(courseId);
             if (currentStatus == null) return "Không tìm thấy khóa học!";
             if (currentStatus == CourseStatus.KhoaVinhVien) return "Khóa học đã bị khóa vĩnh viễn!";
-            if (currentStatus != CourseStatus.TamKhoa && !CourseStatus.IsPublished(currentStatus))
-                return "Chỉ có thể khóa vĩnh viễn khóa học đang bán hoặc đang tạm khóa!";
+            if (currentStatus != CourseStatus.TamKhoa && currentStatus != CourseStatus.TamNgung && !CourseStatus.IsPublished(currentStatus))
+                return "Chỉ có thể khóa vĩnh viễn khóa học đang bán, đang tạm ngưng hoặc đang tạm khóa!";
 
             var lastLock = currentStatus == CourseStatus.TamKhoa ? GetLatestLock(courseId) : null;
             using (var tx = db.Database.BeginTransaction())

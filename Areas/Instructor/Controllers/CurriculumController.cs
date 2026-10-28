@@ -35,6 +35,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
             if (course == null) {
                 context.Result = Json(new { success = false, message = "Không tìm thấy khóa học hoặc bạn không có quyền chỉnh sửa." }); return;
             }
+            if (course.trangThai == ECOLearning.Services.CourseStatus.TamNgung || course.trangThai == ECOLearning.Services.CourseStatus.DaXoa) {
+                context.Result = Json(new { success = false, message = "Khóa học đang tạm ngưng bán hoặc đã xóa nên không thể chỉnh sửa. Hãy mở bán lại trước." }); return;
+            }
             if (ECOLearning.Services.CourseRevisionService.Published(course.trangThai) || course.DangKyKhoaHoc.Any()) {
                 context.Result = Json(new { success = false, message = "Khóa đã xuất bản cần duyệt bản sửa. Vào Quản lý khóa học → Chỉnh sửa thông tin để lưu bản nháp và gửi Admin duyệt." }); return;
             }
@@ -76,7 +79,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
         {
             int teacherId = CurrentTeacherId;
             var teacherCourses = db.KhoaHoc
-                .Where(k => k.maGiaoVien == teacherId)
+                .Where(k => k.maGiaoVien == teacherId && k.trangThai != ECOLearning.Services.CourseStatus.DaXoa)
                 .ToList();
 
             if (!teacherCourses.Any())

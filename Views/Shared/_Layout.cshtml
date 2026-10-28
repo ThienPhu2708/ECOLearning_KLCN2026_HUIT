@@ -15,8 +15,8 @@
         <link rel="stylesheet" href="@Url.Content("~/assets/css/variables.css?v=2.0")" />
         <link rel="stylesheet" href="@Url.Content("~/assets/css/base.css?v=2.0")" />
         <link rel="stylesheet" href="@Url.Content("~/assets/css/components.css?v=2.9")" />
-        <link rel="stylesheet" href="@Url.Content("~/assets/css/coupon.css?v=1.5")" />
-        <link rel="stylesheet" href="@Url.Content("~/assets/css/search.css?v=1.0")" />
+        <link rel="stylesheet" href="@Url.Content("~/assets/css/coupon.css?v=1.6")" />
+        <link rel="stylesheet" href="@Url.Content("~/assets/css/search.css?v=1.1")" />
         <link rel="stylesheet" href="@Url.Content("~/assets/css/pagination.css?v=1.0")" />
 
         <!-- Skeleton Screen cho thẻ khóa học: hiện khung xương tới khi ảnh bìa tải xong (tối đa 2,5 giây).
@@ -88,7 +88,7 @@
         }
         @if (chiXem)
         {
-            <link rel="stylesheet" href="@Url.Content("~/assets/css/staff-readonly.css?v=1.0")" />
+            <link rel="stylesheet" href="@Url.Content("~/assets/css/staff-readonly.css?v=1.1")" />
         }
 
         @RenderSection("styles", required: false)
@@ -129,8 +129,9 @@
                         else
                         {
                             <a href="@Url.Action("Index", "Home", new { area = "" })" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")">Trang chủ</a>
-                            <a href="@Url.Action("Login", "Account", new { area = "", mode = "login" })" class="nav-link">Đăng nhập</a>
-                            <a href="@Url.Action("Login", "Account", new { area = "", mode = "register" })" class="nav-link">Đăng ký</a>
+                            @* Khách: chỉ một link "Khám phá" tới trang tất cả khóa học, không có menu xổ khi rê chuột
+                               (đăng nhập / đăng ký dùng nút "Đăng ký/ Đăng nhập" ở góc phải) *@
+                            <a href="@Url.Action("Index", "Course", new { area = "" })" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Course" ? "active" : "")">Khám phá</a>
                         }
                     </nav>
                 </div>
@@ -305,6 +306,16 @@
                 Bạn có chắc chắn muốn kết thúc phiên làm việc hiện tại?
             </p>
 
+            @{
+                // Nhãn vai trò theo tài khoản đang đăng nhập (trước đây luôn ghi "Học viên", kể cả Admin / Marketing ở chế độ chỉ xem)
+                string vaiTroDangXuat = Session["Role"] as string;
+                string tenVaiTroDangXuat = vaiTroDangXuat == "Admin" ? "Quản trị viên"
+                    : vaiTroDangXuat == "Marketing" ? "Nhân viên Marketing"
+                    : vaiTroDangXuat == "GiaoVien" ? "Giáo viên" : "Học viên";
+                string mauVaiTroDangXuat = vaiTroDangXuat == "Admin" ? "background: #EEF2FF; color: #434CE8;"
+                    : vaiTroDangXuat == "Marketing" ? "background: #FFF7ED; color: #C2410C;"
+                    : vaiTroDangXuat == "GiaoVien" ? "background: #F0FDFA; color: #0D9488;" : "background: #ECFDF5; color: #10B981;";
+            }
             @if (User.Identity.IsAuthenticated || Session["UserId"] != null)
             {
                 <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 14px; text-align: left;">
@@ -312,17 +323,21 @@
                     <div style="flex: 1; line-height: 1.3;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
                             <strong style="font-size: 14px; color: #0F172A;">@(Session["FullName"]?.ToString() ?? User.Identity.Name)</strong>
-                            <span class="badge badge-success" style="font-size: 11px; padding: 2px 8px; background: #ECFDF5; color: #10B981; border-radius: 9999px;">Học viên</span>
+                            <span class="badge" style="font-size: 11px; padding: 2px 8px; @mauVaiTroDangXuat border-radius: 9999px;">@tenVaiTroDangXuat</span>
                         </div>
                         <div style="font-size: 12px; color: #64748B;">@(Session["Email"]?.ToString() ?? "")</div>
                     </div>
                 </div>
             }
 
-            <div style="background: rgba(67, 76, 232, 0.05); border: 1px dashed rgba(67, 76, 232, 0.25); border-radius: 12px; padding: 12px 14px; font-size: 13px; color: #475569; line-height: 20px; text-align: left; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 8px;">
-                <i class="bi bi-info-circle-fill text-primary" style="font-size: 15px; margin-top: 2px;"></i>
-                <span>Hệ thống đã tự động lưu toàn bộ tiến độ video và khóa học của bạn. Khi đăng xuất, bạn sẽ được đưa về <strong>Trang chủ</strong> an toàn.</span>
-            </div>
+            @* Thông báo lưu tiến độ học chỉ dành cho học viên / giáo viên; Admin / Marketing ở chế độ chỉ xem không có tiến độ *@
+            @if (!chiXem)
+            {
+                <div style="background: rgba(67, 76, 232, 0.05); border: 1px dashed rgba(67, 76, 232, 0.25); border-radius: 12px; padding: 12px 14px; font-size: 13px; color: #475569; line-height: 20px; text-align: left; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 8px;">
+                    <i class="bi bi-info-circle-fill text-primary" style="font-size: 15px; margin-top: 2px;"></i>
+                    <span>Hệ thống đã tự động lưu toàn bộ tiến độ video và khóa học của bạn. Khi đăng xuất, bạn sẽ được đưa về <strong>Trang chủ</strong> an toàn.</span>
+                </div>
+            }
 
             @using (Html.BeginForm("Logout", "Account", new { area = "" }, FormMethod.Post, new { id = "logout-form" }))
             {
@@ -332,7 +347,7 @@
                         <i class="bi bi-box-arrow-right" style="font-size: 18px;"></i>
                         <span>Đăng xuất</span>
                     </button>
-                    <button type="button" class="btn btn-outline btn-md" data-modal-close style="width: 100%; height: 44px; border-radius: 12px; font-weight: 600;">Hủy và tiếp tục học</button>
+                    <button type="button" class="btn btn-outline btn-md" data-modal-close style="width: 100%; height: 44px; border-radius: 12px; font-weight: 600;">@(chiXem ? "Hủy" : "Hủy và tiếp tục học")</button>
                 </div>
             }
         </div>
@@ -376,15 +391,15 @@ window.SEARCH_SUGGEST_URL = '@Url.Action("Suggest", "Search", new { area = "" })
 </script>
 <script src="@Url.Content("~/assets/js/explore-menu.js?v=1.1")"></script>
 <script src="@Url.Content("~/assets/js/favorite.js?v=1.2")"></script>
-<script src="@Url.Content("~/assets/js/coupon-wallet.js?v=1.0")"></script>
-<script src="@Url.Content("~/assets/js/search-suggest.js?v=1.1")"></script>
+<script src="@Url.Content("~/assets/js/coupon-wallet.js?v=1.1")"></script>
+<script src="@Url.Content("~/assets/js/search-suggest.js?v=1.3")"></script>
 @* Admin / Marketing xem trang học viên vẫn bị đá ra khi tài khoản đăng nhập nơi khác; trang Đăng nhập hiện pop-up sau khi bị đá *@
 @Html.Partial("_PhienDangNhap")
 @RenderSection("scripts", required: false)
 @if (chiXem)
 {
     @* Sau mọi script của trang để đánh dấu cả nút do trang tạo ra; chặn bấm ở pha capture nên chạy trước các xử lý gốc *@
-    <script src="@Url.Content("~/assets/js/staff-readonly.js?v=1.0")"></script>
+    <script src="@Url.Content("~/assets/js/staff-readonly.js?v=1.1")"></script>
 }
 </body>
 </html>

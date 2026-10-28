@@ -1,7 +1,8 @@
 /**
  * table-pagination.js — Phân trang phía trình duyệt cho bảng trong khu vực Admin & Giáo viên.
  *
- * Cách dùng: thêm data-paginate="10" vào <table> (số dòng mỗi trang).
+ * Cách dùng: thêm data-paginate="10" vào <table> (số dòng mỗi trang). Danh sách không phải bảng (vd. <ul>) cũng dùng được:
+ *   mỗi phần tử con trực tiếp là một mục.
  * - Chỉ đếm các dòng dữ liệu trong <tbody>; dòng thông báo "không có dữ liệu" (1 ô colspan) được bỏ qua.
  * - Tôn trọng bộ lọc / tìm kiếm sẵn có của trang: dòng bị ẩn bằng style.display = 'none'
  *   hoặc thuộc tính hidden được coi là không khớp bộ lọc. Khi bộ lọc thay đổi, phân trang tự tính lại
@@ -18,7 +19,7 @@
     var style = document.createElement('style');
     style.id = 'tp-style';
     style.textContent =
-      'tr.' + HIDE_CLASS + '{display:none !important;}' +
+      '.' + HIDE_CLASS + '{display:none !important;}' +
       '.tp-pager[hidden]{display:none !important;}' +
       '.tp-pager{margin-top:16px;gap:12px;flex-wrap:wrap;}' +
       '.tp-pager .page-link{cursor:pointer;min-width:36px;}' +
@@ -51,20 +52,24 @@
     table.dataset.tpReady = '1';
 
     var pageSize = parseInt(table.getAttribute('data-paginate'), 10) || 10;
-    var tbody = table.tBodies[0];
+    var isTable = table.tagName === 'TABLE';
+    var tbody = isTable ? table.tBodies[0] : table;
     if (!tbody) return;
+    var items = function () {
+      return isTable ? Array.prototype.filter.call(tbody.rows, isDataRow) : Array.prototype.slice.call(tbody.children);
+    };
 
     var pager = document.createElement('div');
     pager.className = 'pagination-container tp-pager';
     // Đặt thanh phân trang ngay dưới khung chứa bảng (không nằm trong vùng cuộn ngang của bảng)
-    var anchor = table.closest('.table-responsive')
+    var anchor = !isTable ? table : table.closest('.table-responsive')
       || (table.parentElement && table.parentElement.children.length === 1 ? table.parentElement : table);
     anchor.parentNode.insertBefore(pager, anchor.nextSibling);
 
     var state = { page: 1, signature: '' };
 
     function render() {
-      var rows = Array.prototype.filter.call(tbody.rows, isDataRow);
+      var rows = items();
       var visible = rows.filter(matchesFilter);
       var signature = visible.length + ':' + rows.length;
       if (signature !== state.signature) {
@@ -133,7 +138,7 @@
 
   function init() {
     injectStyle();
-    document.querySelectorAll('table[data-paginate]').forEach(setup);
+    document.querySelectorAll('[data-paginate]').forEach(setup);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

@@ -139,7 +139,8 @@
                                 </div>
                             </td>
                             <td><strong>@item.TenDanhMuc</strong></td>
-                            <td class="cell-wrap">@(string.IsNullOrEmpty(item.MoTa) ? "Chưa có mô tả" : item.MoTa)</td>
+                            @* Mô tả dài hơn 54 ký tự thì rút gọn kèm "...", rê chuột để xem đủ *@
+                            <td class="cell-wrap" title="@(item.MoTa != null && item.MoTa.Length > 54 ? item.MoTa : null)">@(string.IsNullOrEmpty(item.MoTa) ? "Chưa có mô tả" : item.MoTa.Length > 54 ? item.MoTa.Substring(0, 54).TrimEnd() + "..." : item.MoTa)</td>
                             <td>
                                 @if (item.SoKhoaHoc > 0)
                                 {
@@ -432,6 +433,16 @@
         }
 
         function setCategoryStatus(id, name, active, courseCount) {
+            // Danh mục còn khóa học thì không cho tạm ngưng (server cũng kiểm tra lại)
+            if (!active && courseCount > 0) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Không thể tạm ngưng',
+                    text: `Danh mục "${name}" đang có ${courseCount} khóa học. Hãy chuyển các khóa học sang danh mục khác trước khi tạm ngưng.`,
+                    confirmButtonText: 'Đã hiểu'
+                });
+                return;
+            }
             const text = active
                 ? `Danh mục "${name}" sẽ hiển thị lại trong bộ lọc của học viên và trong danh sách chọn khi giáo viên tạo khóa học.`
                 : `Danh mục "${name}" sẽ bị ẩn khỏi bộ lọc của học viên và danh sách chọn khi giáo viên tạo khóa học.`

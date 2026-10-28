@@ -1114,7 +1114,141 @@ thiếu bằng `Database/Migrations/018_Marketing_DacTa.sql`. Ánh xạ tên: `l
 - **Lên hosting**: thêm khóa R2 vào `Secrets.config` trên hosting và tải `ffmpeg.exe` (bản static) vào `App_Data` bằng File Manager (cả hai không đi theo Publish).
   Chạy `r2-migration.sql` trên CSDL hosting sau khi đã chuyển video cũ ở máy local.
 
-## 29. Việc còn lại / cần quyết định
+## 29. Ghi chú bài học đồng bộ web và ứng dụng (mới, **chưa commit**)
+
+- Trước đây ghi chú ở trang học (Learning/Study) lưu trong `localStorage` của trình duyệt: đổi máy / trình duyệt là mất, app không thấy.
+  Nay lưu trong bảng `GhiChuBaiHoc` (`Database/Migrations/020_GhiChuBaiHoc.sql`), nghiệp vụ chung ở `Services/LessonNoteService.cs`
+  (nội dung 1–1000 ký tự, tối đa 200 ghi chú mỗi bài, mốc giây của video; chỉ học viên đã ghi danh, chỉ sửa / xóa ghi chú của mình;
+  xóa bài học thì xóa luôn ghi chú).
+- **Web**: `Learning/Notes`, `AddNote`, `DeleteNote`; mở bài học thì ghi chú cũ còn trong `localStorage` được chuyển lên máy chủ một lần
+  (`ImportNotes`, bỏ trùng). Mở bảng ghi chú là tải lại nên thấy ngay ghi chú vừa tạo trên app.
+- **API** (Bearer token, cùng kiểm tra quyền học với G2–G4):
+
+  | | Đường dẫn | Ghi chú |
+  |---|---|---|
+  | G5 | `GET /api/v1/learning/{courseId}/notes?lessonId=` | Ghi chú cả khóa (theo thứ tự bài rồi mốc giây), hoặc một bài |
+  | G6 | `GET /api/v1/learning/{courseId}/lessons/{lessonId}/notes` | Ghi chú của một bài |
+  | G7 | `POST /api/v1/learning/{courseId}/lessons/{lessonId}/notes` | Body `{ "positionSeconds": 75, "content": "..." }` |
+  | G8 | `PUT /api/v1/notes/{id}` | Body `{ "content": "...", "positionSeconds": 80 }` (bỏ `positionSeconds` thì giữ mốc cũ) |
+  | G9 | `DELETE /api/v1/notes/{id}` | |
+
+  Mỗi ghi chú: `id, courseId, lessonId, lessonTitle, positionSeconds, content, createdAt, updatedAt`. Mã lỗi: `NOTE_EMPTY`, `NOTE_TOO_LONG`,
+  `NOTE_LIMIT`, `NOTE_NOT_FOUND` (cả khi là ghi chú của người khác), `LESSON_NOT_FOUND`, `NOT_ENROLLED`, `COURSE_LOCKED`, `NOTES_NOT_INSTALLED` (503, chưa chạy 020).
+- **Kiểm thử** (IIS Express): tạo trên app → web thấy, tạo trên web → app thấy, sửa / xóa, kiểm tra dữ liệu, người khác không sửa / xóa được,
+  chuyển ghi chú cũ từ trình duyệt không nhân đôi: 27/27 đạt. Dữ liệu test đã xóa.
+- **Lên hosting**: chạy `020_GhiChuBaiHoc.sql` (bỏ dòng `USE`) cùng lúc với bản publish này.
+
+## 30. Trợ lý ECO: chatbot Gemini + công cụ tra dữ liệu (mới, **chưa commit**)
+
+Trang thử: `/Chatbot` (chưa gắn khung chat nổi vào mọi trang). **Đang tắt**: chỉ bật khi `Chatbot:Enabled = true` (mục 32). Hiện có công cụ **tìm khóa học**; tiến độ học, đơn hàng, mã giảm giá, chính sách là bước sau.
+
+| Thành phần | Việc làm |
+| :--- | :--- |
+| `Services/GeminiClient.cs` | Gọi `generateContent` bằng HttpClient. Mô hình chính `Gemini:Model`, dự phòng `Gemini:FallbackModel` (ghi được nhiều tên, ngăn cách dấu phẩy). 5xx / hết giờ: thử lại 3 lần (1 s, 2 s). 429 hoặc 404: sang mô hình kế ngay, nhớ mô hình hết hạn mức tới khi hết thời gian Google báo (tối đa 30 phút). 400 / 401 / 403: báo ngay. `Gemini:ThinkingLevel` mặc định `low` (nhanh hơn khoảng 2-3 lần, vẫn gọi công cụ đúng) |
+| `Services/ChatbotCongCu.cs` | Khai báo công cụ cho Gemini và chạy chúng. Gemini chỉ đề nghị gọi (tên + tham số), **server chạy**. `tim_khoa_hoc` (tuKhoa, giaToiDa, capDo, sapXep, soLuong) dùng lại `SearchService` nên có tìm gần đúng. Mã người dùng lấy từ Session, không nhận từ Gemini; công cụ chỉ đọc |
+| `Services/ChatbotService.cs` | Hướng dẫn hệ thống (chỉ dùng dữ liệu từ công cụ, từ chối ngoài phạm vi, chống chèn lệnh), vòng lặp gọi công cụ tối đa 4 lượt, nhớ 10 lượt gần nhất |
+| `Controllers/ChatbotController.cs` | `POST /Chatbot/Hoi`, `/Chatbot/Xoa` (có token chống giả mạo). Lịch sử ở Session. Giới hạn 20 câu / 10 phút cho mỗi người (khách theo IP). Câu hỏi tối đa 500 ký tự |
+| `Views/Chatbot/Index.cshtml` | Trang chat, thẻ khóa học bấm được, dòng nhỏ hiện mô hình và thời gian trả lời (để thử nghiệm) |
+
+**Cấu hình** (`Secrets.config`, mẫu ở `Secrets.config.example`): `Gemini:ApiKey`, `Gemini:Model` (đang dùng `gemini-3.5-flash`), `Gemini:FallbackModel` (`gemini-3.5-flash-lite`), `Gemini:ThinkingLevel`. Khóa lấy ở aistudio.google.com bằng dự án **không gắn thanh toán** (gói miễn phí). Không cần migration.
+
+**Giới hạn gói miễn phí (đo ngày 27/10/2026):** mỗi mô hình chỉ **20 yêu cầu mỗi ngày** (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`), reset khoảng 21 giờ sau. Một câu hỏi dùng 2 yêu cầu (chọn công cụ, rồi viết câu trả lời), nên mỗi mô hình trả lời khoảng 10 câu mỗi ngày. Gói miễn phí còn được Google dùng nội dung gửi lên để cải thiện sản phẩm: chỉ dùng dữ liệu demo. `gemini-3.8-flash` hay báo 503 quá tải, không dùng làm mô hình chính.
+
+**Đã thử:** 16 kiểm thử tự động (đầu vào rỗng / quá dài / sai token, giá lọc đúng với CSDL, mọi thẻ là khóa thật, nhớ ngữ cảnh, từ chối ngoài phạm vi, không lộ hướng dẫn hệ thống), cộng chuyển mô hình dự phòng khi chính hỏng, cả hai hỏng, sai khóa, 429, danh sách nhiều mô hình dự phòng.
+
+## 31. API tài liệu bài học cho ứng dụng (mới, **chưa commit**)
+
+Trước đây app không lấy được tài liệu giáo viên đính kèm bài học. Nay app đọc **cùng bảng `TaiNguyen`** với trang học trên web,
+nên giáo viên tải tài liệu lên là cả web và app thấy ngay, không cần đồng bộ riêng. Không cần migration.
+
+- **File**: `Services/LessonDocumentService.cs` (đọc thông tin tệp, tìm đường dẫn thật trên máy chủ), `Controllers/Api/LearningApiController.cs`
+  (G10–G12, thêm trường vào G2 / G3), `Controllers/Api/CatalogApiController.cs` (B3). Postman: đã thêm G10–G12 và biến `documentId`
+  vào `Tuan10\ECOLearning_API.postman_collection.json`.
+- **API** (Bearer token; phải đã ghi danh khóa, cùng kiểm tra quyền với G2–G9):
+
+  | | Đường dẫn | Ghi chú |
+  |---|---|---|
+  | G10 | `GET /api/v1/learning/{courseId}/documents?lessonId=` | Tài liệu cả khóa theo thứ tự bài (thêm `lessonId` để lọc một bài). Trả `{ courseId, total, items }` |
+  | G11 | `GET /api/v1/learning/{courseId}/lessons/{lessonId}/documents` | Tài liệu một bài |
+  | G12 | `GET /api/v1/documents/{id}/download?inline=true` | Trả **nội dung tệp**, không phải JSON. `inline=true` mở xem pdf / txt / csv; loại khác luôn tải về |
+  | G2 | (bổ sung) | Mỗi bài thêm `documentsCount`; thêm `totalDocuments` của khóa |
+  | G3 | (bổ sung) | Thêm mảng `documents` của bài (cùng dạng G10), màn hình bài học không cần gọi thêm |
+  | B3 | (bổ sung) | Thêm `documentsCount` của khóa (không cần đăng nhập), để trang giới thiệu hiện "x tài liệu" |
+
+  Mỗi tài liệu: `id, courseId, lessonId, lessonTitle, title` (tên hiển thị, không đuôi), `fileName` (tên lưu về máy, có đuôi),
+  `fileType` (pdf, docx, xlsx, pptx, zip, txt, csv), `mimeType, sizeBytes` (null nếu không đọc được), `uploadedAt`,
+  `isAvailable` (false: tệp đã mất trên máy chủ, app nên làm mờ nút tải), `canPreview, downloadUrl, previewUrl` (null nếu không xem trực tiếp được).
+- **Cách app tải tệp**: gọi `downloadUrl` **kèm header `Authorization: Bearer`** (ví dụ Dio `download()`), lưu bằng `fileName`, rồi mở bằng
+  ứng dụng trên máy (open_file...). Không mở thẳng `downloadUrl` bằng trình duyệt ngoài vì trình duyệt không gửi token (sẽ nhận 401).
+  Tên tệp tiếng Việt nằm trong header `Content-Disposition` dạng `filename*=UTF-8''...`; app dùng sẵn `fileName` trong JSON là đủ.
+  Tài liệu là liên kết ngoài (http) thì G12 trả 302 tới địa chỉ đó.
+- **Mã lỗi**: `UNAUTHORIZED` (401), `NOT_ENROLLED` / `COURSE_LOCKED` (403), `COURSE_NOT_FOUND`, `LESSON_NOT_FOUND`,
+  `DOCUMENT_NOT_FOUND`, `FILE_NOT_FOUND` (404, tệp không còn trên máy chủ).
+- **An toàn**: API không trả đường dẫn tệp tĩnh `/Uploads/...`; chỉ đọc tệp trong `~/Uploads/` hoặc `~/Content/Uploads/` với đuôi giáo viên
+  được phép tải lên (đường dẫn lạ trong CSDL, ví dụ `../Web.config`, bị coi là tệp không có).
+- **Kiểm thử** (IIS Express, dữ liệu tạm đã xóa): 34/34 đạt, gồm danh sách / lọc theo bài / thứ tự bài, tên và loại tệp với dữ liệu cũ
+  (`loaiTaiNguyen` ".pdf" hoặc "DOCX", tên thiếu đuôi), tải đúng từng byte, inline / attachment, tên tệp tiếng Việt, 401 / 403 / 404,
+  liên kết ngoài 302, đường dẫn `../Web.config` không lộ nội dung, trang học web hiện đúng tài liệu app nhận được.
+- **Còn lại**: trang học **web** vẫn link thẳng tệp tĩnh `/Uploads/...` (ai có link đều tải được, giống video cũ). Có thể chuyển web sang
+  tải qua một action kiểm tra quyền như G12 nếu cần.
+
+## 32. API trang chủ học viên, tìm giáo viên; tắt chatbot khi publish (mới, **chưa commit**)
+
+- **I1 `GET /api/v1/home`** (`Controllers/Api/HomeApiController.cs`): gọi `HomeSectionService` như trang chủ web, trả các mục theo đúng thứ tự:
+  `continue-learning`, `favorites`, `best-sellers`, `because-you-learned`, `top-rated`, `new-releases`, `featured-teachers`, `recently-viewed`.
+  Mọi mục cùng khung `{ key, type, title, subtitle, total, period, anchorCourseId, anchorCourseTitle, items }`; thẻ khóa học = trường của B2 +
+  `badge`, `note`, `enrollmentsInPeriod`. Không token: chỉ 4 mục chung. Mục không có dữ liệu / lỗi riêng thì bỏ qua, mục khác vẫn trả.
+  Danh mục (B1), mã khuyến mãi (`/coupons/collectable`), gợi ý riêng (C1) dùng API có sẵn.
+- **Tìm giáo viên** (`CatalogApiController`, dùng `SearchService.TimGiaoVien` của web): B5 thêm `teachers`; **B9** `GET /teachers/search?q=`
+  (`isApproximate` = chỉ có người tên gần giống); **B10** `GET /teachers/{id}` hồ sơ công khai + khóa đang bán (không trả email, số điện thoại,
+  ngân hàng; không phải giáo viên thì 404 `TEACHER_NOT_FOUND`); **B2** thêm `instructorId`.
+- **Tắt chatbot**: `ChatbotController` chỉ chạy khi `Secrets.config` có `Chatbot:Enabled = true` (kiểm tra ở `OnAuthorization` để cả POST cũng
+  trả 404). Không khai báo = tắt, nên bản publish lên hosting không mở `/Chatbot`.
+- **Kiểm thử** (so trực tiếp với trang web cùng tài khoản): 43/43 (từng mục trang chủ cùng khóa, cùng thứ tự, cùng nhãn với web; tìm giáo viên
+  5 cách gõ cho cùng kết quả với trang tìm kiếm và gợi ý của web; hồ sơ không lộ thông tin riêng; chatbot 404) + mục Yêu thích 2/2 (thả tim tạm rồi bỏ).
+- **Tài liệu cho nhóm App**: `Tuan11\Tuan11.docx` (phần "Hướng dẫn API cho ứng dụng": Ghi chú, Tài liệu, Trang chủ, Tìm giáo viên);
+  Postman `Tuan10\ECOLearning_API.postman_collection.json` đã có G5 – G12, B9, B10, nhóm I.
+
+## 33. Nhập nhanh bài học từ CSV cho giáo viên (**đã gỡ bỏ**)
+
+- Chức năng tạm thời phục vụ demo (chọn file CSV 3 cột Chương, Bài học, Video + các file video, hệ thống tạo chương / bài và tải video lần lượt),
+  kiểm thử đạt 31/31, sau khi nhóm test xong đã **gỡ khỏi hệ thống**: xóa `CourseImportController`, view `CourseImport/Index`, mục menu trái
+  và các nút "Nhập nhanh từ CSV" (trang đề cương, chi tiết, sửa khóa học). Các chương / bài đã nhập trước đó là dữ liệu bình thường, vẫn giữ nguyên.
+
+## 34. Sửa lỗi mục tiêu đầu ra dài bị cắt vụn (**chưa commit**)
+
+- **Lỗi**: trang chi tiết khóa học và thẻ khóa học (trang chủ, danh sách) tách `mucTieuDauRa` theo cả dấu phẩy, nên một mục tiêu như
+  "Hiểu cú pháp cơ bản, biến, kiểu dữ liệu (chuỗi, danh sách...)" bị cắt thành nhiều mục rời, vỡ bố cục 2 cột.
+- **Sửa**: `Services/CourseOutcomes.cs` (`Tach`) dùng chung cho `Views/Course/Details.cshtml`, `Views/Shared/_CourseCard.cshtml`,
+  `Views/Home/Index.cshtml` và API B3 (`outcomes`): tách theo dòng; dữ liệu cũ không có xuống dòng thì tách theo `;`; **không** tách theo dấu phẩy.
+- **Ô nhập của giáo viên** (`Areas/Instructor/Views/Course/Create.cshtml`, dùng cho cả Tạo và Sửa khóa học): mỗi mục tiêu là ô tự giãn chiều cao
+  (`assets/js/outcome-field.js`), đọc được hết câu dài, tối đa 250 ký tự, Enter thêm dòng mới, dán nhiều dòng thì gộp thành một dòng.
+- `Areas/Instructor/Views/Course/Edit.cshtml` **không được dùng** (action Edit trả về view Create): sửa giao diện trang Sửa khóa học ở Create.cshtml.
+- **Kiểm thử**: 13/13 (trang chi tiết, API, dữ liệu cũ dạng `;`, ô nhập trang Tạo / Sửa trên Edge headless).
+
+## 35. Giáo viên Tạm ngưng / Mở bán lại / Xóa khóa học (**chưa commit**)
+
+- **Trạng thái mới** (`Services/CourseStatus.cs`, không cần migration): `Tạm ngưng` (giáo viên ngưng bán), `Đã xóa` (xóa mềm).
+  Cả hai không nằm trong nhóm "đang bán" nên trang chủ, tìm kiếm, danh sách, giỏ hàng, API tự loại ra; trang học chỉ chặn
+  `Khóa vĩnh viễn` nên **học viên đã mua vẫn học** ở cả hai trạng thái.
+- **Quy tắc** (`Services/CourseLifecycleService.cs`):
+  - Tạm ngưng: chỉ khóa đang xuất bản, không có bản sửa đang chờ duyệt. Mở bán lại: về `Đã xuất bản` ngay, không cần Admin duyệt.
+    Trong lúc tạm ngưng không sửa nội dung / đề cương / gửi duyệt (mở bán lại trước, sửa đi qua luồng duyệt bản sửa như cũ).
+  - Xóa: không xóa khóa đang chờ duyệt, đang xử lý vi phạm (Tạm khóa, Khóa vĩnh viễn) hoặc đang tạm ẩn.
+    Khóa **chưa có lịch sử** (đăng ký, đơn hàng, đánh giá, tiến độ, báo cáo / xử lý vi phạm, quiz) thì **xóa hẳn** cả chương, bài, bài lẻ,
+    tài liệu, yêu cầu duyệt; video vẫn còn trong Thư viện tài nguyên. **Đã có lịch sử** thì **xóa mềm**: khóa biến mất khỏi khu giáo viên
+    (danh sách, chi tiết, tổng quan, đề cương), doanh thu / phiếu chi / danh sách học viên vẫn tính khóa này.
+  - Mọi thao tác kiểm tra khóa thuộc giáo viên đang đăng nhập; đổi trạng thái có điều kiện trạng thái cũ (tránh bấm hai lần).
+- **Giao diện**: nút ở danh sách khóa học (biểu tượng, thêm tab "Tạm ngưng") và thanh thao tác trang chi tiết (partial
+  `Areas/Instructor/Views/Course/_CourseLifecycleActions.cshtml`), hộp xác nhận nói rõ hệ quả (`instructorConfirmAction` trong layout).
+  Nút "Xóa khóa học" cũ chỉ báo "đang phát triển" đã được thay bằng chức năng thật. Sửa kèm: trang Tổng quan giáo viên trước đây hiện khóa
+  `Đã xuất bản` thành "Bản nháp" (dùng `CourseStatus.TeacherBadgeText`).
+- **Admin**: vẫn Tạm khóa / Khóa vĩnh viễn được khóa đang tạm ngưng (`ViolationReportService`), để giáo viên không né xử lý vi phạm
+  bằng cách tạm ngưng; mở lại sau vi phạm trả về `Tạm ngưng`. Thống kê hiện nhóm "Tạm ngưng (GV ngưng bán)", "Đã xóa (GV xóa)".
+- **Kiểm thử**: 31/31 (nút đúng theo trạng thái, tạm ngưng → ẩn trang bán / API / giỏ hàng nhưng học viên vẫn học, chặn sửa và đề cương,
+  mở bán lại, xóa hẳn khóa nháp và khóa đang bán chưa có học viên, xóa mềm khóa có học viên, chặn khóa chờ duyệt / khóa người khác / xóa lại).
+
+## 36. Việc còn lại / cần quyết định
 
 | Việc | Ghi chú |
 | :--- | :--- |

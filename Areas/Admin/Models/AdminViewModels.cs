@@ -8,6 +8,8 @@ namespace ECOLearning.Areas.Admin.Models
         public string Label { get; set; }
         public double Value { get; set; }
         public string Color { get; set; }
+        /// <summary>Số lượng thật (vd. số khóa học) để hiện khi rê chuột; 0 nếu không dùng.</summary>
+        public int Count { get; set; }
     }
 
     public class PendingCourseItem
@@ -33,17 +35,35 @@ namespace ECOLearning.Areas.Admin.Models
         public int PendingCoursesCount { get; set; }
         public int PendingViolationReports { get; set; }
         public List<PendingCourseItem> PendingCourses { get; set; }
-        public List<int> MonthlyGrowthData { get; set; }
-        public List<string> MonthlyGrowthLabels { get; set; }
         public List<DonutSegmentItem> CategoryDonutSegments { get; set; }
+        /// <summary>Doanh thu thực thu tháng này và tháng trước (so sánh ở thẻ KPI).</summary>
+        public decimal RevenueThisMonth { get; set; }
+        public decimal RevenueLastMonth { get; set; }
+        /// <summary>Các năm có dữ liệu để chọn ở bộ lọc biểu đồ (mới nhất trước).</summary>
+        public List<int> ChartYears { get; set; }
+        public List<RecentOrderItem> RecentOrders { get; set; }
+        /// <summary>Danh mục (mã, tên) cho bộ lọc card "Top giáo viên".</summary>
+        public List<KeyValuePair<string, string>> CategoryOptions { get; set; }
 
         public AdminDashboardViewModel()
         {
+            CategoryOptions = new List<KeyValuePair<string, string>>();
             PendingCourses = new List<PendingCourseItem>();
-            MonthlyGrowthData = new List<int>();
-            MonthlyGrowthLabels = new List<string>();
             CategoryDonutSegments = new List<DonutSegmentItem>();
+            ChartYears = new List<int>();
+            RecentOrders = new List<RecentOrderItem>();
         }
+    }
+
+    public class RecentOrderItem
+    {
+        public string MaDonHang { get; set; }
+        public DateTime? NgayDat { get; set; }
+        public int MaHocVien { get; set; }
+        public string TenHocVien { get; set; }
+        public int SoKhoaHoc { get; set; }
+        public decimal TongTien { get; set; }
+        public string TrangThai { get; set; }
     }
 
     public class CategoryViewModel
@@ -142,6 +162,32 @@ namespace ECOLearning.Areas.Admin.Models
         public int PublishedCourseCount { get; set; }
         public int Orders { get; set; }
         public decimal Revenue { get; set; }
+    }
+
+    /// <summary>Trang Báo cáo hệ thống: khung trang, các card tự lấy số liệu theo bộ lọc riêng.</summary>
+    public class SystemReportPageViewModel
+    {
+        public List<int> Years { get; set; } = new List<int>();
+        public List<KeyValuePair<string, string>> Categories { get; set; } = new List<KeyValuePair<string, string>>();
+        public int TotalInstructors { get; set; }
+        public int InstructorsWithPublishedCourse { get; set; }
+        public int PendingTeacherApplications { get; set; }
+        public VideoStorageSummary Video { get; set; }
+    }
+
+    /// <summary>Card Lưu trữ video (Cloudflare R2 + ffmpeg) trong trang Báo cáo hệ thống.</summary>
+    public class VideoStorageSummary
+    {
+        public bool R2DaCauHinh { get; set; }
+        public string TenBucket { get; set; }
+        public bool FfmpegSanSang { get; set; }
+        public string FfmpegThongTin { get; set; }
+        public int BaiTrenR2 { get; set; }
+        public int BaiTrenMayChu { get; set; }
+        public int FileTrenMayChu { get; set; }
+        public bool CoFileSql { get; set; }
+        public List<ECOLearning.Services.VideoStorageService.CongViecVideo> DangCho { get; set; }
+        public List<ECOLearning.Services.VideoStorageService.KetQuaVideo> LichSu { get; set; }
     }
 
     public class SystemReportViewModel

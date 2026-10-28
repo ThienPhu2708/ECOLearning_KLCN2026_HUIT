@@ -1,4 +1,4 @@
-@helper ChamDo(string key, int soLuong, string donVi)
+﻿@helper ChamDo(string key, int soLuong, string donVi)
 {
     <span class="sb-dot" data-pending="@key" data-unit="@donVi" title="@soLuong @donVi chờ xử lý" hidden="@(soLuong > 0 ? null : "hidden")"><span class="sb-sr">@soLuong @donVi chờ xử lý</span></span>
 }
@@ -166,10 +166,6 @@
                     Chi trả giáo viên
                     @ChamDo("payouts", choXuLy.ChiTra, "phiếu chi")
                 </a>
-                <a href="@Url.Action("Index", "VideoStorage", new { area = "Admin" })" class="sidebar-item @(currentController == "VideoStorage" ? "active" : "")">
-                    <i class="bi bi-cloud-arrow-up" style="font-size: 17px; width: 18px; text-align: center;"></i>
-                    Lưu trữ video
-                </a>
             </nav>
 
             <div class="sidebar-footer">
@@ -183,6 +179,12 @@
             <header class="dashboard-topbar">
                 <nav class="breadcrumb-nav">
                     <a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })">Admin</a>
+                    @* Trang chi tiết (cấp 3): cấp giữa bấm được, quay về đúng trang danh sách vừa mở (giữ bộ lọc, trang số) *@
+                    @if (ViewBag.BreadcrumbParent != null)
+                    {
+                        <span class="separator">/</span>
+                        <a href="@ViewBag.BreadcrumbParentUrl" id="breadcrumb-parent">@ViewBag.BreadcrumbParent</a>
+                    }
                     @if (ViewBag.BreadcrumbCurrent != null)
                     {
                         <span class="separator">/</span>
@@ -196,6 +198,23 @@
 
             @RenderBody()
         </main>
+        <script>
+            // Breadcrumb: trang danh sách ghi lại địa chỉ (kèm bộ lọc) và tên; trang chi tiết dùng làm cấp giữa để Admin
+            // quay về đúng trang vừa bấm vào. Thao tác trên trang chi tiết (khóa, cảnh báo...) không ghi đè nên vẫn quay về đúng chỗ.
+            (function () {
+                var key = 'admin-breadcrumb-list';
+                var parent = document.getElementById('breadcrumb-parent');
+                try {
+                    if (!parent) {
+                        var title = '@Html.Raw(HttpUtility.JavaScriptStringEncode(ViewBag.BreadcrumbCurrent as string ?? ""))';
+                        if (title) sessionStorage.setItem(key, JSON.stringify({ url: location.pathname + location.search, title: title }));
+                        return;
+                    }
+                    var last = JSON.parse(sessionStorage.getItem(key) || 'null');
+                    if (last && last.url && last.title) { parent.href = last.url; parent.textContent = last.title; }
+                } catch (e) { }
+            })();
+        </script>
     </div>
 
     <!-- MODAL XÁC NHẬN ĐĂNG XUẤT ADMIN -->
@@ -222,8 +241,9 @@
     <!-- Scripts -->
     <script src="~/Scripts/jquery-3.7.0.min.js"></script>
     <script src="~/assets/js/charts.js?v=2"></script>
+    <script src="~/assets/js/admin-charts.js?v=1"></script>
     <script src="~/assets/js/app.js"></script>
-    <script src="~/assets/js/table-pagination.js?v=1"></script>
+    <script src="~/assets/js/table-pagination.js?v=2"></script>
     <script src="~/assets/js/sweetalert2.all.min.js"></script>
     <script>
         if (typeof Swal === 'undefined') {

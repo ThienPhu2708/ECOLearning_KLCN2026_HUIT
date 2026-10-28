@@ -1,84 +1,43 @@
-@model ECOLearning.Areas.Admin.Models.SystemReportViewModel
+@model ECOLearning.Areas.Admin.Models.SystemReportPageViewModel
+@*
+    Báo cáo hệ thống (UC16). Mỗi card có bộ lọc riêng và lấy số liệu qua JSON (SystemReportController); rê chuột vào biểu đồ / thanh
+    tỷ lệ để xem số liệu. Xuất Excel / PDF theo kỳ và năm đang chọn ở bảng số liệu theo kỳ. Cuối trang: card Lưu trữ video.
+*@
 @{
-ViewBag.Title = "Báo Cáo Thống Kê Toàn Hệ Thống";
-bool isFiltered = Model.FilterCategory != "" || Model.FilterTeacherId.HasValue;
+    ViewBag.Title = "Báo Cáo Thống Kê Toàn Hệ Thống";
+    var v = Model.Video;
+    int videoLoi = v.DangCho.Count(c => c.TrangThai == "Lỗi");
+    Func<long, string> mb = b => b > 0 ? (b / 1048576d).ToString("#,##0.#") + " MB" : "—";
 }
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px;">
+<link rel="stylesheet" href="~/assets/css/admin-report.css?v=1" />
+<style>
+    .sr-stat { display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border-color); }
+    .vs-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .vs-facts { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13.5px; color: var(--text-secondary); margin: 12px 0; }
+    .vs-facts b { color: var(--text-heading); }
+    .vs-alert { padding: 10px 14px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FCA5A5; color: #991B1B; font-size: 13.5px; margin-bottom: 12px;
+        display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .vs-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .vs-details summary { cursor: pointer; font-weight: 600; color: var(--text-heading); font-size: 13.5px; margin-top: 14px; }
+</style>
+
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 28px;">
     <div>
         <h1 class="h2" style="margin-top: 6px;">Báo Cáo & Thống Kê Toàn Hệ Thống</h1>
-        <p class="body-2" style="color: var(--text-secondary);">Tổng hợp số liệu doanh thu sàn, sản lượng đơn hàng và cơ cấu theo chuyên ngành</p>
+        <p class="body-2" style="color: var(--text-secondary);">Tổng hợp doanh thu sàn, đơn hàng, giáo viên, khóa học và lưu trữ video</p>
     </div>
     <div style="display: flex; gap: 10px;">
-        <a href="@Url.Action("ExportExcel", "SystemReport", new { area = "Admin", period = Model.Period, category = Model.FilterCategory, teacher = Model.FilterTeacherId })" class="btn btn-outline">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Xuất Excel
+        <a id="export-excel" href="@Url.Action("ExportExcel", "SystemReport", new { area = "Admin", period = "month" })" class="btn btn-outline" title="Theo kỳ và năm đang chọn ở bảng số liệu theo kỳ">
+            <i class="bi bi-file-earmark-spreadsheet"></i> Xuất Excel
         </a>
-        <a href="@Url.Action("ExportPdf", "SystemReport", new { area = "Admin", period = Model.Period, category = Model.FilterCategory, teacher = Model.FilterTeacherId })" class="btn btn-primary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-                <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            Xuất Báo Cáo PDF
+        <a id="export-pdf" href="@Url.Action("ExportPdf", "SystemReport", new { area = "Admin", period = "month" })" class="btn btn-primary" title="Theo kỳ và năm đang chọn ở bảng số liệu theo kỳ">
+            <i class="bi bi-file-earmark-pdf"></i> Xuất Báo Cáo PDF
         </a>
     </div>
 </div>
 
-<!-- FILTER CONTROLS (UC16) -->
-<div class="card" style="margin-bottom: 24px; padding: 16px 20px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-        <div style="display: flex; align-items: center; gap: 14px;">
-            <label class="caption" style="font-weight: 700; color: var(--text-heading);">Khoảng thời gian:</label>
-            <div style="display: flex; gap: 8px;">
-                <a href="@Url.Action("Index", "SystemReport", new { area = "Admin", period = "month", category = Model.FilterCategory, teacher = Model.FilterTeacherId })"
-                class="btn btn-sm @(Model.Period == "month" ? "btn-primary" : "btn-secondary")">Theo Tháng</a>
-                <a href="@Url.Action("Index", "SystemReport", new { area = "Admin", period = "quarter", category = Model.FilterCategory, teacher = Model.FilterTeacherId })"
-                class="btn btn-sm @(Model.Period == "quarter" ? "btn-primary" : "btn-secondary")">Theo Quý</a>
-                <a href="@Url.Action("Index", "SystemReport", new { area = "Admin", period = "year", category = Model.FilterCategory, teacher = Model.FilterTeacherId })"
-                class="btn btn-sm @(Model.Period == "year" ? "btn-primary" : "btn-secondary")">Theo Năm</a>
-            </div>
-        </div>
-
-        <!-- Phân tích dữ liệu: lọc theo danh mục / giáo viên -->
-        <form method="get" action="@Url.Action("Index", "SystemReport", new { area = "Admin" })" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <input type="hidden" name="period" value="@Model.Period" />
-            <label class="caption" style="font-weight: 700; color: var(--text-heading);">Phân tích dữ liệu:</label>
-            <select name="category" class="form-control" style="width: 200px; height: 38px; font-size: 13px;">
-                <option value="">Tất cả danh mục</option>
-                @foreach (var c in Model.CategoryOptions)
-                {
-                    <option value="@c.Value" @(c.Selected ? "selected" : "")>@c.Text</option>
-                }
-            </select>
-            <select name="teacher" class="form-control" style="width: 200px; height: 38px; font-size: 13px;">
-                <option value="">Tất cả giáo viên</option>
-                @foreach (var t in Model.TeacherOptions)
-                {
-                    <option value="@t.Value" @(t.Selected ? "selected" : "")>@t.Text</option>
-                }
-            </select>
-            <button type="submit" class="btn btn-primary btn-sm" style="height: 38px;">Áp dụng</button>
-            @if (isFiltered)
-            {
-                <a href="@Url.Action("Index", "SystemReport", new { area = "Admin", period = Model.Period })" class="btn btn-secondary btn-sm" style="height: 38px; display: inline-flex; align-items: center;">Bỏ lọc</a>
-            }
-        </form>
-    </div>
-    @if (isFiltered)
-    {
-        <div style="margin-top: 12px;">
-            <span class="badge badge-primary" style="font-size: 12px;"><i class="bi bi-funnel-fill"></i> Đang phân tích: @Model.FilterLabel</span>
-            <span class="caption" style="color: var(--text-secondary); margin-left: 6px;">Toàn bộ số liệu, biểu đồ và file xuất Excel/PDF bên dưới chỉ tính trong phạm vi này.</span>
-        </div>
-    }
-</div>
+@Html.Partial("_AdminFlash")
 
 <!-- THỐNG KÊ GIÁO VIÊN & KHÓA HỌC THEO TRẠNG THÁI -->
 <div class="grid-12" style="margin-bottom: 32px;">
@@ -86,19 +45,11 @@ bool isFiltered = Model.FilterCategory != "" || Model.FilterTeacherId.HasValue;
         <div class="card" style="height: 100%;">
             <h3 class="h3" style="margin-bottom: 6px;">Thống Kê Giáo Viên</h3>
             <span class="caption" style="display: block; margin-bottom: 20px;">Số tài khoản có vai trò Giáo viên trên hệ thống</span>
-
             <div style="font-size: 40px; font-weight: 800; color: var(--primary); line-height: 1;">@Model.TotalInstructors.ToString("#,##0")</div>
             <div class="caption" style="color: var(--text-secondary); margin: 6px 0 20px;">giáo viên</div>
-
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border-color);">
-                <span>Có khóa học đang bán</span>
-                <strong>@Model.InstructorsWithPublishedCourse.ToString("#,##0")</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border-color);">
-                <span>Chưa có khóa học đang bán</span>
-                <strong>@((Model.TotalInstructors - Model.InstructorsWithPublishedCourse).ToString("#,##0"))</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border-color);">
+            <div class="sr-stat"><span>Có khóa học đang bán</span><strong>@Model.InstructorsWithPublishedCourse.ToString("#,##0")</strong></div>
+            <div class="sr-stat"><span>Chưa có khóa học đang bán</span><strong>@((Model.TotalInstructors - Model.InstructorsWithPublishedCourse).ToString("#,##0"))</strong></div>
+            <div class="sr-stat">
                 <span>Hồ sơ đăng ký GV chờ duyệt</span>
                 <a href="@Url.Action("Index", "TeacherApproval", new { area = "Admin", statusFilter = "Pending" })" style="font-weight: 700; color: var(--status-warning); text-decoration: none;">@Model.PendingTeacherApplications.ToString("#,##0")</a>
             </div>
@@ -107,92 +58,105 @@ bool isFiltered = Model.FilterCategory != "" || Model.FilterTeacherId.HasValue;
 
     <div class="col-8">
         <div class="card" style="height: 100%;">
-            <h3 class="h3" style="margin-bottom: 6px;">Khóa Học Theo Trạng Thái</h3>
-            <span class="caption" style="display: block; margin-bottom: 20px;">Tổng số <strong>@Model.TotalCourses</strong> khóa học trên hệ thống</span>
-
-            @if (Model.CourseStatusStats.Any())
-            {
-                <table class="table" style="margin: 0;">
-                    <thead>
-                        <tr>
-                            <th>Trạng thái</th>
-                            <th style="width: 110px; text-align: right;">Số khóa học</th>
-                            <th style="width: 45%;">Tỷ lệ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var s in Model.CourseStatusStats)
+            <div class="ad-card-head">
+                <div>
+                    <h3 class="h3" style="margin-bottom: 6px;">Khóa Học Theo Trạng Thái</h3>
+                    <span class="caption" id="status-caption">Đang tải…</span>
+                </div>
+                <div class="ad-card-filter">
+                    <select id="status-category" aria-label="Danh mục">
+                        <option value="">Tất cả danh mục</option>
+                        @foreach (var c in Model.Categories)
                         {
-                            <tr>
-                                <td>
-                                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: @s.Color; margin-right: 8px;"></span>
-                                    <strong>@s.Label</strong>
-                                </td>
-                                <td style="text-align: right;"><strong>@s.Count</strong></td>
-                                <td>
-                                    <div style="display: flex; align-items: center; gap: 10px;">
-                                        <div style="flex: 1; height: 8px; background: #F1F5F9; border-radius: 4px; overflow: hidden;">
-                                            <div style="width: @(s.Percent.ToString(System.Globalization.CultureInfo.InvariantCulture))%; height: 100%; background: @s.Color;"></div>
-                                        </div>
-                                        <span class="caption" style="width: 48px; text-align: right;">@s.Percent.ToString("0.#")%</span>
-                                    </div>
-                                </td>
-                            </tr>
+                            <option value="@c.Key">@c.Value</option>
                         }
-                    </tbody>
-                </table>
-            }
-            else
-            {
-                <p style="color: var(--text-secondary); text-align: center; padding: 24px 0;">Chưa có khóa học nào trên hệ thống.</p>
-            }
+                    </select>
+                </div>
+            </div>
+            <table class="table" style="margin: 0;" data-paginate="10">
+                <thead><tr><th>Trạng thái</th><th style="width: 110px; text-align: right;">Số khóa học</th><th style="width: 45%;">Tỷ lệ</th></tr></thead>
+                <tbody id="status-body"><tr><td colspan="3" class="ad-empty">Đang tải…</td></tr></tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<!-- BIỂU ĐỒ ĐƯỜNG KÉP & DONUT CHART (UC16) -->
+<!-- DOANH THU & ĐƠN HÀNG / CƠ CẤU THEO DANH MỤC -->
 <div class="grid-12" style="margin-bottom: 32px;">
-
-    <!-- Biểu đồ kép: Doanh thu & Đơn hàng hoàn tất -->
     <div class="col-8">
         <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div class="ad-chart-head">
                 <div>
-                    <h3 class="h3">Tăng Trưởng Doanh Thu & Đơn Hàng Hoàn Tất</h3>
-                    <span class="caption">Trục trái: doanh thu (triệu VNĐ) • Trục phải: số đơn thanh toán thành công</span>
+                    <h3 class="h3">Doanh Thu & Đơn Hàng Đã Thanh Toán</h3>
+                    <span class="caption" id="rev-caption">Doanh thu thực thu và số đơn đã thanh toán</span>
                 </div>
-                <div style="display: flex; gap: 16px; font-size: 12px; font-weight: 700;">
-                    <span style="display: flex; align-items: center; gap: 6px; color: var(--primary);">
-                        <span style="width: 12px; height: 3px; background: var(--primary);"></span> Doanh thu
-                    </span>
-                    <span style="display: flex; align-items: center; gap: 6px; color: var(--status-success);">
-                        <span style="width: 14px; height: 0; border-top: 3px dashed var(--status-success);"></span> Đơn hoàn tất
-                    </span>
+                <div class="ad-filter">
+                    <div class="ad-seg" id="rev-period" role="group" aria-label="Xem theo">
+                        <button type="button" data-period="month" class="active">Tháng</button>
+                        <button type="button" data-period="quarter">Quý</button>
+                        <button type="button" data-period="year">Năm</button>
+                    </div>
+                    <select id="rev-year" aria-label="Năm">
+                        @foreach (var y in Model.Years) { <option value="@y">@y</option> }
+                    </select>
                 </div>
             </div>
-
-            <div id="dual-metrics-chart"></div>
+            <div class="ad-legend">
+                <span><span class="ad-swatch" style="background: #434CE8;"></span> Doanh thu: <b id="rev-total">—</b></span>
+                <span><span class="ad-swatch" style="background: #10B981;"></span> Đơn đã thanh toán: <b id="rev-orders">—</b></span>
+            </div>
+            <div class="ad-chart" id="rev-chart"><div class="ad-empty">Đang tải biểu đồ…</div></div>
         </div>
     </div>
 
-    <!-- Biểu đồ tròn: Tỷ trọng doanh thu theo danh mục đào tạo (UC16) -->
     <div class="col-4">
-        <div class="card">
-            <h3 class="h3" style="margin-bottom: 6px;">@(Model.CategorySegmentsByCourse ? "Cơ Cấu Theo Khóa Học" : "Cơ Cấu Theo Danh Mục")</h3>
-            <span class="caption" style="display: block; margin-bottom: 20px;">
-                @(Model.CategorySegmentsByRevenue ? "Tỷ trọng % theo doanh thu" : "Chưa phát sinh doanh thu — tỷ trọng % theo số khóa học")
-            </span>
-            <div id="system-category-donut"></div>
+        <div class="card" style="height: 100%;">
+            <h3 class="h3" style="margin-bottom: 6px;">Cơ Cấu Theo Danh Mục</h3>
+            <span class="caption" id="share-caption" style="display: block; margin-bottom: 12px;">Đang tải…</span>
+            <div class="ad-card-filter" style="margin-bottom: 16px;">
+                <select id="share-metric" aria-label="Tiêu chí">
+                    <option value="revenue">Theo doanh thu</option>
+                    <option value="enrollments">Theo lượt đăng ký</option>
+                    <option value="courses">Theo số khóa học</option>
+                </select>
+                <select id="share-period" aria-label="Kỳ">
+                    <option value="all">Toàn thời gian</option>
+                    <option value="month">Theo tháng</option>
+                    <option value="quarter">Theo quý</option>
+                    <option value="year">Theo năm</option>
+                </select>
+                <select id="share-value" aria-label="Chọn kỳ" hidden></select>
+            </div>
+            <div id="share-donut"></div>
         </div>
     </div>
-
 </div>
 
 <!-- DOANH THU THEO GIÁO VIÊN -->
 <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 32px;">
     <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-color);">
-        <h3 class="h3" style="margin: 0;">Doanh thu theo giáo viên</h3>
-        <span class="caption" style="color: var(--text-secondary);">Tính trên các đơn hàng đã thanh toán trong phạm vi phân tích</span>
+        <div class="ad-card-head" style="margin-bottom: 12px;">
+            <div>
+                <h3 class="h3" style="margin: 0;">Doanh thu theo giáo viên</h3>
+                <span class="caption" id="teacher-caption">Đơn hàng đã thanh toán</span>
+            </div>
+        </div>
+        <div class="ad-card-filter">
+            <input type="search" id="teacher-search" placeholder="Tìm tên giáo viên" aria-label="Tìm tên giáo viên" style="width: 200px; max-width: 100%;" />
+            <select id="teacher-period" aria-label="Kỳ">
+                <option value="all">Toàn thời gian</option>
+                <option value="month">Theo tháng</option>
+                <option value="quarter">Theo quý</option>
+                <option value="year">Theo năm</option>
+            </select>
+            <select id="teacher-value" aria-label="Chọn kỳ" hidden></select>
+            <select id="teacher-sort" aria-label="Sắp xếp">
+                <option value="revenue">Doanh thu cao nhất</option>
+                <option value="orders">Nhiều đơn nhất</option>
+                <option value="courses">Nhiều khóa học nhất</option>
+                <option value="name">Tên A–Z</option>
+            </select>
+        </div>
     </div>
     <div class="table-responsive" style="border: none; border-radius: 0;">
         <table class="table" data-paginate="10">
@@ -203,240 +167,316 @@ bool isFiltered = Model.FilterCategory != "" || Model.FilterTeacherId.HasValue;
                     <th style="text-align: center;">Đang bán</th>
                     <th style="text-align: center;">Số đơn</th>
                     <th style="text-align: right;">Doanh thu</th>
-                    <th style="width: 30%;">Tỷ trọng</th>
+                    <th style="width: 28%;">Tỷ trọng</th>
                 </tr>
             </thead>
-            <tbody>
-                @if (Model.TeacherRevenueRows.Any())
-                {
-                    foreach (var r in Model.TeacherRevenueRows)
-                    {
-                        double share = Model.TotalNetRevenue > 0 ? (double)(r.Revenue / Model.TotalNetRevenue * 100) : 0;
-                        <tr>
-                            <td>
-                                <a href="@Url.Action("Index", "SystemReport", new { area = "Admin", period = Model.Period, category = Model.FilterCategory, teacher = r.TeacherId })" style="text-decoration: none; font-weight: 700; color: var(--text-heading);">@r.TeacherName</a>
-                            </td>
-                            <td style="text-align: center;">@r.CourseCount</td>
-                            <td style="text-align: center;">@r.PublishedCourseCount</td>
-                            <td style="text-align: center;">@r.Orders</td>
-                            <td style="text-align: right;"><strong style="color: var(--primary);">@r.Revenue.ToString("#,##0 đ")</strong></td>
-                            <td>
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <div style="flex: 1; height: 8px; background: #F1F5F9; border-radius: 4px; overflow: hidden;">
-                                        <div style="width: @(share.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%; height: 100%; background: var(--primary);"></div>
-                                    </div>
-                                    <span class="caption" style="width: 48px; text-align: right;">@share.ToString("0.#")%</span>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                }
-                else
-                {
-                    <tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 24px;">Không có giáo viên nào trong phạm vi phân tích.</td></tr>
-                }
-            </tbody>
+            <tbody id="teacher-body"><tr><td colspan="6" class="ad-empty">Đang tải…</td></tr></tbody>
         </table>
     </div>
 </div>
 
-<!-- SUMMARY REPORT TABLE -->
-@{
-int totalReports = Model.PeriodReports != null ? Model.PeriodReports.Count : 0;
-int pageSize = Model.Period == "month" ? 6 : 10;
-int totalPages = totalReports > 0 ? (int)Math.Ceiling((double)totalReports / pageSize) : 1;
-int initialEnd = Math.Min(pageSize, totalReports);
-}
-<div class="card" style="padding: 0; overflow: hidden;">
-    <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-        <h3 class="h3" style="margin: 0;">Bảng số liệu tổng hợp chi tiết theo kỳ báo cáo (@(Model.Period == "month" ? "Theo Tháng" : (Model.Period == "year" ? "Theo Năm" : "Theo Quý")))</h3>
-        @if (Model.Period == "month")
-        {
-            <span class="badge badge-primary" style="font-size: 12px; font-weight: 600;">Phân trang 6 tháng / trang</span>
-        }
+<!-- BẢNG SỐ LIỆU THEO KỲ -->
+<div class="card" style="padding: 0; overflow: hidden; margin-bottom: 32px;">
+    <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-color);" class="ad-chart-head">
+        <div>
+            <h3 class="h3" style="margin: 0;">Bảng số liệu tổng hợp theo kỳ</h3>
+            <span class="caption" id="period-caption">Doanh thu thuần, đơn hàng, học viên mua và tăng trưởng so với kỳ trước</span>
+        </div>
+        <div class="ad-filter">
+            <div class="ad-seg" id="period-type" role="group" aria-label="Kỳ báo cáo">
+                <button type="button" data-period="month" class="active">Tháng</button>
+                <button type="button" data-period="quarter">Quý</button>
+                <button type="button" data-period="year">Năm</button>
+            </div>
+            <select id="period-year" aria-label="Năm">
+                @foreach (var y in Model.Years) { <option value="@y">@y</option> }
+            </select>
+        </div>
     </div>
-
-    <div class="table-responsive">
-        <table class="table" id="period-report-table">
+    <div class="table-responsive" style="border: none; border-radius: 0;">
+        <table class="table" data-paginate="10">
             <thead>
-                <tr>
-                    <th>Giai Đoạn</th>
-                    <th>Doanh Thu Thuần</th>
-                    <th>Số Đơn Hàng</th>
-                    <th>Giá Trị Đơn TB</th>
-                    <th>Học Viên Mới</th>
-                    <th>Tăng Trưởng</th>
-                </tr>
+                <tr><th>Giai đoạn</th><th>Doanh thu thuần</th><th>Số đơn hàng</th><th>Giá trị đơn TB</th><th>Học viên mua</th><th>Tăng trưởng</th></tr>
             </thead>
-            <tbody id="period-report-tbody">
-                @if (Model.PeriodReports != null && Model.PeriodReports.Any())
+            <tbody id="period-body"><tr><td colspan="6" class="ad-empty">Đang tải…</td></tr></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- LƯU TRỮ VIDEO (Cloudflare R2 + ffmpeg) -->
+<div class="card" id="luu-tru-video">
+    <div class="ad-card-head" style="margin-bottom: 0;">
+        <div>
+            <h3 class="h3" style="margin-bottom: 4px;"><i class="bi bi-cloud-arrow-up"></i> Lưu trữ video</h3>
+            <span class="caption">Video bài học được nén 720p rồi đưa lên Cloudflare R2@(v.R2DaCauHinh ? " · bucket " + v.TenBucket : "")</span>
+        </div>
+        <div class="vs-badges">
+            <span class="badge @(v.R2DaCauHinh ? "badge-success" : "badge-danger")">R2: @(v.R2DaCauHinh ? "đã cấu hình" : "chưa cấu hình")</span>
+            <span class="badge @(v.FfmpegSanSang ? "badge-success" : "badge-warning")" title="@v.FfmpegThongTin">Nén video: @(v.FfmpegSanSang ? "sẵn sàng" : "không dùng được")</span>
+        </div>
+    </div>
+    <div class="vs-facts">
+        <span><b>@v.BaiTrenR2</b> bài học dùng video trên R2</span>
+        <span><b>@v.BaiTrenMayChu</b> bài còn video trên máy chủ</span>
+        <span><b>@v.DangCho.Count</b> video đang chờ xử lý</span>
+    </div>
+    @if (!v.R2DaCauHinh)
+    {
+        <div class="vs-alert"><span>Chưa có khóa R2 trong Secrets.config: video mới đang lưu trên máy chủ.</span></div>
+    }
+    @if (!v.FfmpegSanSang)
+    {
+        <div class="caption" style="margin-bottom: 12px; color: #B45309;"><i class="bi bi-exclamation-triangle"></i> @v.FfmpegThongTin — video được đưa lên bản gốc, không nén.</div>
+    }
+    @if (videoLoi > 0)
+    {
+        <div class="vs-alert">
+            <span><i class="bi bi-x-circle-fill"></i> @videoLoi video lỗi khi xử lý: @string.Join("; ", v.DangCho.Where(c => c.TrangThai == "Lỗi").Select(c => c.TenGoc + " (" + c.GhiChu + ")").Take(3))</span>
+            @using (Html.BeginForm("ThuLai", "VideoStorage", new { area = "Admin" }, FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline btn-sm">Thử lại</button>
+            }
+        </div>
+    }
+    @if ((v.R2DaCauHinh && v.FileTrenMayChu > 0) || v.CoFileSql)
+    {
+        <div class="vs-actions">
+            @if (v.R2DaCauHinh && v.FileTrenMayChu > 0)
+            {
+                using (Html.BeginForm("ChuyenVideoCu", "VideoStorage", new { area = "Admin" }, FormMethod.Post, new { onsubmit = "return confirm('Đưa " + v.FileTrenMayChu + " video cũ vào hàng đợi chuyển lên R2?');" }))
                 {
-                    int rowIndex = 0;
-                    foreach (var row in Model.PeriodReports)
-                    {
-                        int rowPage = (rowIndex / pageSize) + 1;
-                        <tr class="report-row" data-page="@rowPage" style="@(rowPage > 1 ? "display: none;" : "")">
-                        <td><strong>@row.GiaiDoan</strong></td>
-                        <td><strong style="color: var(--primary);">@row.DoanhThu.ToString("#,##0 đ")</strong></td>
-                        <td>@row.SoDonHang.ToString("#,##0") đơn</td>
-                        <td>@row.GiaTriDonTrungBinh.ToString("#,##0 đ")</td>
-                        <td>+@row.HocVienMoi.ToString("#,##0")</td>
-                        <td>
-                            @if (row.TangTruong == "-")
-                            {
-                                <span style="color: var(--text-secondary); font-weight: 500;">-</span>
-                            }
-                            else if (row.TangTruong.StartsWith("-"))
-                            {
-                                <span class="badge badge-danger">@row.TangTruong</span>
-                            }
-                            else
-                            {
-                                <span class="badge badge-success">@row.TangTruong</span>
-                            }
-                        </td>
-                    </tr>
-                    rowIndex++;
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-primary btn-sm">Chuyển @v.FileTrenMayChu video cũ lên R2</button>
                 }
             }
-            else
+            @if (v.CoFileSql)
             {
-                <tr class="no-data-row">
-                    <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 24px;">
-                        Không có dữ liệu báo cáo cho khoảng thời gian đã chọn.
-                    </td>
-                </tr>
+                <a class="btn btn-outline btn-sm" href="@Url.Action("SqlChuyenDoi", "VideoStorage", new { area = "Admin" })" title="Câu lệnh đổi đường dẫn video để chạy trên CSDL hosting">Tải SQL cho hosting</a>
             }
-        </tbody>
-    </table>
-</div>
-
-<!-- PAGINATION CONTAINER -->
-<div class="pagination-container" id="report-pagination-container">
-    <div class="pagination-info" id="report-pagination-info">
-        Hiển thị <strong>@(totalReports > 0 ? 1 : 0) - @initialEnd</strong> trên tổng số <strong>@totalReports</strong> kỳ báo cáo
-    </div>
-    <ul class="pagination" id="report-pagination-list">
-        <li class="page-item disabled" id="report-page-prev">
-            <button class="page-link" type="button" onclick="changeReportPage(currentReportPage - 1)"><i class="bi bi-chevron-left me-1"></i> Trước</button>
-        </li>
-        @for (int p = 1; p <= totalPages; p++)
-        {
-            <li class="page-item @(p == 1 ? "active" : "")" data-page-item="@p">
-                <button class="page-link" type="button" onclick="changeReportPage(@p)">@p</button>
-            </li>
-        }
-        <li class="page-item @(totalPages <= 1 ? "disabled" : "")" id="report-page-next">
-            <button class="page-link" type="button" onclick="changeReportPage(currentReportPage + 1)">Sau <i class="bi bi-chevron-right ms-1"></i></button>
-        </li>
-    </ul>
-</div>
+        </div>
+    }
+    @if (v.DangCho.Any())
+    {
+        <div class="table-responsive" style="margin-top: 14px;">
+            <table class="table" data-paginate="10">
+                <thead><tr><th>Video đang chờ</th><th>Dung lượng gốc</th><th>Trạng thái</th><th>Ghi chú</th></tr></thead>
+                <tbody>
+                    @foreach (var cv in v.DangCho)
+                    {
+                        <tr>
+                            <td><strong>@cv.TenGoc</strong><div class="ad-sub">@cv.TaoLuc.ToString("dd/MM/yyyy HH:mm")</div></td>
+                            <td>@mb(cv.KichThuocGoc)</td>
+                            <td><span class="badge @(cv.TrangThai == "Lỗi" ? "badge-danger" : cv.TrangThai == "Chờ xử lý" ? "badge-warning" : "badge-primary")">@cv.TrangThai</span></td>
+                            <td class="ad-sub">@cv.GhiChu</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    @if (v.LichSu.Any())
+    {
+        <details class="vs-details">
+            <summary>Lịch sử xử lý gần đây (@v.LichSu.Count video, từ lần khởi động gần nhất)</summary>
+            <div class="table-responsive" style="margin-top: 10px;">
+                <table class="table" data-paginate="10">
+                    <thead><tr><th>Video</th><th>Gốc</th><th>Trên R2</th><th>Kết quả</th><th>Thời điểm</th></tr></thead>
+                    <tbody>
+                        @foreach (var kq in v.LichSu)
+                        {
+                            <tr>
+                                <td><strong>@kq.TenGoc</strong></td>
+                                <td>@mb(kq.KichThuocGoc)</td>
+                                <td>@(kq.ThanhCong ? mb(kq.KichThuocLuu) : "—")</td>
+                                <td>
+                                    <span class="badge @(kq.ThanhCong ? "badge-success" : "badge-danger")">@(kq.ThanhCong ? (kq.DaNen ? "Đã nén" : "Bản gốc") : "Bỏ qua")</span>
+                                    @if (!string.IsNullOrEmpty(kq.GhiChu)) { <div class="ad-sub">@kq.GhiChu</div> }
+                                </td>
+                                <td class="ad-sub">@kq.Luc.ToString("dd/MM/yyyy HH:mm")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </details>
+    }
 </div>
 
 @section Scripts {
 <script>
-    let currentReportPage = 1;
-    const reportPageSize = @pageSize;
-    const reportTotalRows = @totalReports;
-    const reportTotalPages = @totalPages;
+(function () {
+    var C = window.AdminCharts, fmtNum = C.fmtNum, fmtMoney = C.fmtMoney, esc = C.esc;
+    var base = '@Url.Action("Index", "SystemReport", new { area = "Admin" })'.replace(/\/Index$/, '');
+    var years = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Years));
+    var now = new Date(), nowYear = now.getFullYear(), nowMonth = now.getMonth() + 1;
 
-    function changeReportPage(targetPage) {
-    if (targetPage < 1 || targetPage > reportTotalPages) return;
-    currentReportPage = targetPage;
+    function getJson(action, params) {
+        var q = Object.keys(params).map(function (k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
+        return fetch(base + '/' + action + '?' + q, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (!d.success) throw new Error(); return d; });
+    }
+    function failRow(tbody, cols) { tbody.innerHTML = '<tr><td colspan="' + cols + '" class="ad-empty">Không tải được dữ liệu.</td></tr>'; }
+    // Ô chọn kỳ cụ thể (tháng / quý / năm) đi kèm ô chọn loại kỳ; "Toàn thời gian" thì ẩn
+    function periodPicker(typeSel, valueSel) {
+        function fill() {
+            var opts = [];
+            years.forEach(function (y) {
+                if (typeSel.value === 'month') for (var m = (y === nowYear ? nowMonth : 12); m >= 1; m--) opts.push([y + '-' + m, 'Tháng ' + m + '/' + y]);
+                else if (typeSel.value === 'quarter') for (var q = (y === nowYear ? Math.ceil(nowMonth / 3) : 4); q >= 1; q--) opts.push([y + '-' + q, 'Quý ' + q + '/' + y]);
+                else if (typeSel.value === 'year') opts.push([y + '-0', 'Năm ' + y]);
+            });
+            valueSel.innerHTML = opts.map(function (o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('');
+            valueSel.hidden = !opts.length;
+        }
+        fill();
+        return {
+            refill: fill,
+            params: function () {
+                var v = (valueSel.value || (nowYear + '-' + nowMonth)).split('-');
+                return { period: typeSel.value, year: v[0], index: v[1] };
+            }
+        };
+    }
+    function segControl(id, onChange) {
+        var box = document.getElementById(id);
+        box.querySelectorAll('button').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                box.querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b === btn); });
+                onChange(btn.dataset.period);
+            });
+        });
+    }
+    function bar(percent, color, tip) {
+        return '<div class="ad-bar-row" data-tip="' + esc(tip) + '"><div class="ad-bar"><div style="width:' + percent + '%;background:' + color + ';"></div></div>'
+            + '<span class="caption" style="width:48px;text-align:right;">' + percent.toLocaleString('vi-VN') + '%</span></div>';
+    }
 
-    // Hiển thị/ẩn các hàng tương ứng với trang được chọn
-    const rows = document.querySelectorAll('#period-report-tbody tr.report-row');
-    rows.forEach(row => {
-    const p = parseInt(row.getAttribute('data-page'), 10);
-    if (p === currentReportPage) {
-    row.style.display = '';
-}
-else
-{
-    row.style.display = 'none';
-}
-});
+    // ---- Khóa học theo trạng thái: lọc danh mục, rê chuột thanh tỷ lệ ----
+    var statusCat = document.getElementById('status-category'), statusBody = document.getElementById('status-body');
+    function loadStatus() {
+        getJson('CourseStatusStats', { category: statusCat.value }).then(function (d) {
+            document.getElementById('status-caption').innerHTML = 'Tổng số <strong>' + fmtNum(d.total) + '</strong> khóa học'
+                + (statusCat.value ? ' thuộc ' + esc(statusCat.options[statusCat.selectedIndex].text) : ' trên hệ thống');
+            if (!d.rows.length) { statusBody.innerHTML = '<tr><td colspan="3" class="ad-empty">Chưa có khóa học nào.</td></tr>'; return; }
+            statusBody.innerHTML = d.rows.map(function (s) {
+                return '<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + s.color + ';margin-right:8px;"></span><strong>'
+                    + esc(s.label) + '</strong></td><td style="text-align:right;"><strong>' + fmtNum(s.count) + '</strong></td><td>'
+                    + bar(s.percent, s.color, '<strong>' + esc(s.label) + '</strong>' + fmtNum(s.count) + ' / ' + fmtNum(d.total) + ' khóa học · ' + s.percent.toLocaleString('vi-VN') + '%') + '</td></tr>';
+            }).join('');
+            C.tips(statusBody);
+        }).catch(function () { failRow(statusBody, 3); });
+    }
+    statusCat.addEventListener('change', loadStatus);
 
-// Cập nhật thông tin phân trang (Ví dụ: Hiển thị 1 - 6 hoặc 7 - 12)
-const startIdx = (currentReportPage - 1) * reportPageSize + 1;
-const endIdx = Math.min(currentReportPage * reportPageSize, reportTotalRows);
-const infoElem = document.getElementById('report-pagination-info');
-if (infoElem) {
-infoElem.innerHTML = `Hiển thị <strong>${startIdx} - ${endIdx}</strong> trên tổng số <strong>${reportTotalRows}</strong> kỳ báo cáo`;
-}
+    // ---- Doanh thu & đơn hàng: Tháng / Quý / Năm + năm, rê chuột từng điểm ----
+    var revState = { period: 'month', year: document.getElementById('rev-year').value };
+    var tenKy = { month: 'Theo tháng', quarter: 'Theo quý', year: 'Theo năm' };
+    function loadRevenue() {
+        getJson('RevenueChart', revState).then(function (d) {
+            document.getElementById('rev-caption').textContent = tenKy[d.period] + ' · ' + d.range + ' · doanh thu thực thu và số đơn đã thanh toán';
+            document.getElementById('rev-total').textContent = fmtMoney(d.totalRevenue);
+            document.getElementById('rev-orders').textContent = fmtNum(d.totalOrders) + ' đơn';
+            C.dualLine(document.getElementById('rev-chart'), {
+                labels: d.labels,
+                ariaLabel: 'Biểu đồ doanh thu và đơn hàng',
+                title: function (i) { return d.labels[i] + (d.period === 'year' ? '' : ' / ' + d.year); },
+                axes: [C.fmtShort, function (v) { return fmtNum(Math.round(v)); }],
+                series: [
+                    { name: 'Doanh thu', data: d.revenue, color: '#434CE8', fill: 'rgba(67,76,232,0.06)', format: fmtMoney },
+                    { name: 'Đơn đã thanh toán', data: d.orders, color: '#10B981', dashed: true, format: function (v) { return fmtNum(v) + ' đơn'; } }
+                ]
+            });
+        }).catch(function () { document.getElementById('rev-chart').innerHTML = '<div class="ad-empty">Không tải được biểu đồ.</div>'; });
+    }
+    segControl('rev-period', function (p) { revState.period = p; loadRevenue(); });
+    document.getElementById('rev-year').addEventListener('change', function () { revState.year = this.value; loadRevenue(); });
 
-// Cập nhật trạng thái active của các nút số trang
-document.querySelectorAll('#report-pagination-list .page-item[data-page-item]').forEach(item => {
-const p = parseInt(item.getAttribute('data-page-item'), 10);
-if (p === currentReportPage) {
-item.classList.add('active');
-}
-else
-{
-    item.classList.remove('active');
-}
-});
+    // ---- Cơ cấu theo danh mục: tiêu chí + kỳ, rê chuột phần màu / chú thích ----
+    var shareMetric = document.getElementById('share-metric'), sharePeriod = document.getElementById('share-period');
+    var sharePicker = periodPicker(sharePeriod, document.getElementById('share-value'));
+    var tenTieuChi = { revenue: 'doanh thu', enrollments: 'lượt đăng ký', courses: 'số khóa học' };
+    function loadShare() {
+        var laKhoa = shareMetric.value === 'courses';
+        sharePeriod.hidden = laKhoa;
+        document.getElementById('share-value').hidden = laKhoa || sharePeriod.value === 'all';
+        var p = sharePicker.params(); p.metric = shareMetric.value;
+        getJson('CategoryShare', p).then(function (d) {
+            document.getElementById('share-caption').textContent = 'Tỷ trọng % theo ' + tenTieuChi[d.metric] + (d.metric === 'courses' ? '' : ' · ' + d.range);
+            var fmt = d.metric === 'revenue' ? fmtMoney : function (x) { return fmtNum(x) + ' ' + d.unit; };
+            C.donut(document.getElementById('share-donut'), {
+                segments: d.segments.map(function (s) { return { label: s.label, value: s.value, color: s.color, detail: fmt(s.amount) }; }),
+                centerValue: d.metric === 'revenue' ? C.fmtShort(d.total) : fmtNum(d.total),
+                centerLabel: d.metric === 'revenue' ? 'doanh thu' : d.unit,
+                emptyText: 'Chưa có ' + tenTieuChi[d.metric] + ' trong kỳ này.'
+            });
+        }).catch(function () { document.getElementById('share-donut').innerHTML = '<div class="ad-empty">Không tải được dữ liệu.</div>'; });
+    }
+    shareMetric.addEventListener('change', loadShare);
+    sharePeriod.addEventListener('change', function () { sharePicker.refill(); loadShare(); });
+    document.getElementById('share-value').addEventListener('change', loadShare);
 
-// Cập nhật trạng thái nút Trước / Sau
-const prevBtn = document.getElementById('report-page-prev');
-if (prevBtn) {
-if (currentReportPage <= 1) {
-prevBtn.classList.add('disabled');
-}
-else
-{
-    prevBtn.classList.remove('disabled');
-}
-}
+    // ---- Doanh thu theo giáo viên: kỳ (server), tìm tên + sắp xếp (trên trang) ----
+    var teacherBody = document.getElementById('teacher-body'), teacherRows = [], teacherTotal = 0;
+    var teacherPicker = periodPicker(document.getElementById('teacher-period'), document.getElementById('teacher-value'));
+    function renderTeachers() {
+        var q = document.getElementById('teacher-search').value.trim().toLowerCase();
+        var sort = document.getElementById('teacher-sort').value;
+        var rows = teacherRows.filter(function (r) { return !q || r.name.toLowerCase().indexOf(q) >= 0; });
+        rows.sort(function (a, b) {
+            if (sort === 'name') return a.name.localeCompare(b.name, 'vi');
+            return (b[sort] - a[sort]) || (b.revenue - a.revenue) || a.name.localeCompare(b.name, 'vi');
+        });
+        if (!rows.length) { teacherBody.innerHTML = '<tr><td colspan="6" class="ad-empty">Không có giáo viên phù hợp.</td></tr>'; return; }
+        teacherBody.innerHTML = rows.map(function (r) {
+            return '<tr><td><a href="' + esc(r.url) + '" style="text-decoration:none;font-weight:700;color:var(--text-heading);">' + esc(r.name) + '</a></td>'
+                + '<td style="text-align:center;">' + r.courses + '</td><td style="text-align:center;">' + r.published + '</td>'
+                + '<td style="text-align:center;">' + r.orders + '</td>'
+                + '<td style="text-align:right;"><strong style="color:var(--primary);">' + fmtMoney(r.revenue) + '</strong></td>'
+                + '<td>' + bar(r.share, 'var(--primary)', '<strong>' + esc(r.name) + '</strong>' + fmtMoney(r.revenue) + ' / ' + fmtMoney(teacherTotal) + ' · ' + r.orders + ' đơn') + '</td></tr>';
+        }).join('');
+        C.tips(teacherBody);
+    }
+    function loadTeachers() {
+        getJson('TeacherRevenue', teacherPicker.params()).then(function (d) {
+            document.getElementById('teacher-caption').textContent = 'Đơn hàng đã thanh toán · ' + d.range + ' · tổng ' + fmtMoney(d.total);
+            teacherRows = d.rows; teacherTotal = d.total;
+            renderTeachers();
+        }).catch(function () { failRow(teacherBody, 6); });
+    }
+    document.getElementById('teacher-period').addEventListener('change', function () { teacherPicker.refill(); loadTeachers(); });
+    document.getElementById('teacher-value').addEventListener('change', loadTeachers);
+    document.getElementById('teacher-sort').addEventListener('change', renderTeachers);
+    document.getElementById('teacher-search').addEventListener('input', renderTeachers);
 
-const nextBtn = document.getElementById('report-page-next');
-if (nextBtn) {
-if (currentReportPage >= reportTotalPages) {
-nextBtn.classList.add('disabled');
-}
-else
-{
-    nextBtn.classList.remove('disabled');
-}
-}
-}
+    // ---- Bảng số liệu theo kỳ (cũng là phạm vi của file Excel / PDF) ----
+    var periodState = { period: 'month', year: document.getElementById('period-year').value };
+    var periodBody = document.getElementById('period-body');
+    function loadPeriod() {
+        var exportQ = '?period=' + periodState.period + '&year=' + periodState.year;
+        document.getElementById('export-excel').href = base + '/ExportExcel' + exportQ;
+        document.getElementById('export-pdf').href = base + '/ExportPdf' + exportQ;
+        getJson('PeriodTable', periodState).then(function (d) {
+            document.getElementById('period-caption').textContent = tenKy[d.period] + (d.period === 'year' ? ' (tới năm ' + d.year + ')' : ' · năm ' + d.year)
+                + ' · Xuất Excel / PDF theo kỳ này';
+            periodBody.innerHTML = d.rows.map(function (r) {
+                var g = r.growth === '-' ? '<span style="color:var(--text-secondary);">-</span>'
+                    : '<span class="badge ' + (r.growth.charAt(0) === '-' ? 'badge-danger' : 'badge-success') + '">' + esc(r.growth) + '</span>';
+                return '<tr><td><strong>' + esc(r.label) + '</strong></td><td><strong style="color:var(--primary);">' + fmtMoney(r.revenue) + '</strong></td>'
+                    + '<td>' + fmtNum(r.orders) + ' đơn</td><td>' + fmtMoney(r.avg) + '</td><td>' + fmtNum(r.students) + '</td><td>' + g + '</td></tr>';
+            }).join('') || '<tr><td colspan="6" class="ad-empty">Không có dữ liệu.</td></tr>';
+        }).catch(function () { failRow(periodBody, 6); });
+    }
+    segControl('period-type', function (p) { periodState.period = p; loadPeriod(); });
+    document.getElementById('period-year').addEventListener('change', function () { periodState.year = this.value; loadPeriod(); });
 
-// Khi in ấn PDF, hiển thị toàn bộ hàng để văn bản đầy đủ
-window.addEventListener('beforeprint', () => {
-document.querySelectorAll('#period-report-tbody tr.report-row').forEach(r => r.style.display = '');
-});
-window.addEventListener('afterprint', () => {
-changeReportPage(currentReportPage);
-});
+    loadStatus(); loadRevenue(); loadShare(); loadTeachers(); loadPeriod();
 
-document.addEventListener('DOMContentLoaded', () => {
-const revenueData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RevenueChartData));
-const orderData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.OrderChartData));
-const chartLabels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartLabels));
-const categorySegments = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.CategoryRevenueSegments.Select(s => new { label = s.Label, value = s.Value, color = s.Color })));
-
-if (window.Charts && typeof Charts.renderDualLineChart === 'function') {
-// Biểu đồ 2 trục: Doanh thu (triệu VNĐ, trục trái) & Đơn hoàn tất (trục phải)
-Charts.renderDualLineChart('dual-metrics-chart', {
-labels: chartLabels,
-series: [
-{ name: 'Doanh thu', data: revenueData, color: '#434CE8', fillColor: 'rgba(67, 76, 232, 0.06)', unit: 'triệu VNĐ' },
-{ name: 'Đơn hoàn tất', data: orderData, color: '#10B981', unit: 'đơn' }
-]
-});
-
-// Donut Chart compliant with UC16
-Charts.renderDonutChart('system-category-donut', {
-segments: categorySegments
-});
-}
-
-@if (Request.QueryString["pdfError"] == "1")
-{
-    <text>
-        if (window.showToast) showToast('Không tạo được file PDF. Vui lòng thử lại!', 'error');
-    </text>
-}
-});
+    @if (Request.QueryString["pdfError"] == "1")
+    {
+        <text>if (window.showToast) showToast('Không tạo được file PDF. Vui lòng thử lại!', 'error');</text>
+    }
+})();
 </script>
 }

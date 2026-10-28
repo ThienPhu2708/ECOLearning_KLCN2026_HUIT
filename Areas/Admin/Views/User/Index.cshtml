@@ -49,6 +49,12 @@ else
 
     <form method="get" action="@Url.Action("Index")" class="au-filter" id="danh-sach">
         <input type="search" name="q" value="@q" class="form-control au-search" placeholder="Tìm theo họ tên, email, số điện thoại hoặc mã người dùng" maxlength="100" />
+        <button type="submit" class="btn btn-secondary"><i class="bi bi-search"></i> Tìm</button>
+        <select name="status" class="form-control" onchange="this.form.submit()">
+            <option value="">Mọi trạng thái</option>
+            <option value="active" @(status == "active" ? "selected" : "")>Đang hoạt động</option>
+            <option value="locked" @(status == "locked" ? "selected" : "")>Đang bị khóa</option>
+        </select>
         <select name="role" class="form-control" onchange="this.form.submit()">
             <option value="">Tất cả vai trò</option>
             <option value="HocVien" @(role == "HocVien" ? "selected" : "")>Học viên</option>
@@ -56,12 +62,6 @@ else
             <option value="Marketing" @(role == "Marketing" ? "selected" : "")>Marketing</option>
             <option value="Admin" @(role == "Admin" ? "selected" : "")>Quản trị viên</option>
         </select>
-        <select name="status" class="form-control" onchange="this.form.submit()">
-            <option value="">Mọi trạng thái</option>
-            <option value="active" @(status == "active" ? "selected" : "")>Đang hoạt động</option>
-            <option value="locked" @(status == "locked" ? "selected" : "")>Đang bị khóa</option>
-        </select>
-        <button type="submit" class="btn btn-secondary"><i class="bi bi-search"></i> Tìm</button>
         @if (!string.IsNullOrEmpty(q) || role != null || status != null)
         {
             <a href="@Url.Action("Index")" class="btn btn-outline">Bỏ lọc</a>

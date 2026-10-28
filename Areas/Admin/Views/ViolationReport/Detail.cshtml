@@ -8,7 +8,9 @@
     string status = course.trangThai ?? CourseStatus.BanNhap;
     bool isLocked = status == CourseStatus.TamKhoa;
     bool isBanned = status == CourseStatus.KhoaVinhVien;
-    bool isPublished = CourseStatus.IsPublished(status);
+    bool isPaused = status == CourseStatus.TamNgung;
+    // Khóa giáo viên tự tạm ngưng vẫn xử lý vi phạm như khóa đang bán
+    bool isPublished = CourseStatus.IsPublished(status) || isPaused;
     int pendingCount = reports.Count(r => r.trangThai == ViolationReportService.ReportPending);
     var lastLock = (ECOLearning.Models.ViolationAction)ViewBag.LastLock;
     var messages = (List<ECOLearning.Models.ViolationMessage>)ViewBag.Messages;
@@ -17,10 +19,6 @@
 }
 
 @Html.AntiForgeryToken()
-
-<div style="margin-bottom: 16px;">
-    <a href="@Url.Action("Index", "ViolationReport", new { area = "Admin", id = "" })" style="text-decoration: none; font-weight: 600;"><i class="bi bi-arrow-left"></i> Quay lại danh sách</a>
-</div>
 
 <!-- THÔNG TIN KHÓA HỌC + THAO TÁC -->
 <div class="card" style="margin-bottom: 24px;">
@@ -45,6 +43,10 @@
                 else if (isBanned)
                 {
                     <span class="badge badge-danger">Khóa vĩnh viễn</span>
+                }
+                else if (isPaused)
+                {
+                    <span class="badge badge-warning">Giáo viên tạm ngưng bán</span>
                 }
                 else if (isPublished)
                 {

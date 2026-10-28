@@ -8,6 +8,30 @@
     var body = document.body;
     if (!body || !body.classList.contains('staff-readonly')) return;
 
+    // Dòng thông báo "chế độ chỉ xem" dưới header: ẩn khi cuộn xuống để xem nội dung, hiện lại khi cuộn lên,
+    // khi về đầu trang hoặc khi rê chuột lên thanh menu
+    (function () {
+        var banner = document.querySelector('.staff-banner');
+        if (!banner) return;
+        var header = document.querySelector('.main-header');
+        var lastY = window.pageYOffset, ticking = false;
+        function setHidden(hidden) { banner.classList.toggle('is-hidden', hidden); }
+        window.addEventListener('scroll', function () {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(function () {
+                var y = window.pageYOffset;
+                if (y <= 80) setHidden(false);
+                else if (y > lastY + 4) setHidden(true);
+                else if (y < lastY - 4) setHidden(false);
+                lastY = y;
+                ticking = false;
+            });
+        }, { passive: true });
+        if (header) header.addEventListener('mouseenter', function () { setHidden(false); });
+        banner.addEventListener('focusin', function () { setHidden(false); });
+    })();
+
     var THONG_BAO = body.getAttribute('data-staff-msg') || 'Tài khoản quản trị chỉ có quyền xem.';
     var GOI_Y = 'Chế độ chỉ xem của ' + (body.getAttribute('data-staff-role') || 'Quản trị viên') + ': không thể thao tác';
 

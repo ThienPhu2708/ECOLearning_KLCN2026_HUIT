@@ -47,7 +47,9 @@ namespace ECOLearning.Areas.Admin.Controllers
             var promotion = new PromotionService(db);
             ViewBag.KhoaHoc = promotion.LayKhoaHocApDung(id);
             ViewBag.LuotSuDung = promotion.LayLuotSuDung(id);
-            ViewBag.BreadcrumbCurrent = "Giám sát Marketing / " + model.ChuongTrinh.TenKhuyenMai;
+            ViewBag.BreadcrumbParent = "Giám sát Marketing";
+            ViewBag.BreadcrumbParentUrl = Url.Action("Index");
+            ViewBag.BreadcrumbCurrent = model.ChuongTrinh.TenKhuyenMai;
             return View(model);
         }
 

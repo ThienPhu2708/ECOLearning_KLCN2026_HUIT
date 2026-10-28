@@ -1,0 +1,16 @@
+@model Tuple<string, List<ECOLearning.ViewModels.CourseCardViewModel>>
+@*
+    Thanh trượt thẻ khóa học ở trang chủ (Item1 = id, nút mũi tên đặt ở tiêu đề mục với data-slider-nav="id").
+    Thẻ luôn giữ kích thước chuẩn (5 thẻ một lượt trên máy tính), ít khóa thì nằm bên trái, không kéo giãn.
+    Script chung initCourseSlider ở cuối Views/Home/Index.cshtml.
+*@
+<div class="course-slider" id="@Model.Item1" style="--count: @Model.Item2.Count;">
+    <div class="course-slider-track">
+        @foreach (var item in Model.Item2)
+        {
+            <div class="course-slide">
+                @Html.Partial("_CourseCard", item)
+            </div>
+        }
+    </div>
+</div>

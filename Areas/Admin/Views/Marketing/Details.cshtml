@@ -13,10 +13,6 @@
 
 <link rel="stylesheet" href="~/assets/css/admin-users.css?v=1" />
 
-<div style="margin-bottom: 14px;">
-    <a href="@Url.Action("Index")" class="btn btn-outline btn-sm"><i class="bi bi-arrow-left"></i> Giám sát Marketing</a>
-</div>
-
 @Html.Partial("_AdminFlash")
 
 <div class="card au-profile">
@@ -69,7 +65,7 @@
     <div class="card" style="padding: 18px 20px; margin-bottom: 20px;">
         <h3 class="h3" style="margin-bottom: 8px;">Khóa học áp dụng (@khoaHoc.Count)</h3>
         <div class="table-responsive">
-            <table class="table au-table">
+            <table class="table au-table" data-paginate="10">
                 <thead><tr><th>Khóa học</th><th>Danh mục</th><th>Giá bán</th></tr></thead>
                 <tbody>
                     @if (khoaHoc.Count == 0)

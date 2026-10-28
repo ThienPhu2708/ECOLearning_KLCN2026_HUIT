@@ -4,6 +4,7 @@ using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Models;
 using ECOLearning.Areas.Admin.Models;
+using ECOLearning.Services;
 
 namespace ECOLearning.Areas.Admin.Controllers
 {
@@ -79,22 +80,39 @@ namespace ECOLearning.Areas.Admin.Controllers
                 };
             }).ToList();
 
-            // 6. Dữ liệu biểu đồ Tăng trưởng học viên mới thực tế qua 12 tháng năm hiện tại
-            int currentYear = DateTime.Now.Year;
-            model.MonthlyGrowthLabels = new List<string> { "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12" };
-            model.MonthlyGrowthData = new List<int>();
+            // 6. Doanh thu thực thu tháng này / tháng trước (thẻ KPI). Biểu đồ đường lấy số liệu qua ChartData theo bộ lọc
+            var dauThang = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var banHang = LayDongBanHang(dauThang.AddMonths(-1), dauThang.AddMonths(1));
+            model.RevenueThisMonth = banHang.Where(l => l.Ngay >= dauThang).Sum(l => l.TienThucThu);
+            model.RevenueLastMonth = banHang.Where(l => l.Ngay < dauThang).Sum(l => l.TienThucThu);
 
-            var dangKys = db.DangKyKhoaHoc.Where(dk => dk.ngayDangKy.HasValue && dk.ngayDangKy.Value.Year == currentYear).ToList();
-            for (int m = 1; m <= 12; m++)
-            {
-                model.MonthlyGrowthData.Add(dangKys.Count(dk => dk.ngayDangKy.Value.Month == m));
-            }
+            var namDon = db.DonHang.Where(d => d.ngayDat.HasValue).Select(d => d.ngayDat.Value.Year).Distinct().ToList();
+            var namDangKy = db.DangKyKhoaHoc.Where(d => d.ngayDangKy.HasValue).Select(d => d.ngayDangKy.Value.Year).Distinct().ToList();
+            int namDau = namDon.Concat(namDangKy).DefaultIfEmpty(DateTime.Now.Year).Min();
+            for (int y = DateTime.Now.Year; y >= Math.Min(namDau, DateTime.Now.Year); y--) model.ChartYears.Add(y);
+
+            // 6b. Đơn hàng mới nhất (mọi trạng thái), giới hạn 100 đơn; bảng phân trang 10 đơn mỗi trang
+            model.RecentOrders = db.DonHang.OrderByDescending(d => d.ngayDat).Take(100)
+                .Select(d => new RecentOrderItem
+                {
+                    MaDonHang = d.maDonHang,
+                    NgayDat = d.ngayDat,
+                    MaHocVien = d.maHocVien,
+                    TenHocVien = db.NguoiDung.Where(n => n.maNguoiDung == d.maHocVien).Select(n => n.hoTen).FirstOrDefault(),
+                    SoKhoaHoc = db.ChiTietDonHang.Count(c => c.maDonHang == d.maDonHang),
+                    TongTien = d.tongTien,
+                    TrangThai = d.trangThai
+                }).ToList();
 
             // 7. Dữ liệu biểu đồ Donut Tỷ trọng danh mục khóa học thực tế từ CSDL
             var categories = db.DanhMuc.ToList();
+            model.CategoryOptions = categories.OrderBy(c => c.tenDanhMuc)
+                .Select(c => new KeyValuePair<string, string>(c.maDanhMuc, c.tenDanhMuc)).ToList();
             int totalCourses = db.KhoaHoc.Count();
 
-            string[] chartColors = new string[] { "#434CE8", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899" };
+            // 12 màu khác nhau rõ để các danh mục không trùng màu
+            string[] chartColors = new string[] { "#434CE8", "#10B981", "#F59E0B", "#EC4899", "#8B5CF6", "#3B82F6",
+                                                  "#14B8A6", "#EF4444", "#84CC16", "#F97316", "#06B6D4", "#A855F7" };
             int colorIndex = 0;
 
             if (totalCourses > 0)
@@ -109,6 +127,7 @@ namespace ECOLearning.Areas.Admin.Controllers
                         {
                             Label = cat.tenDanhMuc,
                             Value = percentage,
+                            Count = count,
                             Color = chartColors[colorIndex % chartColors.Length]
                         });
                         colorIndex++;
@@ -121,6 +140,177 @@ namespace ECOLearning.Areas.Admin.Controllers
 
             ViewBag.BreadcrumbCurrent = "Dashboard hệ thống";
             return View(model);
+        }
+
+        // Một dòng bán hàng = một khóa trong đơn đã thanh toán; tiền giảm của mã được chia về từng khóa theo tỷ lệ đơn giá
+        private class DongBanHang
+        {
+            public DateTime Ngay;
+            public decimal TienThucThu;
+            public string MaKhoaHoc;
+            public string MaDanhMuc;
+            public int MaGiaoVien;
+        }
+
+        private List<DongBanHang> LayDongBanHang(DateTime tu, DateTime denTruoc)
+        {
+            var trangThai = RevenueService.TrangThaiThanhCong;
+            var dong = (from ct in db.ChiTietDonHang
+                        join dh in db.DonHang on ct.maDonHang equals dh.maDonHang
+                        join kh in db.KhoaHoc on ct.maKhoaHoc equals kh.maKhoaHoc
+                        where trangThai.Contains(dh.trangThai) && dh.ngayDat >= tu && dh.ngayDat < denTruoc
+                        select new { dh.maDonHang, dh.ngayDat, ct.donGia, kh.maKhoaHoc, kh.maDanhMuc, kh.maGiaoVien }).ToList();
+            var tyLe = new RevenueService(db).TyLeThucThuTheoDon();
+            return dong.Select(x =>
+            {
+                decimal r;
+                return new DongBanHang
+                {
+                    Ngay = x.ngayDat.Value,
+                    TienThucThu = tyLe.TryGetValue(x.maDonHang, out r) ? Math.Round(x.donGia * r, 0) : x.donGia,
+                    MaKhoaHoc = x.maKhoaHoc,
+                    MaDanhMuc = x.maDanhMuc,
+                    MaGiaoVien = x.maGiaoVien
+                };
+            }).ToList();
+        }
+
+        // GET: Admin/Dashboard/ChartData?period=month|quarter|year&year=2026
+        // Tháng: 12 tháng của năm chọn; Quý: 4 quý của năm chọn; Năm: 5 năm, kết thúc ở năm chọn.
+        // Kèm top 10 khóa học theo doanh thu trong cùng khoảng thời gian (trang chọn hiện 5 hoặc 10).
+        [HttpGet]
+        public JsonResult ChartData(string period = "month", int? year = null)
+        {
+            Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+            int nam = Math.Max(2000, Math.Min(year ?? DateTime.Now.Year, DateTime.Now.Year + 1));
+            DateTime tu, denTruoc;
+            List<string> nhan;
+            Func<DateTime, int> viTri;
+            string khoang;
+            if (period == "quarter")
+            {
+                tu = new DateTime(nam, 1, 1); denTruoc = tu.AddYears(1);
+                nhan = Enumerable.Range(1, 4).Select(q => "Quý " + q).ToList();
+                viTri = d => (d.Month - 1) / 3;
+                khoang = "4 quý năm " + nam;
+            }
+            else if (period == "year")
+            {
+                tu = new DateTime(nam - 4, 1, 1); denTruoc = new DateTime(nam + 1, 1, 1);
+                nhan = Enumerable.Range(nam - 4, 5).Select(y => y.ToString()).ToList();
+                viTri = d => d.Year - (nam - 4);
+                khoang = "năm " + (nam - 4) + " – " + nam;
+            }
+            else
+            {
+                period = "month";
+                tu = new DateTime(nam, 1, 1); denTruoc = tu.AddYears(1);
+                nhan = Enumerable.Range(1, 12).Select(m => "T" + m).ToList();
+                viTri = d => d.Month - 1;
+                khoang = "12 tháng năm " + nam;
+            }
+
+            var banHang = LayDongBanHang(tu, denTruoc);
+            var dangKy = db.DangKyKhoaHoc.Where(d => d.ngayDangKy >= tu && d.ngayDangKy < denTruoc).Select(d => d.ngayDangKy.Value).ToList();
+            var doanhThu = new decimal[nhan.Count];
+            var luotDangKy = new int[nhan.Count];
+            foreach (var l in banHang) doanhThu[viTri(l.Ngay)] += l.TienThucThu;
+            foreach (var d in dangKy) luotDangKy[viTri(d)]++;
+
+            var maKhoa = banHang.Select(l => l.MaKhoaHoc).Distinct().ToList();
+            var tenKhoa = db.KhoaHoc.Where(k => maKhoa.Contains(k.maKhoaHoc)).ToDictionary(k => k.maKhoaHoc, k => k.tenKhoaHoc);
+            var tenGv = TenGiaoVien(banHang);
+
+            var topKhoaHoc = banHang.GroupBy(l => l.MaKhoaHoc)
+                .Select(g => new
+                {
+                    id = g.Key,
+                    name = tenKhoa.ContainsKey(g.Key) ? tenKhoa[g.Key] : g.Key,
+                    teacher = tenGv.ContainsKey(g.First().MaGiaoVien) ? tenGv[g.First().MaGiaoVien] : "",
+                    sold = g.Count(),
+                    revenue = g.Sum(l => l.TienThucThu),
+                    url = Url.Action("Details", "Course", new { area = "", id = g.Key })
+                })
+                .OrderByDescending(x => x.revenue).ThenByDescending(x => x.sold).Take(10).ToList();
+
+            return Json(new
+            {
+                success = true,
+                period,
+                year = nam,
+                range = khoang,
+                labels = nhan,
+                enrollments = luotDangKy,
+                revenue = doanhThu,
+                totalEnrollments = luotDangKy.Sum(),
+                totalRevenue = doanhThu.Sum(),
+                topCourses = topKhoaHoc
+            }, JsonRequestBehavior.AllowGet);
+        }
+
+        private Dictionary<int, string> TenGiaoVien(List<DongBanHang> banHang)
+        {
+            var maGv = banHang.Select(l => l.MaGiaoVien).Distinct().ToList();
+            return db.NguoiDung.Where(n => maGv.Contains(n.maNguoiDung)).ToDictionary(n => n.maNguoiDung, n => n.hoTen);
+        }
+
+        // GET: Admin/Dashboard/TopTeachers?period=month|quarter|year|all&year=2026&index=10&category=CAT-001&top=5
+        // Bộ lọc riêng của card "Top giáo viên": một tháng / một quý / một năm cụ thể (hoặc toàn thời gian), theo danh mục, top 5 hoặc 10.
+        [HttpGet]
+        public JsonResult TopTeachers(string period = "month", int? year = null, int? index = null, string category = null, int top = 5)
+        {
+            Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+            int nam = Math.Max(2000, Math.Min(year ?? DateTime.Now.Year, DateTime.Now.Year + 1));
+            DateTime tu, denTruoc;
+            string khoang;
+            if (period == "all")
+            {
+                tu = new DateTime(2000, 1, 1); denTruoc = DateTime.Now.AddDays(1); khoang = "toàn thời gian";
+            }
+            else if (period == "year")
+            {
+                tu = new DateTime(nam, 1, 1); denTruoc = tu.AddYears(1); khoang = "năm " + nam;
+            }
+            else if (period == "quarter")
+            {
+                int q = Math.Max(1, Math.Min(index ?? ((DateTime.Now.Month - 1) / 3 + 1), 4));
+                tu = new DateTime(nam, (q - 1) * 3 + 1, 1); denTruoc = tu.AddMonths(3); khoang = "quý " + q + "/" + nam;
+            }
+            else
+            {
+                period = "month";
+                int m = Math.Max(1, Math.Min(index ?? DateTime.Now.Month, 12));
+                tu = new DateTime(nam, m, 1); denTruoc = tu.AddMonths(1); khoang = "tháng " + m + "/" + nam;
+            }
+            top = top == 10 ? 10 : 5;
+
+            var banHang = LayDongBanHang(tu, denTruoc);
+            string tenDanhMuc = null;
+            if (!string.IsNullOrEmpty(category))
+            {
+                banHang = banHang.Where(l => l.MaDanhMuc == category).ToList();
+                tenDanhMuc = db.DanhMuc.Where(c => c.maDanhMuc == category).Select(c => c.tenDanhMuc).FirstOrDefault();
+            }
+            var tenGv = TenGiaoVien(banHang);
+            var ds = banHang.GroupBy(l => l.MaGiaoVien)
+                .Select(g => new
+                {
+                    id = g.Key,
+                    name = tenGv.ContainsKey(g.Key) ? tenGv[g.Key] : "Giáo viên #" + g.Key,
+                    courses = g.Select(l => l.MaKhoaHoc).Distinct().Count(),
+                    sold = g.Count(),
+                    revenue = g.Sum(l => l.TienThucThu),
+                    url = Url.Action("Details", "Teacher", new { area = "Admin", id = g.Key })
+                })
+                .OrderByDescending(x => x.revenue).ThenByDescending(x => x.sold).Take(top).ToList();
+
+            return Json(new
+            {
+                success = true,
+                range = khoang + (tenDanhMuc != null ? " · " + tenDanhMuc : ""),
+                top,
+                teachers = ds
+            }, JsonRequestBehavior.AllowGet);
         }
 
         // GET: Admin/Dashboard/PendingCounts (menu tự làm mới chấm đỏ khi Admin đang mở trang)

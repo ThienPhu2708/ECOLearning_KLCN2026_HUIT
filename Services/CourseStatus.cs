@@ -22,6 +22,14 @@ namespace ECOLearning.Services
         // Không nằm trong PublishedValues nên mọi trang bán hàng tự loại ra; học viên đã mua vẫn học bình thường.
         public const string TamAn = "Tạm ẩn";
 
+        // Giáo viên tự ngưng bán khóa đang xuất bản (CourseLifecycleService). Ẩn khỏi trang bán, học viên đã mua vẫn học;
+        // giáo viên mở bán lại ngay không cần duyệt.
+        public const string TamNgung = "Tạm ngưng";
+
+        // Giáo viên xóa khóa đã có lịch sử (học viên, đơn hàng, đánh giá...): xóa mềm để giữ doanh thu / báo cáo,
+        // khóa biến mất khỏi khu giáo viên và trang bán, học viên đã mua vẫn học. Khóa chưa có lịch sử thì xóa hẳn.
+        public const string DaXoa = "Đã xóa";
+
         private static readonly string[] PublishedValues = { DaXuatBan, "Đã duyệt", "Active", "Đang hoạt động" };
         private static readonly string[] PendingValues = { ChoDuyet, "Chờ kiểm duyệt", "Chờ xét duyệt", "Pending" };
         private static readonly string[] NeedsFixValues = { CanSuaDoi, "Từ chối" };
@@ -41,7 +49,33 @@ namespace ECOLearning.Services
             if (status == TamKhoa) return "Tạm khóa (vi phạm)";
             if (status == KhoaVinhVien) return "Khóa vĩnh viễn";
             if (status == TamAn) return "Tạm ẩn (GV bị khóa)";
+            if (status == TamNgung) return "Tạm ngưng (GV ngưng bán)";
+            if (status == DaXoa) return "Đã xóa (GV xóa)";
             return status;
+        }
+
+        /// <summary>Nhãn và class badge trạng thái ở khu giáo viên (danh sách khóa học, tổng quan).</summary>
+        public static string TeacherBadgeText(string status)
+        {
+            if (IsPublished(status) || status == "DaDuyet") return "Đã xuất bản";
+            if (PendingValues.Contains(status) || status == "ChoDuyet") return "Chờ duyệt";
+            if (NeedsFixValues.Contains(status) || status == "TuChoi") return "Cần sửa đổi";
+            if (status == TamKhoa) return "Tạm khóa (vi phạm)";
+            if (status == KhoaVinhVien) return "Khóa vĩnh viễn";
+            if (status == TamAn) return "Tạm ẩn";
+            if (status == TamNgung) return "Tạm ngưng bán";
+            return "Bản nháp";
+        }
+
+        public static string TeacherBadgeClass(string status)
+        {
+            switch (TeacherBadgeText(status))
+            {
+                case "Đã xuất bản": return "badge-success";
+                case "Chờ duyệt": case "Tạm khóa (vi phạm)": case "Tạm ngưng bán": return "badge-warning";
+                case "Cần sửa đổi": case "Khóa vĩnh viễn": return "badge-danger";
+                default: return "badge-secondary";
+            }
         }
 
         /// <summary>Thứ tự hiển thị các nhóm trong bảng thống kê.</summary>
@@ -56,6 +90,8 @@ namespace ECOLearning.Services
                 case "Tạm khóa (vi phạm)": return 5;
                 case "Khóa vĩnh viễn": return 6;
                 case "Tạm ẩn (GV bị khóa)": return 7;
+                case "Tạm ngưng (GV ngưng bán)": return 8;
+                case "Đã xóa (GV xóa)": return 9;
                 default: return 99;
             }
         }
@@ -71,6 +107,8 @@ namespace ECOLearning.Services
                 case "Tạm khóa (vi phạm)": return "#F97316";
                 case "Khóa vĩnh viễn": return "#7F1D1D";
                 case "Tạm ẩn (GV bị khóa)": return "#6B7280";
+                case "Tạm ngưng (GV ngưng bán)": return "#0EA5E9";
+                case "Đã xóa (GV xóa)": return "#334155";
                 default: return "#64748B";
             }
         }

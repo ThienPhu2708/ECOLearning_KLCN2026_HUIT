@@ -11,7 +11,7 @@ namespace ECOLearning.Controllers
     /// <summary>
     /// Tìm kiếm khóa học, mở cho cả khách chưa đăng nhập (Services/SearchService.cs):
     ///   GET /tim-kiem?q=...            trang kết quả (lọc, sắp xếp, phân trang)
-    ///   GET /Search/Suggest?q=...      JSON cho dropdown khi gõ: tối đa 7 từ khóa, 5 khóa học chưa sở hữu, 2 giáo viên
+    ///   GET /Search/Suggest?q=...      JSON cho dropdown khi gõ: tối đa 7 từ khóa, 5 khóa học chưa sở hữu, 3 giáo viên (khớp đúng hoặc gần đúng)
     /// </summary>
     public class SearchController : Controller
     {
@@ -67,12 +67,14 @@ namespace ECOLearning.Controllers
                 Anh = Anh(k.AnhBia),
                 Url = Url.Action("Details", "Course", new { id = k.MaKhoaHoc })
             }).ToList();
-            vm.GiaoVien = kq.GiaoVien.Select(g => new GoiYGiaoVien
+            vm.GiaoVien = kq.GiaoVien.Select(x => new GoiYGiaoVien
             {
-                Ten = g.HoTen,
-                Anh = Anh(g.AnhDaiDien),
-                SoKhoaHoc = g.SoKhoaHoc,
-                Url = Url.Action("Index", "User", new { id = g.MaGiaoVien })
+                Ten = x.GiaoVien.HoTen,
+                Anh = Anh(x.GiaoVien.AnhDaiDien),
+                SoKhoaHoc = x.GiaoVien.SoKhoaHoc,
+                ChuyenMon = x.GiaoVien.ChuyenMon,
+                GanDung = x.GanDung,
+                Url = Url.Action("Index", "User", new { id = x.GiaoVien.MaGiaoVien })
             }).ToList();
             return Json(vm, JsonRequestBehavior.AllowGet);
         }

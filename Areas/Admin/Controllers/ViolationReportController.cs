@@ -92,7 +92,9 @@ namespace ECOLearning.Areas.Admin.Controllers
             ViewBag.Messages = service.GetMessages(lastLock != null ? lastLock.maXuLy : null);
             ViewBag.MinDays = ViolationReportService.MinDeadlineDays;
             ViewBag.MaxDays = ViolationReportService.MaxDeadlineDays;
-            ViewBag.BreadcrumbCurrent = "Báo cáo vi phạm / " + course.tenKhoaHoc;
+            ViewBag.BreadcrumbParent = "Báo cáo vi phạm";
+            ViewBag.BreadcrumbParentUrl = Url.Action("Index", new { id = "" });
+            ViewBag.BreadcrumbCurrent = course.tenKhoaHoc;
             return View();
         }
 

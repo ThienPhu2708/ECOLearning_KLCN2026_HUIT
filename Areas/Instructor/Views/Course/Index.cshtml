@@ -8,6 +8,7 @@
     int totalPublished = Model != null ? Model.Count(x => x.TrangThai == "DaDuyet"  || x.TrangThai == "Đã xuất bản" || x.TrangThai == "Đã duyệt") : 0;
     int totalRejected  = Model != null ? Model.Count(x => x.TrangThai == "TuChoi"   || x.TrangThai == "Từ chối" || x.TrangThai == "Cần sửa đổi" || x.RevisionStatus == "Rejected") : 0;
     int totalViolation = Model != null ? Model.Count(x => x.TrangThai == "Tạm khóa" || x.TrangThai == "Khóa vĩnh viễn") : 0;
+    int totalPaused    = Model != null ? Model.Count(x => x.TrangThai == ECOLearning.Services.CourseStatus.TamNgung) : 0;
 }
 
 @if (TempData["SuccessMessage"] != null)
@@ -35,6 +36,10 @@
             @if (totalRejected > 0)
             {
                 <button class="btn btn-secondary btn-sm filter-btn" data-filter="rejected">Cần sửa (@totalRejected)</button>
+            }
+            @if (totalPaused > 0)
+            {
+                <button class="btn btn-secondary btn-sm filter-btn" data-filter="paused">Tạm ngưng (@totalPaused)</button>
             }
             @if (totalViolation > 0)
             {
@@ -87,6 +92,10 @@
                         { filterKey = "violation"; badgeClass = "badge-warning"; badgeText = "Tạm khóa (vi phạm)"; }
                         else if (item.TrangThai == "Khóa vĩnh viễn")
                         { filterKey = "violation"; badgeClass = "badge-danger"; badgeText = "Khóa vĩnh viễn"; }
+                        else if (item.TrangThai == ECOLearning.Services.CourseStatus.TamNgung)
+                        { filterKey = "paused"; badgeClass = "badge-warning"; badgeText = "Tạm ngưng bán"; }
+                        else if (item.TrangThai == ECOLearning.Services.CourseStatus.TamAn)
+                        { filterKey = "hidden"; badgeClass = "badge-secondary"; badgeText = "Tạm ẩn"; }
 
                         decimal displayPrice = item.GiaBan;
 
@@ -175,6 +184,7 @@
                                             </button>
                                         }
                                     }
+                                    @Html.Partial("_CourseLifecycleActions", item, new ViewDataDictionary { { "Compact", true } })
                                 </div>
                             </td>
                         </tr>

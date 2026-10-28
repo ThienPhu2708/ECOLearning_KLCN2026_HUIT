@@ -452,7 +452,9 @@
             }
             else if (activeLesson != null && !string.IsNullOrEmpty(activeLesson.duongDanVideo))
             {
-                <video id="studyPlayer" preload="none" class="w-100 h-100" style="object-fit:contain; background:#000;" poster="@(course != null ? course.anhBia : "")">
+                @* Kích thước đặt trực tiếp (trang không nạp CSS Bootstrap nên class w-100 / h-100 không có tác dụng): video luôn vừa khung,
+                   không bị cắt mép khi khung nhỏ hơn video và phóng theo khi bấm Toàn màn hình *@
+                <video id="studyPlayer" preload="none" style="display:block; width:100%; height:100%; object-fit:contain; background:#000;" poster="@(course != null ? course.anhBia : "")">
                     <source data-src="@activeVideoSrc" type="video/mp4" />
                     Trình duyệt không hỗ trợ xem video.
                 </video>
@@ -822,7 +824,7 @@
         var seekWarnTimer   = null;
         var SEEK_THRESHOLD  = 10; // giây
 
-        // Ghi chú
+        // Ghi chú: khóa localStorage cũ (trước khi lưu trên máy chủ), chỉ dùng để chuyển ghi chú cũ lên máy chủ
         var notesKey = 'eco_notes_' + currentCourseId + '_' + currentLessonId;
 
         // Danh sách bài học
@@ -967,38 +969,76 @@
         }
 
         // ==================== GHI CHÚ ====================
-        function getNotes() {
-            try { return JSON.parse(localStorage.getItem(notesKey) || '[]'); }
-            catch (e) { return []; }
-        }
-        function saveNotes(arr) { localStorage.setItem(notesKey, JSON.stringify(arr)); }
+        // Lưu trên máy chủ (LearningController.Notes / AddNote / DeleteNote), dùng chung với ứng dụng di động
+        // (/api/v1/learning/{courseId}/notes) nên ghi chú hai bên đồng bộ. Ghi chú cũ còn trong localStorage được chuyển lên một lần.
+        var notesCache = [], notesMessage = null;
+        var notesUrls = {
+            list: '@Url.Action("Notes", "Learning")',
+            add: '@Url.Action("AddNote", "Learning")',
+            del: '@Url.Action("DeleteNote", "Learning")',
+            imp: '@Url.Action("ImportNotes", "Learning")'
+        };
         function formatSec(sec) {
             var m = Math.floor(sec / 60), s = Math.floor(sec % 60);
             return (m < 10 ? '0':'') + m + ':' + (s < 10 ? '0':'') + s;
         }
-        function escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+        function escHtml(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+        function postNotes(url, data) {
+            var fd = new FormData();
+            fd.append('__RequestVerificationToken', document.querySelector('#learning-antiforgery input').value);
+            Object.keys(data).forEach(function (k) { fd.append(k, data[k]); });
+            return fetch(url, { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.json(); });
+        }
+        function migrateLocalNotes() {
+            var cu;
+            try { cu = JSON.parse(localStorage.getItem(notesKey) || '[]'); } catch (e) { cu = []; }
+            if (!Array.isArray(cu) || !cu.length) return Promise.resolve();
+            return postNotes(notesUrls.imp, { courseId: currentCourseId, lessonId: currentLessonId, notes: JSON.stringify(cu) })
+                .then(function (d) { if (d && d.success) { try { localStorage.removeItem(notesKey); } catch (e) { } } })
+                .catch(function () { });
+        }
 
         function loadNotes() {
-            var notes = getNotes();
+            if (!currentCourseId || !currentLessonId) return;
+            migrateLocalNotes()
+                .then(function () {
+                    return fetch(notesUrls.list + '?courseId=' + encodeURIComponent(currentCourseId) + '&lessonId=' + encodeURIComponent(currentLessonId),
+                        { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    notesMessage = d.success ? null : (d.message || 'Không tải được ghi chú.');
+                    notesCache = d.success ? d.notes : [];
+                    renderNotes();
+                })
+                .catch(function () { notesMessage = 'Không tải được ghi chú. Hãy thử lại.'; notesCache = []; renderNotes(); });
+        }
+
+        function renderNotes() {
             var list  = document.getElementById('notes-list');
             var empty = document.getElementById('notes-empty');
             if (!list) return;
             list.querySelectorAll('.note-item').forEach(function (el) { el.remove(); });
-            if (notes.length === 0) { if (empty) empty.style.display = 'block'; return; }
+            if (notesCache.length === 0) {
+                if (empty) {
+                    empty.textContent = notesMessage || 'Chưa có ghi chú nào. Nhấn nút bên dưới để thêm ghi chú tại mốc thời gian hiện tại.';
+                    empty.style.display = 'block';
+                }
+                return;
+            }
             if (empty) empty.style.display = 'none';
-            notes.forEach(function (n, idx) {
+            notesCache.forEach(function (n) {
                 var item = document.createElement('div');
                 item.className = 'note-item';
                 item.innerHTML =
                     '<div style="display:flex; justify-content:space-between; align-items:center;">'+
                         '<div class="note-timestamp"><i class="bi bi-clock"></i> ' + formatSec(n.time) + '</div>'+
-                        '<button onclick="deleteNote(' + idx + ')" style="background:none; border:none; color:#9CA3AF; cursor:pointer; font-size:13px; padding:0; display:flex; align-items:center;" title="Xoá"><i class="bi bi-x-lg"></i></button>'+
+                        '<button type="button" data-note-id="' + n.id + '" style="background:none; border:none; color:#9CA3AF; cursor:pointer; font-size:13px; padding:0; display:flex; align-items:center;" title="Xoá"><i class="bi bi-x-lg"></i></button>'+
                     '</div>'+
                     '<div class="note-text">' + escHtml(n.text) + '</div>';
-                item.addEventListener('click', function (e) {
-                    if (e.target.tagName === 'BUTTON') return;
-                    jumpToNoteTime(n.time);
-                });
+                item.querySelector('[data-note-id]').addEventListener('click', function (e) { e.stopPropagation(); deleteNote(n.id); });
+                item.addEventListener('click', function () { jumpToNoteTime(n.time); });
                 list.appendChild(item);
             });
         }
@@ -1007,19 +1047,29 @@
             var input = document.getElementById('note-input');
             if (!input || !input.value.trim()) { showToast('Vui lòng nhập nội dung ghi chú!', 'warning'); return; }
             var player = document.getElementById('studyPlayer');
-            var time   = player ? player.currentTime : 0;
-            var notes  = getNotes();
-            notes.push({ time: time, text: input.value.trim(), createdAt: new Date().toISOString() });
-            notes.sort(function (a, b) { return a.time - b.time; });
-            saveNotes(notes);
-            input.value = '';
-            loadNotes();
-            showToast('Da luu ghi chu tai moc ' + formatSec(time), 'success');
+            var time   = player ? Math.floor(player.currentTime) : 0;
+            postNotes(notesUrls.add,{ courseId: currentCourseId, lessonId: currentLessonId, time: time, text: input.value.trim() })
+                .then(function (d) {
+                    if (!d.success) { showToast(d.message || 'Không lưu được ghi chú.', 'warning'); return; }
+                    input.value = '';
+                    notesMessage = null;
+                    notesCache.push(d.note);
+                    notesCache.sort(function (a, b) { return a.time - b.time || a.id - b.id; });
+                    renderNotes();
+                    showToast('Đã lưu ghi chú tại mốc ' + formatSec(d.note.time), 'success');
+                })
+                .catch(function () { showToast('Không lưu được ghi chú. Hãy thử lại.', 'error'); });
         }
 
-        function deleteNote(idx) {
-            var notes = getNotes(); notes.splice(idx, 1); saveNotes(notes); loadNotes();
-            showToast('Đã xóa ghi chú', 'info');
+        function deleteNote(id) {
+            postNotes(notesUrls.del, { courseId: currentCourseId, id: id })
+                .then(function (d) {
+                    if (!d.success) { showToast(d.message || 'Không xóa được ghi chú.', 'warning'); return; }
+                    notesCache = notesCache.filter(function (n) { return n.id !== id; });
+                    renderNotes();
+                    showToast('Đã xóa ghi chú', 'info');
+                })
+                .catch(function () { showToast('Không xóa được ghi chú. Hãy thử lại.', 'error'); });
         }
 
         function jumpToNoteTime(time) {
@@ -1028,7 +1078,7 @@
                 lastTrackedTime = time;
                 player.currentTime = time;
                 if (player.paused) player.play();
-                showToast('Phat tu moc ghi chu: ' + formatSec(time), 'info');
+                showToast('Phát từ mốc ghi chú: ' + formatSec(time), 'info');
             } else {
                 showToast('Tính năng này chỉ khả dụng với video MP4 nội bộ', 'warning');
             }

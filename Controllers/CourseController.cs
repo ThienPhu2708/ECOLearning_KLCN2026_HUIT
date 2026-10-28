@@ -14,13 +14,10 @@ namespace ECOLearning.Controllers
         private QL_HETHONG_CUNGCAP_KHOAHOCEntities1 db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1();
 
         // GET: Course (UC4: Tìm kiếm & Lọc nâng cao đa tiêu chí)
+        // Mở cho khách (link "Khám phá" trên menu khi chưa đăng nhập): khách xem và lọc được mọi khóa đang bán. Nút thả tim tự ẩn
+        // với khách (_FavoriteButton); mua / thêm giỏ / vào học ở trang chi tiết mới yêu cầu đăng nhập.
         public ActionResult Index(string search, string category, bool? isFree, bool? isPaid, string level, double? minRating, string sort, int trang = 1)
         {
-            if (!User.Identity.IsAuthenticated && Session["UserId"] == null)
-            {
-                return RedirectToAction("Login", "Account", new { returnUrl = Request.RawUrl });
-            }
-
             // Bỏ khóa người dùng đã sở hữu (đã mua qua giỏ hàng hoặc đăng ký khóa 0đ, cả hai đều ghi DangKyKhoaHoc):
             // khóa đã sở hữu chỉ hiện ở "Khóa học của tôi"
             int userId = (Session["UserId"] as int?) ?? 0;

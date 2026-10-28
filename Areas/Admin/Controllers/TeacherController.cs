@@ -52,7 +52,9 @@ namespace ECOLearning.Areas.Admin.Controllers
                 return RedirectToAction("Details", "User", new { id });
             }
 
-            ViewBag.BreadcrumbCurrent = "Quản lý giáo viên / " + model.CoBan.HoTen;
+            ViewBag.BreadcrumbParent = "Quản lý giáo viên";
+            ViewBag.BreadcrumbParentUrl = Url.Action("Index");
+            ViewBag.BreadcrumbCurrent = model.CoBan.HoTen;
             ViewBag.LaChinhMinh = id == Convert.ToInt32(Session["UserId"]);
             return View(model);
         }

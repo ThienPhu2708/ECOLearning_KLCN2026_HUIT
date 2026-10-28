@@ -17,7 +17,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
             int teacherId = CurrentTeacherId;
 
             var query = db.KhoaHoc
-                .Where(k => k.maGiaoVien == teacherId)
+                .Where(k => k.maGiaoVien == teacherId && k.trangThai != CourseStatus.DaXoa)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(search))
@@ -133,6 +133,10 @@ namespace ECOLearning.Areas.Instructor.Controllers
         // Tạm khóa: được sửa nội dung nhưng không tự gửi duyệt / xóa. Khóa vĩnh viễn: không sửa / xóa.
         private string GetLockedCourseError(KhoaHoc course, bool isSubmitOrDelete)
         {
+            if (course.trangThai == CourseStatus.TamNgung)
+                return "Khóa học đang tạm ngưng bán. Hãy mở bán lại trước khi chỉnh sửa hoặc gửi duyệt.";
+            if (course.trangThai == CourseStatus.DaXoa)
+                return "Khóa học đã bị xóa.";
             if (course.trangThai == CourseStatus.KhoaVinhVien)
                 return "Khóa học đã bị khóa vĩnh viễn do vi phạm nên không thể chỉnh sửa hoặc xóa!";
             if (course.trangThai == CourseStatus.TamKhoa && isSubmitOrDelete)
@@ -364,7 +368,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
 
             int teacherId = CurrentTeacherId;
             var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == id && k.maGiaoVien == teacherId);
-            if (course == null) return HttpNotFound();
+            if (course == null || course.trangThai == CourseStatus.DaXoa) return HttpNotFound();
 
             var reviews = db.DanhGiaKhoaHoc.Where(d => d.maKhoaHoc == id);
             int reviewCount = reviews.Count();
@@ -635,7 +639,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
             return RedirectToAction("Details", new { id = id });
         }
 
-        // POST: Instructor/Course/Delete/5
+        // POST: Instructor/Course/CancelRevision/5
         [HttpPost, ValidateAntiForgeryToken]
         public ActionResult CancelRevision(string id, string version) {
             try { new CourseRevisionService(db, Server.MapPath).Cancel(id, CurrentTeacherId, version); }
@@ -643,70 +647,49 @@ namespace ECOLearning.Areas.Instructor.Controllers
             return RedirectToAction("Details", new { id });
         }
 
+        // POST: Instructor/Course/Pause/5 — ngưng bán khóa đang xuất bản, học viên đã mua vẫn học
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Pause(string id)
+        {
+            var kq = new CourseLifecycleService(db).TamNgung(id, CurrentTeacherId);
+            if (kq.Loi != null) TempData["ErrorMessage"] = kq.Loi;
+            else TempData["SuccessMessage"] = string.Format("Đã tạm ngưng bán khóa học '{0}'. Học viên đã mua vẫn học bình thường.", kq.TenKhoaHoc);
+            return VeTrangKhoaHoc(kq, id);
+        }
+
+        // POST: Instructor/Course/Resume/5 — mở bán lại ngay, không cần duyệt
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Resume(string id)
+        {
+            var kq = new CourseLifecycleService(db).MoBanLai(id, CurrentTeacherId);
+            if (kq.Loi != null) TempData["ErrorMessage"] = kq.Loi;
+            else TempData["SuccessMessage"] = string.Format("Đã mở bán lại khóa học '{0}'.", kq.TenKhoaHoc);
+            return VeTrangKhoaHoc(kq, id);
+        }
+
+        // POST: Instructor/Course/Delete/5 — chưa có lịch sử thì xóa hẳn, đã có học viên / đơn hàng thì xóa mềm
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult Delete(string id)
         {
-            int teacherId = CurrentTeacherId;
-            var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == id && k.maGiaoVien == teacherId);
-            if (course == null) return HttpNotFound();
-            if (course.trangThai == "Chờ duyệt" || course.trangThai == "ChoDuyet")
+            var kq = new CourseLifecycleService(db).Xoa(id, CurrentTeacherId);
+            if (kq.Loi != null)
             {
-                TempData["ErrorMessage"] = "Khóa học đang chờ duyệt. Vui lòng hủy yêu cầu duyệt trước khi chỉnh sửa.";
-                return RedirectToAction("Details", new { id = course.maKhoaHoc });
+                TempData["ErrorMessage"] = kq.Loi;
+                return VeTrangKhoaHoc(kq, id);
             }
-            string lockError = GetLockedCourseError(course, true);
-            if (lockError != null)
-            {
-                TempData["ErrorMessage"] = lockError;
-                return RedirectToAction("Details", new { id = course.maKhoaHoc });
-            }
-
-
-            // Kiểm tra ràng buộc học viên
-            int studentCount = course.DangKyKhoaHoc != null ? course.DangKyKhoaHoc.Count : 0;
-            if (studentCount > 0)
-            {
-                TempData["ErrorMessage"] = "Không thể xóa khóa học đã có học viên đăng ký tham gia!";
-                return RedirectToAction("Index");
-            }
-
-            // Xóa các bài học không phân chương
-            var unchaptered = db.BaiHoc.Where(b => b.maChuong == null && b.maBaiHoc.StartsWith(course.maKhoaHoc + "_")).ToList();
-            foreach (var bh in unchaptered)
-            {
-                if (bh.TaiNguyen != null)
-                {
-                    db.TaiNguyen.RemoveRange(bh.TaiNguyen);
-                }
-                db.BaiHoc.Remove(bh);
-            }
-
-            // Xóa các liên kết bài học & chương học
-            if (course.ChuongHoc != null)
-            {
-                foreach (var ch in course.ChuongHoc.ToList())
-                {
-                    if (ch.BaiHoc != null)
-                    {
-                        foreach (var bh in ch.BaiHoc.ToList())
-                        {
-                            if (bh.TaiNguyen != null)
-                            {
-                                db.TaiNguyen.RemoveRange(bh.TaiNguyen);
-                            }
-                            db.BaiHoc.Remove(bh);
-                        }
-                    }
-                    db.ChuongHoc.Remove(ch);
-                }
-            }
-
-            db.KhoaHoc.Remove(course);
-            db.SaveChanges();
-
-            TempData["SuccessMessage"] = string.Format("Đã xóa thành công khóa học '{0}'!", course.tenKhoaHoc);
+            TempData["SuccessMessage"] = kq.XoaHan
+                ? string.Format("Đã xóa khóa học '{0}'.", kq.TenKhoaHoc)
+                : string.Format("Đã xóa khóa học '{0}'. Khóa học ngừng bán vĩnh viễn; học viên đã mua vẫn học, doanh thu được giữ nguyên.", kq.TenKhoaHoc);
             return RedirectToAction("Index");
+        }
+
+        // Không tìm thấy khóa (của giáo viên khác / đã xóa) thì về danh sách để thấy thông báo, ngược lại về trang chi tiết
+        private ActionResult VeTrangKhoaHoc(CourseLifecycleService.KetQua kq, string id)
+        {
+            return kq.TenKhoaHoc == null ? RedirectToAction("Index") : RedirectToAction("Details", new { id });
         }
     }
 }

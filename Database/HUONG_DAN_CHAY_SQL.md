@@ -32,12 +32,13 @@ Thư mục: `Database/Migrations/`
 | 16 | `016_QuanTri_NguoiDung.sql` | Admin quản lý người dùng / giáo viên / giám sát Marketing: thêm cột cho `NguoiDung` (ngày tạo, lý do / thời điểm / hạn khóa, Admin khóa, cờ buộc đổi mật khẩu tạm), bảng `NhatKyQuanTri` (nhật ký thao tác Admin), `KhoaHocTamAn` (khóa học bị ẩn khi giáo viên bị khóa, lưu trạng thái cũ) và cột Admin tạm dừng cho `KhuyenMai`. Thiếu file này thì 3 trang Quản lý người dùng, Quản lý giáo viên, Giám sát Marketing báo "Chưa khởi tạo dữ liệu"; đăng nhập và các trang khác vẫn chạy. |
 | 17 | `017_PhienDangNhap_DocQuyen.sql` | Mỗi tài khoản **Admin / Marketing chỉ một phiên đăng nhập**: thêm cột `maPhien`, `phienLuc`, `phienIp`, `phienTrinhDuyet` cho `NguoiDung`. Người đăng nhập sau thay người trước; phiên cũ bị đăng xuất trong khoảng 15 giây, hiện pop-up (thời gian, trình duyệt, IP của lần đăng nhập mới) và ghi "Đăng nhập nơi khác" vào nhật ký quản trị. Chạy **sau 016**. Thiếu file này thì Admin / Marketing vẫn đăng nhập nhiều nơi cùng lúc như trước. |
 | 18 | `018_Marketing_DacTa.sql` | Marketing theo **đặc tả nghiệp vụ đã chốt**: phạm vi khuyến mãi theo **danh mục** (`KhuyenMai.maDanhMucApDung`), số lượt mỗi học viên để trống = không giới hạn (`MaGiamGia.gioiHanMoiHocVien` cho phép NULL), chiến dịch có kênh triển khai, ngân sách, chi phí thực tế, chỉ tiêu doanh thu / lượt dùng, ghi chú và **5 trạng thái** (Kế hoạch / Đang triển khai / Tạm dừng / Hoàn thành / Đã hủy; chiến dịch cũ `HoatDong` → Đang triển khai, `KetThuc` → Hoàn thành). Chạy **sau 008, 009**. **Chạy cùng lúc với bản code mới**: code cũ ghi trạng thái chiến dịch `HoatDong` sẽ bị từ chối sau khi chạy file này. Thiếu file này thì các trang Marketing, ví mã và giỏ hàng báo "chưa khởi tạo". |
+| 20 | `020_GhiChuBaiHoc.sql` | **Ghi chú bài học** lưu trên máy chủ (bảng `GhiChuBaiHoc`: học viên, bài học, mốc giây của video, nội dung) để ghi chú trên web và ứng dụng di động đồng bộ (API `/api/v1/learning/{courseId}/notes`, `/api/v1/notes/{id}`). Trước đây web lưu ghi chú trong trình duyệt; mở lại bài học thì ghi chú cũ tự chuyển lên máy chủ. Thiếu file này thì bảng ghi chú báo "chưa sẵn sàng". |
 
 ### Cách chạy trong SQL Server Management Studio (SSMS)
 1. Mở SSMS, kết nối vào SQL Server trên máy bạn.
 2. **File → Open → File...** → chọn file `001_...sql`.
 3. Bấm **Execute** (hoặc phím **F5**). Thấy *"Commands completed successfully"* là xong.
-4. Lặp lại với `002`, `003`, `004`, `005`, `006`, cả hai file `007`, `008`, `009`, `010`, `011`, `012`, `013`, `014`, `015`, `016`, `017`, `018` **theo đúng thứ tự**.
+4. Lặp lại với `002`, `003`, `004`, `005`, `006`, cả hai file `007`, `008`, `009`, `010`, `011`, `012`, `013`, `014`, `015`, `016`, `017`, `018`, `019`, `020` **theo đúng thứ tự**.
 
 > Mỗi file đã có sẵn dòng `USE QL_HETHONG_CUNGCAP_KHOAHOC;` nên không cần chọn database trước.
 > Nếu chạy bằng dòng lệnh `sqlcmd` thì thêm tham số **`-I`** (bật `QUOTED_IDENTIFIER`), nếu không `007_Quiz_ChungChi.sql`

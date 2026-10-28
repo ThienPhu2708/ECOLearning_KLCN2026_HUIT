@@ -14,10 +14,6 @@
 
 <link rel="stylesheet" href="~/assets/css/admin-users.css?v=1" />
 
-<div style="margin-bottom: 14px;">
-    <a href="@Url.Action("Index")" class="btn btn-outline btn-sm"><i class="bi bi-arrow-left"></i> Danh sách người dùng</a>
-</div>
-
 @Html.Partial("_AdminFlash")
 
 <div class="card au-profile">
@@ -57,21 +53,6 @@
     })
 </div>
 
-@if (!Model.HoatDong)
-{
-    <div class="au-lock-box">
-        <strong><i class="bi bi-lock-fill"></i> Tài khoản đang bị khóa @(Model.KhoaDenNgay.HasValue ? "đến " + Model.KhoaDenNgay.Value.ToString("HH:mm dd/MM/yyyy") : "vĩnh viễn")</strong>
-        @if (!string.IsNullOrEmpty(Model.LyDoKhoa))
-        {
-            <div style="margin-top: 4px;">Lý do: @Model.LyDoKhoa</div>
-        }
-        <div class="au-sub" style="margin-top: 4px;">
-            @(Model.NgayKhoa.HasValue ? "Khóa lúc " + Model.NgayKhoa.Value.ToString("HH:mm dd/MM/yyyy") : "")@(string.IsNullOrEmpty(Model.TenAdminKhoa) ? "" : " bởi " + Model.TenAdminKhoa)
-            @(Model.KhoaDenNgay.HasValue ? " · Tự mở khi hết hạn" : "")
-        </div>
-    </div>
-}
-
 <div class="au-info-grid">
     <div class="card au-info"><span>Số điện thoại</span><b>@(string.IsNullOrEmpty(Model.SoDienThoai) ? "Chưa cập nhật" : Model.SoDienThoai)</b></div>
     <div class="card au-info"><span>Giới tính / Ngày sinh</span><b>@(Model.GioiTinh ?? "-") · @(Model.NgaySinh.HasValue ? Model.NgaySinh.Value.ToString("dd/MM/yyyy") : "-")</b></div>
@@ -102,7 +83,7 @@
         <div class="au-panel active" id="tab-khoa-hoc">
             <div class="au-note"><i class="bi bi-award"></i> Đã nhận <strong>@Model.SoChungChi</strong> chứng chỉ hoàn thành khóa học.</div>
             <div class="table-responsive">
-                <table class="table au-table">
+                <table class="table au-table" data-paginate="10">
                     <thead><tr><th>Khóa học</th><th>Ngày đăng ký</th><th>Tiến độ</th><th>Học gần nhất</th></tr></thead>
                     <tbody>
                         @if (Model.KhoaHoc.Count == 0)
@@ -125,7 +106,7 @@
 
         <div class="au-panel" id="tab-don-hang">
             <div class="table-responsive">
-                <table class="table au-table">
+                <table class="table au-table" data-paginate="10">
                     <thead><tr><th>Mã đơn</th><th>Ngày đặt</th><th class="au-num">Số khóa</th><th>Tổng tiền</th><th>Trạng thái</th></tr></thead>
                     <tbody>
                         @if (Model.DonHang.Count == 0)
@@ -150,7 +131,7 @@
 
         <div class="au-panel" id="tab-danh-gia">
             <div class="table-responsive">
-                <table class="table au-table">
+                <table class="table au-table" data-paginate="10">
                     <thead><tr><th>Khóa học</th><th>Số sao</th><th>Nội dung</th><th>Ngày</th></tr></thead>
                     <tbody>
                         @if (Model.DanhGia.Count == 0)

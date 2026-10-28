@@ -42,6 +42,7 @@ else
 
     <form method="get" action="@Url.Action("Index")" class="au-filter">
         <input type="search" name="q" value="@q" class="form-control au-search" placeholder="Tìm theo họ tên hoặc email giáo viên" maxlength="100" />
+        <button type="submit" class="btn btn-secondary"><i class="bi bi-search"></i> Tìm</button>
         <select name="status" class="form-control" onchange="this.form.submit()">
             <option value="">Mọi trạng thái</option>
             <option value="active" @(status == "active" ? "selected" : "")>Đang hoạt động</option>
@@ -55,12 +56,11 @@ else
             <option value="students" @(sort == "students" ? "selected" : "")>Nhiều học viên nhất</option>
             <option value="newest" @(sort == "newest" ? "selected" : "")>Mới tham gia</option>
         </select>
-        <button type="submit" class="btn btn-secondary"><i class="bi bi-search"></i> Tìm</button>
     </form>
 
     <div class="card" style="padding: 0; overflow: hidden;">
         <div class="table-responsive">
-            <table class="table au-table" data-paginate="15">
+            <table class="table au-table" data-paginate="10">
                 <thead>
                     <tr>
                         <th>Giáo viên</th>

@@ -164,8 +164,10 @@
                 a.appendChild(el('div', 'ss-avatar-fallback', initials(g.Ten)));
             }
             var t = el('div', 'ss-text');
+            // Tên chỉ gần giống câu đang gõ: ghi "Có phải" để người dùng biết đây là gợi ý, không phải khớp đúng
+            if (g.GanDung) t.appendChild(el('div', 'ss-hint', 'Có phải bạn muốn tìm'));
             t.appendChild(el('div', 'ss-title', g.Ten));
-            t.appendChild(el('div', 'ss-meta', 'Giảng viên · ' + g.SoKhoaHoc + ' khóa học'));
+            t.appendChild(el('div', 'ss-meta', 'Giáo viên' + (g.ChuyenMon ? ' · ' + g.ChuyenMon : '') + ' · ' + g.SoKhoaHoc + ' khóa học'));
             a.appendChild(t);
             box.appendChild(a);
             has = true;

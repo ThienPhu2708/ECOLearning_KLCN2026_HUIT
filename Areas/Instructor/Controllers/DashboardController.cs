@@ -89,7 +89,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
             }
 
             // 6. Top 3 khóa học mang lại doanh thu cao nhất
-            var topList = teacherCourses.Select(k => {
+            // Khóa giáo viên đã xóa vẫn tính doanh thu ở trên nhưng không hiện trong danh sách khóa học
+            var visibleCourses = teacherCourses.Where(k => k.trangThai != ECOLearning.Services.CourseStatus.DaXoa).ToList();
+            var topList = visibleCourses.Select(k => {
                 var kDetails = paidDetails.Where(ct => ct.maKhoaHoc == k.maKhoaHoc).ToList();
                 decimal kRev = kDetails.Sum(ct => (decimal?)ct.donGia) ?? 0;
                 int kStudents = enrollments.Count(dk => dk.maKhoaHoc == k.maKhoaHoc);
@@ -117,12 +119,12 @@ namespace ECOLearning.Areas.Instructor.Controllers
 
             // 7. Danh sách tất cả khóa học để hiển thị bảng cuối trang
             var allDanhMuc = db.DanhMuc.ToList();
-            int coursePages = (int)Math.Ceiling(teacherCourses.Count / 5.0);
+            int coursePages = (int)Math.Ceiling(visibleCourses.Count / 5.0);
             coursePage = Math.Max(1, Math.Min(coursePage, Math.Max(1, coursePages)));
             ViewBag.CoursePage = coursePage;
             ViewBag.CoursePages = coursePages;
-            ViewBag.CourseTotal = teacherCourses.Count;
-            model.RecentCourses = teacherCourses
+            ViewBag.CourseTotal = visibleCourses.Count;
+            model.RecentCourses = visibleCourses
                 .OrderByDescending(k => k.maKhoaHoc)
                 .Skip((coursePage - 1) * 5).Take(5)
                 .Select(k =>

@@ -9,6 +9,16 @@
     border-bottom: 1px solid #FDE68A;
     color: #92400E;
     font-size: 13.5px;
+    transition: transform .25s ease, opacity .25s ease;
+}
+/* Cuộn xuống thì trượt lên ẩn sau header, cuộn lên / rê chuột lên menu thì hiện lại (assets/js/staff-readonly.js) */
+.staff-banner.is-hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+    .staff-banner { transition: none; }
 }
 .staff-banner-inner {
     display: flex;

@@ -158,7 +158,7 @@
     <script src="~/Scripts/jquery-3.7.0.min.js"></script>
     <script src="~/assets/js/charts.js"></script>
     <script src="~/assets/js/app.js"></script>
-    <script src="~/assets/js/table-pagination.js?v=1"></script>
+    <script src="~/assets/js/table-pagination.js?v=2"></script>
     <script>
         function confirmInstructorLogout() {
         const modal = document.getElementById('instructor-logout-modal');
@@ -207,13 +207,14 @@ else
 #instructor-action-dialog::backdrop { background:rgba(15,23,42,.45); }
 </style>
 <script>
-function instructorDialog(title, message, action) {
+function instructorDialog(title, message, action, acceptText, danger) {
     var dialog = document.getElementById('instructor-action-dialog');
     document.getElementById('instructor-action-title').textContent = title;
     document.getElementById('instructor-action-message').textContent = message;
     document.getElementById('instructor-action-cancel').hidden = !action;
     var accept = document.getElementById('instructor-action-accept');
-    accept.textContent = action ? 'Xác nhận' : 'Đóng';
+    accept.textContent = acceptText || (action ? 'Xác nhận' : 'Đóng');
+    accept.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
     accept.onclick = function() { dialog.close(); if (action) action(); };
     dialog.showModal();
 }
@@ -222,6 +223,14 @@ function instructorConfirmSubmit(button, message) {
     var form = button.form;
     if (!form) return false;
     instructorDialog('Xác nhận thao tác', message, function() { form.requestSubmit(button); });
+    return false;
+}
+// Xác nhận thao tác khó hoàn tác (tạm ngưng, xóa khóa học): tiêu đề, nội dung và nút đọc từ data-confirm-* của nút bấm
+function instructorConfirmAction(button) {
+    var form = button.form;
+    if (!form) return false;
+    instructorDialog(button.getAttribute('data-confirm-title'), button.getAttribute('data-confirm-message'),
+        function() { form.requestSubmit(button); }, button.getAttribute('data-confirm-accept'), button.hasAttribute('data-confirm-danger'));
     return false;
 }
 </script>

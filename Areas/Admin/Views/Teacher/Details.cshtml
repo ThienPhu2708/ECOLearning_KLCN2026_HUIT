@@ -14,10 +14,6 @@
 
 <link rel="stylesheet" href="~/assets/css/admin-users.css?v=1" />
 
-<div style="margin-bottom: 14px;">
-    <a href="@Url.Action("Index")" class="btn btn-outline btn-sm"><i class="bi bi-arrow-left"></i> Danh sách giáo viên</a>
-</div>
-
 @Html.Partial("_AdminFlash")
 
 <div class="card au-profile">
@@ -91,7 +87,7 @@
 
     <div class="au-panel active" id="tab-khoa-hoc">
         <div class="table-responsive">
-            <table class="table au-table">
+            <table class="table au-table" data-paginate="10">
                 <thead><tr><th>Khóa học</th><th>Trạng thái</th><th>Giá bán</th><th class="au-num">Học viên</th><th>Đánh giá</th><th>Thực thu</th><th></th></tr></thead>
                 <tbody>
                     @if (Model.KhoaHoc.Count == 0)
@@ -140,7 +136,7 @@
 
     <div class="au-panel" id="tab-chi-tra">
         <div class="table-responsive">
-            <table class="table au-table">
+            <table class="table au-table" data-paginate="10">
                 <thead><tr><th>Mã phiếu</th><th>Ngày yêu cầu</th><th>Số tiền</th><th>Trạng thái</th></tr></thead>
                 <tbody>
                     @if (Model.PhieuChi.Count == 0)
@@ -173,7 +169,7 @@
 
     <div class="au-panel" id="tab-danh-gia">
         <div class="table-responsive">
-            <table class="table au-table">
+            <table class="table au-table" data-paginate="10">
                 <thead><tr><th>Khóa học</th><th>Học viên</th><th>Số sao</th><th>Nội dung</th><th>Ngày</th></tr></thead>
                 <tbody>
                     @if (Model.DanhGia.Count == 0)
@@ -198,7 +194,7 @@
 
     <div class="au-panel" id="tab-vi-pham">
         <div class="table-responsive">
-            <table class="table au-table">
+            <table class="table au-table" data-paginate="10">
                 <thead><tr><th>Khóa học</th><th>Loại vi phạm</th><th>Mô tả</th><th>Trạng thái</th><th>Ngày báo cáo</th><th></th></tr></thead>
                 <tbody>
                     @if (Model.ViPham.Count == 0)

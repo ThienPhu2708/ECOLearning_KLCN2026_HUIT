@@ -174,8 +174,8 @@ namespace ECOLearning.Areas.Admin.Controllers
         }
 
         // POST: Admin/Category/SetStatus (Tạm ngưng / Kích hoạt lại danh mục)
-        // Danh mục tạm ngưng bị ẩn khỏi bộ lọc của học viên và dropdown tạo khóa học của giáo viên;
-        // các khóa học đã thuộc danh mục vẫn hoạt động bình thường.
+        // Danh mục tạm ngưng bị ẩn khỏi bộ lọc của học viên và dropdown tạo khóa học của giáo viên.
+        // Chỉ tạm ngưng được danh mục chưa có khóa học nào.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult SetStatus(string id, bool active)
@@ -184,6 +184,15 @@ namespace ECOLearning.Areas.Admin.Controllers
             if (cat == null)
             {
                 return Json(new { success = false, message = "Danh mục không tồn tại!" });
+            }
+
+            if (!active)
+            {
+                int soKhoaHoc = db.KhoaHoc.Count(k => k.maDanhMuc == id);
+                if (soKhoaHoc > 0)
+                {
+                    return Json(new { success = false, message = $"Danh mục \"{cat.tenDanhMuc}\" đang có {soKhoaHoc} khóa học nên không thể tạm ngưng." });
+                }
             }
 
             cat.trangThai = active;

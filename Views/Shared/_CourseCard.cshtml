@@ -8,8 +8,8 @@
     decimal actualPrice = Model.GiaHienTai;
     decimal oldPrice = course.giaBan;
     bool hasRatings = Model.SoDanhGia > 0;
-    bool isTopTrending = Model.SoHocVien >= 3;
-    bool isHighRated = hasRatings && Model.DiemDanhGia >= 4.5;
+    bool isTopTrending = !Model.ChiNhanChiDinh && Model.SoHocVien >= 3;
+    bool isHighRated = !Model.ChiNhanChiDinh && hasRatings && Model.DiemDanhGia >= 4.5;
     string detailUrl = Url.Action("Details", "Course", new { area = "", id = course.maKhoaHoc });
 }
 
@@ -17,7 +17,16 @@
     <div class="course-thumb">
         <img src="@thumbUrl" alt="@course.tenKhoaHoc" loading="lazy" decoding="async" />
         @Html.Partial("_FavoriteButton", new ECOLearning.ViewModels.FavoriteButtonModel { CourseId = course.maKhoaHoc, TeacherId = course.maGiaoVien })
-        @if (isTopTrending)
+        @* Nơi gọi chọn nhãn (trang chủ: "Mới", "Đánh giá cao"); không có thì chọn như cũ *@
+        @if (!string.IsNullOrEmpty(Model.Nhan))
+        {
+            string mauNhan = Model.NhanKieu == "moi" ? "background: #EEF2FF; color: #434CE8; border: 1px solid #C7D2FE;"
+                : Model.NhanKieu == "danhgia" ? "background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;"
+                : "background: #434CE8; color: #FFFFFF;";
+            string iconNhan = Model.NhanKieu == "moi" ? "bi-stars" : Model.NhanKieu == "danhgia" ? "bi-star-fill" : "bi-fire";
+            <span class="badge" style="position: absolute; top: 12px; left: 12px; @mauNhan"><i class="bi @iconNhan me-1"></i> @Model.Nhan</span>
+        }
+        else if (isTopTrending)
         {
             <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;"><i class="bi bi-fire me-1"></i> Top Trending</span>
         }
@@ -35,15 +44,14 @@
             <i class="bi bi-person me-1"></i>
             @teacherName
         </div>
+        @if (!string.IsNullOrEmpty(Model.GhiChu))
+        {
+            <div style="font-size: 12px; color: var(--text-secondary, #64748B); margin-top: 2px;"><i class="bi bi-clock-history"></i> @Model.GhiChu</div>
+        }
 
         @if (!string.IsNullOrWhiteSpace(course.mucTieuDauRa))
         {
-            var cardOutcomes = course.mucTieuDauRa
-                .Split(new[] { "\r\n", "\r", "\n", ";", "," }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(s => s.Trim().TrimStart('-', '•', '*').Trim())
-                .Where(s => !string.IsNullOrEmpty(s))
-                .Take(2)
-                .ToList();
+            var cardOutcomes = ECOLearning.Services.CourseOutcomes.Tach(course.mucTieuDauRa).Take(2).ToList();
 
             if (cardOutcomes.Any())
             {

@@ -53,10 +53,10 @@ namespace ECOLearning.Controllers.Api
             return Ok(data);
         }
 
-        // B2. GET /api/v1/courses?q=&categoryId=&level=&price=free|paid&minRating=&sort=&page=&pageSize=
+        // B2. GET /api/v1/courses?q=&categoryId=&level=&price=free|paid&minRating=&instructorId=&sort=&page=&pageSize=
         [HttpGet, Route("courses")]
         public ActionResult Courses(string q = null, string categoryId = null, string level = null, string price = null,
-            double? minRating = null, string sort = null, int page = 1, int pageSize = 12)
+            double? minRating = null, string sort = null, int page = 1, int pageSize = 12, int? instructorId = null)
         {
             page = ChuanHoaTrang(page);
             pageSize = ChuanHoaKichThuoc(pageSize);
@@ -65,6 +65,9 @@ namespace ECOLearning.Controllers.Api
             var query = Db.KhoaHoc.Where(k => TrangThaiDangBan.Contains(k.trangThai));
             if (userId > 0)
                 query = query.Where(k => k.maGiaoVien != userId && !Db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == k.maKhoaHoc && d.maHocVien == userId));
+            // Khóa của một giáo viên (bấm thẻ "Giáo viên nổi bật" / kết quả tìm giáo viên)
+            if (instructorId.HasValue)
+                query = query.Where(k => k.maGiaoVien == instructorId.Value);
 
             // Từ khóa: xếp hạng bằng bộ tìm kiếm của website (không dấu, gõ sai nhẹ), giữ thứ tự liên quan
             List<string> thuTuLienQuan = null;
@@ -146,7 +149,10 @@ namespace ECOLearning.Controllers.Api
             }
 
             List<BaiHoc> baiKhongChuong;
-            var chuong = new LearningService(Db).LayChuong(k.maKhoaHoc, out baiKhongChuong)
+            var chuongGoc = new LearningService(Db).LayChuong(k.maKhoaHoc, out baiKhongChuong);
+            var maBaiKhoa = chuongGoc.SelectMany(c => c.BaiHoc ?? new List<BaiHoc>()).Concat(baiKhongChuong).Select(b => b.maBaiHoc).ToList();
+            int soTaiLieu = new LessonDocumentService(Db).DemTheoBai(maBaiKhoa).Values.Sum();
+            var chuong = chuongGoc
                 .Select(c => new
                 {
                     id = c.maChuong,
@@ -194,6 +200,7 @@ namespace ECOLearning.Controllers.Api
                 the.DurationSeconds,
                 the.StudentsCount,
                 the.Tag,
+                documentsCount = soTaiLieu,
                 shortDescription = k.moTaNgan,
                 description = k.moTa,
                 outcomes = TachMucTieu(k.mucTieuDauRa),
@@ -220,12 +227,7 @@ namespace ECOLearning.Controllers.Api
             isPreview = b.choXemThu == true
         };
 
-        private static List<string> TachMucTieu(string s)
-        {
-            if (string.IsNullOrWhiteSpace(s)) return new List<string>();
-            return s.Split(new[] { '\n', '\r', ';' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(x => x.Trim().TrimStart('-', '•', '*').Trim()).Where(x => x.Length > 0).ToList();
-        }
+        private static List<string> TachMucTieu(string s) => CourseOutcomes.Tach(s);
 
         /// <summary>Được đánh giá khi đã học đủ bài và đạt quiz cuối khóa (cùng quy tắc ReviewController của website).</summary>
         private bool CoTheDanhGia(string courseId, int userId)
@@ -340,11 +342,82 @@ namespace ECOLearning.Controllers.Api
         {
             var search = new SearchService(Db);
             if (string.IsNullOrWhiteSpace(q))
-                return Ok(new { keywords = search.TuKhoaPhoBien(SearchService.SoTuKhoaGoiY), courses = new List<CourseSummaryDto>() });
+                return Ok(new { keywords = search.TuKhoaPhoBien(SearchService.SoTuKhoaGoiY), courses = new List<CourseSummaryDto>(), teachers = new List<object>() });
             string cau = q.Trim();
             if (cau.Length > SearchService.DoDaiToiDa) cau = cau.Substring(0, SearchService.DoDaiToiDa);
             var kq = search.GoiY(cau, CurrentUserId);
-            return Ok(new { keywords = kq.TuKhoa, courses = Mapper.Map(kq.KhoaHoc.Select(x => x.MaKhoaHoc)) });
+            return Ok(new
+            {
+                keywords = kq.TuKhoa,
+                courses = Mapper.Map(kq.KhoaHoc.Select(x => x.MaKhoaHoc)),
+                teachers = kq.GiaoVien.Select(x => TeacherJson(x.GiaoVien, x.GanDung)).ToList()
+            });
+        }
+
+        // ------------------------------------------------------------------ Giáo viên (cùng bộ tìm kiếm với website, SearchService.TimGiaoVien)
+
+        /// <summary>Thẻ giáo viên. isApproximate: true = tên chỉ gần giống (gõ sai / gõ theo cách đọc), app hiện "Có phải bạn muốn tìm…".</summary>
+        private object TeacherJson(SearchService.GiaoVienChiMuc g, bool? ganDung)
+        {
+            return new
+            {
+                id = g.MaGiaoVien,
+                fullName = g.HoTen,
+                avatarUrl = AbsoluteUrl(string.IsNullOrWhiteSpace(g.AnhDaiDien) ? ApiCourseMapper.AnhDaiDienMacDinh : g.AnhDaiDien),
+                specialty = string.IsNullOrWhiteSpace(g.ChuyenMon) ? null : g.ChuyenMon,
+                coursesCount = g.SoKhoaHoc,
+                studentsCount = g.SoHocVien,
+                rating = Math.Round(g.DiemDanhGia, 1),
+                reviewCount = g.SoDanhGia,
+                isApproximate = ganDung
+            };
+        }
+
+        // B9. GET /api/v1/teachers/search?q=&limit= : giáo viên theo tên, gõ thiếu dấu / sai chính tả / theo cách đọc vẫn tìm được
+        [HttpGet, Route("teachers/search")]
+        public ActionResult SearchTeachers(string q = null, int limit = 20)
+        {
+            limit = Math.Max(1, Math.Min(limit, SearchService.SoGiaoVienKetQua));
+            string cau = (q ?? "").Trim();
+            if (cau.Length > SearchService.DoDaiToiDa) cau = cau.Substring(0, SearchService.DoDaiToiDa);
+            if (SearchText.KhongDau(cau).Length == 0)
+                return Ok(new { query = cau, total = 0, isApproximate = false, items = new List<object>() });
+
+            var search = new SearchService(Db);
+            var kq = search.TimGiaoVien(search.LayChiMuc(), cau, limit);
+            return Ok(new
+            {
+                query = cau,
+                total = kq.Count,
+                // Không ai khớp đúng, chỉ có người tên gần giống: hiện "Có phải bạn muốn tìm giáo viên…?" (giống trang tìm kiếm web)
+                isApproximate = kq.Count > 0 && kq.All(x => x.GanDung),
+                items = kq.Select(x => TeacherJson(x.GiaoVien, x.GanDung)).ToList()
+            });
+        }
+
+        // B10. GET /api/v1/teachers/{id} : hồ sơ công khai của giáo viên + các khóa đang bán (không trả email, số điện thoại, tài khoản ngân hàng)
+        [HttpGet, Route("teachers/{id:int}")]
+        public ActionResult Teacher(int id)
+        {
+            var u = Db.NguoiDung.FirstOrDefault(x => x.maNguoiDung == id && x.vaiTro == "GiaoVien" && x.trangThai != false);
+            if (u == null) return NotFoundJson("Không tìm thấy giáo viên.", "TEACHER_NOT_FOUND");
+
+            var hoSo = new InstructorProfileService(Db).LayHoSo(id);
+            var maKhoa = Db.KhoaHoc.Where(k => k.maGiaoVien == id && TrangThaiDangBan.Contains(k.trangThai)).Select(k => k.maKhoaHoc).ToList();
+            var khoa = Mapper.Map(maKhoa).OrderByDescending(c => c.StudentsCount).ThenByDescending(c => c.Rating).ThenBy(c => c.Id).ToList();
+            return Ok(new
+            {
+                id = u.maNguoiDung,
+                fullName = u.hoTen,
+                avatarUrl = AbsoluteUrl(string.IsNullOrWhiteSpace(u.anhDaiDien) ? ApiCourseMapper.AnhDaiDienMacDinh : u.anhDaiDien),
+                specialty = hoSo == null || string.IsNullOrWhiteSpace(hoSo.ChuyenMon) ? null : hoSo.ChuyenMon,
+                experience = hoSo == null || string.IsNullOrWhiteSpace(hoSo.KinhNghiem) ? null : hoSo.KinhNghiem,
+                coursesCount = khoa.Count,
+                studentsCount = hoSo?.TongSoHocVien ?? khoa.Sum(c => c.StudentsCount),
+                rating = Math.Round(hoSo?.DiemDanhGiaTrungBinh ?? 0, 1),
+                reviewCount = hoSo?.TongLuotDanhGia ?? 0,
+                courses = khoa
+            });
         }
 
         // B6. POST /api/v1/courses/{id}/click

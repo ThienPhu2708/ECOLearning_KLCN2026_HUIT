@@ -29,9 +29,60 @@
             else
             {
                 <h1>Tìm kiếm khóa học</h1>
-                <p>Nhập tên khóa học, kỹ năng, chủ đề hoặc tên giảng viên vào ô tìm kiếm phía trên.</p>
+                <p>Nhập tên khóa học, kỹ năng, chủ đề hoặc tên giáo viên vào ô tìm kiếm phía trên.</p>
             }
         </div>
+
+        @* Giáo viên có tên khớp từ khóa (SearchService.TimGiaoVien), đã xếp hạng: hiện 6, còn lại bấm "Xem tất cả" *@
+        @if (Model.GiaoVien.Count > 0)
+        {
+            const int soHienTruoc = 6;
+            <section class="sr-teachers" id="sr-teachers" aria-label="Giáo viên">
+                @if (Model.GiaoVienGanDung)
+                {
+                    var dau = Model.GiaoVien[0];
+                    <p class="sr-didyoumean"><i class="bi bi-lightbulb"></i> Có phải bạn muốn tìm giáo viên <a href="@Url.Action("Index", "User", new { id = dau.MaGiaoVien })">@dau.HoTen</a>?</p>
+                }
+                <div class="sr-teachers-head">
+                    <h2>@(Model.GiaoVienGanDung ? "Giáo viên có tên gần giống" : "Giáo viên")</h2>
+                    <p>@Model.GiaoVien.Count giáo viên phù hợp</p>
+                </div>
+                <div class="sr-teacher-grid">
+                    @for (int i = 0; i < Model.GiaoVien.Count; i++)
+                    {
+                        var g = Model.GiaoVien[i];
+                        string anh = string.IsNullOrWhiteSpace(g.AnhDaiDien) ? null
+                            : g.AnhDaiDien.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? g.AnhDaiDien : Url.Content("~/" + g.AnhDaiDien.TrimStart('~', '/'));
+                        <a class="sr-teacher@(i >= soHienTruoc ? " is-extra" : "")" href="@Url.Action("Index", "User", new { id = g.MaGiaoVien })">
+                            @if (anh != null)
+                            {
+                                <img src="@anh" alt="" loading="lazy" referrerpolicy="no-referrer" />
+                            }
+                            else
+                            {
+                                <span class="sr-teacher-fallback" aria-hidden="true">@(g.HoTen.Trim().Split(' ').Last().Substring(0, 1).ToUpper())</span>
+                            }
+                            <span class="sr-teacher-body">
+                                <span class="sr-teacher-name">@g.HoTen</span>
+                                <span class="sr-teacher-role" style="display: block;">Giáo viên@(string.IsNullOrEmpty(g.ChuyenMon) ? "" : " · " + g.ChuyenMon)</span>
+                                <span class="sr-teacher-stats">
+                                    <span>@g.SoKhoaHoc khóa học</span>
+                                    <span>@g.SoHocVien.ToString("#,##0") học viên</span>
+                                    @if (g.SoDanhGia > 0)
+                                    {
+                                        <span><i class="bi bi-star-fill"></i> @g.DiemDanhGia.ToString("0.0") (@g.SoDanhGia)</span>
+                                    }
+                                </span>
+                            </span>
+                        </a>
+                    }
+                </div>
+                @if (Model.GiaoVien.Count > soHienTruoc)
+                {
+                    <button type="button" class="sr-teachers-more" id="sr-teachers-more" aria-expanded="false">Xem tất cả giáo viên phù hợp (@Model.GiaoVien.Count)</button>
+                }
+            </section>
+        }
 
         @if (Model.DanhMucLienQuan.Count > 0)
         {
@@ -187,7 +238,7 @@
                     }
                     else
                     {
-                        <p>Thử từ khóa ngắn hơn, kiểm tra chính tả, hoặc tìm theo chủ đề / tên giảng viên.</p>
+                        <p>Thử từ khóa ngắn hơn, kiểm tra chính tả, hoặc tìm theo chủ đề / tên giáo viên.</p>
                     }
                 </div>
             }
@@ -227,6 +278,18 @@
                 // Bỏ tham số rỗng cho URL gọn
                 form.querySelectorAll('input[type=radio]:checked').forEach(function (r) { r.disabled = r.value === ''; });
                 form.submit();
+            });
+        })();
+
+        // Khối giáo viên: mở / thu gọn phần còn lại (sau 6 người đầu)
+        (function () {
+            var nut = document.getElementById('sr-teachers-more');
+            if (!nut) return;
+            var tongSo = nut.textContent;
+            nut.addEventListener('click', function () {
+                var mo = document.getElementById('sr-teachers').classList.toggle('is-open');
+                nut.setAttribute('aria-expanded', mo ? 'true' : 'false');
+                nut.textContent = mo ? 'Thu gọn' : tongSo;
             });
         })();
     </script>

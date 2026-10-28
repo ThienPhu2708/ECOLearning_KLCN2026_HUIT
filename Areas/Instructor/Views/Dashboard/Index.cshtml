@@ -214,26 +214,9 @@
                 <tbody>
                     @foreach (var course in Model.RecentCourses)
                     {
-                        string badgeClass = "badge-secondary";
-                        string badgeText = "Bản nháp";
-                        string btnClass = "btn-primary";
+                        string badgeClass = ECOLearning.Services.CourseStatus.TeacherBadgeClass(course.TrangThai);
+                        string badgeText = ECOLearning.Services.CourseStatus.TeacherBadgeText(course.TrangThai);
                         string btnAction = Url.Action("Details", "Course", new { area = "Instructor", id = course.MaKhoaHoc });
-
-                        if (course.TrangThai == "DaDuyet" || course.TrangThai == "Đã duyệt")
-                        {
-                            badgeClass = "badge-success"; badgeText = "Đã xuất bản";
-                            btnClass = "btn-outline";
-                        }
-                        else if (course.TrangThai == "ChoDuyet" || course.TrangThai == "Chờ duyệt")
-                        {
-                            badgeClass = "badge-warning"; badgeText = "Chờ duyệt";
-                            btnClass = "btn-secondary";
-                        }
-                        else if (course.TrangThai == "TuChoi" || course.TrangThai == "Từ chối")
-                        {
-                            badgeClass = "badge-danger"; badgeText = "Bị từ chối";
-                            btnClass = "btn-secondary";
-                        }
 
                         decimal displayPrice = course.GiaBan;
 

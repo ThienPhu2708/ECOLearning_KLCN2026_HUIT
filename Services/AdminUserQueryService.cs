@@ -10,7 +10,7 @@ namespace ECOLearning.Services
     /// <summary>Đọc dữ liệu cho trang Admin / Quản lý người dùng (cần migration 016 cho cột khóa tài khoản).</summary>
     public class AdminUserQueryService
     {
-        public const int SoDongMoiTrang = 20;
+        public const int SoDongMoiTrang = 10;
 
         private readonly QL_HETHONG_CUNGCAP_KHOAHOCEntities1 db;
 

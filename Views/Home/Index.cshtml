@@ -1,4 +1,4 @@
-@model List<ECOLearning.Models.KhoaHoc>
+﻿@model List<ECOLearning.Models.KhoaHoc>
 @{
     bool isLoggedIn = User.Identity.IsAuthenticated || Session["UserId"] != null;
     ViewBag.Title = isLoggedIn ? "Trang Chủ - Nền tảng Đào tạo Trực tuyến" : "Chào mừng đến với E-Learning";
@@ -9,6 +9,16 @@
     var homeRecommendation = ViewBag.HomeRecommendation as ECOLearning.ViewModels.GoiYTrangChuViewModel ?? new ECOLearning.ViewModels.GoiYTrangChuViewModel();
     var recommendations = homeRecommendation.Items;
     var interestPicker = ViewBag.InterestPicker as ECOLearning.ViewModels.InterestPickerViewModel;
+    var tiepTucHoc = ViewBag.TiepTucHoc as List<ECOLearning.ViewModels.TiepTucHocItem> ?? new List<ECOLearning.ViewModels.TiepTucHocItem>();
+    var yeuThich = ViewBag.YeuThich as List<ECOLearning.ViewModels.YeuThichItem> ?? new List<ECOLearning.ViewModels.YeuThichItem>();
+    int tongYeuThich = ViewBag.TongYeuThich as int? ?? yeuThich.Count;
+    var banChay = ViewBag.BanChay as ECOLearning.ViewModels.BanChayResult ?? new ECOLearning.ViewModels.BanChayResult { TenKy = "tuần này" };
+    var viBanDaHoc = ViewBag.ViBanDaHoc as ECOLearning.ViewModels.GoiYTheoKhoaHoc;
+    var danhGiaCao = ViewBag.DanhGiaCao as List<ECOLearning.ViewModels.CourseCardViewModel> ?? new List<ECOLearning.ViewModels.CourseCardViewModel>();
+    var moiRaMat = ViewBag.MoiRaMat as List<ECOLearning.ViewModels.CourseCardViewModel> ?? new List<ECOLearning.ViewModels.CourseCardViewModel>();
+    var giaoVienNoiBat = ViewBag.GiaoVienNoiBat as List<ECOLearning.Services.SearchService.GiaoVienChiMuc> ?? new List<ECOLearning.Services.SearchService.GiaoVienChiMuc>();
+    var daXemGanDay = ViewBag.DaXemGanDay as List<ECOLearning.ViewModels.CourseCardViewModel> ?? new List<ECOLearning.ViewModels.CourseCardViewModel>();
+    Func<int, string> mocGio = giay => (giay / 3600 > 0 ? (giay / 3600) + ":" + ((giay % 3600) / 60).ToString("00") : (giay / 60).ToString()) + ":" + (giay % 60).ToString("00");
 }
 
 <!-- Hero Section: carousel 4 banner (Views/Home/_HeroCarousel.cshtml) -->
@@ -543,13 +553,143 @@ if (interestPicker != null)
     @Html.Partial("_InterestPicker", interestPicker)
 }
 
-<!-- Section: Danh Sách Khóa Học Nổi Bật / Bán Chạy -->
+<!-- Section: Tiếp tục học (HomeSectionService.TiepTucHoc): khóa đang học dở, mở đúng bài đang xem -->
+    if (tiepTucHoc.Count > 0)
+    {
+    <style>
+        .cl-section { padding: 60px 0 0; background: var(--bg-canvas, #F8FAFC); }
+        .cl-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+        .cl-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+        .cl-card { display: flex; gap: 14px; padding: 14px; background: #FFFFFF; border: 1px solid var(--border-color, #E2E8F0); border-radius: 16px; transition: box-shadow .15s, border-color .15s; }
+        .cl-card:hover { border-color: #C7D2FE; box-shadow: 0 8px 24px rgba(67, 76, 232, 0.08); }
+        .cl-thumb { flex: 0 0 120px; height: 90px; border-radius: 12px; overflow: hidden; background: #E2E8F0; position: relative; display: block; }
+        .cl-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .cl-thumb i { position: absolute; inset: 0; margin: auto; width: 34px; height: 34px; border-radius: 50%; background: rgba(15, 23, 42, .6); color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .cl-body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .cl-title { font-size: 15px; font-weight: 700; line-height: 1.35; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .cl-title a { color: var(--text-heading, #0F172A); text-decoration: none; }
+        .cl-title a:hover { color: var(--primary, #434CE8); }
+        .cl-sub { font-size: 12.5px; color: var(--text-secondary, #64748B); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cl-progress { height: 6px; background: #EEF2FF; border-radius: 999px; overflow: hidden; margin-top: 4px; }
+        .cl-progress span { display: block; height: 100%; background: var(--primary, #434CE8); border-radius: 999px; }
+        .cl-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: auto; padding-top: 6px; }
+        .cl-foot strong { font-size: 13px; color: var(--text-heading, #0F172A); }
+        @@media (max-width: 1024px) { .cl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @@media (max-width: 640px) { .cl-grid { grid-template-columns: 1fr; } .cl-thumb { flex-basis: 96px; height: 72px; } }
+    </style>
+    <section id="continue-section" class="cl-section" aria-labelledby="continue-heading">
+        <div class="safe-container">
+            <div class="cl-head">
+                <div>
+                    <h2 class="h2" id="continue-heading">Tiếp tục học</h2>
+                    <p class="body-2" style="color: var(--text-secondary); margin: 4px 0 0;">Quay lại đúng bài bạn đang học</p>
+                </div>
+                <a href="@Url.Action("MyCourses", "Learning")" class="btn btn-outline btn-sm" style="text-decoration: none;">Khóa học của tôi</a>
+            </div>
+            <div class="cl-grid">
+                @foreach (var t in tiepTucHoc)
+                {
+                    string hocUrl = Url.Action("Study", "Learning", new { courseId = t.MaKhoaHoc, lessonId = t.MaBaiHoc });
+                    string anhBia = string.IsNullOrEmpty(t.AnhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : t.AnhBia;
+                    <article class="cl-card">
+                        <a class="cl-thumb" href="@hocUrl" aria-hidden="true" tabindex="-1">
+                            <img src="@anhBia" alt="" loading="lazy" decoding="async" />
+                            <i class="bi bi-play-fill"></i>
+                        </a>
+                        <div class="cl-body">
+                            <h3 class="cl-title"><a href="@hocUrl" title="@t.TenKhoaHoc">@t.TenKhoaHoc</a></h3>
+                            <div class="cl-sub" title="@t.TenBaiHoc">
+                                @(t.SoThuTuBai > 0 ? "Bài " + t.SoThuTuBai + ": " : "")@t.TenBaiHoc@(t.ViTriGiay > 0 ? " · đang xem đến " + mocGio(t.ViTriGiay) : "")
+                            </div>
+                            <div class="cl-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@t.PhanTram" aria-label="Tiến độ khóa học"><span style="width: @(t.PhanTram)%;"></span></div>
+                            <div class="cl-foot">
+                                <span class="cl-sub"><strong>@t.PhanTram%</strong> · @t.SoBaiXong/@t.TongSoBai bài</span>
+                                <a href="@hocUrl" class="btn btn-primary btn-sm" style="text-decoration: none; white-space: nowrap;"><i class="bi bi-play-fill"></i> @(t.DaBatDau ? "Học tiếp" : "Bắt đầu học")</a>
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+        </div>
+    </section>
+    }
+
+<!-- Section: Khóa học yêu thích của bạn (HomeSectionService.YeuThich): tối đa 5 khóa đã thả tim -->
+if (yeuThich.Count > 0)
+{
+<style>
+    .fv-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+    @@media (max-width: 1024px) { .fv-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @@media (max-width: 768px) { .fv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @@media (max-width: 480px) { .fv-grid { grid-template-columns: 1fr; } }
+    .fv-card { display: flex; flex-direction: column; height: 100%; background: #FFFFFF; border: 1px solid var(--border-color, #E2E8F0); border-radius: 16px; overflow: hidden; text-decoration: none; color: inherit; transition: box-shadow .15s, border-color .15s; }
+    .fv-card:hover { border-color: #FBCFE8; box-shadow: 0 8px 24px rgba(236, 72, 153, 0.08); }
+    .fv-thumb { position: relative; aspect-ratio: 16 / 9; background: #E2E8F0; overflow: hidden; }
+    .fv-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+    .fv-heart { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; background: #FFFFFF; color: #EC4899; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(15, 23, 42, .15); }
+    .fv-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .fv-title { font-size: 14.5px; font-weight: 700; line-height: 1.35; margin: 0; color: var(--text-heading, #0F172A); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .fv-sub { font-size: 12.5px; color: var(--text-secondary, #64748B); }
+    .fv-price { margin-top: auto; padding-top: 8px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .fv-price strong { font-size: 16px; color: var(--text-heading, #0F172A); }
+</style>
+<section id="favorites-section" style="padding: 60px 0; background: var(--bg-canvas, #F8FAFC);" aria-labelledby="favorites-heading">
+    <div class="safe-container">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px; gap: 12px; flex-wrap: wrap;">
+            <div>
+                <h2 class="h2" id="favorites-heading">Khóa học yêu thích của bạn</h2>
+                <p class="body-2" style="color: var(--text-secondary); margin: 4px 0 0;">Các khóa bạn đã thả tim, mới nhất trước.</p>
+            </div>
+            <a href="@Url.Action("Favorites", "Learning")" class="btn btn-outline btn-sm" style="text-decoration: none; flex-shrink: 0;">Xem tất cả (@tongYeuThich)</a>
+        </div>
+        @* Lưới 5 cột, tối đa 5 khóa (1 hàng); nhiều hơn thì bấm "Xem tất cả". Ít khóa thì thẻ vẫn giữ đúng kích thước *@
+        <div class="fv-grid">
+                @foreach (var f in yeuThich)
+                {
+                    var c = f.Course;
+                    string anh = string.IsNullOrEmpty(c.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : c.anhBia;
+                    <div>
+                        <a class="fv-card" href="@Url.Action("Details", "Course", new { id = c.maKhoaHoc })" target="_blank" rel="noopener">
+                            <div class="fv-thumb">
+                                <img src="@anh" alt="" loading="lazy" decoding="async" />
+                                <span class="fv-heart" title="Đã thả tim"><i class="bi bi-heart-fill"></i></span>
+                            </div>
+                            <div class="fv-body">
+                                <span class="caption" style="color: var(--primary); font-weight: 700;">@(c.DanhMuc != null ? c.DanhMuc.tenDanhMuc : "")</span>
+                                <h3 class="fv-title" title="@c.tenKhoaHoc">@c.tenKhoaHoc</h3>
+                                <span class="fv-sub"><i class="bi bi-person"></i> @(c.NguoiDung != null ? c.NguoiDung.hoTen : "")</span>
+                                <span class="fv-sub">
+                                    @if (f.SoDanhGia > 0)
+                                    {
+                                        <span><i class="bi bi-star-fill" style="color: #F59E0B;"></i> @f.DiemDanhGia.ToString("0.0") (@f.SoDanhGia)</span>
+                                    }
+                                    else
+                                    {
+                                        @:Chưa có đánh giá
+                                    }
+                                </span>
+                                <div class="fv-price">
+                                    <strong>@(c.giaBan <= 0 ? "Miễn phí" : c.giaBan.ToString("N0") + " đ")</strong>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                }
+        </div>
+    </div>
+</section>
+}
+
+<!-- Section: Bán chạy (HomeSectionService.BanChay): xếp theo lượt đăng ký trong 7 ngày, ít dữ liệu thì 30 ngày / toàn thời gian -->
 <section id="courses-section" style="padding: 60px 0; background: var(--bg-canvas, #F8FAFC);">
     <div class="safe-container">
         <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px;">
             <div>
                 <span class="badge badge-warning" style="margin-bottom: 8px;">Top Bán Chạy & Xu Hướng</span>
-                <h2 class="h2">Khóa học nổi bật nhất tuần</h2>
+                <h2 class="h2">@(banChay.TenKy == "toàn thời gian" ? "Khóa học bán chạy nhất" : "Bán chạy " + banChay.TenKy)</h2>
+                <p class="body-2" style="color: var(--text-secondary); margin: 4px 0 0;">
+                    @(banChay.TenKy == "toàn thời gian" ? "Xếp theo tổng số học viên đăng ký" : "Xếp theo lượt đăng ký mới trong " + (banChay.TenKy == "tuần này" ? "7 ngày qua" : "30 ngày qua"))
+                </p>
             </div>
             @if (courses != null && courses.Count > 1)
             {
@@ -577,7 +717,9 @@ if (interestPicker != null)
                     int enrollCount;
                     enrollCounts.TryGetValue(course.maKhoaHoc, out enrollCount);
                     double avgStars = hasRatings ? course.DanhGiaKhoaHoc.Average(d => d.soSao) : 0;
-                    bool isTopTrending = enrollCount >= 3;
+                    bool isTopTrending = banChay.TopBanChay.Contains(course.maKhoaHoc);
+                    int luotTrongKy;
+                    banChay.LuotTrongKy.TryGetValue(course.maKhoaHoc, out luotTrongKy);
                     bool isHighRated = hasRatings && avgStars >= 4.5;
 
                     <div class="course-slide">
@@ -587,7 +729,7 @@ if (interestPicker != null)
                                 @Html.Partial("_FavoriteButton", new ECOLearning.ViewModels.FavoriteButtonModel { CourseId = course.maKhoaHoc, TeacherId = course.maGiaoVien })
                                 @if (isTopTrending)
                                 {
-                                    <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;"><i class="bi bi-fire me-1"></i> Top Trending</span>
+                                    <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;"><i class="bi bi-fire me-1"></i> Bán chạy</span>
                                 }
                                 else if (isHighRated)
                                 {
@@ -603,15 +745,14 @@ if (interestPicker != null)
                                     <i class="bi bi-person me-1"></i>
                                     @teacherName
                                 </div>
+                                @if (luotTrongKy > 0 && banChay.TenKy != "toàn thời gian")
+                                {
+                                    <div style="font-size: 12px; color: #C2410C; font-weight: 600; margin-top: 2px;"><i class="bi bi-fire"></i> @luotTrongKy lượt đăng ký @(banChay.TenKy)</div>
+                                }
 
                                 @if (!string.IsNullOrWhiteSpace(course.mucTieuDauRa))
                                 {
-                                    var cardOutcomes = course.mucTieuDauRa
-                                        .Split(new[] { "\r\n", "\r", "\n", ";", "," }, StringSplitOptions.RemoveEmptyEntries)
-                                        .Select(s => s.Trim().TrimStart('-', '•', '*').Trim())
-                                        .Where(s => !string.IsNullOrEmpty(s))
-                                        .Take(2)
-                                        .ToList();
+                                    var cardOutcomes = ECOLearning.Services.CourseOutcomes.Tach(course.mucTieuDauRa).Take(2).ToList();
 
                                     if (cardOutcomes.Any())
                                     {
@@ -672,6 +813,158 @@ if (interestPicker != null)
         }
     </div>
 </section>
+
+<!-- ===== Các mục khám phá (HomeSectionService): Vì bạn đã học, Đánh giá cao / Mới ra mắt, Giáo viên nổi bật, Đã xem gần đây ===== -->
+<style>
+    .hs-section { padding: 60px 0; background: var(--bg-canvas, #F8FAFC); }
+    .hs-section.hs-surface { background: var(--bg-surface, #FFFFFF); border-top: 1px solid var(--border-color, #E2E8F0); border-bottom: 1px solid var(--border-color, #E2E8F0); }
+    .hs-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
+    .hs-head p { color: var(--text-secondary); margin: 4px 0 0; }
+    .hs-head h2 a { color: var(--primary, #434CE8); text-decoration: none; }
+    .hs-tabs { display: inline-flex; gap: 4px; background: #EEF2FF; padding: 4px; border-radius: 12px; }
+    .hs-tabs button { border: 0; background: transparent; padding: 8px 16px; border-radius: 9px; font-size: 15px; font-weight: 700; color: #475569; cursor: pointer; }
+    .hs-tabs button[aria-selected="true"] { background: #FFFFFF; color: #434CE8; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); }
+    .hs-teacher-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    @@media (max-width: 1024px) { .hs-teacher-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @@media (max-width: 560px) { .hs-teacher-grid { grid-template-columns: 1fr; } }
+</style>
+
+@* Vì bạn đã học "X": khóa liên quan tới khóa vừa học gần nhất *@
+if (viBanDaHoc != null)
+{
+<section id="related-section" class="hs-section hs-surface" aria-labelledby="related-heading">
+    <div class="safe-container">
+        <div class="hs-head">
+            <div>
+                <h2 class="h2" id="related-heading">Vì bạn đã học “<a href="@Url.Action("Details", "Course", new { id = viBanDaHoc.MaKhoaHocMoc })" target="_blank" rel="noopener">@viBanDaHoc.TenKhoaHocMoc</a>”</h2>
+                <p class="body-2">Khóa học thường được học cùng hoặc cùng lĩnh vực</p>
+            </div>
+            @if (viBanDaHoc.KhoaHoc.Count > 1)
+            {
+                <div class="course-slider-nav" data-slider-nav="related-slider" style="display: flex; gap: 10px; align-items: center;" hidden>
+                    <button type="button" class="cat-nav-btn js-slider-prev" title="Khóa học trước" aria-label="Khóa học trước" disabled><i class="bi bi-chevron-left"></i></button>
+                    <button type="button" class="cat-nav-btn js-slider-next" title="Khóa học tiếp theo" aria-label="Khóa học tiếp theo"><i class="bi bi-chevron-right"></i></button>
+                </div>
+            }
+        </div>
+        @Html.Partial("_HomeCourseSlider", Tuple.Create("related-slider", viBanDaHoc.KhoaHoc))
+    </div>
+</section>
+}
+
+@* Đánh giá cao / Mới ra mắt: một mục, hai tab *@
+if (danhGiaCao.Count > 0 || moiRaMat.Count > 0)
+{
+    bool tabDanhGia = danhGiaCao.Count > 0;
+<section id="discover-section" class="hs-section" aria-label="Đánh giá cao và mới ra mắt">
+    <div class="safe-container">
+        <div class="hs-head">
+            <div>
+                <div class="hs-tabs" role="tablist">
+                    @if (danhGiaCao.Count > 0)
+                    {
+                        <button type="button" role="tab" id="tab-danhgia" aria-controls="panel-danhgia" aria-selected="true" data-hs-tab="danhgia">Đánh giá cao</button>
+                    }
+                    @if (moiRaMat.Count > 0)
+                    {
+                        <button type="button" role="tab" id="tab-moi" aria-controls="panel-moi" aria-selected="@(tabDanhGia ? "false" : "true")" data-hs-tab="moi">Mới ra mắt</button>
+                    }
+                </div>
+                <p class="body-2" id="discover-desc" data-desc-danhgia="Từ 4 sao trở lên, xếp theo điểm có tính số lượt đánh giá" data-desc-moi="Khóa học vừa được duyệt và mở bán">
+                    @(tabDanhGia ? "Từ 4 sao trở lên, xếp theo điểm có tính số lượt đánh giá" : "Khóa học vừa được duyệt và mở bán")
+                </p>
+            </div>
+            <div data-hs-nav="danhgia" @(tabDanhGia ? "" : "hidden")><div class="course-slider-nav" data-slider-nav="toprated-slider" style="display: flex; gap: 10px; align-items: center;" hidden>
+                    <button type="button" class="cat-nav-btn js-slider-prev" title="Khóa học trước" aria-label="Khóa học trước" disabled><i class="bi bi-chevron-left"></i></button>
+                    <button type="button" class="cat-nav-btn js-slider-next" title="Khóa học tiếp theo" aria-label="Khóa học tiếp theo"><i class="bi bi-chevron-right"></i></button>
+                </div></div>
+            <div data-hs-nav="moi" @(tabDanhGia ? "hidden" : "")><div class="course-slider-nav" data-slider-nav="new-slider" style="display: flex; gap: 10px; align-items: center;" hidden>
+                    <button type="button" class="cat-nav-btn js-slider-prev" title="Khóa học trước" aria-label="Khóa học trước" disabled><i class="bi bi-chevron-left"></i></button>
+                    <button type="button" class="cat-nav-btn js-slider-next" title="Khóa học tiếp theo" aria-label="Khóa học tiếp theo"><i class="bi bi-chevron-right"></i></button>
+                </div></div>
+        </div>
+        @if (danhGiaCao.Count > 0)
+        {
+            <div role="tabpanel" id="panel-danhgia" aria-labelledby="tab-danhgia" data-hs-panel="danhgia">
+                @Html.Partial("_HomeCourseSlider", Tuple.Create("toprated-slider", danhGiaCao))
+            </div>
+        }
+        @if (moiRaMat.Count > 0)
+        {
+            <div role="tabpanel" id="panel-moi" aria-labelledby="tab-moi" data-hs-panel="moi" @(tabDanhGia ? "hidden" : "")>
+                @Html.Partial("_HomeCourseSlider", Tuple.Create("new-slider", moiRaMat))
+            </div>
+        }
+    </div>
+</section>
+}
+
+@* Giáo viên nổi bật: nhiều học viên, đánh giá cao; bấm vào mở hồ sơ giáo viên *@
+if (giaoVienNoiBat.Count > 0)
+{
+<section id="teachers-section" class="hs-section hs-surface" aria-labelledby="teachers-heading">
+    <div class="safe-container">
+        <div class="hs-head">
+            <div>
+                <h2 class="h2" id="teachers-heading">Giáo viên nổi bật</h2>
+                <p class="body-2">Được nhiều học viên theo học và đánh giá cao</p>
+            </div>
+        </div>
+        <div class="hs-teacher-grid">
+            @foreach (var g in giaoVienNoiBat)
+            {
+                string anhGv = string.IsNullOrWhiteSpace(g.AnhDaiDien) ? null
+                    : g.AnhDaiDien.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? g.AnhDaiDien : Url.Content("~/" + g.AnhDaiDien.TrimStart('~', '/'));
+                <a class="sr-teacher" href="@Url.Action("Index", "User", new { id = g.MaGiaoVien })">
+                    @if (anhGv != null)
+                    {
+                        <img src="@anhGv" alt="" loading="lazy" referrerpolicy="no-referrer" />
+                    }
+                    else
+                    {
+                        <span class="sr-teacher-fallback" aria-hidden="true">@(g.HoTen.Trim().Split(' ').Last().Substring(0, 1).ToUpper())</span>
+                    }
+                    <span class="sr-teacher-body">
+                        <span class="sr-teacher-name" style="display: block;">@g.HoTen</span>
+                        <span class="sr-teacher-role" style="display: block;">Giáo viên@(string.IsNullOrEmpty(g.ChuyenMon) ? "" : " · " + g.ChuyenMon)</span>
+                        <span class="sr-teacher-stats">
+                            <span>@g.SoKhoaHoc khóa học</span>
+                            <span>@g.SoHocVien.ToString("#,##0") học viên</span>
+                            @if (g.SoDanhGia > 0)
+                            {
+                                <span><i class="bi bi-star-fill"></i> @g.DiemDanhGia.ToString("0.0")</span>
+                            }
+                        </span>
+                    </span>
+                </a>
+            }
+        </div>
+    </div>
+</section>
+}
+
+@* Đã xem gần đây: khóa đã mở trang chi tiết, chưa sở hữu *@
+if (daXemGanDay.Count > 0)
+{
+<section id="recent-section" class="hs-section" aria-labelledby="recent-heading">
+    <div class="safe-container">
+        <div class="hs-head">
+            <div>
+                <h2 class="h2" id="recent-heading">Đã xem gần đây</h2>
+                <p class="body-2">Các khóa học bạn đã mở xem chi tiết</p>
+            </div>
+            @if (daXemGanDay.Count > 1)
+            {
+                <div class="course-slider-nav" data-slider-nav="recent-slider" style="display: flex; gap: 10px; align-items: center;" hidden>
+                    <button type="button" class="cat-nav-btn js-slider-prev" title="Khóa học trước" aria-label="Khóa học trước" disabled><i class="bi bi-chevron-left"></i></button>
+                    <button type="button" class="cat-nav-btn js-slider-next" title="Khóa học tiếp theo" aria-label="Khóa học tiếp theo"><i class="bi bi-chevron-right"></i></button>
+                </div>
+            }
+        </div>
+        @Html.Partial("_HomeCourseSlider", Tuple.Create("recent-slider", daXemGanDay))
+    </div>
+</section>
+}
 }
 else
 {
@@ -1042,6 +1335,8 @@ else
     </section>
 }
 
+@Html.Partial("_ChatBubble")
+
 @section scripts {
 <script>
     let currentCatIndex = 0;
@@ -1077,6 +1372,19 @@ else
    SLIDER KHÓA HỌC ("Khóa học dành riêng cho bạn", "Khóa học nổi bật nhất tuần"):
    5 khóa một lượt, mỗi lần bấm dời 4 khóa (khóa cuối của lượt trước là khóa đầu của lượt sau)
    ========================================================================== */
+// Mục "Đánh giá cao / Mới ra mắt": chuyển tab thì hiện thanh trượt + nút mũi tên của tab đó
+document.querySelectorAll('[data-hs-tab]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        var tab = btn.getAttribute('data-hs-tab');
+        document.querySelectorAll('[data-hs-tab]').forEach(function (b) { b.setAttribute('aria-selected', b === btn ? 'true' : 'false'); });
+        document.querySelectorAll('[data-hs-panel]').forEach(function (p) { p.hidden = p.getAttribute('data-hs-panel') !== tab; });
+        document.querySelectorAll('[data-hs-nav]').forEach(function (n) { n.hidden = n.getAttribute('data-hs-nav') !== tab; });
+        var desc = document.getElementById('discover-desc');
+        if (desc) desc.textContent = desc.getAttribute('data-desc-' + tab);
+        window.dispatchEvent(new Event('resize'));
+    });
+});
+
 document.querySelectorAll('.course-slider').forEach(function initCourseSlider(slider) {
     const track = slider.querySelector('.course-slider-track');
     const nav = document.querySelector('[data-slider-nav="' + slider.id + '"]');

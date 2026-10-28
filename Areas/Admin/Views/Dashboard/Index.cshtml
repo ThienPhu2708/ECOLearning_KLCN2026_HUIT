@@ -1,32 +1,37 @@
 @model ECOLearning.Areas.Admin.Models.AdminDashboardViewModel
 @{
 ViewBag.Title = "Dashboard Quản Trị Viên";
+Func<decimal, string> tienGon = v => v >= 1000000000 ? (v / 1000000000m).ToString("0.##") + " Tỷ"
+    : v >= 1000000 ? (v / 1000000m).ToString("0.#") + " Triệu" : v.ToString("#,##0 đ");
+decimal? tangTruong = Model.RevenueLastMonth > 0 ? (Model.RevenueThisMonth - Model.RevenueLastMonth) / Model.RevenueLastMonth * 100 : (decimal?)null;
 }
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
-    <div>
-        <h1 class="h2" style="margin-top: 6px;">Tổng Quan Vận Hành Hệ Thống</h1>
-        <p class="body-2" style="color: var(--text-secondary);">Giám sát các chỉ số kinh doanh, người dùng và hàng chờ kiểm duyệt toàn sàn</p>
-    </div>
-    <div style="display: flex; gap: 10px;">
-        <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin" })" class="btn btn-primary">
-            Kiểm duyệt ngay
-        </a>
-    </div>
+<link rel="stylesheet" href="~/assets/css/admin-report.css?v=1" />
+<style>
+    /* Thông báo nổi: báo cáo vi phạm chưa xử lý (tự ẩn sau 4 giây) */
+    .ad-toast { position: fixed; top: 84px; right: 24px; z-index: 1000; display: flex; align-items: center; gap: 10px; max-width: 340px;
+        padding: 10px 14px; border-radius: 12px; background: #FEF2F2; border: 1px solid #FCA5A5; color: #991B1B; font-size: 13.5px; font-weight: 600;
+        text-decoration: none; box-shadow: 0 10px 25px -8px rgba(15, 23, 42, 0.25); animation: ad-toast-in .25s ease-out; }
+    .ad-toast:hover { background: #FEE2E2; }
+    .ad-toast i { font-size: 16px; color: #DC2626; }
+    .ad-toast.is-hiding { opacity: 0; transform: translateY(-8px); transition: opacity .3s, transform .3s; }
+    @@keyframes ad-toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+    @@media (max-width: 640px) { .ad-toast { left: 16px; right: 16px; top: 72px; max-width: none; } }
+</style>
+
+<div style="margin-bottom: 32px;">
+    <h1 class="h2" style="margin-top: 6px;">Tổng Quan Vận Hành Hệ Thống</h1>
+    <p class="body-2" style="color: var(--text-secondary);">Giám sát các chỉ số kinh doanh, người dùng và hàng chờ kiểm duyệt toàn sàn</p>
 </div>
 
-<!-- BÁO CÁO VI PHẠM CHƯA XỬ LÝ -->
-<a href="@Url.Action("Index", "ViolationReport", new { area = "Admin", filter = "pending" })" class="card"
-   style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 16px 20px; text-decoration: none; color: inherit; @(Model.PendingViolationReports > 0 ? "border-color: #FCA5A5; background: #FEF2F2;" : "")">
-    <div style="display: flex; align-items: center; gap: 12px;">
-        <i class="bi bi-flag-fill" style="font-size: 20px; color: @(Model.PendingViolationReports > 0 ? "#DC2626" : "#94A3B8");"></i>
-        <div>
-            <strong>Báo cáo vi phạm chưa xử lý</strong>
-            <div class="caption" style="color: var(--text-secondary);">Báo cáo nội dung không phù hợp / sai sót từ học viên</div>
-        </div>
-    </div>
-    <div style="font-size: 26px; font-weight: 800; color: @(Model.PendingViolationReports > 0 ? "#DC2626" : "var(--text-secondary)");">@Model.PendingViolationReports</div>
-</a>
+@if (Model.PendingViolationReports > 0)
+{
+    <a id="violation-toast" class="ad-toast" role="status" href="@Url.Action("Index", "ViolationReport", new { area = "Admin", filter = "pending" })">
+        <i class="bi bi-flag-fill" aria-hidden="true"></i>
+        <span>@Model.PendingViolationReports báo cáo vi phạm chưa xử lý</span>
+    </a>
+}
 
 <!-- 4 OPERATIONAL KPI CARDS COMPLIANT WITH 3.3.1.4 -->
 <div class="grid-12" style="margin-bottom: 32px;">
@@ -35,23 +40,17 @@ ViewBag.Title = "Dashboard Quản Trị Viên";
         <div class="kpi-card">
             <div class="kpi-info">
                 <h4>Tổng doanh thu sàn</h4>
-                <div class="kpi-value">
-                    @if (Model.TotalRevenue >= 1000000000)
-                    {
-                        @((Model.TotalRevenue / 1000000000m).ToString("0.##") + " Tỷ")
-                    }
-                    else if (Model.TotalRevenue >= 1000000)
-                    {
-                        @((Model.TotalRevenue / 1000000m).ToString("0.#") + " Triệu")
-                    }
-                    else
-                    {
-                        @Model.TotalRevenue.ToString("#,##0 đ")
-                    }
-                </div>
-                <div class="kpi-trend positive">
-                    <span><i class="bi bi-arrow-up-short"></i> +22.8%</span> vs tháng trước
-                </div>
+                <div class="kpi-value">@tienGon(Model.TotalRevenue)</div>
+                @if (tangTruong.HasValue)
+                {
+                    <div class="kpi-trend @(tangTruong.Value >= 0 ? "positive" : "negative")">
+                        <span><i class="bi @(tangTruong.Value >= 0 ? "bi-arrow-up-short" : "bi-arrow-down-short")"></i> @((tangTruong.Value >= 0 ? "+" : "") + tangTruong.Value.ToString("0.#"))%</span> vs tháng trước
+                    </div>
+                }
+                else
+                {
+                    <div class="caption" style="color: var(--text-secondary); margin-top: 4px;">Tháng này: @Model.RevenueThisMonth.ToString("#,##0 đ")</div>
+                }
             </div>
         </div>
     </div>
@@ -98,17 +97,33 @@ ViewBag.Title = "Dashboard Quản Trị Viên";
 
 <!-- CHARTS SECTION -->
 <div class="grid-12" style="margin-bottom: 32px;">
-    <!-- User Growth & Traffic -->
+    <!-- Lượt đăng ký & doanh thu theo kỳ -->
     <div class="col-8">
         <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div class="ad-chart-head">
                 <div>
-                    <h3 class="h3">Tăng Trưởng Người Dùng Mới & Lưu Lượng</h3>
-                    <span class="caption">Học viên và giáo viên đăng ký mới qua từng tháng</span>
+                    <h3 class="h3">Lượt Đăng Ký & Doanh Thu</h3>
+                    <span class="caption" id="growth-range">Lượt đăng ký khóa học và doanh thu thực thu (đơn đã thanh toán)</span>
                 </div>
-                <span class="badge badge-success">+@Model.TotalStudents user tháng này</span>
+                <div class="ad-filter">
+                    <div class="ad-seg" role="group" aria-label="Xem theo">
+                        <button type="button" data-period="month" class="active">Tháng</button>
+                        <button type="button" data-period="quarter">Quý</button>
+                        <button type="button" data-period="year">Năm</button>
+                    </div>
+                    <select id="growth-year" aria-label="Năm">
+                        @foreach (var y in Model.ChartYears)
+                        {
+                            <option value="@y">@y</option>
+                        }
+                    </select>
+                </div>
             </div>
-            <div id="admin-growth-chart"></div>
+            <div class="ad-legend">
+                <span><span class="ad-swatch" style="background: #434CE8;"></span> Lượt đăng ký: <b id="sum-enroll">—</b></span>
+                <span><span class="ad-swatch" style="background: #10B981;"></span> Doanh thu: <b id="sum-revenue">—</b></span>
+            </div>
+            <div class="ad-chart" id="growth-chart"><div class="ad-empty">Đang tải biểu đồ…</div></div>
         </div>
     </div>
 
@@ -116,14 +131,76 @@ ViewBag.Title = "Dashboard Quản Trị Viên";
     <div class="col-4">
         <div class="card">
             <h3 class="h3" style="margin-bottom: 6px;">Tỷ Trọng Khóa Học</h3>
-            <span class="caption" style="display: block; margin-bottom: 20px;">Phân bổ theo danh mục đào tạo</span>
-            <div id="admin-category-donut"></div>
+            <span class="caption" style="display: block; margin-bottom: 20px;">Phân bổ theo danh mục đào tạo · rê chuột để xem chi tiết</span>
+            <div id="category-donut"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TOP KHÓA HỌC / TOP GIÁO VIÊN (theo cùng bộ lọc với biểu đồ) -->
+<div class="grid-12" style="margin-bottom: 32px;">
+    <div class="col-6">
+        <div class="card">
+            <div class="ad-card-head">
+                <div>
+                    <h3 class="h3" style="margin-bottom: 4px;">Top Khóa Học Bán Chạy</h3>
+                    <span class="caption" id="top-course-range">Theo doanh thu thực thu, cùng kỳ với biểu đồ</span>
+                </div>
+                <div class="ad-card-filter">
+                    <select id="top-course-count" aria-label="Số khóa học hiển thị">
+                        <option value="5">Top 5</option>
+                        <option value="10">Top 10</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table ad-rank" data-paginate="5">
+                    <thead><tr><th style="width: 44px;">#</th><th>Khóa học</th><th style="text-align: right;">Lượt bán</th><th style="text-align: right;">Doanh thu</th></tr></thead>
+                    <tbody id="top-courses"><tr><td colspan="4" class="ad-empty">Đang tải…</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="card">
+            <div class="ad-card-head">
+                <div>
+                    <h3 class="h3" style="margin-bottom: 4px;">Top Giáo Viên</h3>
+                    <span class="caption" id="top-teacher-range">Theo doanh thu thực thu</span>
+                </div>
+            </div>
+            <div class="ad-card-filter" style="margin-bottom: 14px;">
+                <select id="tt-period" aria-label="Xem theo">
+                    <option value="month">Theo tháng</option>
+                    <option value="quarter">Theo quý</option>
+                    <option value="year">Theo năm</option>
+                    <option value="all">Toàn thời gian</option>
+                </select>
+                <select id="tt-value" aria-label="Kỳ"></select>
+                <select id="tt-category" aria-label="Danh mục">
+                    <option value="">Tất cả danh mục</option>
+                    @foreach (var c in Model.CategoryOptions)
+                    {
+                        <option value="@c.Key">@c.Value</option>
+                    }
+                </select>
+                <select id="tt-top" aria-label="Số giáo viên hiển thị">
+                    <option value="5">Top 5</option>
+                    <option value="10">Top 10</option>
+                </select>
+            </div>
+            <div class="table-responsive">
+                <table class="table ad-rank" data-paginate="5">
+                    <thead><tr><th style="width: 44px;">#</th><th>Giáo viên</th><th style="text-align: right;">Khóa bán được</th><th style="text-align: right;">Doanh thu</th></tr></thead>
+                    <tbody id="top-teachers"><tr><td colspan="4" class="ad-empty">Đang tải…</td></tr></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- RECENT PENDING APPROVALS TABLE -->
-<div class="card">
+<div class="card" style="margin-bottom: 32px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <div>
             <h3 class="h3">Khóa học đang đợi phê duyệt</h3>
@@ -176,27 +253,159 @@ ViewBag.Title = "Dashboard Quản Trị Viên";
     </div>
 </div>
 
+<!-- ĐƠN HÀNG GẦN ĐÂY -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px; flex-wrap: wrap;">
+        <div>
+            <h3 class="h3">Đơn hàng gần đây</h3>
+            <span class="caption">Đơn mới nhất trên toàn sàn (tối đa 100 đơn gần đây), mọi trạng thái</span>
+        </div>
+        <a href="@Url.Action("Index", "RevenueReport", new { area = "Admin" })" class="btn btn-outline btn-sm">Doanh thu theo ngày <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="table-responsive">
+        <table class="table" data-paginate="10">
+            <thead>
+                <tr><th>Mã đơn</th><th>Học viên</th><th>Ngày đặt</th><th>Số khóa</th><th style="text-align: right;">Tổng tiền</th><th>Trạng thái</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var o in Model.RecentOrders)
+                {
+                    string tt = o.TrangThai ?? "";
+                    string badge = ECOLearning.Services.RevenueService.TrangThaiThanhCong.Contains(tt) ? "badge-success"
+                        : tt == "Chờ thanh toán" ? "badge-warning" : "badge-danger";
+                    <tr>
+                        <td><code>@o.MaDonHang</code></td>
+                        <td><a href="@Url.Action("Details", "User", new { area = "Admin", id = o.MaHocVien })" style="color: inherit; font-weight: 600;">@(o.TenHocVien ?? "Học viên #" + o.MaHocVien)</a></td>
+                        <td>@(o.NgayDat.HasValue ? o.NgayDat.Value.ToString("dd/MM/yyyy HH:mm") : "—")</td>
+                        <td>@o.SoKhoaHoc</td>
+                        <td style="text-align: right; font-weight: 700;">@o.TongTien.ToString("#,##0 đ")</td>
+                        <td><span class="badge @badge">@tt</span></td>
+                    </tr>
+                }
+                @if (!Model.RecentOrders.Any())
+                {
+                    <tr><td colspan="6" class="ad-empty">Chưa có đơn hàng nào.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
 @section Scripts {
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-    // Growth Chart
-    const growthData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyGrowthData));
-    const growthLabels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyGrowthLabels));
+(function () {
+    // ---- Thông báo vi phạm: chỉ có khi thật sự còn báo cáo chưa xử lý, tự ẩn sau 4 giây ----
+    var toast = document.getElementById('violation-toast');
+    if (toast) {
+        setTimeout(function () {
+            toast.classList.add('is-hiding');
+            setTimeout(function () { toast.remove(); }, 300);
+        }, 4000);
+    }
 
-    if (window.Charts && typeof Charts.renderLineChart === 'function') {
-    Charts.renderLineChart('admin-growth-chart', {
-    data: growthData,
-    labels: growthLabels,
-    color: '#434CE8',
-    fillColor: 'rgba(67, 76, 232, 0.08)'
-    });
+    var C = window.AdminCharts, fmtNum = C.fmtNum, fmtMoney = C.fmtMoney, esc = C.esc;
 
-    // Donut chart
-    const donutSegments = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.CategoryDonutSegments.Select(s => new { label = s.Label, value = s.Value, color = s.Color })));
-    Charts.renderDonutChart('admin-category-donut', {
-    segments: donutSegments
+    // ---- Biểu đồ đường 2 trục: lượt đăng ký (trái) và doanh thu (phải); rê chuột hiện số liệu từng điểm ----
+    function renderGrowth(data) {
+        C.dualLine(document.getElementById('growth-chart'), {
+            labels: data.labels,
+            ariaLabel: 'Biểu đồ lượt đăng ký và doanh thu',
+            title: function (i) { return data.labels[i] + (data.period === 'year' ? '' : ' / ' + data.year); },
+            axes: [function (v) { return fmtNum(Math.round(v)); }, C.fmtShort],
+            series: [
+                { name: 'Lượt đăng ký', data: data.enrollments, color: '#434CE8', fill: 'rgba(67,76,232,0.08)', format: fmtNum },
+                { name: 'Doanh thu', data: data.revenue, color: '#10B981', dashed: true, format: fmtMoney }
+            ]
+        });
+    }
+
+    function renderTop(id, rows, kind) {
+        var tb = document.getElementById(id);
+        if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" class="ad-empty">Chưa có doanh thu trong khoảng thời gian này.</td></tr>'; return; }
+        tb.innerHTML = rows.map(function (r, i) {
+            var sub = kind === 'course' ? esc(r.teacher) : r.sold + ' lượt bán';
+            var link = '<a href="' + esc(r.url) + '"' + (kind === 'course' ? ' target="_blank" rel="noopener"' : '') + '><strong>' + esc(r.name) + '</strong></a>';
+            return '<tr><td><span class="no">' + (i + 1) + '</span></td><td>' + link + '<div class="ad-sub">' + sub + '</div></td>'
+                + '<td style="text-align:right;">' + fmtNum(kind === 'course' ? r.sold : r.courses) + '</td>'
+                + '<td style="text-align:right;font-weight:700;">' + fmtMoney(r.revenue) + '</td></tr>';
+        }).join('');
+    }
+
+    // Top khóa học: cùng kỳ với biểu đồ; Top 5 / Top 10 (Top 10 chia 2 trang, mỗi trang 5)
+    var topCourses = [];
+    var courseCount = document.getElementById('top-course-count');
+    function renderTopCourses() { renderTop('top-courses', topCourses.slice(0, +courseCount.value), 'course'); }
+    courseCount.addEventListener('change', renderTopCourses);
+
+    // Top giáo viên: bộ lọc riêng (một tháng / quý / năm cụ thể hoặc toàn thời gian, danh mục, Top 5 / 10)
+    var years = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartYears));
+    var now = new Date(), nowYear = now.getFullYear(), nowMonth = now.getMonth() + 1;
+    var ttPeriod = document.getElementById('tt-period'), ttValue = document.getElementById('tt-value');
+    function fillPeriodValues() {
+        var opts = [];
+        years.forEach(function (y) {
+            if (ttPeriod.value === 'month') for (var m = (y === nowYear ? nowMonth : 12); m >= 1; m--) opts.push([y + '-' + m, 'Tháng ' + m + '/' + y]);
+            else if (ttPeriod.value === 'quarter') for (var q = (y === nowYear ? Math.ceil(nowMonth / 3) : 4); q >= 1; q--) opts.push([y + '-' + q, 'Quý ' + q + '/' + y]);
+            else if (ttPeriod.value === 'year') opts.push([y + '-0', 'Năm ' + y]);
+        });
+        ttValue.innerHTML = opts.map(function (o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('');
+        ttValue.hidden = !opts.length;
+    }
+    function loadTeachers() {
+        var v = (ttValue.value || (nowYear + '-' + nowMonth)).split('-');
+        var url = '@Url.Action("TopTeachers", "Dashboard", new { area = "Admin" })?period=' + ttPeriod.value + '&year=' + v[0] + '&index=' + v[1]
+            + '&category=' + encodeURIComponent(document.getElementById('tt-category').value) + '&top=' + document.getElementById('tt-top').value;
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!d.success) throw new Error();
+                document.getElementById('top-teacher-range').textContent = 'Theo doanh thu thực thu · ' + d.range;
+                renderTop('top-teachers', d.teachers, 'teacher');
+            })
+            .catch(function () { document.getElementById('top-teachers').innerHTML = '<tr><td colspan="4" class="ad-empty">Không tải được dữ liệu.</td></tr>'; });
+    }
+    ttPeriod.addEventListener('change', function () { fillPeriodValues(); loadTeachers(); });
+    ['tt-value', 'tt-category', 'tt-top'].forEach(function (id) { document.getElementById(id).addEventListener('change', loadTeachers); });
+    fillPeriodValues();
+    loadTeachers();
+
+    var state = { period: 'month', year: document.getElementById('growth-year').value };
+    var tenKy = { month: 'Theo tháng', quarter: 'Theo quý', year: 'Theo năm' };
+    function load() {
+        var url = '@Url.Action("ChartData", "Dashboard", new { area = "Admin" })?period=' + state.period + '&year=' + state.year;
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!d.success) throw new Error(d.message || 'Không tải được dữ liệu');
+                document.getElementById('growth-range').textContent = tenKy[d.period] + ' · ' + d.range + ' · doanh thu thực thu (đơn đã thanh toán)';
+                document.getElementById('sum-enroll').textContent = fmtNum(d.totalEnrollments);
+                document.getElementById('sum-revenue').textContent = fmtMoney(d.totalRevenue);
+                document.getElementById('top-course-range').textContent = 'Theo doanh thu thực thu · ' + d.range;
+                renderGrowth(d);
+                topCourses = d.topCourses;
+                renderTopCourses();
+            })
+            .catch(function () {
+                document.getElementById('growth-chart').innerHTML = '<div class="ad-empty">Không tải được biểu đồ. Hãy tải lại trang.</div>';
+            });
+    }
+    document.querySelectorAll('.ad-seg button').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.ad-seg button').forEach(function (b) { b.classList.toggle('active', b === btn); });
+            state.period = btn.dataset.period;
+            load();
+        });
     });
-}
-});
+    document.getElementById('growth-year').addEventListener('change', function () { state.year = this.value; load(); });
+    load();
+
+    // ---- Biểu đồ tròn tỷ trọng khóa học theo danh mục: rê chuột vào phần / chú thích để xem % và số khóa ----
+    var segments = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.CategoryDonutSegments.Select(s => new { label = s.Label, value = s.Value, count = s.Count, color = s.Color })));
+    var tongKhoa = segments.reduce(function (t, x) { return t + x.count; }, 0);
+    C.donut(document.getElementById('category-donut'), {
+        segments: segments.map(function (x) { return { label: x.label, value: x.value, color: x.color, detail: fmtNum(x.count) + ' khóa' }; }),
+        centerValue: fmtNum(tongKhoa), centerLabel: 'khóa học', emptyText: 'Chưa có khóa học.'
+    });
+})();
 </script>
 }

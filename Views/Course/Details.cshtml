@@ -619,11 +619,7 @@
                     <!-- Section 1: Outcomes -->
                     @if (!string.IsNullOrEmpty(Model.mucTieuDauRa))
                     {
-                        var outcomesList = Model.mucTieuDauRa
-                            .Split(new[] { "\r\n", "\r", "\n", ";", "," }, StringSplitOptions.RemoveEmptyEntries)
-                            .Select(s => s.Trim().TrimStart('-', '•', '*').Trim())
-                            .Where(s => !string.IsNullOrEmpty(s))
-                            .ToList();
+                        var outcomesList = ECOLearning.Services.CourseOutcomes.Tach(Model.mucTieuDauRa);
 
                         if (outcomesList.Any())
                         {

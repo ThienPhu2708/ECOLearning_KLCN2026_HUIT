@@ -12,6 +12,11 @@ namespace ECOLearning.Controllers
     {
         // Mục gợi ý trang chủ là slider 5 khóa một lượt
         private const int SoGoiYTrangChu = 10;
+        private const int SoBanChayTrangChu = 10;
+        private const int SoTiepTucHoc = 3;
+        private const int SoKhoaMoiMucKhamPha = 10;
+        private const int SoGiaoVienNoiBat = 4;
+        private const int SoYeuThichTrangChu = 5; // nhiều hơn thì xem ở trang "Khóa học yêu thích" (nút Xem tất cả)
 
         private QL_HETHONG_CUNGCAP_KHOAHOCEntities1 db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1();
 
@@ -24,23 +29,13 @@ namespace ECOLearning.Controllers
             {
                 if (isLoggedIn)
                 {
-                    // Bỏ khóa người dùng đã đăng ký (khóa 0đ vừa bấm "Đăng ký học" hoặc khóa đã mua):
-                    // đã sở hữu thì vào học ở "Khóa học của tôi", không quảng bá lại ở trang chủ
+                    // "Bán chạy tuần này": khóa đang bán, chưa sở hữu (đã sở hữu thì vào học ở "Khóa học của tôi"), xếp theo lượt
+                    // đăng ký trong 7 ngày (ít dữ liệu thì 30 ngày, rồi toàn thời gian). Trước đây lấy mọi khóa theo thứ tự CSDL.
                     int userId = (Session["UserId"] as int?) ?? 0;
-                    courses = db.KhoaHoc
-                        .Include(k => k.NguoiDung)
-                        .Include(k => k.DanhMuc)
-                        .Include(k => k.DanhGiaKhoaHoc)
-                        .Where(k => k.trangThai == "Đã xuất bản" || k.trangThai == "Đã duyệt" || k.trangThai == "Active")
-                        .Where(k => !db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == k.maKhoaHoc && d.maHocVien == userId))
-                        .ToList();
-
-                    // Số học viên mỗi khóa: một truy vấn GROUP BY nhẹ. Không Include(DangKyKhoaHoc) vì nạp cùng lúc
-                    // 2 danh sách con sinh truy vấn UNION ALL cần nhiều bộ nhớ, SQL Server có thể bắt chờ tới 25 giây.
-                    ViewBag.EnrollCounts = db.DangKyKhoaHoc
-                        .GroupBy(d => d.maKhoaHoc)
-                        .Select(g => new { MaKhoaHoc = g.Key, SoHocVien = g.Count() })
-                        .ToDictionary(x => x.MaKhoaHoc, x => x.SoHocVien);
+                    var banChay = new HomeSectionService(db).BanChay(userId, SoBanChayTrangChu);
+                    courses = banChay.KhoaHoc;
+                    ViewBag.BanChay = banChay;
+                    ViewBag.EnrollCounts = banChay.TongHocVien;
 
                     // Lấy danh sách danh mục thực sự có trong CSDL SQL Server
                     // Sắp theo mã như trang Tất cả lĩnh vực (CategoryController.All) để biểu tượng khớp nhau
@@ -91,6 +86,33 @@ namespace ECOLearning.Controllers
                         System.Diagnostics.Debug.WriteLine("Fetch coupons error: " + ex.Message);
                     }
                 }
+
+                // "Tiếp tục học" (dưới banner) và "Khóa học yêu thích của bạn"; lỗi một mục không làm hỏng trang chủ
+                try
+                {
+                    var homeSections = new HomeSectionService(db);
+                    ViewBag.TiepTucHoc = homeSections.TiepTucHoc(currentUserId, SoTiepTucHoc);
+                    int tongYeuThich;
+                    ViewBag.YeuThich = homeSections.YeuThich(currentUserId, SoYeuThichTrangChu, out tongYeuThich);
+                    ViewBag.TongYeuThich = tongYeuThich;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("Fetch home sections error: " + ex.Message);
+                }
+
+                // Các mục khám phá dưới "Bán chạy": mỗi mục lỗi riêng thì chỉ mục đó bị ẩn
+                var khamPha = new HomeSectionService(db);
+                Action<string, Action> nap = (ten, lam) =>
+                {
+                    try { lam(); }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Fetch " + ten + " error: " + ex.Message); }
+                };
+                nap("related", () => ViewBag.ViBanDaHoc = khamPha.ViBanDaHoc(currentUserId, SoKhoaMoiMucKhamPha));
+                nap("top-rated", () => ViewBag.DanhGiaCao = khamPha.DanhGiaCao(currentUserId, SoKhoaMoiMucKhamPha));
+                nap("new", () => ViewBag.MoiRaMat = khamPha.MoiRaMat(currentUserId, SoKhoaMoiMucKhamPha));
+                nap("teachers", () => ViewBag.GiaoVienNoiBat = khamPha.GiaoVienNoiBat(currentUserId, SoGiaoVienNoiBat));
+                nap("recent", () => ViewBag.DaXemGanDay = khamPha.DaXemGanDay(currentUserId, SoKhoaMoiMucKhamPha));
 
                 try
                 {

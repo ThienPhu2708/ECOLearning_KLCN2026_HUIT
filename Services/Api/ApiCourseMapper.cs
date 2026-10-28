@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
@@ -23,11 +23,25 @@ namespace ECOLearning.Services.Api
         public int ReviewCount { get; set; }
         public long Price { get; set; }
         public long OriginalPrice { get; set; }
+
+        /// <summary>Chương trình giảm trực tiếp đang áp dụng cho khóa; null khi không giảm.</summary>
+        public CoursePromotionDto Promotion { get; set; }
         public bool IsFree { get; set; }
         public int LessonsCount { get; set; }
         public int DurationSeconds { get; set; }
         public int StudentsCount { get; set; }
         public string Tag { get; set; }
+    }
+
+    /// <summary>
+    /// Chương trình giảm trực tiếp trên thẻ khóa học. DiscountPercent là % thực tế sau khi áp trần giảm tối đa
+    /// (khớp nhãn "-X%" app tự tính từ price và originalPrice), EndsAt là ngày kết thúc (yyyy-MM-dd).
+    /// </summary>
+    public class CoursePromotionDto
+    {
+        public string Name { get; set; }
+        public int DiscountPercent { get; set; }
+        public string EndsAt { get; set; }
     }
 
     /// <summary>Lấy thông tin thẻ của nhiều khóa học bằng một truy vấn, giữ nguyên thứ tự mã truyền vào.</summary>
@@ -97,8 +111,8 @@ namespace ECOLearning.Services.Api
 
         private CourseSummaryDto ToDto(Row r)
         {
-            // Giá khóa học = giaBan; giảm giá chỉ qua mã khuyến mãi (OriginalPrice giữ để không đổi khung JSON của app)
-            decimal giaHienTai = r.GiaBan;
+            // Server tính một lần giá hiệu lực (CourseDiscountService): Price = giá bán sau giảm trực tiếp, OriginalPrice = giá gốc
+            var gia = CourseDiscountService.Tinh(r.GiaBan, r.MaKhoaHoc, r.MaDanhMuc);
             return new CourseSummaryDto
             {
                 Id = r.MaKhoaHoc,
@@ -111,9 +125,16 @@ namespace ECOLearning.Services.Api
                 Level = r.CapDo,
                 Rating = Math.Round(r.DiemDanhGia, 1),
                 ReviewCount = r.SoDanhGia,
-                Price = (long)giaHienTai,
-                OriginalPrice = (long)r.GiaBan,
-                IsFree = giaHienTai <= 0,
+                Price = (long)gia.Gia,
+                OriginalPrice = (long)gia.GiaGoc,
+                Promotion = !gia.DangGiam ? null : new CoursePromotionDto
+                {
+                    Name = gia.TenChuongTrinh,
+                    DiscountPercent = gia.PhanTram,
+                    EndsAt = gia.NgayKetThuc?.ToString("yyyy-MM-dd")
+                },
+                // Miễn phí theo giá gốc: khóa có phí được giảm về 0đ vẫn đi qua giỏ hàng, không dùng enroll-free
+                IsFree = gia.GiaGoc <= 0,
                 LessonsCount = r.SoBai,
                 DurationSeconds = r.TongGiay,
                 StudentsCount = r.SoHocVien,

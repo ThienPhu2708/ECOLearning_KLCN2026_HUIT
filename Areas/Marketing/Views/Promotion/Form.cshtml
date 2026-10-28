@@ -14,7 +14,7 @@
 <div class="mk-page-head">
     <div>
         <a href="@(laSua ? Url.Action("Details", "Promotion", new { id = Model.MaKhuyenMai }) : Url.Action("Index", "Promotion"))" class="mk-muted" style="text-decoration: none;"><i class="bi bi-arrow-left"></i> Quay lại</a>
-        <h1 class="h2">@(laSua ? "Sửa chương trình khuyến mãi" : (Model.DoiTuong == "ThanThiet" ? "Tạo ưu đãi học viên thân thiết" : "Tạo chương trình khuyến mãi"))</h1>
+        <h1 class="h2">@(laSua ? (Model.LaGiamTrucTiep ? "Sửa chương trình giảm trực tiếp" : "Sửa chương trình khuyến mãi") : (Model.LaGiamTrucTiep ? "Tạo chương trình giảm trực tiếp" : (Model.DoiTuong == "ThanThiet" ? "Tạo ưu đãi học viên thân thiết" : "Tạo chương trình khuyến mãi")))</h1>
         <p>Các trường có dấu <span style="color: #DC2626;">*</span> là bắt buộc.</p>
     </div>
 </div>
@@ -39,6 +39,24 @@
     <div class="mk-form">
         <div>
             <div class="card mk-section">
+                <h2>Loại khuyến mãi</h2>
+                @if (laSua)
+                {
+                    <input type="hidden" name="LoaiKhuyenMai" value="@Model.LoaiKhuyenMai" />
+                    <div style="font-size: 14px; font-weight: 700;">@(Model.LaGiamTrucTiep ? "Giảm trực tiếp trên khóa học" : "Mã coupon")</div>
+                    <div class="mk-hint">Loại khuyến mãi chọn lúc tạo, không đổi được khi sửa.</div>
+                }
+                else
+                {
+                    <div class="mk-choice" role="radiogroup" aria-label="Loại khuyến mãi">
+                        <label><input type="radio" name="LoaiKhuyenMai" value="Coupon" @(!Model.LaGiamTrucTiep ? "checked" : "") /> <span>Mã coupon</span></label>
+                        <label><input type="radio" name="LoaiKhuyenMai" value="GiamTrucTiep" @(Model.LaGiamTrucTiep ? "checked" : "") /> <span>Giảm trực tiếp trên khóa học</span></label>
+                    </div>
+                    <div class="mk-hint" id="hint-loai">Coupon: học viên nhập hoặc chọn mã ở giỏ hàng. Giảm trực tiếp: không cần mã, giá mới (kèm giá cũ gạch ngang và nhãn "-X%") tự hiện trên thẻ khóa học, trang chi tiết, giỏ hàng và ứng dụng trong thời gian áp dụng. Chương trình giảm trực tiếp không có đơn tối thiểu, đối tượng thân thiết hay giới hạn lượt vì mọi học viên phải thấy cùng một giá.</div>
+                }
+            </div>
+
+            <div class="card mk-section">
                 <h2>Thông tin chương trình</h2>
                 <div class="form-group">
                     <label class="form-label" for="TenKhuyenMai">Tên chương trình <span style="color: #DC2626;">*</span></label>
@@ -46,7 +64,7 @@
                     @loi("TenKhuyenMai")
                 </div>
                 <div class="mk-grid-2">
-                    <div class="form-group">
+                    <div class="form-group" id="grp-ma-code">
                         <label class="form-label" for="MaCode">Mã coupon <span style="color: #DC2626;">*</span></label>
                         <input type="text" id="MaCode" name="MaCode" class="form-control" maxlength="30" value="@Model.MaCode" placeholder="VD: NAMHOC2026"
                                style="text-transform: uppercase; font-weight: 700;" @(laSua && Model.SoLuotDaDung > 0 ? "readonly" : "") />
@@ -92,7 +110,7 @@
                         <input type="number" id="GiamToiDa" name="GiamToiDa" class="form-control" step="1" min="1" value="@soNguyen(Model.GiamToiDa)" placeholder="Không giới hạn" />
                         @loi("GiamToiDa")
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" id="grp-don-toi-thieu">
                         <label class="form-label" for="DonHangToiThieu">Giá trị đơn tối thiểu (đ)</label>
                         <input type="number" id="DonHangToiThieu" name="DonHangToiThieu" class="form-control" step="1" min="0" value="@soNguyen(Model.DonHangToiThieu)" placeholder="Không yêu cầu" />
                         <div class="mk-hint">Tính trên tổng giá các khóa thuộc phạm vi trong giỏ. Giảm số tiền thì không được lớn hơn giá trị này.</div>
@@ -156,7 +174,7 @@
                 </div>
             </div>
 
-            <div class="card mk-section">
+            <div class="card mk-section" id="card-gioi-han">
                 <h2>Giới hạn sử dụng</h2>
                 <div class="form-group">
                     <label class="form-label" for="GioiHanLuotDung">Tổng số lượt dùng</label>
@@ -171,7 +189,7 @@
                 <div class="mk-hint">Không lớn hơn tổng lượt dùng. Có giới hạn mỗi học viên thì học viên phải đăng nhập mới dùng được mã. Mỗi đơn hàng chỉ áp dụng một mã, không cộng dồn.</div>
             </div>
 
-            <div class="card mk-section">
+            <div class="card mk-section" id="card-doi-tuong">
                 <h2>Đối tượng học viên</h2>
                 <div class="form-group">
                     <div class="mk-choice" role="radiogroup" aria-label="Đối tượng">
@@ -194,9 +212,9 @@
                 </div>
             </div>
 
-            <div class="card mk-section">
+            <div class="card mk-section" id="card-hien-thi">
                 <h2>Hiển thị cho học viên</h2>
-                <label style="display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 14px;">
+                <label id="grp-cong-khai" style="display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 14px;">
                     <input type="checkbox" name="CongKhai" value="true" @(Model.CongKhai ? "checked" : "") style="margin-top: 3px;" />
                     <input type="hidden" name="CongKhai" value="false" />
                     <span>
@@ -230,8 +248,15 @@
             }
             function sync() {
                 var soTien = value('LoaiUuDai') === 'SoTien';
+                var loai = form.querySelector('input[name="LoaiKhuyenMai"]:checked') || form.querySelector('input[type="hidden"][name="LoaiKhuyenMai"]');
+                var truc = !!loai && loai.value === 'GiamTrucTiep';
+                // Giảm trực tiếp: không mã, đơn tối thiểu, giới hạn lượt, đối tượng thân thiết hay mã công khai (server cũng bỏ qua các trường này)
+                ['grp-ma-code', 'grp-don-toi-thieu', 'card-gioi-han', 'card-doi-tuong', 'grp-cong-khai'].forEach(function (id) {
+                    var el = document.getElementById(id);
+                    if (el) el.hidden = truc;
+                });
                 document.getElementById('lbl-gia-tri').textContent = soTien ? 'Số tiền giảm (đ)' : 'Phần trăm giảm (%)';
-                document.getElementById('GiaTriUuDai').max = soTien ? '' : '100';
+                document.getElementById('GiaTriUuDai').max = soTien ? '' : (truc ? '99' : '100');
                 document.getElementById('grp-giam-toi-da').hidden = soTien;
                 document.getElementById('grp-khoa-hoc').hidden = value('PhamVi') !== 'KhoaHoc';
                 document.getElementById('grp-danh-muc').hidden = value('PhamVi') !== 'DanhMuc';

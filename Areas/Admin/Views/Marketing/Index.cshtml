@@ -82,7 +82,7 @@ else
                         <tr>
                             <td class="au-wrap" style="max-width: 280px;">
                                 <a href="@Url.Action("Details", new { id = p.MaKhuyenMai })" style="font-weight: 700; color: var(--text-heading); text-decoration: none;">@p.TenKhuyenMai</a>
-                                <div class="au-sub"><code>@p.MaCode</code> · @(d.TenNguoiTao ?? "Không rõ người tạo")</div>
+                                <div class="au-sub"><code>@p.MaHienThi</code> · @(d.TenNguoiTao ?? "Không rõ người tạo")</div>
                                 @foreach (var c in d.CanhBao)
                                 {
                                     <div class="au-sub" style="color: #B45309;"><i class="bi bi-exclamation-triangle-fill"></i> @c</div>

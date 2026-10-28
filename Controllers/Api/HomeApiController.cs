@@ -226,6 +226,7 @@ namespace ECOLearning.Controllers.Api
                 ReviewCount = d.ReviewCount,
                 Price = d.Price,
                 OriginalPrice = d.OriginalPrice,
+                Promotion = d.Promotion,
                 IsFree = d.IsFree,
                 LessonsCount = d.LessonsCount,
                 DurationSeconds = d.DurationSeconds,

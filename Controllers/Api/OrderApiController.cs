@@ -78,7 +78,10 @@ namespace ECOLearning.Controllers.Api
             return Ok(new
             {
                 items = the,
+                // subTotal = tổng giá đã giảm trực tiếp (khớp price trên thẻ); discount = tiền giảm của coupon;
+                // directDiscount = tổng tiền được giảm trực tiếp so với giá gốc (originalPrice)
                 subTotal = ApiFormat.Money(bg.TamTinh),
+                directDiscount = ApiFormat.Money(bg.TienGiamTrucTiep),
                 discount = ApiFormat.Money(bg.TienGiam),
                 total = ApiFormat.Money(bg.TongTien),
                 // Cùng khung với POST /api/v1/coupons/check (Đặc tả Marketing mục 13)

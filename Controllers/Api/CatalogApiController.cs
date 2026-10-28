@@ -53,10 +53,11 @@ namespace ECOLearning.Controllers.Api
             return Ok(data);
         }
 
-        // B2. GET /api/v1/courses?q=&categoryId=&level=&price=free|paid&minRating=&instructorId=&sort=&page=&pageSize=
+        // B2. GET /api/v1/courses?q=&categoryId=&level=&price=free|paid&minRating=&instructorId=&onSale=&sort=&page=&pageSize=
+        // onSale=true: chỉ khóa đang được giảm trực tiếp; sort=discount: % giảm nhiều nhất trước (khóa không giảm xếp cuối)
         [HttpGet, Route("courses")]
         public ActionResult Courses(string q = null, string categoryId = null, string level = null, string price = null,
-            double? minRating = null, string sort = null, int page = 1, int pageSize = 12, int? instructorId = null)
+            double? minRating = null, string sort = null, int page = 1, int pageSize = 12, int? instructorId = null, bool onSale = false)
         {
             page = ChuanHoaTrang(page);
             pageSize = ChuanHoaKichThuoc(pageSize);
@@ -82,7 +83,7 @@ namespace ECOLearning.Controllers.Api
             }
             if (!string.IsNullOrWhiteSpace(categoryId)) query = query.Where(k => k.maDanhMuc == categoryId);
             if (!string.IsNullOrWhiteSpace(level)) query = query.Where(k => k.capDo == level);
-            // Giá khóa học = giaBan (không có giá khuyến mãi theo khóa; giảm giá chỉ qua mã)
+            // Lọc free / paid theo giá gốc (giaBan); giá hiệu lực sau giảm trực tiếp do CourseDiscountService tính
             if (price == "free") query = query.Where(k => k.giaBan == 0);
             else if (price == "paid") query = query.Where(k => k.giaBan > 0);
             if (minRating.HasValue && minRating.Value > 0)
@@ -91,9 +92,31 @@ namespace ECOLearning.Controllers.Api
                 query = query.Where(k => k.DanhGiaKhoaHoc.Any() && k.DanhGiaKhoaHoc.Average(d => (double)d.soSao) >= diem);
             }
 
+            Dictionary<string, GiaHieuLuc> dangGiam = null;
+            if (onSale || sort == "discount")
+            {
+                dangGiam = query.Select(k => new { k.maKhoaHoc, k.giaBan, k.maDanhMuc }).ToList()
+                    .Select(k => new { k.maKhoaHoc, Gia = CourseDiscountService.Tinh(k.giaBan, k.maKhoaHoc, k.maDanhMuc) })
+                    .Where(x => x.Gia.DangGiam)
+                    .ToDictionary(x => x.maKhoaHoc, x => x.Gia);
+                if (onSale)
+                {
+                    var tapGiam = dangGiam.Keys.ToList();
+                    query = query.Where(k => tapGiam.Contains(k.maKhoaHoc));
+                }
+            }
+
             int total = query.Count();
             List<string> ids;
-            if (thuTuLienQuan != null && string.IsNullOrWhiteSpace(sort))
+            if (sort == "discount")
+            {
+                ids = query.Select(k => k.maKhoaHoc).ToList()
+                    .OrderByDescending(id => dangGiam.ContainsKey(id) ? dangGiam[id].PhanTram : 0)
+                    .ThenByDescending(id => dangGiam.ContainsKey(id) ? dangGiam[id].TienGiam : 0m)
+                    .ThenByDescending(id => id)
+                    .Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            }
+            else if (thuTuLienQuan != null && string.IsNullOrWhiteSpace(sort))
             {
                 var conLai = new HashSet<string>(query.Select(k => k.maKhoaHoc).ToList());
                 ids = thuTuLienQuan.Where(conLai.Contains).Skip((page - 1) * pageSize).Take(pageSize).ToList();
@@ -195,6 +218,7 @@ namespace ECOLearning.Controllers.Api
                 the.ReviewCount,
                 the.Price,
                 the.OriginalPrice,
+                the.Promotion,
                 the.IsFree,
                 the.LessonsCount,
                 the.DurationSeconds,

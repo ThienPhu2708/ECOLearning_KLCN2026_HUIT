@@ -4,8 +4,9 @@
     string thumbUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
     string teacherName = course.NguoiDung != null ? course.NguoiDung.hoTen : "";
     string categoryName = course.DanhMuc != null ? course.DanhMuc.tenDanhMuc : "";
-    decimal actualPrice = course.giaBan; // giá khóa học = giaBan, giảm giá chỉ qua mã khuyến mãi
-    decimal oldPrice = course.giaBan;
+    var giaKhoa = ECOLearning.Services.CourseDiscountService.Tinh(course); // giá hiệu lực: đã trừ giảm trực tiếp
+    decimal actualPrice = giaKhoa.Gia;
+    decimal oldPrice = giaKhoa.GiaGoc;
     bool hasRatings = Model.SoDanhGia > 0;
     string detailUrl = Url.Action("Details", "Course", new { id = course.maKhoaHoc });
 }
@@ -49,10 +50,11 @@
 
         <div class="course-footer">
             <div class="course-pricing">
-                <span class="price-current">@actualPrice.ToString("N0") đ</span>
+                <span class="price-current@(actualPrice < oldPrice ? " is-sale" : "")">@actualPrice.ToString("N0") đ</span>
                 @if (actualPrice < oldPrice)
                 {
                     <span class="price-original">@oldPrice.ToString("N0") đ</span>
+                    <span class="price-badge">-@ECOLearning.Services.CourseDiscountService.PhanTram(oldPrice, actualPrice)%</span>
                 }
             </div>
             <a href="@detailUrl" target="_blank" rel="noopener" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: var(--radius-xl, 10px); font-weight: 600; text-decoration: none;">

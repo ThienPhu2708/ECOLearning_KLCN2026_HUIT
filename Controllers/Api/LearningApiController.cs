@@ -52,7 +52,7 @@ namespace ECOLearning.Controllers.Api
                 return new
                 {
                     c.Id, c.Title, c.CategoryId, c.Category, c.Instructor, c.InstructorAvatar, c.ImageUrl, c.Level,
-                    c.Rating, c.ReviewCount, c.Price, c.OriginalPrice, c.IsFree, c.LessonsCount, c.DurationSeconds, c.StudentsCount, c.Tag,
+                    c.Rating, c.ReviewCount, c.Price, c.OriginalPrice, c.Promotion, c.IsFree, c.LessonsCount, c.DurationSeconds, c.StudentsCount, c.Tag,
                     progress = td.PhanTram,
                     completedLessons = td.SoBaiXong,
                     isCompleted = td.DaHoanThanh,

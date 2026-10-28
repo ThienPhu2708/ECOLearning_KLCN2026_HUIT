@@ -57,11 +57,12 @@ namespace ECOLearning.Areas.Marketing.Controllers
         }
 
         // GET: Marketing/Promotion/Create?doiTuong=ThanThiet
-        public ActionResult Create(string doiTuong = null, string chienDich = null)
+        public ActionResult Create(string doiTuong = null, string chienDich = null, string loai = null)
         {
             if (!Service.IsInstalled()) return ChuaKhoiTao();
             var f = new PromotionFormViewModel
             {
+                LoaiKhuyenMai = loai == CourseDiscountService.LoaiGiamTrucTiep ? CourseDiscountService.LoaiGiamTrucTiep : CourseDiscountService.LoaiCoupon,
                 DoiTuong = doiTuong == "ThanThiet" ? "ThanThiet" : "TatCa",
                 MaChienDich = chienDich,
                 NgayBatDau = DateTime.Today,
@@ -86,7 +87,9 @@ namespace ECOLearning.Areas.Marketing.Controllers
             try
             {
                 string ma = service.Tao(f, MaNguoiDungHienTai);
-                TempData["Success"] = "Đã tạo chương trình \"" + f.TenKhuyenMai + "\" với mã " + f.MaCode + ".";
+                TempData["Success"] = f.LaGiamTrucTiep
+                    ? "Đã tạo chương trình giảm trực tiếp \"" + f.TenKhuyenMai + "\". Giá mới hiện trên thẻ khóa học trong thời gian áp dụng."
+                    : "Đã tạo chương trình \"" + f.TenKhuyenMai + "\" với mã " + f.MaCode + ".";
                 return RedirectToAction("Details", new { id = ma });
             }
             catch (Exception ex)

@@ -49,8 +49,9 @@
                     var course = item.Course;
                     string thumbUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
                     string detailUrl = Url.Action("Details", "Course", new { id = course.maKhoaHoc });
-                    decimal actualPrice = course.giaBan; // giá khóa học = giaBan, giảm giá chỉ qua mã khuyến mãi
-                    decimal oldPrice = course.giaBan;
+                    var giaKhoa = ECOLearning.Services.CourseDiscountService.Tinh(course); // giá hiệu lực: đã trừ giảm trực tiếp
+                    decimal actualPrice = giaKhoa.Gia;
+                    decimal oldPrice = giaKhoa.GiaGoc;
 
                     <div class="col-4 favorite-col" data-favorite-item="@course.maKhoaHoc">
                         <div class="course-card" onclick="window.open('@detailUrl', '_blank', 'noopener')" style="cursor: pointer; height: 100%;">
@@ -87,10 +88,11 @@
                                         }
                                         else
                                         {
-                                            <span class="price-current">@actualPrice.ToString("N0") đ</span>
+                                            <span class="price-current@(actualPrice < oldPrice ? " is-sale" : "")">@actualPrice.ToString("N0") đ</span>
                                             if (actualPrice < oldPrice)
                                             {
                                                 <span class="price-original">@oldPrice.ToString("N0") đ</span>
+                                                <span class="price-badge">-@ECOLearning.Services.CourseDiscountService.PhanTram(oldPrice, actualPrice)%</span>
                                             }
                                         }
                                     </div>

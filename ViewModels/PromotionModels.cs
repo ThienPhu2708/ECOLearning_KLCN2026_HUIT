@@ -12,6 +12,13 @@ namespace ECOLearning.ViewModels
         public string MaKhuyenMai { get; set; }
         public string TenKhuyenMai { get; set; }
 
+        /// <summary>Coupon (nhập mã khi thanh toán) hoặc GiamTrucTiep (tự áp dụng lên giá khóa học, không có mã; migration 021).</summary>
+        public string LoaiKhuyenMai { get; set; }
+        public bool LaGiamTrucTiep => LoaiKhuyenMai == "GiamTrucTiep";
+
+        /// <summary>Mã coupon, hoặc "Giảm trực tiếp" cho chương trình không có mã (hiện ở danh sách, báo cáo).</summary>
+        public string MaHienThi => LaGiamTrucTiep ? "Giảm trực tiếp" : MaCode;
+
         /// <summary>Giá trị ưu đãi: % (1–100) khi LoaiUuDai = PhanTram, số tiền VNĐ khi = SoTien.</summary>
         public double MucUuDai { get; set; }
         public string LoaiUuDai { get; set; }
@@ -191,6 +198,10 @@ namespace ECOLearning.ViewModels
     {
         public string MaKhuyenMai { get; set; }
         public string TenKhuyenMai { get; set; }
+
+        /// <summary>Coupon hoặc GiamTrucTiep. Chọn lúc tạo, không đổi được khi sửa.</summary>
+        public string LoaiKhuyenMai { get; set; } = "Coupon";
+        public bool LaGiamTrucTiep => LoaiKhuyenMai == "GiamTrucTiep";
         public string MaChienDich { get; set; }
         public string MaCode { get; set; }
         public string LoaiUuDai { get; set; } = "PhanTram";

@@ -11,7 +11,8 @@ namespace ECOLearning.ViewModels
         public int SoDanhGia { get; set; }
         public double DiemDanhGia { get; set; }
 
-        public decimal GiaHienTai => Course.giaBan;
+        /// <summary>Giá bán hiệu lực: giá gốc đã trừ giảm trực tiếp (CourseDiscountService); giá gốc là Course.giaBan.</summary>
+        public decimal GiaHienTai => ECOLearning.Services.CourseDiscountService.Tinh(Course).Gia;
 
         /// <summary>Nhãn góc ảnh do nơi gọi chọn (vd. "Mới", "Đánh giá cao"); null thì thẻ tự chọn như cũ.</summary>
         public string Nhan { get; set; }

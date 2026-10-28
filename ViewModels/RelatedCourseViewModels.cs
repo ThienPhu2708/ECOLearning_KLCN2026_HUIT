@@ -55,8 +55,8 @@ namespace ECOLearning.ViewModels
         /// <summary>Lần duyệt gần nhất (hiện "Đã cập nhật: M/yyyy").</summary>
         public System.DateTime? NgayCapNhat { get; set; }
 
-        /// <summary>Giá khóa học = giaBan (giảm giá chỉ qua mã khuyến mãi), cùng giá thanh toán.</summary>
-        public decimal GiaHienTai => The.Course.giaBan;
+        /// <summary>Giá bán hiệu lực (đã trừ giảm trực tiếp), cùng giá thanh toán.</summary>
+        public decimal GiaHienTai => The.GiaHienTai;
 
         /// <summary>"5,5 giờ" / "45 phút" / null khi chưa có thời lượng.</summary>
         public string ThoiLuongHienThi

@@ -803,8 +803,10 @@
                         <div class="p-4">
                             <!-- Price Block (Strict single horizontal line matching mockup 100%) -->
                             @{
-                                // Giá khóa học = giaBan; giảm giá chỉ qua mã khuyến mãi (ô mã giảm giá bên dưới / giỏ hàng)
-                                decimal originalPrice = Model.giaBan;
+                                // Giá hiệu lực do server tính (CourseDiscountService): giá gốc đã trừ giảm trực tiếp; coupon (ô mã bên dưới / giỏ hàng) tính sau
+                                var giaKhoa = ECOLearning.Services.CourseDiscountService.Tinh(Model);
+                                decimal originalPrice = giaKhoa.GiaGoc;
+                                decimal salePrice = giaKhoa.Gia;
                                 bool isFree = originalPrice <= 0;
                             }
                             <div class="d-flex align-items-baseline gap-2 mb-3" style="flex-wrap: nowrap; white-space: nowrap;">
@@ -814,9 +816,20 @@
                                 }
                                 else
                                 {
-                                    <span style="font-size: 26px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.02em;">@originalPrice.ToString("N0") đ</span>
+                                    <span style="font-size: 26px; font-weight: 800; color: @(giaKhoa.DangGiam ? "#DC2626" : "#0F172A"); line-height: 1; letter-spacing: -0.02em;">@salePrice.ToString("N0") đ</span>
+                                    if (giaKhoa.DangGiam)
+                                    {
+                                        <span style="font-size: 15px; color: #94A3B8; text-decoration: line-through;">@originalPrice.ToString("N0") đ</span>
+                                        <span class="price-badge" style="font-size: 13px;">-@giaKhoa.PhanTram%</span>
+                                    }
                                 }
                             </div>
+                            @if (giaKhoa.DangGiam)
+                            {
+                                <div style="margin: -8px 0 14px; font-size: 12.5px; color: #DC2626; font-weight: 600;">
+                                    <i class="bi bi-tag-fill"></i> @giaKhoa.TenChuongTrinh · còn đến @giaKhoa.NgayKetThuc.Value.ToString("dd/MM/yyyy")
+                                </div>
+                            }
 
                             <!-- Action Buttons -->
                             @if (isOwner)

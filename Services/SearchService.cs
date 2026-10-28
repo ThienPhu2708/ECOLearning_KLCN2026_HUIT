@@ -65,7 +65,14 @@ namespace ECOLearning.Services
             public string TenDanhMuc { get; set; }
             public int MaGiaoVien { get; set; }
             public string TenGiaoVien { get; set; }
-            public decimal GiaHienTai { get; set; }
+
+            /// <summary>Giá gốc (KhoaHoc.giaBan) lúc dựng chỉ mục.</summary>
+            public decimal GiaGoc { get; set; }
+
+            /// <summary>
+            /// Giá bán hiệu lực, tính lúc đọc (chỉ mục được cache 2 phút nên không lưu sẵn giá đã giảm: chương trình hết hạn thì giá về gốc ngay).
+            /// </summary>
+            public decimal GiaHienTai => CourseDiscountService.Tinh(GiaGoc, MaKhoaHoc, MaDanhMuc).Gia;
             public int SoHocVien { get; set; }
             public int SoDanhGia { get; set; }
             public double DiemDanhGia { get; set; }
@@ -219,8 +226,7 @@ namespace ECOLearning.Services
                     TenDanhMuc = k.TenDanhMuc,
                     MaGiaoVien = k.maGiaoVien,
                     TenGiaoVien = k.TenGiaoVien,
-                    // Giá khóa học = giaBan (giảm giá chỉ qua mã khuyến mãi), cùng giá thanh toán
-                    GiaHienTai = k.giaBan,
+                    GiaGoc = k.giaBan,
                     SoHocVien = hv,
                     SoDanhGia = dg != null ? dg.SoLuong : 0,
                     DiemDanhGia = dg != null ? dg.TrungBinh : 0,
@@ -715,7 +721,7 @@ namespace ECOLearning.Services
                 .ToList();
 
             // Mỗi nhóm bộ lọc đếm trên tập đã áp các bộ lọc còn lại
-            Func<KhoaHocChiMuc, bool> locGia = k => f.Gia == null || (f.Gia == "mienphi" ? k.GiaHienTai == 0 : k.GiaHienTai > 0);
+            Func<KhoaHocChiMuc, bool> locGia = k => f.Gia == null || (f.Gia == "mienphi" ? k.GiaGoc == 0 : k.GiaGoc > 0);
             Func<KhoaHocChiMuc, bool> locDiem = k => !f.Diem.HasValue || (k.SoDanhGia > 0 && k.DiemDanhGia >= f.Diem.Value);
             Func<KhoaHocChiMuc, bool> locDanhMuc = k => string.IsNullOrEmpty(f.DanhMuc) || k.MaDanhMuc == f.DanhMuc;
             Func<KhoaHocChiMuc, bool> locCapDo = k => string.IsNullOrEmpty(f.CapDo) || k.CapDo == f.CapDo;

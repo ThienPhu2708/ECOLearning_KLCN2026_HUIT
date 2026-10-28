@@ -842,6 +842,23 @@ html.js-course-img .course-card.is-ready .course-body {
   text-decoration: line-through;
 }
 
+/* Giảm trực tiếp: giá mới đỏ đậm, giá cũ gạch ngang, nhãn -X% nền đỏ nhạt (cùng kiểu với app) */
+.price-current.is-sale {
+  color: #DC2626;
+}
+
+.price-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #FEE2E2;
+  color: #DC2626;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
 /* 5. Surface Cards & KPI Widgets */
 .card {
   background: var(--bg-surface);

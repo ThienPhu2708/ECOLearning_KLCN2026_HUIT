@@ -54,7 +54,7 @@
             <option value="">Tất cả khuyến mãi</option>
             @foreach (var p in chuongTrinh)
             {
-                <option value="@p.MaKhuyenMai" @(p.MaKhuyenMai == Model.MaKhuyenMai ? "selected" : "")>@p.TenKhuyenMai (@p.MaCode)</option>
+                <option value="@p.MaKhuyenMai" @(p.MaKhuyenMai == Model.MaKhuyenMai ? "selected" : "")>@p.TenKhuyenMai (@p.MaHienThi)</option>
             }
         </select>
     </div>

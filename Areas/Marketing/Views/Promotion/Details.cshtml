@@ -13,14 +13,17 @@
         <a href="@Url.Action("Index", "Promotion")" class="mk-muted" style="text-decoration: none;"><i class="bi bi-arrow-left"></i> Danh sách chương trình</a>
         <h1 class="h2">@Model.TenKhuyenMai</h1>
         <p>
-            <span class="mk-code">@Model.MaCode</span>
+            <span class="mk-code">@Model.MaHienThi</span>
             @if (tt == "Đang chạy") { <span class="badge badge-success">Đang chạy</span> }
             else if (tt == "Tạm ngưng") { <span class="badge badge-warning">Tạm ngưng</span> }
             else if (tt == "Chưa bắt đầu") { <span class="badge badge-info">Chưa bắt đầu</span> }
             else if (tt == "Hết lượt") { <span class="badge badge-danger">Hết lượt</span> }
             else { <span class="badge badge-secondary">Đã kết thúc</span> }
             @if (Model.LaThanThiet) { <span class="badge badge-warning"><i class="bi bi-award"></i> Học viên thân thiết</span> }
-            <span class="badge @(Model.CongKhai ? "badge-primary" : "badge-secondary")">@(Model.CongKhai ? "Mã công khai" : "Mã riêng")</span>
+            @if (!Model.LaGiamTrucTiep)
+            {
+                <span class="badge @(Model.CongKhai ? "badge-primary" : "badge-secondary")">@(Model.CongKhai ? "Mã công khai" : "Mã riêng")</span>
+            }
         </p>
     </div>
     <div class="mk-actions">
@@ -51,7 +54,7 @@
     }
     @if (xoaDuoc)
     {
-        using (Html.BeginForm("Delete", "Promotion", new { id = Model.MaKhuyenMai }, FormMethod.Post, new { onsubmit = "return confirm('Xóa hẳn chương trình và mã " + Model.MaCode + "? Chưa có đơn hàng nào dùng mã này nên có thể xóa.');" }))
+        using (Html.BeginForm("Delete", "Promotion", new { id = Model.MaKhuyenMai }, FormMethod.Post, new { onsubmit = "return confirm('Xóa hẳn chương trình" + (Model.LaGiamTrucTiep ? "" : " và mã " + Model.MaCode) + "? Chưa có đơn hàng nào dùng chương trình này nên có thể xóa.');" }))
         {
             @Html.AntiForgeryToken()
             <button type="submit" class="btn btn-outline" style="color: #DC2626; border-color: #FCA5A5;"><i class="bi bi-trash3 me-1"></i> Xóa</button>

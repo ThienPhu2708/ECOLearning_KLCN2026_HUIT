@@ -669,7 +669,12 @@ if (yeuThich.Count > 0)
                                     }
                                 </span>
                                 <div class="fv-price">
-                                    <strong>@(c.giaBan <= 0 ? "Miễn phí" : c.giaBan.ToString("N0") + " đ")</strong>
+                                    @{ var giaYeuThich = ECOLearning.Services.CourseDiscountService.Tinh(c); }
+                                    <strong>@(giaYeuThich.GiaGoc <= 0 ? "Miễn phí" : giaYeuThich.Gia.ToString("N0") + " đ")</strong>
+                                    @if (giaYeuThich.DangGiam)
+                                    {
+                                        <s style="margin-left: 4px; font-size: 12px; color: #94A3B8;">@giaYeuThich.GiaGoc.ToString("N0") đ</s>
+                                    }
                                 </div>
                             </div>
                         </a>
@@ -711,8 +716,9 @@ if (yeuThich.Count > 0)
                     string thumbUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia;
                     string teacherName = course.NguoiDung != null ? course.NguoiDung.hoTen : "ThS. Nguyễn Văn An";
                     string categoryName = course.DanhMuc != null ? course.DanhMuc.tenDanhMuc : "Lập trình Web & CNTT";
-                    decimal actualPrice = course.giaBan; // giá khóa học = giaBan, giảm giá chỉ qua mã khuyến mãi
-                    decimal oldPrice = course.giaBan;
+                    var giaKhoa = ECOLearning.Services.CourseDiscountService.Tinh(course); // giá hiệu lực: đã trừ giảm trực tiếp
+                    decimal actualPrice = giaKhoa.Gia;
+                    decimal oldPrice = giaKhoa.GiaGoc;
                     bool hasRatings = course.DanhGiaKhoaHoc != null && course.DanhGiaKhoaHoc.Count > 0;
                     int enrollCount;
                     enrollCounts.TryGetValue(course.maKhoaHoc, out enrollCount);
@@ -786,10 +792,11 @@ if (yeuThich.Count > 0)
 
                                 <div class="course-footer">
                                     <div class="course-pricing">
-                                        <span class="price-current">@actualPrice.ToString("N0") đ</span>
+                                        <span class="price-current@(actualPrice < oldPrice ? " is-sale" : "")">@actualPrice.ToString("N0") đ</span>
                                         @if (actualPrice < oldPrice)
                                         {
                                             <span class="price-original">@oldPrice.ToString("N0") đ</span>
+                                            <span class="price-badge">-@ECOLearning.Services.CourseDiscountService.PhanTram(oldPrice, actualPrice)%</span>
                                         }
                                     </div>
                                     <a href="@Url.Action("Details", "Course", new { id = course.maKhoaHoc })" target="_blank" rel="noopener" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: var(--radius-xl, 10px); font-weight: 600; text-decoration: none;">

@@ -11,7 +11,8 @@ namespace ECOLearning.Services
 {
     /// <summary>
     /// Chương trình khuyến mãi / coupon (phân hệ Marketing) và luồng áp dụng ưu đãi khi thanh toán, theo Đặc tả Marketing ECOLearning.
-    /// Nguyên tắc: giá khóa học = giaBan (không có giá khuyến mãi theo từng khóa); giảm giá chỉ qua mã, mỗi đơn tối đa 1 mã;
+    /// Nguyên tắc: giá gốc khóa học = giaBan; có hai loại khuyến mãi: Coupon (giảm qua mã, mỗi đơn tối đa 1 mã) và Giảm trực tiếp
+    /// (không mã, tự áp dụng lên giá khóa học, do CourseDiscountService tính; coupon tính sau trên giá đã giảm);
     /// mọi số tiền giảm tính ở server và tính lại trong transaction lúc thanh toán; doanh thu chỉ tính đơn đã thanh toán.
     /// Cột cấu hình thuộc migration 008 / 009 / 018 (chưa có trong mô hình EF) nên đọc bằng SQL trực tiếp.
     /// Tên cột giữ theo 008: loaiUuDai (đặc tả: loaiGiam), donHangToiThieu (donToiThieu), MaGiamGia.gioiHanLuotDung (soLuotToiDa),
@@ -39,7 +40,7 @@ namespace ECOLearning.Services
             this.db = db;
         }
 
-        /// <summary>Đã chạy migration 008, 009 và 018 hay chưa.</summary>
+        /// <summary>Đã chạy migration 008, 009, 018 và 021 hay chưa.</summary>
         public bool IsInstalled()
         {
             try
@@ -52,6 +53,8 @@ namespace ECOLearning.Services
                                  AND OBJECT_ID(N'dbo.ViMaGiamGia', N'U') IS NOT NULL
                                  AND COL_LENGTH(N'dbo.KhuyenMai', N'maDanhMucApDung') IS NOT NULL
                                  AND COL_LENGTH(N'dbo.ChienDich', N'nganSach') IS NOT NULL
+                                 AND COL_LENGTH(N'dbo.KhuyenMai', N'loaiKhuyenMai') IS NOT NULL
+                                 AND COL_LENGTH(N'dbo.ChiTietDonHang', N'maKhuyenMaiTrucTiep') IS NOT NULL
                            THEN 1 ELSE 0 END").FirstOrDefault() == 1;
             }
             catch
@@ -73,7 +76,7 @@ namespace ECOLearning.Services
         // ================================================================== đọc dữ liệu
 
         private const string SelectChuongTrinh = @"
-            SELECT km.maKhuyenMai AS MaKhuyenMai, km.tenKhuyenMai AS TenKhuyenMai, km.mucUuDai AS MucUuDai,
+            SELECT km.maKhuyenMai AS MaKhuyenMai, km.tenKhuyenMai AS TenKhuyenMai, km.loaiKhuyenMai AS LoaiKhuyenMai, km.mucUuDai AS MucUuDai,
                    km.loaiUuDai AS LoaiUuDai, km.giamToiDa AS GiamToiDa, km.donHangToiThieu AS DonHangToiThieu,
                    km.phamVi AS PhamVi, km.maDanhMucApDung AS MaDanhMucApDung, dm.tenDanhMuc AS TenDanhMucApDung,
                    km.doiTuong AS DoiTuong, km.soKhoaToiThieu AS SoKhoaToiThieu,
@@ -229,6 +232,7 @@ namespace ECOLearning.Services
             {
                 MaKhuyenMai = p.MaKhuyenMai,
                 TenKhuyenMai = p.TenKhuyenMai,
+                LoaiKhuyenMai = p.LoaiKhuyenMai,
                 MaChienDich = p.MaChienDich,
                 MaCode = p.MaCode,
                 LoaiUuDai = p.LoaiUuDai,
@@ -261,6 +265,9 @@ namespace ECOLearning.Services
             var loi = new Dictionary<string, string>();
             bool laSua = hienTai != null;
 
+            // Loại khuyến mãi chọn lúc tạo, không đổi khi sửa
+            f.LoaiKhuyenMai = laSua ? hienTai.LoaiKhuyenMai : (f.LoaiKhuyenMai == CourseDiscountService.LoaiGiamTrucTiep ? CourseDiscountService.LoaiGiamTrucTiep : CourseDiscountService.LoaiCoupon);
+            bool giamTrucTiep = f.LaGiamTrucTiep;
             f.TenKhuyenMai = (f.TenKhuyenMai ?? "").Trim();
             f.MaCode = (f.MaCode ?? "").Trim().ToUpperInvariant();
             f.DieuKienApDung = string.IsNullOrWhiteSpace(f.DieuKienApDung) ? null : f.DieuKienApDung.Trim();
@@ -276,8 +283,20 @@ namespace ECOLearning.Services
             if (f.TenKhuyenMai.Length == 0) loi["TenKhuyenMai"] = "Vui lòng nhập tên chương trình.";
             else if (f.TenKhuyenMai.Length > 150) loi["TenKhuyenMai"] = "Tên chương trình tối đa 150 ký tự.";
 
+            // Giảm trực tiếp: không mã, không điều kiện người mua (thẻ phải hiện cùng một giá cho mọi người), không giới hạn lượt
+            if (giamTrucTiep)
+            {
+                f.MaCode = null;
+                f.DonHangToiThieu = null;
+                f.GioiHanLuotDung = null;
+                f.GioiHanMoiHocVien = null;
+                f.CongKhai = false;
+                f.DoiTuong = "TatCa";
+            }
+
             // Mã coupon: không trùng (không phân biệt hoa thường); đã có lượt dùng thì không đổi mã để giữ lịch sử đối soát
-            if (f.MaCode.Length == 0) loi["MaCode"] = "Vui lòng nhập mã coupon.";
+            if (giamTrucTiep) { }
+            else if (f.MaCode.Length == 0) loi["MaCode"] = "Vui lòng nhập mã coupon.";
             else if (!DinhDangMa.IsMatch(f.MaCode)) loi["MaCode"] = "Mã coupon gồm 3–30 ký tự: chữ in hoa không dấu, số, dấu gạch ngang hoặc gạch dưới.";
             else if (laSua && hienTai.SoLuotDaDung > 0 && !string.Equals(f.MaCode, hienTai.MaCode, StringComparison.OrdinalIgnoreCase))
                 loi["MaCode"] = "Mã đã có lượt sử dụng nên không thể đổi.";
@@ -289,8 +308,8 @@ namespace ECOLearning.Services
             if (f.LoaiUuDai == "SoTien") f.GiamToiDa = null;
             if (f.DonHangToiThieu.HasValue && f.DonHangToiThieu <= 0) f.DonHangToiThieu = null;
             if (!f.GiaTriUuDai.HasValue) loi["GiaTriUuDai"] = "Vui lòng nhập giá trị ưu đãi.";
-            else if (f.LoaiUuDai == "PhanTram" && (f.GiaTriUuDai < 1 || f.GiaTriUuDai > 100 || f.GiaTriUuDai != decimal.Truncate(f.GiaTriUuDai.Value)))
-                loi["GiaTriUuDai"] = "Phần trăm giảm là số nguyên từ 1 đến 100.";
+            else if (f.LoaiUuDai == "PhanTram" && (f.GiaTriUuDai < 1 || f.GiaTriUuDai > (giamTrucTiep ? 99 : 100) || f.GiaTriUuDai != decimal.Truncate(f.GiaTriUuDai.Value)))
+                loi["GiaTriUuDai"] = giamTrucTiep ? "Phần trăm giảm trực tiếp là số nguyên từ 1 đến 99 (không làm khóa học miễn phí)." : "Phần trăm giảm là số nguyên từ 1 đến 100.";
             else if (f.LoaiUuDai == "SoTien" && (f.GiaTriUuDai < 1000 || f.GiaTriUuDai != decimal.Truncate(f.GiaTriUuDai.Value)))
                 loi["GiaTriUuDai"] = "Số tiền giảm phải là số nguyên từ 1.000 đ.";
             else if (f.LoaiUuDai == "SoTien" && f.DonHangToiThieu.HasValue && f.GiaTriUuDai > f.DonHangToiThieu)
@@ -322,7 +341,7 @@ namespace ECOLearning.Services
                         + chienDich.NgayBatDau.ToString("dd/MM/yyyy") + " – " + chienDich.NgayKetThuc.ToString("dd/MM/yyyy") + ").";
             }
 
-            // Giới hạn lượt dùng
+            // Giới hạn lượt dùng (giảm trực tiếp đã bỏ trống ở trên)
             if (f.GioiHanLuotDung.HasValue && f.GioiHanLuotDung < 1) loi["GioiHanLuotDung"] = "Tổng lượt dùng phải từ 1 (bỏ trống nếu không giới hạn).";
             else if (laSua && f.GioiHanLuotDung.HasValue && f.GioiHanLuotDung < hienTai.SoLuotDaDung)
                 loi["GioiHanLuotDung"] = "Mã đã được dùng " + hienTai.SoLuotDaDung + " lượt, tổng lượt không được nhỏ hơn số này.";
@@ -392,19 +411,23 @@ namespace ECOLearning.Services
                 db.Database.ExecuteSqlCommand(@"
                     INSERT INTO dbo.KhuyenMai (maKhuyenMai, tenKhuyenMai, mucUuDai, ngayBatDau, ngayKetThuc, dieuKienApDung, maNhanVienMarketing,
                                                loaiUuDai, giamToiDa, donHangToiThieu, phamVi, maDanhMucApDung, doiTuong, soKhoaToiThieu, chiTieuToiThieu,
-                                               trangThai, maChienDich, congKhai, chinhSach)
-                    VALUES (@ma, @ten, @muc, @bd, @kt, @dk, @nv, @loai, @toiDa, @donMin, @phamVi, @danhMuc, @doiTuong, @soKhoa, @chiTieu, N'HoatDong', @cd, @congKhai, @chinhSach)",
+                                               trangThai, maChienDich, congKhai, chinhSach, loaiKhuyenMai)
+                    VALUES (@ma, @ten, @muc, @bd, @kt, @dk, @nv, @loai, @toiDa, @donMin, @phamVi, @danhMuc, @doiTuong, @soKhoa, @chiTieu, N'HoatDong', @cd, @congKhai, @chinhSach, @loaiKm)",
                     ThamSoChuongTrinh(f, maKm, maNhanVien).ToArray());
 
-                db.Database.ExecuteSqlCommand(@"
-                    INSERT INTO dbo.MaGiamGia (maGiamGia, maCode, giaTriGiam, trangThai, maKhuyenMai, gioiHanLuotDung, gioiHanMoiHocVien)
-                    VALUES (@mgg, @code, @giaTri, 1, @km, @gioiHan, @moiHv)",
-                    new SqlParameter("@mgg", maMgg),
-                    new SqlParameter("@code", f.MaCode),
-                    new SqlParameter("@giaTri", f.GiaTriUuDai.Value),
-                    new SqlParameter("@km", maKm),
-                    new SqlParameter("@gioiHan", (object)f.GioiHanLuotDung ?? DBNull.Value),
-                    new SqlParameter("@moiHv", (object)f.GioiHanMoiHocVien ?? DBNull.Value));
+                // Giảm trực tiếp không có mã nên không có dòng MaGiamGia; giá trị ưu đãi nằm ở KhuyenMai.mucUuDai
+                if (!f.LaGiamTrucTiep)
+                {
+                    db.Database.ExecuteSqlCommand(@"
+                        INSERT INTO dbo.MaGiamGia (maGiamGia, maCode, giaTriGiam, trangThai, maKhuyenMai, gioiHanLuotDung, gioiHanMoiHocVien)
+                        VALUES (@mgg, @code, @giaTri, 1, @km, @gioiHan, @moiHv)",
+                        new SqlParameter("@mgg", maMgg),
+                        new SqlParameter("@code", f.MaCode),
+                        new SqlParameter("@giaTri", f.GiaTriUuDai.Value),
+                        new SqlParameter("@km", maKm),
+                        new SqlParameter("@gioiHan", (object)f.GioiHanLuotDung ?? DBNull.Value),
+                        new SqlParameter("@moiHv", (object)f.GioiHanMoiHocVien ?? DBNull.Value));
+                }
 
                 GhiKhoaHocApDung(maKm, f.KhoaHocApDung);
                 tx.Commit();
@@ -426,17 +449,20 @@ namespace ECOLearning.Services
                         doiTuong = @doiTuong, soKhoaToiThieu = @soKhoa, chiTieuToiThieu = @chiTieu, maChienDich = @cd, congKhai = @congKhai,
                         chinhSach = @chinhSach
                     WHERE maKhuyenMai = @ma",
-                    ThamSoChuongTrinh(f, hienTai.MaKhuyenMai, 0).Where(p => p.ParameterName != "@nv").ToArray());
+                    ThamSoChuongTrinh(f, hienTai.MaKhuyenMai, 0).Where(p => p.ParameterName != "@nv" && p.ParameterName != "@loaiKm").ToArray());
 
-                db.Database.ExecuteSqlCommand(@"
-                    UPDATE dbo.MaGiamGia
-                    SET maCode = @code, giaTriGiam = @giaTri, gioiHanLuotDung = @gioiHan, gioiHanMoiHocVien = @moiHv
-                    WHERE maGiamGia = @mgg",
-                    new SqlParameter("@code", f.MaCode),
-                    new SqlParameter("@giaTri", f.GiaTriUuDai.Value),
-                    new SqlParameter("@gioiHan", (object)f.GioiHanLuotDung ?? DBNull.Value),
-                    new SqlParameter("@moiHv", (object)f.GioiHanMoiHocVien ?? DBNull.Value),
-                    new SqlParameter("@mgg", hienTai.MaGiamGia));
+                if (hienTai.MaGiamGia != null)
+                {
+                    db.Database.ExecuteSqlCommand(@"
+                        UPDATE dbo.MaGiamGia
+                        SET maCode = @code, giaTriGiam = @giaTri, gioiHanLuotDung = @gioiHan, gioiHanMoiHocVien = @moiHv
+                        WHERE maGiamGia = @mgg",
+                        new SqlParameter("@code", f.MaCode),
+                        new SqlParameter("@giaTri", f.GiaTriUuDai.Value),
+                        new SqlParameter("@gioiHan", (object)f.GioiHanLuotDung ?? DBNull.Value),
+                        new SqlParameter("@moiHv", (object)f.GioiHanMoiHocVien ?? DBNull.Value),
+                        new SqlParameter("@mgg", hienTai.MaGiamGia));
+                }
 
                 db.Database.ExecuteSqlCommand("DELETE FROM dbo.KhuyenMaiKhoaHoc WHERE maKhuyenMai = @ma", new SqlParameter("@ma", hienTai.MaKhuyenMai));
                 GhiKhoaHocApDung(hienTai.MaKhuyenMai, f.KhoaHocApDung);
@@ -449,6 +475,7 @@ namespace ECOLearning.Services
             return new List<SqlParameter>
             {
                 new SqlParameter("@ma", maKm),
+                new SqlParameter("@loaiKm", f.LoaiKhuyenMai ?? CourseDiscountService.LoaiCoupon),
                 new SqlParameter("@ten", f.TenKhuyenMai),
                 new SqlParameter("@muc", (double)f.GiaTriUuDai.Value),
                 new SqlParameter("@bd", f.NgayBatDau.Value.Date),
@@ -544,7 +571,8 @@ namespace ECOLearning.Services
         public bool DaCoDonHang(ChuongTrinhKhuyenMai p)
         {
             return db.Database.SqlQuery<int>(@"
-                SELECT (SELECT COUNT(*) FROM dbo.DonHang WHERE maGiamGia = @mgg) + (SELECT COUNT(*) FROM dbo.SuDungUuDai WHERE maKhuyenMai = @km)",
+                SELECT (SELECT COUNT(*) FROM dbo.DonHang WHERE maGiamGia = @mgg) + (SELECT COUNT(*) FROM dbo.SuDungUuDai WHERE maKhuyenMai = @km)
+                     + (SELECT COUNT(*) FROM dbo.ChiTietDonHang WHERE maKhuyenMaiTrucTiep = @km)",
                 new SqlParameter("@mgg", (object)p.MaGiamGia ?? DBNull.Value), new SqlParameter("@km", p.MaKhuyenMai)).First() > 0;
         }
 
@@ -554,7 +582,7 @@ namespace ECOLearning.Services
             thanhCong = false;
             var p = LayTheoMa(maKhuyenMai);
             if (p == null) return "Không tìm thấy chương trình khuyến mãi.";
-            if (DaCoDonHang(p)) return "Mã " + p.MaCode + " đã có đơn hàng sử dụng nên không thể xóa. Hãy dùng \"Kết thúc\" để giữ lịch sử.";
+            if (DaCoDonHang(p)) return (p.LaGiamTrucTiep ? "Chương trình giảm trực tiếp này" : "Mã " + p.MaCode) + " đã có đơn hàng sử dụng nên không thể xóa. Hãy dùng \"Kết thúc\" để giữ lịch sử.";
 
             using (var tx = db.Database.BeginTransaction())
             {
@@ -567,7 +595,7 @@ namespace ECOLearning.Services
                 tx.Commit();
             }
             thanhCong = true;
-            return "Đã xóa chương trình \"" + p.TenKhuyenMai + "\" (mã " + p.MaCode + ").";
+            return "Đã xóa chương trình \"" + p.TenKhuyenMai + "\"" + (p.LaGiamTrucTiep ? "." : " (mã " + p.MaCode + ").");
         }
 
         // ================================================================== học viên thân thiết (đặc tả mục 6)

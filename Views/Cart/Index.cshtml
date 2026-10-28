@@ -257,7 +257,14 @@
                                         </div>
                                     </div>
                                     <div style="text-align: right; flex-shrink: 0;">
-                                        <div style="font-weight: 800; font-size: 17px; color: #0F172A;">@item.Price.ToString("N0") đ</div>
+                                        <div style="font-weight: 800; font-size: 17px; color: @(item.Price < item.OriginalPrice ? "#DC2626" : "#0F172A");">@item.Price.ToString("N0") đ</div>
+                                        @if (item.Price < item.OriginalPrice)
+                                        {
+                                            <div style="font-size: 12px; color: #94A3B8;">
+                                                <span style="text-decoration: line-through;">@item.OriginalPrice.ToString("N0") đ</span>
+                                                <span class="price-badge">-@ECOLearning.Services.CourseDiscountService.PhanTram(item.OriginalPrice, item.Price)%</span>
+                                            </div>
+                                        }
                                         <button type="button" class="btn btn-secondary btn-sm" style="margin-top: 6px; padding: 4px 10px; font-size: 12px; border-radius: 8px; background: #FEF2F2; color: #EF4444; border: 1px solid #FCA5A5; cursor: pointer;" onclick="removeItem('@item.CourseId')">
                                             <i class="bi bi-trash3 me-1"></i> Xóa
                                         </button>

@@ -26,8 +26,15 @@ namespace ECOLearning.Services
             public string MaKhoaHoc { get; set; }
             public string TenKhoaHoc { get; set; }
             public string AnhBia { get; set; }
+
+            /// <summary>Giá thanh toán của khóa (đã trừ giảm trực tiếp, chưa trừ coupon).</summary>
             public decimal Gia { get; set; }
+
+            /// <summary>Giá gốc trong CSDL (KhoaHoc.giaBan).</summary>
             public decimal GiaGoc { get; set; }
+
+            /// <summary>Chương trình giảm trực tiếp đã áp dụng cho khóa; null = không giảm.</summary>
+            public string MaKhuyenMaiTrucTiep { get; set; }
         }
 
         public class KhoaKhongHopLe
@@ -40,7 +47,10 @@ namespace ECOLearning.Services
         {
             public List<DongBaoGia> Dong { get; set; } = new List<DongBaoGia>();
             public List<KhoaKhongHopLe> KhongHopLe { get; set; } = new List<KhoaKhongHopLe>();
+
+            /// <summary>Tạm tính theo giá đã giảm trực tiếp; coupon và đơn tối thiểu của coupon tính trên số này.</summary>
             public decimal TamTinh => Dong.Sum(d => d.Gia);
+            public decimal TienGiamTrucTiep => Dong.Sum(d => d.GiaGoc - d.Gia);
             public KetQuaApDungUuDai UuDai { get; set; }
             public decimal TienGiam => UuDai != null && UuDai.Success ? UuDai.TienGiam : 0;
             public decimal TongTien => Math.Max(0, TamTinh - TienGiam);
@@ -66,14 +76,19 @@ namespace ECOLearning.Services
                 else if (!CourseStatus.IsPublished(k.trangThai)) kq.KhongHopLe.Add(new KhoaKhongHopLe { MaKhoaHoc = id, LyDo = "Khóa học hiện không còn mở bán" });
                 else if (k.maGiaoVien == userId) kq.KhongHopLe.Add(new KhoaKhongHopLe { MaKhoaHoc = id, LyDo = "Bạn không thể tự mua khóa học của chính mình" });
                 else if (daSoHuu.Contains(id)) kq.KhongHopLe.Add(new KhoaKhongHopLe { MaKhoaHoc = id, LyDo = "Bạn đã sở hữu khóa học này" });
-                else kq.Dong.Add(new DongBaoGia
+                else
                 {
-                    MaKhoaHoc = k.maKhoaHoc,
-                    TenKhoaHoc = k.tenKhoaHoc,
-                    AnhBia = k.anhBia,
-                    Gia = k.giaBan,
-                    GiaGoc = k.giaBan
-                });
+                    var gia = CourseDiscountService.Tinh(k);
+                    kq.Dong.Add(new DongBaoGia
+                    {
+                        MaKhoaHoc = k.maKhoaHoc,
+                        TenKhoaHoc = k.tenKhoaHoc,
+                        AnhBia = k.anhBia,
+                        Gia = gia.Gia,
+                        GiaGoc = gia.GiaGoc,
+                        MaKhuyenMaiTrucTiep = gia.MaKhuyenMai
+                    });
+                }
             }
 
             string ma = string.IsNullOrWhiteSpace(couponCode) ? null : couponCode.Trim().ToUpperInvariant();
@@ -171,6 +186,8 @@ namespace ECOLearning.Services
                 }
                 db.SaveChanges();
 
+                // Giá gốc và chương trình giảm trực tiếp của từng dòng (cột migration 021, chưa có trong mô hình EF)
+                CourseDiscountService.GhiGiaGocDong(db, orderId, bg.Dong);
                 if (uuDai != null) promotions.GhiNhanSuDung(orderId, userId, uuDai);
                 payment.DatThongTinDonCho(orderId, total > 0 ? phuongThuc : "Miễn phí");
                 // Trigger chi tiết đơn hàng tính lại tổng tiền; đặt lại số tiền thực trả để chắc chắn khớp

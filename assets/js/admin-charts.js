@@ -170,5 +170,13 @@
     });
   }
 
-  window.AdminCharts = { dualLine: dualLine, donut: donut, tips: tips, fmtNum: fmtNum, fmtMoney: fmtMoney, fmtShort: fmtShort, esc: esc };
+  // Biểu đồ đường 1 chuỗi: o = { labels, data, name, color, fill, format, axis, height }
+  function line(box, o) {
+    dualLine(box, {
+      labels: o.labels, height: o.height, ariaLabel: o.ariaLabel, axes: [o.axis || fmtNum],
+      series: [{ name: o.name, data: o.data, color: o.color, fill: o.fill, format: o.format }]
+    });
+  }
+
+  window.AdminCharts = { dualLine: dualLine, line: line, donut: donut, tips: tips, fmtNum: fmtNum, fmtMoney: fmtMoney, fmtShort: fmtShort, esc: esc };
 })();

@@ -32,7 +32,7 @@
     </div>
     <div class="card mk-stat">
         <div class="mk-stat-label">Lượt dùng mã tháng @now.Month</div>
-        <div class="mk-stat-value" style="color: #E11D48;">@Model.TotalCouponsUsed.ToString("#,##0")</div>
+        <div class="mk-stat-value" style="color: var(--primary);">@Model.TotalCouponsUsed.ToString("#,##0")</div>
     </div>
     <div class="card mk-stat">
         <div class="mk-stat-label">Doanh thu tháng @now.Month</div>
@@ -60,6 +60,7 @@
             }
             else
             {
+                <div class="ad-legend" style="margin-bottom: 6px;"><span><span class="ad-swatch" style="background: #434CE8;"></span> Lượt dùng mã</span><span><span class="ad-swatch" style="background: #10B981;"></span> Doanh thu</span></div>
                 <div id="marketing-coupon-chart"></div>
             }
         </div>
@@ -74,9 +75,9 @@
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                     @foreach (var cp in Model.TopCoupons)
                     {
-                        <div style="padding: 10px 12px; background: var(--bg-canvas, #F8FAFC); border-radius: var(--radius-xl); border: 1px dashed rgba(225, 29, 72, 0.3); display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                        <div style="padding: 10px 12px; background: var(--bg-canvas, #F8FAFC); border-radius: var(--radius-xl); border: 1px dashed rgba(67, 76, 232, 0.3); display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                             <div style="min-width: 0;">
-                                <span class="badge badge-primary" style="background: #FFE4E6; color: #E11D48; font-weight: 700; font-size: 13px; letter-spacing: 0.05em;">@cp.MaCode</span>
+                                <span class="badge badge-primary" style="background: var(--primary-light); color: var(--primary); font-weight: 700; font-size: 13px; letter-spacing: 0.05em;">@cp.MaCode</span>
                                 <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">@cp.TenKhuyenMai</div>
                             </div>
                             <div style="text-align: right; flex-shrink: 0;">
@@ -145,12 +146,16 @@
 @section Scripts {
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        if (!document.getElementById('marketing-coupon-chart') || !window.Charts || typeof Charts.renderDualLineChart !== 'function') return;
-        Charts.renderDualLineChart('marketing-coupon-chart', {
+        var box = document.getElementById('marketing-coupon-chart');
+        if (!box || !window.AdminCharts) return;
+        var C = AdminCharts;
+        C.dualLine(box, {
             labels: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartLabels)),
+            ariaLabel: 'Biểu đồ lượt dùng mã và doanh thu',
+            axes: [function (v) { return C.fmtNum(Math.round(v)); }, C.fmtShort],
             series: [
-                { name: 'Lượt dùng mã', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.CouponUsageChartData)), color: '#E11D48', fillColor: 'rgba(225, 29, 72, 0.06)', unit: 'lượt' },
-                { name: 'Doanh thu (đ)', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RevenueChartData)), color: '#2563EB', fillColor: 'rgba(37, 99, 235, 0.05)', unit: 'đ' }
+                { name: 'Lượt dùng mã', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.CouponUsageChartData)), color: '#434CE8', fill: 'rgba(67,76,232,0.08)', format: C.fmtNum },
+                { name: 'Doanh thu', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RevenueChartData)), color: '#10B981', dashed: true, format: C.fmtMoney }
             ]
         });
     });

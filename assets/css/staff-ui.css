@@ -1,0 +1,557 @@
+/* ==========================================================================
+   STAFF UI: giao diện khu vực nhân viên (Marketing, sau này Giáo viên / Admin), hướng tới phong cách Azota:
+   nền sáng, sidebar trắng chia nhóm, thẻ và bảng nhẹ, nút bo góc, một màu nhấn duy nhất (màu thương hiệu --primary).
+   Chỉ có tác dụng khi <body class="staff-ui">, nên không ảnh hưởng web học viên. Không đổi tên class hay cấu trúc view cũ.
+   Muốn bỏ giao diện này: gỡ class "staff-ui" khỏi <body> của layout, mọi trang trở về như cũ.
+   ========================================================================== */
+
+body.staff-ui {
+  --staff-bg: #F5F7FB;
+  --staff-line: #E6EAF2;
+  --staff-line-soft: #EEF1F7;
+  --staff-radius: 14px;
+  --staff-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --sidebar-width: 264px;
+  background: var(--staff-bg);
+}
+
+body.staff-ui .dashboard-layout,
+body.staff-ui .dashboard-main {
+  background: var(--staff-bg);
+}
+
+/* ---------- Sidebar ---------- */
+body.staff-ui .dashboard-sidebar {
+  background: #FFFFFF;
+  border-right: 1px solid var(--staff-line);
+}
+
+body.staff-ui .sidebar-logo {
+  height: 68px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--staff-line-soft);
+}
+
+body.staff-ui .sidebar-menu {
+  padding: 14px 14px 18px;
+  gap: 2px;
+}
+
+body.staff-ui .sidebar-section {
+  padding: 16px 12px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+body.staff-ui .sidebar-section:first-child {
+  padding-top: 4px;
+}
+
+body.staff-ui .sidebar-item {
+  position: relative;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+body.staff-ui .sidebar-item i {
+  font-size: 18px;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+body.staff-ui .sidebar-item:hover {
+  background: var(--bg-subtle);
+  color: var(--text-heading);
+}
+
+body.staff-ui .sidebar-item {
+  transition: background .15s ease, color .15s ease, transform .15s ease;
+}
+
+body.staff-ui .sidebar-item:hover {
+  transform: translateX(2px);
+}
+
+/* Mục đang chọn: nền màu thương hiệu, chữ trắng */
+body.staff-ui .sidebar-item.active,
+body.staff-ui .sidebar-item.active:hover {
+  background: var(--primary);
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(67, 76, 232, 0.28);
+  transform: none;
+}
+
+body.staff-ui .sidebar-footer {
+  padding: 14px;
+  border-top: 1px solid var(--staff-line-soft);
+}
+
+/* Thẻ người dùng cuối sidebar */
+body.staff-ui .staff-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--bg-canvas);
+  border: 1px solid var(--staff-line-soft);
+}
+
+body.staff-ui .staff-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--primary-light);
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 15px;
+}
+
+body.staff-ui .staff-user-info {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+body.staff-ui .staff-user-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.staff-ui .staff-user-role {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+body.staff-ui .staff-logout {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+}
+
+body.staff-ui .staff-logout:hover {
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
+}
+
+/* ---------- Topbar ---------- */
+/* Khung nội dung và thanh trên cùng giữ đúng kích thước mặc định như khu Admin (đệm 32px, thanh cao 64px) */
+body.staff-ui .staff-menu-btn {
+  display: none;
+  width: 38px;
+  height: 38px;
+  margin-right: 10px;
+  border: 1px solid var(--staff-line);
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: var(--text-heading);
+  font-size: 19px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+
+body.staff-ui .topbar-left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+body.staff-ui .breadcrumb-nav {
+  font-size: 13.5px;
+}
+
+body.staff-ui .breadcrumb-nav .current {
+  font-weight: 700;
+}
+
+/* ---------- Tiêu đề trang ---------- */
+body.staff-ui .dashboard-main h1.h2,
+body.staff-ui .dashboard-main .h2 {
+  font-size: 24px;
+  line-height: 32px;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- Thẻ ---------- */
+body.staff-ui .card {
+  border: 1px solid var(--staff-line);
+  border-radius: var(--staff-radius);
+  box-shadow: var(--staff-shadow);
+}
+
+body.staff-ui .card .h3,
+body.staff-ui .card h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* ---------- Nút ---------- */
+body.staff-ui .btn {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+body.staff-ui .btn-sm {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+body.staff-ui .btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(67, 76, 232, 0.28);
+}
+
+body.staff-ui .btn-outline,
+body.staff-ui .btn-secondary {
+  background: #FFFFFF;
+  border-color: var(--staff-line);
+  color: var(--text-heading);
+}
+
+body.staff-ui .btn-outline:hover,
+body.staff-ui .btn-secondary:hover {
+  background: var(--bg-subtle);
+  border-color: #D5DBE8;
+  color: var(--text-heading);
+}
+
+/* Màu nhấn của Marketing trước đây là hồng (#E11D48); nay dùng màu thương hiệu cho mọi nút / tab đang chọn để cả hệ thống đồng nhất */
+body.staff-ui .mk-btn-accent,
+body.staff-ui .mk-btn-accent:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #FFFFFF;
+}
+
+body.staff-ui .mk-btn-accent:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  box-shadow: 0 4px 12px rgba(67, 76, 232, 0.28);
+}
+
+/* ---------- Bảng ---------- */
+body.staff-ui .table-responsive {
+  border: 1px solid var(--staff-line);
+  border-radius: var(--staff-radius);
+  box-shadow: var(--staff-shadow);
+}
+
+body.staff-ui .card .table-responsive {
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+body.staff-ui .table th {
+  background: #F8FAFD;
+  border-bottom: 1px solid var(--staff-line);
+}
+
+body.staff-ui .table td {
+  border-bottom: 1px solid var(--staff-line-soft);
+}
+
+body.staff-ui .table tbody tr:hover {
+  background: #F8FAFF;
+}
+
+/* ---------- Nhãn trạng thái ---------- */
+body.staff-ui .badge {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* ---------- Bộ lọc, tab, form ---------- */
+body.staff-ui .mk-filter {
+  padding: 16px 18px;
+}
+
+body.staff-ui .mk-tabs {
+  gap: 4px;
+  padding: 4px;
+  background: #EAEEF6;
+  border-radius: 12px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+body.staff-ui .mk-tab {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+body.staff-ui .mk-tab:hover {
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--text-heading);
+  border-color: transparent;
+}
+
+body.staff-ui .mk-tab.is-active,
+body.staff-ui .mk-tab.is-active:hover {
+  background: var(--primary);
+  color: #FFFFFF;
+  box-shadow: 0 4px 10px rgba(67, 76, 232, 0.25);
+}
+
+body.staff-ui .mk-choice input:checked + span {
+  color: var(--primary);
+}
+
+body.staff-ui .mk-choice label {
+  border-radius: 10px;
+}
+
+body.staff-ui .mk-choice label:has(input:checked) {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+body.staff-ui .form-control {
+  border-radius: 10px;
+  border-color: var(--staff-line);
+}
+
+body.staff-ui .form-control:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-focus);
+  outline: none;
+}
+
+body.staff-ui .mk-section {
+  padding: 22px 24px;
+}
+
+body.staff-ui .mk-section h2 {
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--staff-line-soft);
+}
+
+/* ---------- Thẻ chỉ số ---------- */
+body.staff-ui .mk-stats {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--gutter);
+  margin-bottom: 32px;
+}
+
+body.staff-ui .mk-page-head {
+  margin-bottom: 32px;
+  align-items: center;
+}
+
+body.staff-ui .mk-page-head h1 {
+  margin: 6px 0 4px;
+}
+
+body.staff-ui .mk-filter {
+  margin-bottom: 24px;
+}
+
+body.staff-ui .mk-stat {
+  padding: 22px 24px;
+  border-radius: var(--radius-2xl);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+
+
+body.staff-ui .mk-stat-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+body.staff-ui .mk-stat-value {
+  font-size: 26px;
+  letter-spacing: -0.01em;
+}
+
+body.staff-ui .mk-bar {
+  background: #C7CCF8;
+}
+
+body.staff-ui .mk-bar:hover {
+  background: var(--primary);
+}
+
+body.staff-ui .mk-flash {
+  border-radius: 12px;
+}
+
+body.staff-ui .mk-code {
+  background: var(--primary-light);
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+body.staff-ui .badge {
+  white-space: nowrap;
+}
+
+/* Số liệu / giá trị ưu đãi còn dùng màu hồng cũ (viết trực tiếp trong view): đổi sang màu thương hiệu cho đồng nhất */
+body.staff-ui .mk-stat-value[style*="E11D48"],
+body.staff-ui td strong[style*="E11D48"] {
+  color: var(--primary) !important;
+}
+
+body.staff-ui .mk-empty {
+  padding: 52px 20px;
+}
+
+/* ---------- Màn hình nhỏ: sidebar trượt ra ---------- */
+body.staff-ui .staff-backdrop {
+  display: none;
+}
+
+@media (max-width: 992px) {
+  body.staff-ui .staff-menu-btn {
+    display: inline-flex;
+  }
+
+  body.staff-ui .dashboard-sidebar {
+    box-shadow: none;
+  }
+
+  body.staff-ui .dashboard-sidebar.active {
+    box-shadow: 0 0 40px rgba(15, 23, 42, 0.18);
+  }
+
+  body.staff-ui .staff-backdrop.active {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    z-index: 39;
+  }
+
+  body.staff-ui .dashboard-topbar .btn span.staff-hide-sm {
+    display: none;
+  }
+}
+
+/* ---------- Dùng chung cho Giáo viên / Admin (icon svg, layout có đệm riêng) ---------- */
+body.staff-ui .sidebar-item svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+body.staff-ui .sidebar-footer .btn {
+  width: 100%;
+}
+
+/* Layout Giáo viên tự đệm nội dung bên trong (<main style="padding:0">), nên topbar không cần kéo ra mép */
+body.staff-ui.staff-flush .dashboard-main {
+  padding: 0 !important;
+}
+
+body.staff-ui.staff-flush .dashboard-topbar {
+  margin: 0;
+  padding: 0 32px;
+}
+
+@media (max-width: 992px) {
+  body.staff-ui.staff-flush .dashboard-topbar {
+    padding: 0 16px;
+  }
+}
+
+/* ---------- Hiệu ứng rê chuột giống khu Admin ---------- */
+body.staff-ui .mk-stat:hover,
+body.staff-ui .mk-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -10px rgba(15, 23, 42, 0.18);
+  border-color: #D5DBF5;
+}
+
+body.staff-ui .mk-section {
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+body.staff-ui .grid-12 > [class*="col-"] > .card {
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+
+body.staff-ui .grid-12 > [class*="col-"] > .card:hover {
+  box-shadow: 0 10px 24px -12px rgba(15, 23, 42, 0.16);
+  border-color: #D5DBF5;
+}
+
+body.staff-ui .card .table tbody tr {
+  transition: background .12s ease;
+}
+
+body.staff-ui .mk-course-item {
+  transition: background .12s ease;
+}
+
+body.staff-ui .mk-stat-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chú thích biểu đồ (dùng chung với admin-report.css, cần khai báo lại vì Marketing không nạp file đó) */
+body.staff-ui .ad-legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: #475569; }
+body.staff-ui .ad-legend span { display: inline-flex; align-items: center; gap: 6px; }
+body.staff-ui .ad-swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+
+/* Cột tên (chương trình, chiến dịch) cho xuống dòng thay vì kéo giãn bảng */
+body.staff-ui .dashboard-main table:has(> thead) td:first-child:has(> a, > strong) {
+  white-space: normal;
+  min-width: 200px;
+  max-width: 340px;
+}
+
+/* ---------- Hiệu ứng rê chuột cho thẻ ở khu Giáo viên (giống Admin / Marketing) ---------- */
+body.staff-ui .kpi-card {
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+body.staff-ui .kpi-card:hover {
+  box-shadow: 0 10px 24px -10px rgba(15, 23, 42, 0.18);
+  border-color: #D5DBF5;
+}
+
+body.staff-ui.staff-flush .dashboard-main .card {
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+
+body.staff-ui.staff-flush .dashboard-main .card:hover {
+  box-shadow: 0 10px 24px -12px rgba(15, 23, 42, 0.16);
+  border-color: #D5DBF5;
+}

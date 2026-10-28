@@ -99,6 +99,7 @@ else
         }
         else
         {
+            <div class="ad-legend" style="margin-bottom: 6px;"><span><span class="ad-swatch" style="background: #434CE8;"></span> Lượt dùng mã</span><span><span class="ad-swatch" style="background: #10B981;"></span> Doanh thu</span></div>
             <div id="report-chart"></div>
         }
     </div>
@@ -226,12 +227,16 @@ else
     {
         <script>
             document.addEventListener('DOMContentLoaded', function () {
-                if (!window.Charts || typeof Charts.renderDualLineChart !== 'function') return;
-                Charts.renderDualLineChart('report-chart', {
+                var box = document.getElementById('report-chart');
+                if (!box || !window.AdminCharts) return;
+                var C = AdminCharts;
+                C.dualLine(box, {
                     labels: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartLabels)),
+                    ariaLabel: 'Biểu đồ lượt dùng mã và doanh thu',
+                    axes: [function (v) { return C.fmtNum(Math.round(v)); }, C.fmtShort],
                     series: [
-                        { name: 'Lượt dùng mã', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartData)), color: '#E11D48', fillColor: 'rgba(225, 29, 72, 0.06)', unit: 'lượt' },
-                        { name: 'Doanh thu (đ)', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartDoanhThu)), color: '#2563EB', fillColor: 'rgba(37, 99, 235, 0.05)', unit: 'đ' }
+                        { name: 'Lượt dùng mã', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartData)), color: '#434CE8', fill: 'rgba(67,76,232,0.08)', format: C.fmtNum },
+                        { name: 'Doanh thu', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartDoanhThu)), color: '#10B981', dashed: true, format: C.fmtMoney }
                     ]
                 });
             });

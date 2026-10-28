@@ -138,6 +138,7 @@ namespace ECOLearning.Services
             string nguon = chiTrongVi
                 ? "EXISTS (SELECT 1 FROM dbo.ViMaGiamGia v WHERE v.maGiamGia = mg.maGiamGia AND v.maHocVien = @hv)"
                 : "km.congKhai = 1";
+            nguon += " AND km.loaiKhuyenMai = N'Coupon'"; // giảm trực tiếp không có mã, không vào ví / danh sách thu thập
             var now = DateTime.Now;
             var chuongTrinh = db.Database.SqlQuery<ChuongTrinhKhuyenMai>(SelectChuongTrinh + @"
                 WHERE " + nguon + " AND " + DieuKienLuuDuoc + @"
@@ -192,7 +193,7 @@ namespace ECOLearning.Services
             if (maHocVien <= 0) return ketQua;
             var now = DateTime.Now;
             var chuongTrinh = db.Database.SqlQuery<ChuongTrinhKhuyenMai>(SelectChuongTrinh + @"
-                WHERE km.congKhai = 1 AND km.doiTuong = N'ThanThiet' AND " + DieuKienLuuDuoc + @"
+                WHERE km.congKhai = 1 AND km.loaiKhuyenMai = N'Coupon' AND km.doiTuong = N'ThanThiet' AND " + DieuKienLuuDuoc + @"
                 ORDER BY km.ngayKetThuc",
                 new SqlParameter("@now", now)).Where(p => !p.HetLuot).ToList();
             if (chuongTrinh.Count == 0) return ketQua;

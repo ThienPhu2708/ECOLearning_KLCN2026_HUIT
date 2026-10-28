@@ -89,7 +89,7 @@
                     @foreach (var p in chuongTrinh)
                     {
                         <tr>
-                            <td><a href="@Url.Action("Details", "Promotion", new { id = p.MaKhuyenMai })" style="font-weight: 700;">@p.TenKhuyenMai</a> <span class="mk-code" style="font-size: 11.5px;">@p.MaCode</span></td>
+                            <td><a href="@Url.Action("Details", "Promotion", new { id = p.MaKhuyenMai })" style="font-weight: 700;">@p.TenKhuyenMai</a> <span class="mk-code" style="font-size: 11.5px;">@p.MaHienThi</span></td>
                             <td>@p.MoTaUuDai</td>
                             <td style="text-align: right;">@p.SoLuotDaDung</td>
                             <td style="text-align: right;">@p.TongTienGiam.ToString("N0") đ</td>

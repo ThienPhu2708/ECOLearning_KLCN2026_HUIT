@@ -83,7 +83,7 @@
                     {
                         <label class="mk-course-item">
                             <input type="checkbox" name="ChuongTrinh" value="@p.MaKhuyenMai" @(chon.Contains(p.MaKhuyenMai) ? "checked" : "") />
-                            <span>@p.TenKhuyenMai <span class="mk-code" style="font-size: 11.5px;">@p.MaCode</span>
+                            <span>@p.TenKhuyenMai <span class="mk-code" style="font-size: 11.5px;">@p.MaHienThi</span>
                                 <small>@p.MoTaUuDai · @p.NgayBatDau.ToString("dd/MM/yyyy") – @p.NgayKetThuc.ToString("dd/MM/yyyy") · @p.TrangThaiHienThi(now)</small></span>
                         </label>
                     }

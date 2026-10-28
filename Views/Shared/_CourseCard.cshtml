@@ -83,10 +83,11 @@
 
         <div class="course-footer">
             <div class="course-pricing">
-                <span class="price-current">@actualPrice.ToString("N0") đ</span>
+                <span class="price-current@(actualPrice < oldPrice ? " is-sale" : "")">@actualPrice.ToString("N0") đ</span>
                 @if (actualPrice < oldPrice)
                 {
                     <span class="price-original">@oldPrice.ToString("N0") đ</span>
+                    <span class="price-badge">-@ECOLearning.Services.CourseDiscountService.PhanTram(oldPrice, actualPrice)%</span>
                 }
             </div>
             <a href="@detailUrl" target="_blank" rel="noopener" class="btn btn-outline btn-sm" onclick="event.stopPropagation();" style="border-radius: var(--radius-xl, 10px); font-weight: 600; text-decoration: none;">

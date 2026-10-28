@@ -161,14 +161,16 @@ namespace ECOLearning.Controllers
                 return false;
             }
 
+            var gia = CourseDiscountService.Tinh(course);
             cart.Add(new CartItemViewModel
             {
                 CourseId = course.maKhoaHoc,
                 CourseName = course.tenKhoaHoc,
                 InstructorName = course.NguoiDung != null ? course.NguoiDung.hoTen : "Giảng viên E-Learning",
                 DurationText = "30 giờ học",
-                Price = course.giaBan,
-                OriginalPrice = course.giaBan,
+                Price = gia.Gia,
+                OriginalPrice = gia.GiaGoc,
+                MaKhuyenMaiTrucTiep = gia.MaKhuyenMai,
                 ThumbnailUrl = string.IsNullOrEmpty(course.anhBia) ? "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80" : course.anhBia
             });
             message = "Đã thêm khóa học vào giỏ hàng thành công!";
@@ -372,7 +374,7 @@ namespace ECOLearning.Controllers
 
                     foreach (var item in cart)
                     {
-                        // Đơn giá lưu giá bán của khóa (trước coupon); tiền giảm của coupon lưu riêng ở SuDungUuDai
+                        // Đơn giá lưu giá thanh toán của khóa (sau giảm trực tiếp, trước coupon); tiền giảm của coupon lưu riêng ở SuDungUuDai
                         db.ChiTietDonHang.Add(new ChiTietDonHang
                         {
                             maChiTiet = "CT" + Guid.NewGuid().ToString("N").Substring(0, 18),
@@ -384,6 +386,15 @@ namespace ECOLearning.Controllers
                     }
 
                     db.SaveChanges();
+
+                    // Giá gốc và chương trình giảm trực tiếp của từng dòng (cột migration 021, chưa có trong mô hình EF)
+                    CourseDiscountService.GhiGiaGocDong(db, orderId, cart.Select(i => new OrderService.DongBaoGia
+                    {
+                        MaKhoaHoc = i.CourseId,
+                        GiaGoc = i.OriginalPrice,
+                        Gia = i.Price,
+                        MaKhuyenMaiTrucTiep = i.MaKhuyenMaiTrucTiep
+                    }));
 
                     if (uuDai != null)
                     {
@@ -459,7 +470,7 @@ namespace ECOLearning.Controllers
             Session["Cart"] = cart;
         }
 
-        /// <summary>Lấy lại giá bán (giaBan) từ CSDL: giáo viên có thể đổi giá sau khi khóa đã nằm trong giỏ.</summary>
+        /// <summary>Tính lại giá từ CSDL (giá gốc và giảm trực tiếp): giáo viên có thể đổi giá, chương trình có thể hết hạn sau khi khóa đã nằm trong giỏ.</summary>
         private void CapNhatGia(List<CartItemViewModel> cart)
         {
             if (cart.Count == 0) return;
@@ -470,8 +481,10 @@ namespace ECOLearning.Controllers
                 KhoaHoc k;
                 if (courses.TryGetValue(item.CourseId, out k))
                 {
-                    item.Price = k.giaBan;
-                    item.OriginalPrice = k.giaBan;
+                    var gia = CourseDiscountService.Tinh(k);
+                    item.Price = gia.Gia;
+                    item.OriginalPrice = gia.GiaGoc;
+                    item.MaKhuyenMaiTrucTiep = gia.MaKhuyenMai;
                 }
             }
         }

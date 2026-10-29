@@ -1,0 +1,256 @@
+@model ECOLearning.Areas.Marketing.Models.CourseEngagementViewModel
+@{
+    ViewBag.Title = "Tương tác khóa học";
+    string tu = Model.TuNgay.ToString("yyyy-MM-dd");
+    string den = Model.DenNgay.ToString("yyyy-MM-dd");
+    var homNay = DateTime.Today;
+    var nhanh = new[]
+    {
+        new { Ten = "7 ngày", Tu = homNay.AddDays(-6), Den = homNay },
+        new { Ten = "30 ngày", Tu = homNay.AddDays(-29), Den = homNay },
+        new { Ten = "90 ngày", Tu = homNay.AddDays(-89), Den = homNay },
+        new { Ten = "Năm nay", Tu = new DateTime(homNay.Year, 1, 1), Den = homNay }
+    };
+    Func<decimal?, string> phanTram = v => v.HasValue ? v.Value.ToString("0.#") + "%" : "—";
+    int diemMax = Model.Rows.Any() ? Model.Rows.Max(r => r.Diem) : 1;
+}
+
+<div class="mk-page-head">
+    <div>
+        <h1 class="h2">Tương tác khóa học</h1>
+        <p>Học viên xem, nhấp và yêu thích khóa nào nhiều nhất, và khóa nào đang được quan tâm nhưng chưa có ưu đãi. Chỉ đọc dữ liệu, không thay đổi gì trong hệ thống.</p>
+    </div>
+</div>
+
+<form method="get" action="@Url.Action("Index", "CourseEngagement")" class="card mk-filter">
+    <div class="mk-field">
+        <label for="tuNgay">Từ ngày</label>
+        <input type="date" id="tuNgay" name="tuNgay" class="form-control" value="@tu" required />
+    </div>
+    <div class="mk-field">
+        <label for="denNgay">Đến ngày</label>
+        <input type="date" id="denNgay" name="denNgay" class="form-control" value="@den" required />
+    </div>
+    <button type="submit" class="btn btn-secondary btn-sm" style="height: 38px;">Xem</button>
+    <div class="mk-tabs" style="margin-left: auto;">
+        @foreach (var n in nhanh)
+        {
+            <a class="mk-tab @(n.Tu.Date == Model.TuNgay && n.Den.Date == Model.DenNgay ? "is-active" : "")" href="@Url.Action("Index", "CourseEngagement", new { tuNgay = n.Tu.ToString("yyyy-MM-dd"), denNgay = n.Den.ToString("yyyy-MM-dd") })">@n.Ten</a>
+        }
+    </div>
+</form>
+
+@if (Model.ThongBaoLoi != null)
+{
+    <div class="mk-flash mk-flash-error" role="alert"><span><i class="bi bi-exclamation-triangle-fill me-1"></i> @Model.ThongBaoLoi</span></div>
+}
+else
+{
+    <div class="mk-stats">
+        <div class="card mk-stat">
+            <div class="mk-stat-label">Lượt xem khóa học</div>
+            <div class="mk-stat-value">@Model.TongLuotXem.ToString("#,##0")</div>
+            <div class="mk-stat-note">Mở trang chi tiết khóa</div>
+        </div>
+        <div class="card mk-stat">
+            <div class="mk-stat-label">Lượt nhấp vào thẻ khóa</div>
+            <div class="mk-stat-value">@Model.TongLuotClick.ToString("#,##0")</div>
+            <div class="mk-stat-note">Chạm vào thẻ khóa trên ứng dụng di động</div>
+        </div>
+        <div class="card mk-stat">
+            <div class="mk-stat-label">Lượt yêu thích</div>
+            <div class="mk-stat-value">@Model.TongLuotThich.ToString("#,##0")</div>
+            <div class="mk-stat-note">Học viên đang yêu thích</div>
+        </div>
+        <div class="card mk-stat">
+            <div class="mk-stat-label">Lượt đăng ký khóa</div>
+            <div class="mk-stat-value" style="color: #10B981;">@Model.TongDangKy.ToString("#,##0")</div>
+            <div class="mk-stat-note">Trong kỳ đã chọn</div>
+        </div>
+    </div>
+
+    <p class="mk-muted" style="margin: -14px 0 24px;">
+        <i class="bi bi-info-circle"></i> Hệ thống lưu tương tác theo tổng cộng dồn của từng học viên với từng khóa, kèm thời điểm gần nhất.
+        Số liệu trong kỳ là của các học viên có hoạt động gần nhất rơi vào kỳ, nên chưa chia được theo từng ngày.
+    </p>
+
+    if (!Model.Rows.Any())
+    {
+        <div class="card"><div class="mk-empty"><i class="bi bi-activity"></i>Chưa có tương tác nào trong kỳ đã chọn.</div></div>
+    }
+    else
+    {
+        <div class="grid-12" style="margin-bottom: 24px;">
+            <div class="col-8">
+                <div class="card">
+                    <h3 class="h3" style="margin-bottom: 4px;">Top 10 khóa theo tương tác</h3>
+                    <span class="caption" style="display: block; margin-bottom: 16px;">Điểm = lượt xem + 2 × lượt nhấp + 3 × lượt yêu thích · rê chuột để xem chi tiết</span>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        @foreach (var r in Model.Rows.Take(10))
+                        {
+                            var rong = Math.Max(3, (int)Math.Round(100.0 * r.Diem / diemMax));
+                            var tip = "<strong>" + System.Web.HttpUtility.HtmlEncode(r.TenKhoaHoc) + "</strong>"
+                                + "<div>Lượt xem: <b>" + r.LuotXem.ToString("#,##0") + "</b></div>"
+                                + "<div>Lượt nhấp: <b>" + r.LuotClick.ToString("#,##0") + "</b></div>"
+                                + "<div>Yêu thích: <b>" + r.LuotThich.ToString("#,##0") + "</b></div>"
+                                + "<div>Điểm tương tác: <b>" + r.Diem.ToString("#,##0") + "</b></div>";
+                            <div data-tip="@tip">
+                                <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 13px; margin-bottom: 4px;">
+                                    <span style="font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@r.TenKhoaHoc</span>
+                                    <span style="font-weight: 700; flex-shrink: 0;">@r.Diem.ToString("#,##0")</span>
+                                </div>
+                                <div class="ad-bar"><div style="width: @(rong)%; background: #434CE8; border-radius: 4px;"></div></div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-4">
+                <div class="card">
+                    <h3 class="h3" style="margin-bottom: 4px;">Nên tạo ưu đãi cho</h3>
+                    <span class="caption" style="display: block; margin-bottom: 16px;">Tương tác cao nhưng chưa có giảm trực tiếp, khuyến mãi theo khóa hoặc theo danh mục đang chạy</span>
+                    @if (Model.GoiY.Any())
+                    {
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            @foreach (var r in Model.GoiY)
+                            {
+                                <div style="padding: 10px 12px; background: var(--bg-canvas, #F8FAFC); border-radius: var(--radius-xl); border: 1px dashed rgba(67, 76, 232, 0.3);">
+                                    <div style="font-weight: 700; font-size: 13.5px;">@r.TenKhoaHoc</div>
+                                    <div style="display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
+                                        <span>@r.TenDanhMuc · @r.GiaBan.ToString("#,##0") đ</span>
+                                        <span>@r.Diem.ToString("#,##0") điểm</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <a href="@Url.Action("Create", "Promotion")" class="btn mk-btn-accent btn-sm" style="margin-top: 14px; width: 100%;"><i class="bi bi-plus-lg me-1"></i> Tạo khuyến mãi</a>
+                    }
+                    else
+                    {
+                        <p class="body-2" style="color: var(--text-secondary); text-align: center; padding: 24px 8px;">Các khóa được quan tâm đều đã có ưu đãi.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <form id="chi-tiet" method="get" action="@Url.Action("Index", "CourseEngagement")#chi-tiet" class="card mk-filter">
+            <input type="hidden" name="tuNgay" value="@tu" />
+            <input type="hidden" name="denNgay" value="@den" />
+            <div class="mk-field" style="flex: 1; min-width: 200px;">
+                <label for="q">Tên khóa học</label>
+                <input type="text" id="q" name="q" class="form-control" value="@Model.TuKhoa" placeholder="Tìm theo tên khóa học" />
+            </div>
+            <div class="mk-field" style="min-width: 180px;">
+                <label for="danhMuc">Danh mục</label>
+                <select id="danhMuc" name="danhMuc" class="form-control">
+                    <option value="">Tất cả danh mục</option>
+                    @foreach (var d in Model.DanhMucs)
+                    {
+                        <option value="@d" @(d == Model.DanhMuc ? "selected" : "")>@d</option>
+                    }
+                </select>
+            </div>
+            <div class="mk-field" style="min-width: 150px;">
+                <label for="uuDai">Ưu đãi</label>
+                <select id="uuDai" name="uuDai" class="form-control">
+                    <option value="" @(Model.UuDai == "" ? "selected" : "")>Tất cả</option>
+                    <option value="chua" @(Model.UuDai == "chua" ? "selected" : "")>Chưa có ưu đãi</option>
+                    <option value="co" @(Model.UuDai == "co" ? "selected" : "")>Đang có ưu đãi</option>
+                </select>
+            </div>
+            <div class="mk-field" style="min-width: 170px;">
+                <label for="sapXep">Sắp xếp theo</label>
+                <select id="sapXep" name="sapXep" class="form-control">
+                    <option value="diem" @(Model.SapXep == "diem" ? "selected" : "")>Điểm tương tác</option>
+                    <option value="xem" @(Model.SapXep == "xem" ? "selected" : "")>Lượt xem</option>
+                    <option value="nhap" @(Model.SapXep == "nhap" ? "selected" : "")>Lượt nhấp</option>
+                    <option value="thich" @(Model.SapXep == "thich" ? "selected" : "")>Yêu thích</option>
+                    <option value="dangky" @(Model.SapXep == "dangky" ? "selected" : "")>Đăng ký trong kỳ</option>
+                    <option value="chuyendoi" @(Model.SapXep == "chuyendoi" ? "selected" : "")>Tỷ lệ chuyển đổi</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-secondary btn-sm" style="height: 38px;">Lọc</button>
+            @if (Model.TuKhoa != "" || Model.DanhMuc != "" || Model.UuDai != "" || Model.SapXep != "diem")
+            {
+                <a class="btn btn-outline btn-sm" style="height: 38px; display: inline-flex; align-items: center;" href="@Url.Action("Index", "CourseEngagement", new { tuNgay = tu, denNgay = den })#chi-tiet">Xóa lọc</a>
+            }
+        </form>
+
+        <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 20px;">
+            <div style="padding: 18px 22px 6px;"><h2 style="font-size: 15px; font-weight: 800; margin: 0;">Chi tiết theo khóa học <span class="mk-muted" style="font-weight: 600;">(@Model.TongDong khóa)</span></h2></div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Khóa học</th>
+                            <th style="text-align: right;">Lượt xem</th>
+                            <th style="text-align: right;" title="Số lần học viên chạm vào thẻ khóa học trên ứng dụng di động">Lượt nhấp</th>
+                            <th style="text-align: right;">Yêu thích</th>
+                            <th style="text-align: right;">Học viên xem</th>
+                            <th style="text-align: right;">Đăng ký trong kỳ</th>
+                            <th style="text-align: right;" title="Học viên xem rồi đăng ký / học viên xem">Chuyển đổi</th>
+                            <th>Ưu đãi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.TrangRows)
+                        {
+                            <tr>
+                                <td><strong>@r.TenKhoaHoc</strong><div class="mk-muted">@r.TenDanhMuc</div></td>
+                                <td style="text-align: right;">@r.LuotXem.ToString("#,##0")</td>
+                                <td style="text-align: right;">@r.LuotClick.ToString("#,##0")</td>
+                                <td style="text-align: right;">@r.LuotThich.ToString("#,##0")</td>
+                                <td style="text-align: right;">@r.HocVienXem.ToString("#,##0")</td>
+                                <td style="text-align: right; font-weight: 700;">@r.DangKyTrongKy.ToString("#,##0")</td>
+                                <td style="text-align: right;">@phanTram(r.TyLeChuyenDoi)</td>
+                                <td>
+                                    @if (r.CoUuDai) { <span class="badge badge-success">Đang có</span> }
+                                    else { <span class="badge badge-secondary">Chưa có</span> }
+                                </td>
+                            </tr>
+                        }
+                        @if (!Model.TrangRows.Any())
+                        {
+                            <tr><td colspan="8" class="mk-empty"><i class="bi bi-search"></i>Không có khóa học nào khớp bộ lọc trong kỳ này. Bảng chỉ liệt kê khóa có tương tác trong khoảng ngày đã chọn, hãy thử mở rộng khoảng ngày.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        if (Model.SoTrang > 1)
+        {
+            Func<int, string> lienKet = n => Url.Action("Index", "CourseEngagement", new { tuNgay = tu, denNgay = den, q = Model.TuKhoa, danhMuc = Model.DanhMuc, uuDai = Model.UuDai, sapXep = Model.SapXep, trang = n }) + "#chi-tiet";
+            int tuTrang = Math.Max(1, Model.Trang - 2);
+            int denTrang = Math.Min(Model.SoTrang, Model.Trang + 2);
+            int dau = (Model.Trang - 1) * ECOLearning.Areas.Marketing.Models.CourseEngagementViewModel.KichThuocTrang + 1;
+            int cuoi = Math.Min(Model.TongDong, Model.Trang * ECOLearning.Areas.Marketing.Models.CourseEngagementViewModel.KichThuocTrang);
+            <div class="pagination-container" style="margin-top: 0;">
+                <div class="pagination-info">Hiển thị <strong>@dau–@cuoi</strong> / <strong>@Model.TongDong</strong> khóa học</div>
+                <ul class="pagination">
+                    @if (Model.Trang > 1)
+                    {
+                        <li class="page-item"><a class="page-link" href="@lienKet(Model.Trang - 1)" aria-label="Trang trước"><i class="bi bi-chevron-left"></i></a></li>
+                    }
+                    @for (int n = tuTrang; n <= denTrang; n++)
+                    {
+                        <li class="page-item @(n == Model.Trang ? "active" : "")"><a class="page-link" href="@lienKet(n)">@n</a></li>
+                    }
+                    @if (Model.Trang < Model.SoTrang)
+                    {
+                        <li class="page-item"><a class="page-link" href="@lienKet(Model.Trang + 1)" aria-label="Trang sau"><i class="bi bi-chevron-right"></i></a></li>
+                    }
+                </ul>
+            </div>
+        }
+    }
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.AdminCharts) AdminCharts.tips(document);
+        });
+    </script>
+}

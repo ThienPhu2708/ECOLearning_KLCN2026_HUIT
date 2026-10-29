@@ -320,13 +320,41 @@
     }
 
     @@media (max-width: 900px) {
+        .hero-carousel { padding-top: 32px !important; padding-bottom: 58px !important; }
+        .hero-carousel .hero-slide .safe-container { padding-left: 56px; padding-right: 56px; }
         .hero-slide-grid {
             grid-template-columns: 1fr;
+            gap: 24px;
         }
 
         .hero-panel {
             min-height: 0;
+            padding: 18px;
         }
+
+        .hero-panel img { max-height: 280px; }
+        .hero-title { font-size: clamp(28px, 5vw, 38px); line-height: 1.2; }
+        .hero-desc { margin-bottom: 20px; }
+    }
+
+    @@media (max-width: 600px) {
+        .hero-carousel { padding-top: 24px !important; padding-bottom: 50px !important; }
+        .hero-carousel .hero-slide .safe-container { padding-left: 46px; padding-right: 46px; }
+        .hero-carousel-arrow { width: 36px; height: 36px; margin-top: -18px; font-size: 16px; }
+        .hero-carousel-arrow.prev { left: 6px; }
+        .hero-carousel-arrow.next { right: 6px; }
+        .hero-slide-grid { gap: 16px; }
+        .hero-eyebrow { padding: 6px 10px; margin-bottom: 12px; font-size: 11px; }
+        .hero-title { font-size: clamp(24px, 7vw, 32px); line-height: 1.2; margin-bottom: 12px; }
+        .hero-desc { font-size: 15px; line-height: 1.55; margin-bottom: 16px; }
+        .hero-actions { gap: 8px; }
+        .hero-actions .btn { padding: 10px 14px; font-size: 14px; }
+        .hero-panel { padding: 10px; border-radius: 16px; }
+        .hero-panel img { max-height: 190px; border-radius: 12px; }
+        .hero-float-card { left: 12px; bottom: 12px; gap: 8px; padding: 8px 10px; max-width: calc(100% - 24px); }
+        .hero-float-card .hero-float-icon { width: 34px; height: 34px; flex: 0 0 34px; }
+        .hero-float-card > div:last-child { min-width: 0; }
+        .hero-carousel-dots { bottom: 14px; }
     }
 
     @@media (prefers-reduced-motion: reduce) {

@@ -1,0 +1,59 @@
+@* Mục "Ảnh quảng cáo popup" dùng chung cho form Chiến dịch và form Chương trình khuyến mãi.
+   Dữ liệu: ViewBag.QuangCaoCoSan (đã chạy migration 023), ViewBag.QuangCao (QuangCaoHienTai), ViewBag.QuangCaoLoi.
+   Form chứa mục này phải có enctype="multipart/form-data". *@
+@if (ViewBag.QuangCaoCoSan == true)
+{
+    var qc = ViewBag.QuangCao as ECOLearning.ViewModels.QuangCaoHienTai ?? new ECOLearning.ViewModels.QuangCaoHienTai();
+    bool coAnh = !string.IsNullOrEmpty(qc.Anh);
+    string loiAnh = ViewBag.QuangCaoLoi as string;
+
+    <div class="card mk-section">
+        <h2>Ảnh quảng cáo popup</h2>
+        <p class="mk-hint" style="margin-top: 0;">
+            Ảnh hiện ở trang chủ khi bật popup (chỉ trong thời gian chạy). Bấm vào ảnh, học viên được đưa tới trang liệt kê các ưu đãi.
+            Nên dùng ảnh dọc hoặc vuông, tối đa 2 MB, JPG / PNG / WEBP.
+        </p>
+        <div class="form-group">
+            @if (coAnh)
+            {
+                <div style="margin-bottom: 10px;">
+                    <img id="qc-anh-hien-tai" src="@Url.Content("~" + qc.Anh)" alt="Ảnh quảng cáo hiện tại" style="display: block; max-width: 220px; max-height: 220px; border-radius: 12px; border: 1px solid var(--border-color, #E2E8F0);" />
+                </div>
+            }
+            <img id="qc-xem-truoc" alt="Ảnh mới chọn" hidden style="display: none; max-width: 220px; max-height: 220px; border-radius: 12px; border: 1px solid var(--border-color, #E2E8F0); margin-bottom: 10px;" />
+            <label class="form-label" for="anhQuangCao">@(coAnh ? "Thay bằng ảnh khác" : "Chọn ảnh")</label>
+            <input type="file" id="anhQuangCao" name="anhQuangCao" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" />
+            @if (!string.IsNullOrEmpty(loiAnh))
+            {
+                <div style="color: #DC2626; font-size: 12.5px; margin-top: 4px;">@loiAnh</div>
+            }
+        </div>
+        @if (coAnh)
+        {
+            <div class="form-group">
+                <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer;">
+                    <input type="checkbox" name="xoaAnh" value="true" /> Xóa ảnh hiện tại
+                </label>
+            </div>
+        }
+        <div class="form-group" style="margin-bottom: 0;">
+            <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                <input type="checkbox" name="hienPopup" value="true" @(qc.HienPopup ? "checked" : "") /> Hiện quảng cáo popup trên trang chủ
+            </label>
+        </div>
+    </div>
+    <script>
+        (function () {
+            var input = document.getElementById('anhQuangCao');
+            var preview = document.getElementById('qc-xem-truoc');
+            if (!input || !preview) return;
+            input.addEventListener('change', function () {
+                var f = input.files && input.files[0];
+                if (!f) { preview.hidden = true; preview.style.display = 'none'; return; }
+                var reader = new FileReader();
+                reader.onload = function (e) { preview.src = e.target.result; preview.hidden = false; preview.style.display = 'block'; };
+                reader.readAsDataURL(f);
+            });
+        })();
+    </script>
+}

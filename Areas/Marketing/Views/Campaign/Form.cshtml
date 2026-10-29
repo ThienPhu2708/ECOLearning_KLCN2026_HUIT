@@ -30,7 +30,7 @@
     </div>
 }
 
-@using (Html.BeginForm(laSua ? "Edit" : "Create", "Campaign", laSua ? new { id = Model.MaChienDich } : null, FormMethod.Post, new { novalidate = "novalidate" }))
+@using (Html.BeginForm(laSua ? "Edit" : "Create", "Campaign", laSua ? new { id = Model.MaChienDich } : null, FormMethod.Post, new { novalidate = "novalidate", enctype = "multipart/form-data" }))
 {
     @Html.AntiForgeryToken()
     <div class="mk-form">
@@ -146,6 +146,8 @@
                     @loi("ChiTieuLuotDung")
                 </div>
             </div>
+
+            @Html.Partial("~/Areas/Marketing/Views/Shared/_QuangCaoFields.cshtml")
 
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <a href="@(laSua ? Url.Action("Details", "Campaign", new { id = Model.MaChienDich }) : Url.Action("Index", "Campaign"))" class="btn btn-outline">Hủy</a>

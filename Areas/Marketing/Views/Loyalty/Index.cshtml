@@ -35,33 +35,30 @@
 
 <div class="card" style="padding: 0; overflow: hidden;">
     <div class="table-responsive">
-        <table class="table">
+        <table class="table pm-table">
             <thead>
                 <tr>
                     <th>Chương trình</th>
-                    <th>Mã coupon</th>
                     <th>Ưu đãi</th>
                     <th>Tiêu chí thân thiết</th>
-                    <th>Thời gian</th>
-                    <th>Lượt dùng</th>
                     <th>Trạng thái</th>
-                    <th style="width: 220px;">Thao tác</th>
+                    <th style="width: 110px;"></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var p in Model)
                 {
                     string tt = p.TrangThaiHienThi(now);
-                    <tr>
-                        <td><a href="@Url.Action("Details", "Promotion", new { id = p.MaKhuyenMai })" style="font-weight: 700; color: var(--text-heading); text-decoration: none;">@p.TenKhuyenMai</a></td>
-                        <td><span class="mk-code">@p.MaCode</span></td>
-                        <td><strong style="color: #E11D48;">@p.MoTaUuDai</strong></td>
+                    <tr class="pm-row" tabindex="0" role="button" aria-label="Xem chi tiết @p.TenKhuyenMai">
+                        <td>
+                            <div style="font-weight: 700; color: var(--text-heading);">@p.TenKhuyenMai</div>
+                            <div class="mk-muted" style="margin-top: 3px;"><span class="mk-code" style="font-size: 11.5px;">@p.MaHienThi</span></div>
+                        </td>
+                        <td><strong style="color: var(--primary);">@p.MoTaUuDai</strong></td>
                         <td>
                             @if (p.SoKhoaToiThieu.HasValue) { <div>Đã mua từ <strong>@p.SoKhoaToiThieu</strong> khóa học</div> }
                             @if (p.ChiTieuToiThieu.HasValue) { <div>Chi tiêu từ <strong>@p.ChiTieuToiThieu.Value.ToString("N0") đ</strong></div> }
                         </td>
-                        <td style="white-space: nowrap;">@p.NgayBatDau.ToString("dd/MM/yyyy") – @p.NgayKetThuc.ToString("dd/MM/yyyy")</td>
-                        <td><strong>@p.SoLuotDaDung</strong>@(p.GioiHanLuotDung.HasValue ? " / " + p.GioiHanLuotDung.Value : "")</td>
                         <td>
                             @if (tt == "Đang chạy") { <span class="badge badge-success">Đang chạy</span> }
                             else if (tt == "Tạm ngưng") { <span class="badge badge-warning">Tạm ngưng</span> }
@@ -69,19 +66,91 @@
                             else if (tt == "Hết lượt") { <span class="badge badge-danger">Hết lượt</span> }
                             else { <span class="badge badge-secondary">Đã kết thúc</span> }
                         </td>
-                        <td>
-                            <div class="mk-actions">
-                                <a href="@Url.Action("Eligible", "Loyalty", new { id = p.MaKhuyenMai })" class="btn btn-outline btn-sm">Học viên đủ điều kiện</a>
-                                <a href="@Url.Action("Details", "Promotion", new { id = p.MaKhuyenMai })" class="btn btn-outline btn-sm">Chi tiết</a>
-                            </div>
+                        <td style="text-align: right;">
+                            <button type="button" class="btn btn-outline btn-sm pm-open"><i class="bi bi-eye"></i> Xem</button>
+                            <template class="pm-tpl">
+                                <div class="pm-head">
+                                    <div style="min-width: 0;">
+                                        <h3 class="h3" style="margin: 0 0 6px;">@p.TenKhuyenMai</h3>
+                                        <span class="mk-code">@p.MaHienThi</span>
+                                        @if (tt == "Đang chạy") { <span class="badge badge-success">Đang chạy</span> }
+                                        else if (tt == "Tạm ngưng") { <span class="badge badge-warning">Tạm ngưng</span> }
+                                        else if (tt == "Chưa bắt đầu") { <span class="badge badge-info">Chưa bắt đầu</span> }
+                                        else if (tt == "Hết lượt") { <span class="badge badge-danger">Hết lượt</span> }
+                                        else { <span class="badge badge-secondary">Đã kết thúc</span> }
+                                    </div>
+                                    <button type="button" class="pm-close" aria-label="Đóng"><i class="bi bi-x-lg"></i></button>
+                                </div>
+                                <dl class="mk-dl pm-dl">
+                                    <dt>Ưu đãi</dt>
+                                    <dd><strong style="color: var(--primary);">@p.MoTaUuDai</strong>@if (p.DonHangToiThieu.HasValue) { <span class="mk-muted"> · đơn từ @p.DonHangToiThieu.Value.ToString("N0") đ</span> }</dd>
+                                    <dt>Tiêu chí</dt>
+                                    <dd>
+                                        @if (p.SoKhoaToiThieu.HasValue) { <div>Đã mua từ <strong>@p.SoKhoaToiThieu</strong> khóa học</div> }
+                                        @if (p.ChiTieuToiThieu.HasValue) { <div>Chi tiêu từ <strong>@p.ChiTieuToiThieu.Value.ToString("N0") đ</strong></div> }
+                                    </dd>
+                                    <dt>Thời gian</dt>
+                                    <dd>@p.NgayBatDau.ToString("dd/MM/yyyy") – @p.NgayKetThuc.ToString("dd/MM/yyyy")</dd>
+                                    <dt>Phạm vi</dt>
+                                    <dd>@p.MoTaPhamVi</dd>
+                                    <dt>Lượt dùng</dt>
+                                    <dd><strong>@p.SoLuotDaDung</strong>@(p.GioiHanLuotDung.HasValue ? " / " + p.GioiHanLuotDung.Value : "") lượt@(p.HetLuot ? " (đã hết lượt)" : "")</dd>
+                                    @if (!string.IsNullOrEmpty(p.TenChienDich))
+                                    {
+                                        <dt>Chiến dịch</dt>
+                                        <dd>@p.TenChienDich</dd>
+                                    }
+                                </dl>
+                                <div class="pm-foot">
+                                    <a href="@Url.Action("Eligible", "Loyalty", new { id = p.MaKhuyenMai })" class="btn btn-outline btn-sm">Học viên đủ điều kiện</a>
+                                    <a href="@Url.Action("Details", "Promotion", new { id = p.MaKhuyenMai })" class="btn mk-btn-accent btn-sm">Xem đầy đủ</a>
+                                </div>
+                            </template>
                         </td>
                     </tr>
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="8" class="mk-empty"><i class="bi bi-award"></i>Chưa có ưu đãi thân thiết nào.</td></tr>
+                    <tr><td colspan="5" class="mk-empty"><i class="bi bi-award"></i>Chưa có ưu đãi thân thiết nào.</td></tr>
                 }
             </tbody>
         </table>
     </div>
+    <div style="padding: 14px 22px; border-top: 1px solid var(--border-color);" class="mk-muted">
+        Hiển thị <strong>@Model.Count</strong> ưu đãi thân thiết. Bấm vào một dòng để xem chi tiết.
+    </div>
 </div>
+
+<div class="modal-overlay" id="pm-modal" aria-hidden="true">
+    <div class="modal-container pm-modal" role="dialog" aria-modal="true"></div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var modal = document.getElementById('pm-modal');
+            var box = modal.querySelector('.pm-modal');
+            function dong() {
+                modal.classList.remove('active');
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+                box.innerHTML = '';
+            }
+            function mo(row) {
+                var tpl = row.querySelector('template.pm-tpl');
+                if (!tpl) return;
+                box.innerHTML = '';
+                box.appendChild(tpl.content.cloneNode(true));
+                modal.classList.add('active');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+            }
+            document.querySelectorAll('tr.pm-row').forEach(function (row) {
+                row.addEventListener('click', function (e) { if (!e.target.closest('a, form')) mo(row); });
+                row.addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target === row) mo(row); });
+            });
+            modal.addEventListener('click', function (e) { if (e.target === modal || e.target.closest('.pm-close')) dong(); });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal.classList.contains('active')) dong(); });
+        })();
+    </script>
+}

@@ -213,6 +213,38 @@ namespace ECOLearning.Services
             return ketQua;
         }
 
+        /// <summary>
+        /// Ưu đãi thân thiết nổi bật cho popup quảng cáo: ưu tiên mã học viên đã đủ điều kiện nhưng chưa lưu vào ví
+        /// (chỉ mã công khai, đang chạy, còn lượt), nếu không có thì lấy ưu đãi sắp mở kèm tiến độ. Không có gì để quảng cáo thì null.
+        /// </summary>
+        public PopupUuDaiThanThiet LayPopupThanThiet(int maHocVien)
+        {
+            if (maHocVien <= 0) return null;
+            var now = DateTime.Now;
+            var dat = LayMaChoHocVien(maHocVien)
+                .Where(m => m.LaThanThiet && !m.DaLuu && !m.ChuaBatDau)
+                .OrderBy(m => m.NgayKetThuc)
+                .FirstOrDefault();
+            if (dat != null)
+            {
+                return new PopupUuDaiThanThiet
+                {
+                    Loai = "dat",
+                    MaKhuyenMai = dat.MaKhuyenMai,
+                    MaCode = dat.MaCode,
+                    TieuDe = dat.TenKhuyenMai,
+                    GiaTriNgan = dat.GiaTriNgan,
+                    GhiChuGiaTri = dat.GhiChuGiaTri,
+                    MoTa = dat.MoTaUuDai,
+                    DieuKien = dat.DieuKien,
+                    HanDung = dat.NgayKetThuc
+                };
+            }
+
+            // Chỉ quảng cáo cho học viên đã đủ điều kiện; chưa đủ thì không hiện popup (tiến độ vẫn có ở trang Mã giảm giá của tôi)
+            return null;
+        }
+
         /// <summary>Trạng thái của một mã trong ví (đặc tả mục 8, các tab trong ví).</summary>
         private static void GanTrangThai(MaTrongVi v, ChuongTrinhKhuyenMai p, DateTime now)
         {

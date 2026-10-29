@@ -25,7 +25,12 @@
         </div>
         <div class="cpn-title">@m.MoTaUuDai</div>
         <div class="cpn-name"><span class="cpn-code">@m.MaCode</span> @m.TenKhuyenMai</div>
-        <div class="cpn-cond">@string.Join(" · ", m.DieuKien)</div>
+        <div class="cpn-cond">
+            @foreach (var dk in m.DieuKien)
+            {
+                <div class="cpn-cond-line">@dk</div>
+            }
+        </div>
         @if (!string.IsNullOrEmpty(Model.DongPhu))
         {
             <div class="cpn-extra">@Model.DongPhu</div>

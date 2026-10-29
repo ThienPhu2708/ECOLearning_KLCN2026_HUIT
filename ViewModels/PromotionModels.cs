@@ -322,6 +322,24 @@ namespace ECOLearning.ViewModels
         public List<LuotSuDungUuDai> LichSu { get; set; } = new List<LuotSuDungUuDai>();
     }
 
+    /// <summary>
+    /// Popup quảng cáo ưu đãi thân thiết cho học viên (web và API ứng dụng).
+    /// Loai = "dat": học viên đã đủ điều kiện, có mã để lưu vào ví. Loai = "sapDat": chưa đủ, hiện tiến độ và không lộ mã.
+    /// </summary>
+    public class PopupUuDaiThanThiet
+    {
+        public string Loai { get; set; }
+        public string MaKhuyenMai { get; set; }
+        public string MaCode { get; set; }
+        public string TieuDe { get; set; }
+        public string GiaTriNgan { get; set; }
+        public string GhiChuGiaTri { get; set; }
+        public string MoTa { get; set; }
+        public List<string> DieuKien { get; set; } = new List<string>();
+        public DateTime? HanDung { get; set; }
+        public string TienDo { get; set; }
+    }
+
     /// <summary>Ưu đãi thân thiết học viên chưa đạt tiêu chí: hiện tiến độ để khuyến khích mua thêm, không lộ mã.</summary>
     public class UuDaiThanThietSapMo
     {

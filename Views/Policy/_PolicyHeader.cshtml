@@ -1,0 +1,26 @@
+﻿@* Đầu trang chính sách: breadcrumb, tiêu đề, ngày cập nhật và tab chuyển giữa 3 tài liệu. ViewBag.PolicyKey = terms | privacy | revenue *@
+@{
+    string key = ViewBag.PolicyKey as string;
+    var docs = new[]
+    {
+        new { Key = "terms", Title = "Điều khoản sử dụng", Url = Url.Action("Terms", "Policy") },
+        new { Key = "privacy", Title = "Chính sách bảo mật", Url = Url.Action("Privacy", "Policy") },
+        new { Key = "revenue", Title = "Chính sách phân chia doanh thu", Url = Url.Action("RevenueShare", "Policy") }
+    };
+}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/policy.css?v=2")" />
+<header class="policy-head">
+    <div class="safe-container">
+        <nav class="policy-crumbs" aria-label="Breadcrumb">
+            <a href="@Url.Action("Index", "Home")">Trang chủ</a><span aria-hidden="true">/</span><span>Chính sách và điều khoản</span>
+        </nav>
+        <h1>@ViewBag.Title</h1>
+        <p class="policy-meta"><span>Cập nhật lần cuối: @ECOLearning.Controllers.PolicyController.NgayCapNhat</span><span>Có hiệu lực từ: @ECOLearning.Controllers.PolicyController.NgayCapNhat</span></p>
+        <nav class="policy-tabs" aria-label="Tài liệu chính sách">
+            @foreach (var d in docs)
+            {
+                <a href="@d.Url" aria-current="@(d.Key == key ? "page" : null)">@d.Title</a>
+            }
+        </nav>
+    </div>
+</header>

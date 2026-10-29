@@ -1326,7 +1326,36 @@ nên giáo viên tải tài liệu lên là cả web và app thấy ngay, không
 - **Kiểm thử**: `Tests/Run-TeacherSpecialtyTests.ps1` **39/39** (sửa các bài kiểm tra hành vi legacy cũ, thêm 7 bài mới); kiểm thử giao diện
   bằng tài khoản `bao.pham` **8/8**. Đã chạy migration 019 trên CSDL local; `Run-CourseRevisionTests.ps1` **26/26**.
 
-## 39. Việc còn lại / cần quyết định
+## 39. Khối giới thiệu ứng dụng di động trên footer, chỉ cho khách chưa đăng nhập (**chưa commit**)
+
+- `Views/Shared/_AppPromo.cshtml`, đặt **ngay trên footer** trong `_Layout.cshtml`, là **dải xanh tràn hết chiều ngang** (nội dung căn theo `safe-container`; footer
+  giữ nguyên như cũ). Quảng cáo + footer bọc chung một `div` có `margin-top:auto` để cả hai cùng nằm cuối trang, không hở ở trang ngắn.
+  **Chỉ hiện khi chưa đăng nhập** (`!(User.Identity.IsAuthenticated || Session["UserId"] != null)`, cùng điều kiện với header).
+  3 điện thoại hiện **trọn trong dải** (flex, chồng nhẹ, kích thước theo biến `--pw`: 180 / 150 / 140 / 122 px), cả trên điện thoại: nền gradient, tiêu đề + 3 lợi ích, nút Google Play, 3 ảnh
+  app (Khám phá / Trang chủ / Học bài) lồng trong khung điện thoại vẽ bằng CSS, xếp so le; màn hình ≤ 1100 px còn 2 máy, điện thoại
+  còn 1 máy và ẩn QR. Ảnh: `assets/images/app/*.webp` (540×1200, 35–65 KB, tải lười).
+- Cấu hình trong `Web.config`: `AppName` = ELearning, `AppAndroidUrl` = `#`. Chưa có link thật ("#" / trống) → nút "Sắp có trên Google
+  Play · Sắp ra mắt", bấm hiện thông báo "sắp có mặt", không có QR. Có link `https://…` → nút dẫn tới cửa hàng + mã QR (qrcodejs từ cdnjs,
+  chỉ tải khi có link và màn hình lớn). **Khi lên CH Play chỉ cần sửa `AppAndroidUrl`.**
+- Thêm MIME `.webp` vào `Web.config` (`remove` + `mimeMap`): IIS Express trên máy chưa có sẵn.
+- Kiểm thử Edge headless: chưa phát hành 10/10, đã phát hành (link thử, đã trả về `#`) 10/10.
+
+## 40. Trang chính sách: Điều khoản sử dụng, Chính sách bảo mật, Chính sách phân chia doanh thu (**chưa commit**)
+
+- `PolicyController` (`/Policy/Terms`, `/Policy/Privacy`, `/Policy/RevenueShare`), view trong `Views/Policy` (+ `_PolicyHeader`,
+  `_PolicyToc`), CSS `assets/css/policy.css`. Link footer trỏ đúng 3 trang (trước đây `#` và `Payouts/Instructor` sai đường dẫn).
+- Bố cục kiểu trang pháp lý thật: breadcrumb, ngày cập nhật / hiệu lực (`PolicyController.NgayCapNhat`), tab chuyển tài liệu, mục lục dính
+  bên trái có đánh dấu mục đang đọc (điện thoại: thu gọn "Mục lục"), văn bản một cột, mục đánh số, bảng.
+- Nội dung bám đúng nghiệp vụ trong code: VNPay, OTP / Google, chưa có hoàn tiền (chỉ xử lý trừ tiền mà không ghi danh / trừ trùng),
+  học viên vẫn học khi khóa ngừng bán / tạm khóa (chỉ chặn khi khóa vĩnh viễn), dữ liệu thu thập theo bảng thật, nhà cung cấp
+  (VNPay, Google / Gemini, Cloudflare R2, Gmail), cookie thật, lịch sử Trợ lý ECO (web theo phiên, app 2 giờ, 10 lượt),
+  phân bổ mã giảm theo tỷ lệ giá bán, số dư = phần giáo viên − yêu cầu chờ / đã thanh toán.
+- Tỷ lệ chia lấy từ `RevenueService.TyLeGiaoVien`, mức rút tối thiểu tách thành `PayoutController.RutToiThieu` (dùng chung cho kiểm tra rút
+  tiền và trang chính sách); ví dụ minh họa tính bằng chính công thức hệ thống. Kiểm thử Edge headless 24/24.
+- **Lưu ý:** trang phân chia doanh thu cam kết "tỷ lệ mới chỉ áp dụng cho đơn phát sinh từ ngày hiệu lực" → trước khi đổi tỷ lệ phải làm
+  việc chốt tỷ lệ theo đơn (đề xuất chính sách, giai đoạn 1).
+
+## 41. Việc còn lại / cần quyết định
 
 | Việc | Ghi chú |
 | :--- | :--- |

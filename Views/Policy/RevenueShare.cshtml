@@ -1,0 +1,125 @@
+﻿@{
+    ViewBag.Title = "Chính sách phân chia doanh thu";
+    ViewBag.PolicyKey = "revenue";
+    var vn = new System.Globalization.CultureInfo("vi-VN");
+    decimal tyLe = ECOLearning.Services.RevenueService.TyLeGiaoVien;
+    string pGv = (tyLe * 100).ToString("0.##", vn) + "%";
+    string pNt = ((1 - tyLe) * 100).ToString("0.##", vn) + "%";
+    string rutToiThieu = ECOLearning.Areas.Instructor.Controllers.PayoutController.RutToiThieu.ToString("N0", vn) + " đ";
+    Func<decimal, string> tien = x => x.ToString("N0", vn) + " đ";
+
+    // Ví dụ minh họa: đơn 2 khóa (khóa A của bạn, khóa B của giáo viên khác), dùng mã giảm giá cho cả đơn.
+    // Cách tính giống hệt hệ thống: tiền giảm của mã được phân bổ theo tỷ lệ giá bán từng khóa trong đơn.
+    decimal giaGocA = 1000000m, giaBanA = 900000m, giaBanB = 600000m, maGiam = 150000m;
+    decimal tongDon = giaBanA + giaBanB;
+    decimal thucThuA = Math.Round(giaBanA * (tongDon - maGiam) / tongDon, 0);
+    decimal phanGv = ECOLearning.Services.RevenueService.PhanGiaoVien(thucThuA);
+    decimal phanNt = thucThuA - phanGv;
+
+    var toc = new List<string[]>
+    {
+        new[] { "doi-tuong", "1. Đối tượng áp dụng" },
+        new[] { "ty-le", "2. Tỷ lệ phân chia" },
+        new[] { "thuc-thu", "3. Doanh thu được tính" },
+        new[] { "vi-du", "4. Ví dụ minh họa" },
+        new[] { "so-du", "5. Số dư khả dụng" },
+        new[] { "rut-tien", "6. Rút tiền" },
+        new[] { "truong-hop", "7. Một số trường hợp cụ thể" },
+        new[] { "thue", "8. Thuế" },
+        new[] { "thay-doi", "9. Thay đổi chính sách" },
+        new[] { "lien-he", "10. Liên hệ" }
+    };
+}
+<div class="policy-page">
+    @Html.Partial("_PolicyHeader")
+    <div class="safe-container policy-body">
+        @Html.Partial("_PolicyToc", toc)
+        <article class="policy-doc">
+            <p>Chính sách này quy định cách E-Learning chia doanh thu bán khóa học với giáo viên, cách tính số dư và thủ tục rút tiền. Chính sách là một phần của Điều khoản hợp tác giảng dạy mà giáo viên đã đồng ý khi đăng ký.</p>
+
+            <h2 id="doi-tuong">1. Đối tượng áp dụng</h2>
+            <p>Giáo viên có hồ sơ đã được Quản trị viên phê duyệt và có khóa học đang bán hoặc đã từng bán trên E-Learning.</p>
+
+            <h2 id="ty-le">2. Tỷ lệ phân chia</h2>
+            <div class="policy-table-wrap">
+                <table class="policy-table">
+                    <thead><tr><th>Bên nhận</th><th class="num">Tỷ lệ</th><th>Ghi chú</th></tr></thead>
+                    <tbody>
+                        <tr><td>Giáo viên</td><td class="num">@pGv</td><td>Tính trên doanh thu thực thu của từng khóa học</td></tr>
+                        <tr><td>E-Learning</td><td class="num">@pNt</td><td>Chi phí lưu trữ và phát video, cổng thanh toán, kiểm duyệt nội dung, hỗ trợ học viên và quảng bá khóa học</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>Tỷ lệ áp dụng như nhau cho mọi khóa học và mọi giáo viên, không phụ thuộc học viên đến từ đâu.</p>
+
+            <h2 id="thuc-thu">3. Doanh thu được tính</h2>
+            <p>Doanh thu thực thu của một khóa học là số tiền học viên thực trả cho khóa học đó:</p>
+            <ul>
+                <li>Chỉ tính đơn hàng đã thanh toán thành công. Đơn đang chờ thanh toán, thanh toán thất bại hoặc hết hạn không được tính.</li>
+                <li>Tính theo giá bán thực tế, tức là giá gốc trừ khuyến mãi giảm trực tiếp đang áp dụng cho khóa học lúc mua.</li>
+                <li>Nếu đơn hàng dùng mã giảm giá, số tiền giảm được chia cho các khóa trong đơn <strong>theo tỷ lệ giá bán</strong> của từng khóa, rồi trừ vào doanh thu của khóa đó.</li>
+            </ul>
+            <p class="policy-note">Khuyến mãi và mã giảm giá giúp tăng lượt mua cho khóa học, nên tiền giảm do giáo viên và E-Learning cùng chịu theo đúng tỷ lệ @pGv / @pNt. Giáo viên không phải bù thêm khoản nào ngoài phần đã giảm trên khóa học của mình.</p>
+
+            <h2 id="vi-du">4. Ví dụ minh họa</h2>
+            <p>Học viên mua cùng lúc khóa A của bạn (giá gốc @tien(giaGocA), đang giảm trực tiếp còn @tien(giaBanA)) và khóa B của một giáo viên khác (@tien(giaBanB)), có dùng mã giảm @tien(maGiam) cho cả đơn.</p>
+            <div class="policy-table-wrap">
+                <table class="policy-table">
+                    <thead><tr><th>Khoản mục (khóa A)</th><th class="num">Số tiền</th></tr></thead>
+                    <tbody>
+                        <tr><td>Giá bán sau khuyến mãi</td><td class="num">@tien(giaBanA)</td></tr>
+                        <tr><td>Phần mã giảm giá khóa A chịu (@tien(giaBanA) / @tien(tongDon) × @tien(maGiam))</td><td class="num">−@tien(giaBanA - thucThuA)</td></tr>
+                        <tr><td>Doanh thu thực thu của khóa A</td><td class="num">@tien(thucThuA)</td></tr>
+                        <tr class="is-total"><td>Giáo viên nhận (@pGv)</td><td class="num">@tien(phanGv)</td></tr>
+                        <tr><td>E-Learning giữ (@pNt)</td><td class="num">@tien(phanNt)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>Phần của giáo viên được làm tròn đến đồng. Số tiền được cộng vào số dư ngay khi đơn hàng thanh toán thành công.</p>
+
+            <h2 id="so-du">5. Số dư khả dụng</h2>
+            <p>Trang <em>Nhận thanh toán</em> trong khu vực giáo viên hiển thị:</p>
+            <ul>
+                <li><strong>Tổng doanh thu thực thu</strong> của tất cả khóa học của bạn và <strong>phần giáo viên</strong> (@pGv của số đó).</li>
+                <li><strong>Số dư khả dụng</strong> = phần giáo viên − tổng các yêu cầu rút tiền đang chờ duyệt và đã được thanh toán.</li>
+                <li>Yêu cầu bị từ chối không bị trừ, số tiền đó được tính lại vào số dư khả dụng.</li>
+            </ul>
+
+            <h2 id="rut-tien">6. Rút tiền</h2>
+            <h3>6.1. Điều kiện</h3>
+            <ul>
+                <li>Mỗi lần rút tối thiểu <strong>@rutToiThieu</strong>, số tiền là số nguyên đồng và không vượt quá số dư khả dụng.</li>
+                <li>Đã khai báo tài khoản ngân hàng nhận tiền trong trang Nhận thanh toán. Tên chủ tài khoản ghi in hoa, không dấu, đúng như trên ứng dụng ngân hàng.</li>
+                <li>Tài khoản ngân hàng thay đổi chỉ áp dụng cho các yêu cầu gửi sau thời điểm cập nhật.</li>
+            </ul>
+            <h3>6.2. Quy trình</h3>
+            <ol>
+                <li>Giáo viên gửi yêu cầu rút tiền; yêu cầu ở trạng thái <em>Chờ duyệt</em> và số tiền được tạm giữ khỏi số dư khả dụng.</li>
+                <li>Quản trị viên kiểm tra số dư và thông tin tài khoản, xử lý theo thứ tự gửi.</li>
+                <li>Khi chuyển khoản xong, yêu cầu chuyển sang <em>Đã thanh toán</em> kèm mã giao dịch để giáo viên đối chiếu với sao kê ngân hàng. Nếu không hợp lệ, yêu cầu bị <em>Từ chối</em> kèm lý do.</li>
+            </ol>
+            <p>E-Learning <strong>không thu thêm phí rút tiền</strong>: phần @pNt đã được trừ khi tính số dư, giáo viên nhận đúng số tiền đã yêu cầu. Phí chuyển khoản liên ngân hàng (nếu có) do E-Learning chịu.</p>
+
+            <h2 id="truong-hop">7. Một số trường hợp cụ thể</h2>
+            <ul>
+                <li><strong>Ngừng bán hoặc xóa khóa học:</strong> doanh thu từ các đơn đã thanh toán trước đó vẫn thuộc về giáo viên và vẫn rút được.</li>
+                <li><strong>Khóa học bị tạm khóa hoặc khóa vĩnh viễn do vi phạm:</strong> khóa học ngừng bán từ thời điểm bị khóa; doanh thu đã phát sinh trước đó không bị thu hồi, trừ khi vi phạm được xác định là gian lận (ví dụ tự mua khóa học của mình để tạo doanh thu ảo).</li>
+                <li><strong>Tài khoản giáo viên bị khóa:</strong> khóa học đang bán được tạm ẩn; yêu cầu rút tiền được xử lý sau khi tài khoản được mở lại.</li>
+                <li><strong>Giao dịch sai sót:</strong> nếu một đơn hàng được xác định là ghi nhận nhầm hoặc phải hoàn lại cho học viên theo <a href="@Url.Action("Terms", "Policy")#hoan-tien">Điều khoản sử dụng</a>, phần doanh thu tương ứng sẽ được điều chỉnh khỏi số dư.</li>
+            </ul>
+
+            <h2 id="thue">8. Thuế</h2>
+            <p>Thu nhập từ việc bán khóa học là thu nhập chịu thuế theo pháp luật Việt Nam. Giáo viên tự kê khai và nộp thuế thu nhập cá nhân, trừ trường hợp pháp luật yêu cầu E-Learning khấu trừ hoặc khai thay; khi đó E-Learning sẽ thông báo trước cho giáo viên mức khấu trừ áp dụng.</p>
+
+            <h2 id="thay-doi">9. Thay đổi chính sách</h2>
+            <p>Mọi thay đổi về tỷ lệ phân chia hoặc điều kiện rút tiền được thông báo cho giáo viên trên nền tảng ít nhất 5 ngày trước ngày hiệu lực. Tỷ lệ mới chỉ áp dụng cho đơn hàng phát sinh từ ngày hiệu lực; doanh thu của các đơn trước đó vẫn tính theo tỷ lệ cũ.</p>
+
+            <h2 id="lien-he">10. Liên hệ</h2>
+            <p>Thắc mắc về doanh thu, số dư hoặc yêu cầu rút tiền, vui lòng gửi qua trang <a href="@Url.Action("Contact", "Home")">Liên hệ trợ giúp</a>, kèm mã yêu cầu rút tiền (bắt đầu bằng “PC”) nếu có.</p>
+
+            <div class="policy-end">
+                <p>Xem thêm: <a href="@Url.Action("Terms", "Policy")">Điều khoản sử dụng</a> · <a href="@Url.Action("Privacy", "Policy")">Chính sách bảo mật</a></p>
+            </div>
+        </article>
+    </div>
+</div>

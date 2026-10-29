@@ -1,0 +1,108 @@
+﻿@* Khối giới thiệu ứng dụng di động: dải xanh tràn hết chiều ngang, đặt ngay trên footer (_Layout.cshtml), chỉ hiện khi khách chưa đăng nhập. Link tải và tên app lấy từ Web.config (AppAndroidUrl, AppName):
+   chưa phát hành ("#" hoặc trống) thì nút Google Play hiện "Sắp ra mắt" và không có mã QR. *@
+@{
+    string appName = System.Configuration.ConfigurationManager.AppSettings["AppName"];
+    if (string.IsNullOrWhiteSpace(appName)) { appName = "ELearning"; }
+    string androidUrl = (System.Configuration.ConfigurationManager.AppSettings["AppAndroidUrl"] ?? "").Trim();
+    bool released = androidUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || androidUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+}
+<style>
+    .app-promo { position:relative;overflow:hidden;margin:0;background:radial-gradient(120% 140% at 100% 0%,#6D5DF6 0%,#434CE8 45%,#2E2AA8 100%);color:#fff;isolation:isolate; }
+    .app-promo-inner { display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:24px;align-items:center;padding-top:48px;padding-bottom:48px; }
+    .app-promo::before { content:"";position:absolute;inset:0;z-index:-1;background-image:radial-gradient(rgba(255,255,255,.09) 1px,transparent 1px);background-size:18px 18px;mask-image:linear-gradient(90deg,transparent 30%,#000 100%);-webkit-mask-image:linear-gradient(90deg,transparent 30%,#000 100%); }
+    .app-promo-copy { min-width:0; }
+    .app-promo-brand { display:inline-flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;border-radius:999px;background:rgba(255,255,255,.12);font-size:13px;font-weight:700;letter-spacing:.02em; }
+    .app-promo-brand .logo-icon { width:28px;height:28px;border-radius:8px;background:#fff;color:#434CE8; }
+    .app-promo h3 { margin:18px 0 10px;color:#fff;font-size:30px;line-height:1.25;font-weight:800;letter-spacing:-.02em; }
+    .app-promo-lead { margin:0 0 20px;color:rgba(255,255,255,.82);font-size:15px;line-height:1.6;max-width:460px; }
+    .app-promo-points { list-style:none;margin:0 0 28px;padding:0;display:grid;gap:10px; }
+    .app-promo-points li { display:flex;align-items:center;gap:10px;font-size:14px;color:rgba(255,255,255,.92); }
+    .app-promo-points i { display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.16);font-size:12px;flex-shrink:0; }
+    .app-promo-actions { display:flex;align-items:center;gap:18px;flex-wrap:wrap; }
+    .app-store-badge { display:inline-flex;align-items:center;gap:12px;padding:10px 20px 10px 16px;border-radius:14px;background:#0B1020;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.22);transition:transform .15s,background .15s; }
+    .app-store-badge:hover { color:#fff;background:#000;transform:translateY(-1px); }
+    .app-store-badge:focus-visible { outline:3px solid #C7D2FE;outline-offset:3px; }
+    .app-store-badge > i { font-size:26px; }
+    .app-store-badge small { display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.75); }
+    .app-store-badge strong { display:block;font-size:18px;line-height:1.15;font-weight:700; }
+    .app-store-badge.is-soon { cursor:default; }
+    .app-store-badge.is-soon:hover { transform:none;background:#0B1020; }
+    .app-soon-pill { margin-left:4px;padding:3px 9px;border-radius:999px;background:#FBBF24;color:#422006;font-size:11px;font-weight:800;white-space:nowrap; }
+    .app-promo-qr { display:flex;align-items:center;gap:12px;font-size:12.5px;line-height:1.4;color:rgba(255,255,255,.8); }
+    .app-promo-qr-box { width:84px;height:84px;padding:6px;border-radius:12px;background:#fff; }
+    .app-promo-qr-box img,.app-promo-qr-box canvas { width:100% !important;height:100% !important; }
+    /* 3 điện thoại hiện trọn trong dải quảng cáo: xếp ngang, chồng nhẹ lên nhau; kích thước theo --pw (máy giữa) */
+    .app-promo-phones { --pw:180px;display:flex;justify-content:center;align-items:center;min-width:0; }
+    .app-phone { position:relative;flex-shrink:0;width:calc(var(--pw) * .86);aspect-ratio:9/20;padding:calc(var(--pw) * .035);border-radius:calc(var(--pw) * .17);background:#0B1020;box-shadow:0 24px 48px -16px rgba(8,10,40,.6),inset 0 0 0 1.5px rgba(255,255,255,.12); }
+    .app-phone img { display:block;width:100%;height:100%;object-fit:cover;object-position:top;border-radius:calc(var(--pw) * .135);background:#F8FAFC; }
+    .app-phone.is-front { order:2;z-index:3;width:var(--pw); }
+    .app-phone.is-left { order:1;z-index:2;margin-right:calc(var(--pw) * -.22);transform:translateY(calc(var(--pw) * .08)) rotate(-7deg); }
+    .app-phone.is-right { order:3;z-index:1;margin-left:calc(var(--pw) * -.22);transform:translateY(calc(var(--pw) * .08)) rotate(7deg); }
+    @@media (max-width: 1100px) { .app-promo-phones { --pw:150px; } }
+    @@media (max-width: 860px) {
+        .app-promo-inner { grid-template-columns:1fr;padding-top:32px;padding-bottom:36px;gap:28px; }
+        .app-promo h3 { font-size:24px; }
+        .app-promo-qr { display:none; }
+        .app-promo-phones { --pw:140px; }
+    }
+    @@media (max-width: 400px) { .app-promo-phones { --pw:122px; } }
+    @@media (prefers-reduced-motion: reduce) { .app-store-badge { transition:none; } }
+</style>
+<section class="app-promo" aria-labelledby="app-promo-title">
+  <div class="safe-container app-promo-inner">
+    <div class="app-promo-copy">
+        <span class="app-promo-brand"><span class="logo-icon"><i class="bi bi-book-half" aria-hidden="true"></i></span>Ứng dụng @appName</span>
+        <h3 id="app-promo-title">Học mọi lúc, mọi nơi trên điện thoại</h3>
+        <p class="app-promo-lead">Tải ngay ứng dụng @appName để có trải nghiệm học tốt hơn: đồng bộ với tài khoản và khóa học bạn đã mua trên web.</p>
+        <ul class="app-promo-points">
+            <li><i class="bi bi-play-fill" aria-hidden="true"></i> Học tiếp đúng bài đang xem</li>
+            <li><i class="bi bi-stars" aria-hidden="true"></i> Gợi ý khóa học dành riêng cho bạn</li>
+            <li><i class="bi bi-robot" aria-hidden="true"></i> Hỏi đáp nhanh cùng Trợ lý ECO</li>
+        </ul>
+        <div class="app-promo-actions">
+            @if (released)
+            {
+                <a class="app-store-badge" href="@androidUrl" target="_blank" rel="noopener">
+                    <i class="bi bi-google-play" aria-hidden="true"></i>
+                    <span><small>Tải về trên</small><strong>Google Play</strong></span>
+                </a>
+                <div class="app-promo-qr">
+                    <div class="app-promo-qr-box" id="app-promo-qr" data-url="@androidUrl" role="img" aria-label="Mã QR tải ứng dụng @appName"></div>
+                    <span>Quét mã bằng<br />điện thoại để tải</span>
+                </div>
+            }
+            else
+            {
+                <a class="app-store-badge is-soon" href="#" aria-disabled="true" data-app-soon>
+                    <i class="bi bi-google-play" aria-hidden="true"></i>
+                    <span><small>Sắp có trên</small><strong>Google Play</strong></span>
+                    <span class="app-soon-pill">Sắp ra mắt</span>
+                </a>
+            }
+        </div>
+    </div>
+    <div class="app-promo-phones" aria-hidden="true">
+        <div class="app-phone is-left"><img src="@Url.Content("~/assets/images/app/app-explore.webp")" alt="" loading="lazy" decoding="async" width="540" height="1200" /></div>
+        <div class="app-phone is-front"><img src="@Url.Content("~/assets/images/app/app-home.webp")" alt="" loading="lazy" decoding="async" width="540" height="1200" /></div>
+        <div class="app-phone is-right"><img src="@Url.Content("~/assets/images/app/app-learning.webp")" alt="" loading="lazy" decoding="async" width="540" height="1200" /></div>
+    </div>
+  </div>
+</section>
+<script>
+    (function () {
+        // Chưa phát hành: nút Google Play không dẫn đi đâu, chỉ báo "sắp ra mắt"
+        document.querySelectorAll('[data-app-soon]').forEach(function (a) {
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                if (window.showToast) showToast('Ứng dụng @appName sắp có mặt trên Google Play.', 'info');
+            });
+        });
+        // Đã phát hành: tạo mã QR từ link tải (thư viện chỉ tải khi có link thật và đang xem trên màn hình lớn)
+        var qr = document.getElementById('app-promo-qr');
+        if (!qr || !window.matchMedia('(min-width: 861px)').matches) return;
+        var s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+        s.onload = function () { try { new QRCode(qr, { text: qr.getAttribute('data-url'), width: 144, height: 144, correctLevel: QRCode.CorrectLevel.M }); } catch (e) { } };
+        document.head.appendChild(s);
+    })();
+</script>

@@ -1,0 +1,139 @@
+﻿@{
+    ViewBag.Title = "Chính sách bảo mật";
+    ViewBag.PolicyKey = "privacy";
+    var toc = new List<string[]>
+    {
+        new[] { "tom-tat", "Tóm tắt" },
+        new[] { "thu-thap", "1. Thông tin chúng tôi thu thập" },
+        new[] { "muc-dich", "2. Mục đích sử dụng" },
+        new[] { "goi-y", "3. Gợi ý khóa học" },
+        new[] { "chia-se", "4. Chia sẻ thông tin" },
+        new[] { "tro-ly", "5. Trợ lý ECO" },
+        new[] { "cookie", "6. Cookie và lưu trữ trên trình duyệt" },
+        new[] { "luu-tru", "7. Lưu trữ và bảo vệ dữ liệu" },
+        new[] { "quyen", "8. Quyền của bạn" },
+        new[] { "thay-doi", "9. Thay đổi chính sách" },
+        new[] { "lien-he", "10. Liên hệ" }
+    };
+}
+<div class="policy-page">
+    @Html.Partial("_PolicyHeader")
+    <div class="safe-container policy-body">
+        @Html.Partial("_PolicyToc", toc)
+        <article class="policy-doc">
+            <p>Chính sách này giải thích E-Learning thu thập những thông tin cá nhân nào khi bạn sử dụng website và ứng dụng di động E-Learning, chúng tôi dùng các thông tin đó vào việc gì và bạn có những quyền gì đối với dữ liệu của mình. Chính sách được xây dựng theo quy định của pháp luật Việt Nam về bảo vệ dữ liệu cá nhân.</p>
+
+            <section class="policy-summary">
+                <h2 id="tom-tat">Tóm tắt</h2>
+                <ul>
+                    <li>Chúng tôi chỉ thu thập thông tin cần để cung cấp khóa học, xử lý thanh toán và chi trả cho giáo viên.</li>
+                    <li>Chúng tôi không bán dữ liệu cá nhân và không dùng cookie quảng cáo của bên thứ ba.</li>
+                    <li>Thông tin thẻ thanh toán do VNPay xử lý; E-Learning không lưu số thẻ.</li>
+                    <li>Bạn có thể xem, sửa thông tin hồ sơ bất cứ lúc nào và yêu cầu xóa tài khoản.</li>
+                </ul>
+            </section>
+
+            <h2 id="thu-thap">1. Thông tin chúng tôi thu thập</h2>
+            <h3>1.1. Thông tin bạn cung cấp</h3>
+            <ul>
+                <li><strong>Tài khoản:</strong> họ tên, email, số điện thoại, ngày sinh, giới tính, ảnh đại diện và mật khẩu. Mật khẩu được mã hóa một chiều trước khi lưu, kể cả quản trị viên cũng không xem được.</li>
+                <li><strong>Đăng nhập bằng Google:</strong> chúng tôi nhận họ tên, email và ảnh đại diện từ tài khoản Google của bạn. Chúng tôi không nhận mật khẩu Google.</li>
+                <li><strong>Hồ sơ giáo viên:</strong> lĩnh vực chuyên môn, kinh nghiệm giảng dạy, bằng cấp hoặc chứng chỉ minh chứng, và thông tin nhận tiền (tên ngân hàng, số tài khoản, tên chủ tài khoản).</li>
+                <li><strong>Nội dung bạn tạo:</strong> ghi chú bài học, đánh giá khóa học, phản hồi, báo cáo vi phạm và nội dung gửi qua trang Liên hệ.</li>
+            </ul>
+            <h3>1.2. Thông tin phát sinh khi bạn học</h3>
+            <ul>
+                <li>Khóa học đã mua, tiến độ từng bài học, kết quả bài kiểm tra và chứng chỉ.</li>
+                <li>Khóa học bạn xem, nhấn vào, đánh dấu yêu thích; lĩnh vực bạn chọn khi khảo sát sở thích; từ khóa bạn tìm kiếm.</li>
+            </ul>
+            <h3>1.3. Thông tin giao dịch</h3>
+            <p>Đơn hàng, khóa học trong đơn, số tiền, mã giảm giá đã dùng, mã giao dịch và trạng thái do cổng VNPay trả về. Với giáo viên: các yêu cầu rút tiền và mã giao dịch chuyển khoản.</p>
+            <h3>1.4. Thông tin kỹ thuật</h3>
+            <p>Địa chỉ IP, loại trình duyệt và thời điểm đăng nhập. Các thông tin này được dùng để bảo vệ tài khoản, chống lạm dụng và điều tra sự cố.</p>
+
+            <h2 id="muc-dich">2. Mục đích sử dụng</h2>
+            <ul>
+                <li>Tạo và quản lý tài khoản; xác thực email bằng mã OTP; đặt lại mật khẩu.</li>
+                <li>Mở quyền học sau khi thanh toán, lưu tiến độ để bạn học tiếp đúng bài đang xem trên cả website và ứng dụng.</li>
+                <li>Cấp chứng chỉ hoàn thành, hiển thị đánh giá của bạn (kèm tên hiển thị) trên trang khóa học.</li>
+                <li>Gợi ý khóa học phù hợp (xem mục 3) và đưa mã ưu đãi dành cho học viên thân thiết vào ví mã giảm giá của bạn.</li>
+                <li>Tính doanh thu và chi trả cho giáo viên; đối soát giao dịch.</li>
+                <li>Gửi email về tài khoản: mã OTP, xác nhận đổi mật khẩu, thông báo khóa hoặc mở khóa tài khoản. Chúng tôi không gửi email quảng cáo nếu bạn không đăng ký nhận.</li>
+                <li>Xử lý báo cáo vi phạm, yêu cầu hỗ trợ và bảo đảm an toàn cho hệ thống.</li>
+            </ul>
+
+            <h2 id="goi-y">3. Gợi ý khóa học</h2>
+            <p>Mục “Khóa học dành riêng cho bạn” được tạo từ lượt xem, lượt nhấn, khóa học yêu thích, đánh giá và tiến độ học. Hệ thống so sánh hành vi học tập của nhiều học viên để tìm những khóa học thường được quan tâm cùng nhau, và cập nhật gợi ý định kỳ mỗi ngày. Khi bạn mới đăng ký và chưa có lịch sử học, hệ thống dựa vào các lĩnh vực bạn chọn trong khảo sát sở thích hoặc các khóa học phổ biến.</p>
+            <p>Việc gợi ý không làm thay đổi giá bán và không dẫn đến quyết định nào ảnh hưởng tới quyền lợi của bạn.</p>
+
+            <h2 id="chia-se">4. Chia sẻ thông tin</h2>
+            <p>Chúng tôi <strong>không bán</strong> dữ liệu cá nhân. Thông tin chỉ được chia sẻ trong các trường hợp sau:</p>
+            <h3>4.1. Giáo viên của khóa học bạn mua</h3>
+            <p>Giáo viên xem được tên, email, tiến độ học, kết quả bài kiểm tra và đánh giá của học viên trong khóa học của mình để theo dõi và hỗ trợ việc học. Giáo viên không được dùng các thông tin này cho mục đích khác.</p>
+            <h3>4.2. Nhà cung cấp dịch vụ</h3>
+            <div class="policy-table-wrap">
+                <table class="policy-table">
+                    <thead><tr><th>Đơn vị</th><th>Dịch vụ</th><th>Thông tin liên quan</th></tr></thead>
+                    <tbody>
+                        <tr><td>VNPay</td><td>Cổng thanh toán</td><td>Mã đơn hàng, số tiền; thông tin thẻ do bạn nhập trực tiếp trên trang VNPay</td></tr>
+                        <tr><td>Google</td><td>Đăng nhập bằng Google; mô hình Gemini cho Trợ lý ECO</td><td>Thông tin đăng nhập Google; nội dung câu hỏi gửi cho Trợ lý ECO</td></tr>
+                        <tr><td>Cloudflare</td><td>Lưu trữ và phát video, tài liệu khóa học (R2)</td><td>Tệp nội dung khóa học; không gồm hồ sơ học viên</td></tr>
+                        <tr><td>Gmail (Google)</td><td>Gửi email hệ thống</td><td>Họ tên, địa chỉ email, nội dung thư</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <h3>4.3. Theo yêu cầu của pháp luật</h3>
+            <p>Khi có yêu cầu hợp pháp của cơ quan nhà nước có thẩm quyền, hoặc khi cần thiết để bảo vệ quyền lợi hợp pháp của E-Learning và người dùng.</p>
+
+            <h2 id="tro-ly">5. Trợ lý ECO</h2>
+            <p>Câu hỏi bạn gửi cho Trợ lý ECO được chuyển tới dịch vụ Gemini của Google để tạo câu trả lời. Lịch sử trò chuyện không được lưu vào cơ sở dữ liệu; máy chủ chỉ giữ tạm @ECOLearning.Services.ChatbotService.SoLuotNho lượt hỏi đáp gần nhất để Trợ lý hiểu ngữ cảnh:</p>
+            <ul>
+                <li>Trên website: lịch sử mất khi bạn đăng xuất hoặc phiên làm việc hết hạn.</li>
+                <li>Trên ứng dụng: lịch sử tự xóa sau 2 giờ kể từ lần trao đổi cuối.</li>
+            </ul>
+            <p>Bạn có thể xóa lịch sử bất cứ lúc nào ngay trong khung trò chuyện. Vui lòng không gửi mật khẩu, số thẻ hay thông tin nhạy cảm qua Trợ lý ECO.</p>
+
+            <h2 id="cookie">6. Cookie và lưu trữ trên trình duyệt</h2>
+            <p>E-Learning chỉ dùng cookie cần thiết để nền tảng hoạt động; chúng tôi không dùng cookie quảng cáo hay công cụ theo dõi của bên thứ ba.</p>
+            <div class="policy-table-wrap">
+                <table class="policy-table">
+                    <thead><tr><th>Tên</th><th>Mục đích</th><th>Thời hạn</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>.ASPXAUTH</code></td><td>Giữ trạng thái đăng nhập</td><td>Đến khi đăng xuất; lâu hơn nếu chọn “Ghi nhớ đăng nhập”</td></tr>
+                        <tr><td><code>ASP.NET_SessionId</code></td><td>Phiên làm việc (giỏ hàng, bước thanh toán)</td><td>Đến khi đóng trình duyệt</td></tr>
+                        <tr><td><code>__RequestVerificationToken</code></td><td>Chống giả mạo yêu cầu khi gửi biểu mẫu</td><td>Đến khi đóng trình duyệt</td></tr>
+                        <tr><td><code>ECO_Phien</code></td><td>Chỉ dùng cho tài khoản quản trị: mỗi tài khoản chỉ đăng nhập ở một nơi</td><td>Theo phiên đăng nhập</td></tr>
+                        <tr><td><code>eco_player_volume</code></td><td>Ghi nhớ âm lượng trình phát video (lưu trong trình duyệt, không gửi về máy chủ)</td><td>Đến khi xóa dữ liệu trình duyệt</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>Nếu chặn cookie, bạn sẽ không đăng nhập và thanh toán được.</p>
+
+            <h2 id="luu-tru">7. Lưu trữ và bảo vệ dữ liệu</h2>
+            <ul>
+                <li>Dữ liệu được truyền qua kết nối mã hóa HTTPS và lưu trên máy chủ đặt tại nhà cung cấp hosting của E-Learning.</li>
+                <li>Quyền truy cập dữ liệu được phân theo vai trò; mọi thao tác quản trị quan trọng (khóa tài khoản, duyệt hồ sơ, chi trả) đều được ghi nhật ký.</li>
+                <li>Thông tin tài khoản được lưu trong thời gian tài khoản còn hoạt động. Dữ liệu đơn hàng, thanh toán và chi trả được lưu trữ theo thời hạn mà pháp luật về kế toán, thuế yêu cầu, kể cả sau khi tài khoản bị xóa.</li>
+                <li>Khi xảy ra sự cố lộ lọt dữ liệu, chúng tôi sẽ thông báo cho người dùng bị ảnh hưởng và cơ quan có thẩm quyền theo quy định.</li>
+            </ul>
+
+            <h2 id="quyen">8. Quyền của bạn</h2>
+            <ul>
+                <li><strong>Xem và chỉnh sửa:</strong> thông tin hồ sơ, ảnh đại diện và mật khẩu trong trang <a href="@Url.Action("Index", "Profile")">Hồ sơ</a>. Giáo viên cập nhật tài khoản nhận tiền trong trang Nhận thanh toán.</li>
+                <li><strong>Rút lại sự đồng ý, yêu cầu xóa tài khoản:</strong> gửi yêu cầu qua trang <a href="@Url.Action("Contact", "Home")">Liên hệ</a> từ email đã đăng ký. Sau khi xác minh, chúng tôi xóa hoặc ẩn danh dữ liệu tài khoản, trừ dữ liệu giao dịch phải lưu theo mục 7. Khi tài khoản bị xóa, bạn sẽ mất quyền truy cập các khóa học đã mua.</li>
+                <li><strong>Yêu cầu cung cấp bản sao dữ liệu</strong> hoặc khiếu nại về việc xử lý dữ liệu: gửi qua trang Liên hệ.</li>
+            </ul>
+            <p>Chúng tôi phản hồi yêu cầu trong thời hạn pháp luật quy định.</p>
+
+            <h2 id="thay-doi">9. Thay đổi chính sách</h2>
+            <p>Khi có thay đổi quan trọng (ví dụ thu thập thêm loại dữ liệu mới hoặc chia sẻ với đơn vị mới), chúng tôi sẽ cập nhật ngày ở đầu trang và thông báo trên nền tảng trước khi áp dụng.</p>
+
+            <h2 id="lien-he">10. Liên hệ</h2>
+            <p>Mọi câu hỏi về dữ liệu cá nhân, vui lòng gửi qua trang <a href="@Url.Action("Contact", "Home")">Liên hệ trợ giúp</a> và ghi rõ “Bảo mật dữ liệu” ở tiêu đề để được chuyển đúng bộ phận.</p>
+
+            <div class="policy-end">
+                <p>Xem thêm: <a href="@Url.Action("Terms", "Policy")">Điều khoản sử dụng</a> · <a href="@Url.Action("RevenueShare", "Policy")">Chính sách phân chia doanh thu</a></p>
+            </div>
+        </article>
+    </div>
+</div>

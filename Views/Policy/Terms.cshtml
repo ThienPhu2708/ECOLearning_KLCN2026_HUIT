@@ -1,0 +1,116 @@
+﻿@{
+    ViewBag.Title = "Điều khoản sử dụng";
+    ViewBag.PolicyKey = "terms";
+    var toc = new List<string[]>
+    {
+        new[] { "pham-vi", "1. Phạm vi áp dụng" },
+        new[] { "tai-khoan", "2. Tài khoản" },
+        new[] { "mua-khoa-hoc", "3. Mua khóa học và thanh toán" },
+        new[] { "hoan-tien", "4. Hoàn tiền" },
+        new[] { "quyen-truy-cap", "5. Quyền truy cập khóa học" },
+        new[] { "quy-tac", "6. Quy tắc sử dụng" },
+        new[] { "danh-gia", "7. Đánh giá và báo cáo vi phạm" },
+        new[] { "tro-ly", "8. Trợ lý ECO" },
+        new[] { "so-huu-tri-tue", "9. Quyền sở hữu trí tuệ" },
+        new[] { "trach-nhiem", "10. Giới hạn trách nhiệm" },
+        new[] { "cham-dut", "11. Tạm khóa và chấm dứt" },
+        new[] { "thay-doi", "12. Thay đổi điều khoản" },
+        new[] { "luat-ap-dung", "13. Luật áp dụng" },
+        new[] { "lien-he", "14. Liên hệ" }
+    };
+}
+<div class="policy-page">
+    @Html.Partial("_PolicyHeader")
+    <div class="safe-container policy-body">
+        @Html.Partial("_PolicyToc", toc)
+        <article class="policy-doc">
+            <p>Điều khoản này là thỏa thuận giữa bạn và E-Learning (“chúng tôi”) khi bạn sử dụng website và ứng dụng di động E-Learning (gọi chung là “nền tảng”). Vui lòng đọc kỹ trước khi đăng ký tài khoản hoặc mua khóa học.</p>
+
+            <h2 id="pham-vi">1. Phạm vi áp dụng</h2>
+            <p>Điều khoản áp dụng cho mọi người truy cập và sử dụng nền tảng, gồm khách, học viên và giáo viên. Khi tạo tài khoản, đăng nhập hoặc thanh toán, bạn xác nhận đã đọc và đồng ý với Điều khoản này và <a href="@Url.Action("Privacy", "Policy")">Chính sách bảo mật</a>.</p>
+            <p>Giáo viên còn phải tuân thủ Điều khoản hợp tác giảng dạy (hiển thị khi đăng ký làm giáo viên) và <a href="@Url.Action("RevenueShare", "Policy")">Chính sách phân chia doanh thu</a>. Nếu có điểm khác nhau, văn bản dành riêng cho giáo viên được ưu tiên áp dụng trong phạm vi hoạt động giảng dạy.</p>
+
+            <h2 id="tai-khoan">2. Tài khoản</h2>
+            <h3>2.1. Đăng ký</h3>
+            <p>Bạn có thể đăng ký bằng email (xác thực bằng mã OTP gửi tới email) hoặc đăng nhập bằng tài khoản Google. Thông tin bạn cung cấp phải chính xác và là của chính bạn. Người dưới 16 tuổi cần có sự đồng ý của cha mẹ hoặc người giám hộ trước khi đăng ký.</p>
+            <h3>2.2. Bảo mật tài khoản</h3>
+            <ul>
+                <li>Bạn chịu trách nhiệm giữ bí mật mật khẩu và mọi hoạt động diễn ra dưới tài khoản của mình.</li>
+                <li>Mỗi tài khoản chỉ dành cho một người. Không chia sẻ, cho mượn hoặc mua bán tài khoản.</li>
+                <li>Khi quên mật khẩu, bạn đặt lại bằng mã OTP gửi tới email đã đăng ký. Chúng tôi không bao giờ hỏi mật khẩu của bạn qua email hoặc điện thoại.</li>
+            </ul>
+            <p>Nếu phát hiện tài khoản bị truy cập trái phép, hãy đổi mật khẩu ngay và báo cho chúng tôi qua trang <a href="@Url.Action("Contact", "Home")">Liên hệ</a>.</p>
+
+            <h2 id="mua-khoa-hoc">3. Mua khóa học và thanh toán</h2>
+            <ul>
+                <li><strong>Giá bán</strong> niêm yết bằng đồng Việt Nam. Giá hiển thị đã gồm khuyến mãi giảm trực tiếp đang áp dụng cho khóa học (nếu có).</li>
+                <li><strong>Mã giảm giá</strong> chỉ dùng được theo điều kiện ghi trên từng mã (thời hạn, giá trị đơn tối thiểu, số lượt sử dụng, đối tượng áp dụng). Mã đã dùng cho một đơn hàng thành công không được dùng lại cho đơn khác và không quy đổi thành tiền.</li>
+                <li><strong>Thanh toán</strong> qua cổng VNPay. Thông tin thẻ và tài khoản ngân hàng của bạn do VNPay xử lý; E-Learning không nhận và không lưu các thông tin này.</li>
+                <li>Đơn hàng chỉ được ghi nhận khi cổng thanh toán xác nhận giao dịch thành công. Quyền học được kích hoạt ngay sau đó và khóa học xuất hiện trong mục <em>Khóa học của tôi</em>.</li>
+            </ul>
+
+            <h2 id="hoan-tien">4. Hoàn tiền</h2>
+            <p>Khóa học là nội dung số, được mở toàn bộ ngay sau khi thanh toán. Vì vậy, E-Learning hiện <strong>không áp dụng hoàn tiền theo yêu cầu</strong> sau khi đơn hàng đã thanh toán thành công. Bạn nên xem phần giới thiệu, đề cương và đánh giá của khóa học trước khi mua.</p>
+            <p>Chúng tôi sẽ xem xét và xử lý cho bạn trong các trường hợp sau:</p>
+            <ul>
+                <li>Tài khoản ngân hàng đã bị trừ tiền nhưng đơn hàng không được ghi nhận hoặc khóa học không được mở.</li>
+                <li>Bị trừ tiền nhiều lần cho cùng một đơn hàng.</li>
+            </ul>
+            <p>Khi gửi yêu cầu qua trang <a href="@Url.Action("Contact", "Home")">Liên hệ</a>, vui lòng kèm email tài khoản, mã đơn hàng và mã giao dịch VNPay. Sau khi đối soát, chúng tôi sẽ mở khóa học cho bạn hoặc hoàn lại khoản bị trừ thừa.</p>
+
+            <h2 id="quyen-truy-cap">5. Quyền truy cập khóa học</h2>
+            <ul>
+                <li>Khi mua khóa học, bạn được cấp quyền <strong>sử dụng cá nhân, không độc quyền và không được chuyển nhượng</strong> để học trên nền tảng. Quyền này không bao gồm quyền sao chép, tải xuống, chia sẻ hay bán lại nội dung.</li>
+                <li>Bạn được học không giới hạn thời gian. Nếu giáo viên ngừng bán khóa học, hoặc khóa học bị tạm khóa để xử lý báo cáo vi phạm, học viên đã mua vẫn tiếp tục học bình thường.</li>
+                <li>Quyền truy cập chỉ chấm dứt khi khóa học bị khóa vĩnh viễn do vi phạm nghiêm trọng (ví dụ vi phạm bản quyền hoặc pháp luật). Trường hợp này, chúng tôi sẽ thông báo trong mục <em>Khóa học của tôi</em>.</li>
+                <li>Giáo viên có thể cập nhật nội dung khóa học. Mọi bản cập nhật của khóa học đang bán đều được kiểm duyệt trước khi hiển thị. Tiến độ bạn đã hoàn thành được giữ nguyên sau khi cập nhật.</li>
+                <li>Chứng chỉ hoàn thành được cấp khi bạn học xong các bài học và đạt bài kiểm tra cuối khóa (nếu khóa học có). Chứng chỉ xác nhận việc hoàn thành khóa học trên E-Learning, không thay thế văn bằng hay chứng chỉ do cơ sở giáo dục hoặc cơ quan nhà nước cấp.</li>
+            </ul>
+
+            <h2 id="quy-tac">6. Quy tắc sử dụng</h2>
+            <p>Khi sử dụng nền tảng, bạn không được:</p>
+            <ul>
+                <li>Ghi màn hình, tải xuống, sao chép hoặc phát tán video, tài liệu khóa học dưới bất kỳ hình thức nào.</li>
+                <li>Chia sẻ tài khoản hoặc dùng chung tài khoản để nhiều người cùng học.</li>
+                <li>Dùng công cụ tự động để thu thập dữ liệu, tạo tài khoản hàng loạt hoặc gửi yêu cầu gây quá tải hệ thống.</li>
+                <li>Gian lận trong bài kiểm tra, tạo đánh giá ảo hoặc bình chọn “hữu ích” không trung thực.</li>
+                <li>Đăng nội dung xúc phạm, quấy rối, phân biệt đối xử, quảng cáo trái phép hoặc vi phạm pháp luật Việt Nam.</li>
+                <li>Tìm cách truy cập trái phép vào tài khoản khác, khu vực quản trị hoặc can thiệp vào hoạt động của hệ thống.</li>
+            </ul>
+
+            <h2 id="danh-gia">7. Đánh giá và báo cáo vi phạm</h2>
+            <p>Học viên đánh giá được khóa học sau khi đáp ứng điều kiện học tập của khóa (học xong các bài học và đạt bài kiểm tra cuối khóa nếu có). Đánh giá được hiển thị công khai kèm tên hiển thị của bạn; giáo viên có thể phản hồi và người dùng khác có thể bình chọn đánh giá hữu ích. Chúng tôi có thể ẩn những đánh giá vi phạm mục 6.</p>
+            <p>Nếu thấy khóa học có nội dung sai sự thật, vi phạm bản quyền hoặc không phù hợp, bạn có thể gửi báo cáo vi phạm ngay trong trang học. Quản trị viên sẽ xem xét, trao đổi với giáo viên và quyết định yêu cầu chỉnh sửa, tạm khóa hoặc khóa vĩnh viễn khóa học.</p>
+
+            <h2 id="tro-ly">8. Trợ lý ECO</h2>
+            <p>Trợ lý ECO là tính năng hỏi đáp tự động sử dụng trí tuệ nhân tạo để gợi ý khóa học và trả lời câu hỏi thường gặp. Câu trả lời chỉ mang tính tham khảo và có thể chưa chính xác; thông tin về giá, khuyến mãi và nội dung khóa học được hiển thị trên trang khóa học là thông tin chính thức. Không nhập mật khẩu, số thẻ hay thông tin nhạy cảm khác vào khung trò chuyện.</p>
+
+            <h2 id="so-huu-tri-tue">9. Quyền sở hữu trí tuệ</h2>
+            <p>Nội dung khóa học (video, tài liệu, câu hỏi kiểm tra) thuộc quyền sở hữu của giáo viên hoặc bên đã cấp phép cho giáo viên. Tên, logo, giao diện và phần mềm của nền tảng thuộc quyền sở hữu của E-Learning. Mọi hình thức sử dụng ngoài phạm vi mục 5 đều cần có sự đồng ý bằng văn bản của chủ sở hữu.</p>
+            <p>Nếu bạn cho rằng nội dung trên nền tảng vi phạm quyền của mình, hãy gửi thông báo qua trang <a href="@Url.Action("Contact", "Home")">Liên hệ</a> kèm thông tin chứng minh quyền sở hữu; chúng tôi sẽ tạm khóa nội dung liên quan trong thời gian xác minh.</p>
+
+            <h2 id="trach-nhiem">10. Giới hạn trách nhiệm</h2>
+            <ul>
+                <li>Nền tảng được cung cấp theo hiện trạng. Chúng tôi nỗ lực duy trì hệ thống hoạt động ổn định nhưng không cam kết dịch vụ không bao giờ gián đoạn, đặc biệt trong thời gian bảo trì hoặc do sự cố từ nhà cung cấp hạ tầng, cổng thanh toán.</li>
+                <li>Nội dung khóa học do giáo viên xây dựng. Kết quả học tập, việc làm hoặc thu nhập sau khóa học phụ thuộc vào người học; chúng tôi không bảo đảm các kết quả này.</li>
+                <li>Chúng tôi không chịu trách nhiệm đối với thiệt hại phát sinh do bạn để lộ mật khẩu hoặc vi phạm Điều khoản này.</li>
+            </ul>
+
+            <h2 id="cham-dut">11. Tạm khóa và chấm dứt</h2>
+            <p>Chúng tôi có thể tạm khóa hoặc khóa vĩnh viễn tài khoản vi phạm Điều khoản này; lý do và thời hạn khóa (nếu có) được thông báo qua email. Bạn có thể ngừng sử dụng nền tảng bất cứ lúc nào và yêu cầu xóa tài khoản theo hướng dẫn tại <a href="@Url.Action("Privacy", "Policy")#quyen">Chính sách bảo mật</a>.</p>
+
+            <h2 id="thay-doi">12. Thay đổi điều khoản</h2>
+            <p>Chúng tôi có thể cập nhật Điều khoản này khi thay đổi tính năng hoặc theo yêu cầu của pháp luật. Bản cập nhật được đăng trên trang này kèm ngày hiệu lực và được thông báo trên nền tảng ít nhất 5 ngày trước khi áp dụng. Nếu tiếp tục sử dụng nền tảng sau ngày hiệu lực, bạn được xem là đã đồng ý với bản cập nhật.</p>
+
+            <h2 id="luat-ap-dung">13. Luật áp dụng</h2>
+            <p>Điều khoản này được điều chỉnh theo pháp luật Việt Nam. Tranh chấp phát sinh trước hết được giải quyết bằng thương lượng; nếu không thương lượng được, một trong hai bên có quyền đưa tranh chấp ra Tòa án có thẩm quyền tại Việt Nam.</p>
+
+            <h2 id="lien-he">14. Liên hệ</h2>
+            <p>Mọi câu hỏi về Điều khoản sử dụng, vui lòng gửi qua trang <a href="@Url.Action("Contact", "Home")">Liên hệ trợ giúp</a>. Chúng tôi phản hồi qua email bạn cung cấp.</p>
+
+            <div class="policy-end">
+                <p>Xem thêm: <a href="@Url.Action("Privacy", "Policy")">Chính sách bảo mật</a> · <a href="@Url.Action("RevenueShare", "Policy")">Chính sách phân chia doanh thu</a></p>
+            </div>
+        </article>
+    </div>
+</div>

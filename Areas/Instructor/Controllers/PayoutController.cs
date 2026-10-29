@@ -13,6 +13,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
         /// <summary>Giáo viên nhận 80% doanh thu thực thu; nền tảng giữ 20%. Phí 20% đã trừ ở đây nên phiếu chi không trừ thêm.</summary>
         public const decimal TyLeGiaoVien = RevenueService.TyLeGiaoVien;
 
+        /// <summary>Số tiền tối thiểu mỗi lần rút (VNĐ). Dùng chung cho kiểm tra yêu cầu rút và trang Chính sách phân chia doanh thu.</summary>
+        public const decimal RutToiThieu = 500000m;
+
         /// <summary>
         /// Doanh thu thực thu của các khóa thuộc giáo viên: chỉ đơn đã thanh toán (đơn chờ / thất bại / hết hạn không tính),
         /// mỗi dòng đơn tính theo số tiền học viên thực trả sau mã giảm giá (RevenueService.TyLeThucThuTheoDon phân bổ tiền giảm về từng khóa).
@@ -144,10 +147,10 @@ namespace ECOLearning.Areas.Instructor.Controllers
             string nganHang = profile != null ? profile.BankName : null;
             string soTaiKhoan = profile != null ? profile.AccountNumber : null;
             string tenChuTaiKhoan = profile != null ? profile.AccountName : null;
-            // Ngưỡng tối thiểu rút tiền 500,000 VNĐ
-            if (!ModelState.IsValid || soTien < 500000m || soTien != decimal.Truncate(soTien))
+            // Ngưỡng tối thiểu rút tiền (RutToiThieu)
+            if (!ModelState.IsValid || soTien < RutToiThieu || soTien != decimal.Truncate(soTien))
             {
-                TempData["ErrorMessage"] = "Số tiền yêu cầu rút tối thiểu là 500.000 VNĐ!";
+                TempData["ErrorMessage"] = "Số tiền yêu cầu rút tối thiểu là " + RutToiThieu.ToString("N0", new System.Globalization.CultureInfo("vi-VN")) + " VNĐ!";
                 return RedirectToAction("Index");
             }
 

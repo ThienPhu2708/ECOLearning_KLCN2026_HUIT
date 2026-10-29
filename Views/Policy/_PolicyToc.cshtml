@@ -1,0 +1,40 @@
+﻿@* Mục lục bên trái (màn hình nhỏ: thu gọn thành "Mục lục"). Model: danh sách { id, tiêu đề } theo thứ tự mục trong trang. *@
+@model IEnumerable<string[]>
+<aside class="policy-toc">
+    <p class="policy-toc-title">Trong trang này</p>
+    <details open>
+        <summary>Mục lục</summary>
+        <ol>
+            @foreach (var m in Model)
+            {
+                <li><a href="#@m[0]">@m[1]</a></li>
+            }
+        </ol>
+    </details>
+</aside>
+<script>
+    // Màn hình nhỏ: mục lục mặc định thu gọn; đánh dấu mục đang đọc khi cuộn
+    (function () {
+        var toc = document.currentScript.previousElementSibling;
+        var details = toc.querySelector('details');
+        if (window.matchMedia('(max-width: 960px)').matches) details.removeAttribute('open');
+        toc.querySelectorAll('a').forEach(function (a) {
+            a.addEventListener('click', function () { if (window.matchMedia('(max-width: 960px)').matches) details.removeAttribute('open'); });
+        });
+        if (!('IntersectionObserver' in window)) return;
+        document.addEventListener('DOMContentLoaded', function () {
+            var links = {};
+            toc.querySelectorAll('a').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });
+            var current = null;
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (e) {
+                    if (!e.isIntersecting) return;
+                    if (current) current.classList.remove('is-current');
+                    current = links[e.target.id];
+                    if (current) current.classList.add('is-current');
+                });
+            }, { rootMargin: '-96px 0px -70% 0px' });
+            Object.keys(links).forEach(function (id) { var h = document.getElementById(id); if (h) io.observe(h); });
+        });
+    })();
+</script>

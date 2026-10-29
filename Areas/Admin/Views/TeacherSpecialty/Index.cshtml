@@ -1,0 +1,14 @@
+﻿@using ECOLearning.Services
+@model List<TeacherSpecialtyRequest>
+@{ViewBag.Title="Duyệt chuyên môn";var names=ViewBag.TeacherNames as Dictionary<int,string>;var categories=ViewBag.Categories as Dictionary<string,string>;}
+<link rel="stylesheet" href="~/assets/css/teacher-specialty.css?v=1" />
+<div class="specialty-page"><h2>Duyệt chuyên môn giảng dạy</h2>
+<p>Yêu cầu bổ sung lĩnh vực giảng dạy đang chờ xét duyệt.</p>
+@if(!Model.Any()){<div class="sp-card">Không có yêu cầu chờ duyệt.</div>}
+@foreach(var r in Model){<div class="sp-card">
+<h3>@(names.ContainsKey(r.TeacherId)?names[r.TeacherId]:"Giáo viên #"+r.TeacherId)</h3>
+<p>@string.Join(", ",r.CategoryIds.Select(id=>categories.ContainsKey(id)?categories[id]:id))</p>
+<p>@r.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+<a class="btn btn-primary" href="@Url.Action("Manage",new{id=r.TeacherId})">Xem minh chứng và xét duyệt</a>
+</div>}
+</div>

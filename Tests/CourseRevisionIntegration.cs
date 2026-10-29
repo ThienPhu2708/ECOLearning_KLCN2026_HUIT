@@ -10,12 +10,14 @@ class CourseRevisionIntegration {
  static void Check(bool value,string text){if(!value)throw new Exception("FAIL: "+text);Console.WriteLine("PASS: "+text);checks++;}
  static void Reject(Action action,string text){try{action();}catch(InvalidOperationException){Check(true,text);return;}throw new Exception("Expected rejection: "+text);}
  static int Main(){
-  string id="RV"+Guid.NewGuid().ToString("N").Substring(0,10), temp=Path.GetTempFileName();int student=0,other=0;
+  string id="RV"+Guid.NewGuid().ToString("N").Substring(0,10), temp=Path.GetTempFileName();int student=0,other=0,fixtureTeacher=0;
   using(var db=new QL_HETHONG_CUNGCAP_KHOAHOCEntities1()) try {
-   var teacher=db.NguoiDung.First(u=>u.vaiTro=="GiaoVien"&&u.trangThai!=false);var category=db.DanhMuc.First(c=>c.trangThai!=false);
+   var teacher=new NguoiDung {hoTen="Revision teacher fixture",email=id+"@teacher.test",matKhau="test-only",vaiTro="GiaoVien",trangThai=true}; db.NguoiDung.Add(teacher);db.SaveChanges();fixtureTeacher=teacher.maNguoiDung;var category=db.DanhMuc.First(c=>c.trangThai!=false);
    var user=new NguoiDung {hoTen="Revision test",email=id+"@revision.test",matKhau="test-only",vaiTro="HocVien",trangThai=true};
    var second=new NguoiDung {hoTen="Revision test unfinished",email="2"+id+"@revision.test",matKhau="test-only",vaiTro="HocVien",trangThai=true};
    db.NguoiDung.Add(user);db.NguoiDung.Add(second);db.SaveChanges();student=user.maNguoiDung;other=second.maNguoiDung;
+   var reviewer=db.NguoiDung.First(u=>u.vaiTro=="Admin"&&u.trangThai!=false).maNguoiDung;
+   db.Database.ExecuteSqlCommand("INSERT dbo.TeacherSpecialty(TeacherId,CategoryId,ApprovedBy) VALUES(@p0,@p1,@p2)",fixtureTeacher,category.maDanhMuc,reviewer);
    var course=new KhoaHoc {maKhoaHoc=id,tenKhoaHoc="Live title",maGiaoVien=teacher.maNguoiDung,maDanhMuc=category.maDanhMuc,giaBan=100,trangThai="Đã xuất bản",capDo="Cơ bản"};db.KhoaHoc.Add(course);db.SaveChanges();
    db.ChuongHoc.Add(new ChuongHoc {maChuong=id+"ch",maKhoaHoc=id,tenChuong="Original chapter",thuTu=1});db.SaveChanges();
    db.BaiHoc.Add(new BaiHoc {maBaiHoc=id+"_1",maChuong=id+"ch",tenBaiHoc="Original",thuTu=1,thoiLuong=100,duongDanVideo="~/revision-test.mp4"});
@@ -63,6 +65,7 @@ class CourseRevisionIntegration {
   }catch(Exception e){Console.Error.WriteLine(e);return 1;}
   finally {
    foreach(var sql in new[]{"DELETE dbo.CourseCertificateSnapshot WHERE CourseId=@p0","DELETE dbo.QuizCertificate WHERE CourseId=@p0","DELETE dbo.CourseCompletionProtection WHERE CourseId=@p0","DELETE dbo.CourseRevision WHERE CourseId=@p0","DELETE dbo.TienDoBaiHoc WHERE maBaiHoc LIKE @p0+'[_]%'","DELETE dbo.TienDoHocTap WHERE maKhoaHoc=@p0","DELETE dbo.DangKyKhoaHoc WHERE maKhoaHoc=@p0","DELETE dbo.TaiNguyen WHERE maBaiHoc LIKE @p0+'[_]%'","DELETE dbo.BaiHoc WHERE maBaiHoc LIKE @p0+'[_]%'","DELETE dbo.ChuongHoc WHERE maKhoaHoc=@p0","DELETE dbo.KhoaHoc WHERE maKhoaHoc=@p0"}) db.Database.ExecuteSqlCommand(sql,id);
+   if(fixtureTeacher>0) {db.Database.ExecuteSqlCommand("DELETE dbo.TeacherSpecialty WHERE TeacherId=@p0",fixtureTeacher);db.Database.ExecuteSqlCommand("DELETE dbo.NguoiDung WHERE maNguoiDung=@p0",fixtureTeacher);}
    if(student>0)db.Database.ExecuteSqlCommand("DELETE dbo.NguoiDung WHERE maNguoiDung=@p0",student);if(other>0)db.Database.ExecuteSqlCommand("DELETE dbo.NguoiDung WHERE maNguoiDung=@p0",other);if(File.Exists(temp)) File.Delete(temp);
   }
  }

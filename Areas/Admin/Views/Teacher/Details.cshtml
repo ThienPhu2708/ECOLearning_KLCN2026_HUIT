@@ -1,4 +1,4 @@
-@using ECOLearning.Services
+﻿@using ECOLearning.Services
 @model GiaoVienChiTiet
 @*
     Admin / Quản lý giáo viên / Hồ sơ: thông tin đăng ký, khóa học, doanh thu & chi trả, đánh giá, vi phạm, nhật ký quản trị.
@@ -16,6 +16,7 @@
 
 @Html.Partial("_AdminFlash")
 
+<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><a class="btn btn-outline" href="@Url.Action("Manage", "TeacherSpecialty", new { area = "Admin", id = u.MaNguoiDung })">Chuyên môn giảng dạy</a></div>
 <div class="card au-profile">
     <div class="au-profile-main">
         @if (anh != null)

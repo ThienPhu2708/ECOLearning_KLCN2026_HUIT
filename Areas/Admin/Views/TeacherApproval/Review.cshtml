@@ -1,0 +1,111 @@
+﻿@model ECOLearning.Models.TeacherApplication
+@{
+    ViewBag.Title = "Duyệt hồ sơ giảng dạy";
+    var requested = ViewBag.Requested as List<string> ?? new List<string>();
+    var categories = ViewBag.Categories as List<ECOLearning.Models.DanhMuc> ?? new List<ECOLearning.Models.DanhMuc>();
+    var choices = categories.Where(c => requested.Contains(c.maDanhMuc)).ToList();
+    bool expandableBio = !string.IsNullOrWhiteSpace(Model.BioExperience) && (Model.BioExperience.Length > 180 || Model.BioExperience.Contains("\n"));
+    bool canApprove = Model.Status == "Pending" && requested.Any();
+    string initial = string.IsNullOrWhiteSpace(Model.FullName) ? "G" : Model.FullName.Trim().Substring(0, 1).ToUpper();
+    string statusText = Model.Status == "Pending" ? "Chờ duyệt" : Model.Status == "Approved" ? "Đã duyệt" : "Đã từ chối";
+    string statusClass = Model.Status == "Pending" ? "is-pending" : Model.Status == "Approved" ? "is-approved" : "is-rejected";
+}
+<link rel="stylesheet" href="~/assets/css/teacher-specialty.css?v=4" />
+<div class="specialty-page sp-manage sp-review">
+    <header class="sp-page-heading">
+        <div><h2>Duyệt hồ sơ giảng dạy</h2><p>Đối chiếu thông tin và minh chứng trước khi duyệt lĩnh vực giảng dạy.</p></div>
+        <a class="btn btn-outline" href="@Url.Action("Index")"><i class="bi bi-list-ul" aria-hidden="true"></i> Danh sách hồ sơ</a>
+    </header>
+    <div class="sp-manage-grid sp-review-grid">
+        <aside class="sp-card sp-review-profile">
+            <div class="sp-teacher"><span class="sp-avatar">@initial</span><div><h3>@Model.FullName</h3><span class="sp-teacher-role">Ứng viên giảng dạy</span></div></div>
+            <div class="sp-review-contact">
+                <div><i class="bi bi-envelope" aria-hidden="true"></i><span>@Model.Email</span></div>
+                @if (!string.IsNullOrWhiteSpace(Model.Phone)) {<div><i class="bi bi-telephone" aria-hidden="true"></i><span>@Model.Phone</span></div>}
+                <div><i class="bi bi-calendar3" aria-hidden="true"></i><span>Gửi ngày @Model.CreatedAt.ToString("dd/MM/yyyy")</span></div>
+            </div>
+            <div class="sp-profile-section">
+                <div class="sp-section-heading"><span class="sp-label">TRẠNG THÁI HỒ SƠ</span><span class="sp-request-status @statusClass">@statusText</span></div>
+            </div>
+            <div class="sp-profile-section">
+                <span class="sp-label">BẰNG CẤP VÀ CHỨNG CHỈ</span>
+                @if (!string.IsNullOrWhiteSpace(Model.CertificateFilePath)) {
+                    <a class="sp-evidence" href="@Url.Content(Model.CertificateFilePath)" target="_blank" rel="noopener"><span class="sp-evidence-icon"><i class="bi bi-file-earmark-check" aria-hidden="true"></i></span><span>Xem minh chứng<small>Mở tài liệu đính kèm</small></span><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>
+                } else {<p class="sp-section-description">Hồ sơ chưa có tệp minh chứng.</p>}
+            </div>
+        </aside>
+        <div class="sp-review-main">
+            <section class="sp-card sp-review-experience">
+                <div class="sp-section-heading"><h3>Giới thiệu và kinh nghiệm</h3>
+                    @if (expandableBio) {<button type="button" class="sp-bio-toggle" id="review-bio-toggle" aria-expanded="false" aria-controls="review-bio"><span>Xem đầy đủ</span><i class="bi bi-chevron-down" aria-hidden="true"></i></button>}
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.BioExperience)) {
+                    <p id="review-bio" class="sp-bio-content @(expandableBio ? "is-collapsed" : "")">@Model.BioExperience</p>
+                } else {<p class="sp-section-description">Chưa có thông tin giới thiệu.</p>}
+            </section>
+            <section class="sp-card sp-review-decision">
+                <div class="sp-section-heading"><h3>Lĩnh vực đăng ký giảng dạy</h3><span class="sp-number">@requested.Count</span></div>
+                <p class="sp-section-description">Chọn các lĩnh vực phù hợp với năng lực và minh chứng của ứng viên.</p>
+                @if (canApprove) {
+                    <form id="specialty-approval" method="post" action="@Url.Action("Approve")">
+                        @Html.AntiForgeryToken()<input type="hidden" name="appId" value="@Model.ApplicationId" />
+                        <div class="sp-grid sp-category-grid">@foreach (var c in choices) {<label class="sp-choice"><input type="checkbox" name="categoryIds" value="@c.maDanhMuc" /><span>@c.tenDanhMuc</span><i class="bi bi-check-circle sp-choice-check" aria-hidden="true"></i></label>}</div>
+                        <p id="approval-message" class="sp-approval-message" role="status" hidden></p>
+                        <div class="sp-form-footer"><span id="approval-selection-count" class="sp-selected-count" aria-live="polite">Chưa chọn lĩnh vực</span><button class="btn btn-primary" type="submit"><i class="bi bi-check2" aria-hidden="true"></i><span>Duyệt hồ sơ</span></button></div>
+                    </form>
+                } else {
+                    <div class="sp-review-state"><i class="bi @(Model.Status == "Approved" ? "bi-check-circle" : "bi-info-circle")" aria-hidden="true"></i><p>@(Model.Status == "Pending" ? "Hồ sơ chưa chọn lĩnh vực. Người đăng ký cần nộp lại theo danh sách lĩnh vực mới." : "Hồ sơ này đã được xử lý.")</p></div>
+                    if (!string.IsNullOrWhiteSpace(Model.RejectionReason)) {<p class="sp-description"><strong>Lý do từ chối:</strong> @Model.RejectionReason</p>}
+                }
+            </section>
+        </div>
+    </div>
+</div>
+@section Scripts {
+<script>
+(function() {
+    var bioToggle = document.getElementById('review-bio-toggle');
+    if (bioToggle) bioToggle.addEventListener('click', function() {
+        var expanded = this.getAttribute('aria-expanded') !== 'true';
+        this.setAttribute('aria-expanded', String(expanded));
+        this.querySelector('span').textContent = expanded ? 'Thu gọn' : 'Xem đầy đủ';
+        document.getElementById('review-bio').classList.toggle('is-collapsed', !expanded);
+    });
+    var form = document.getElementById('specialty-approval');
+    if (!form) return;
+    var button = form.querySelector('button[type="submit"]');
+    var label = button.querySelector('span');
+    var message = document.getElementById('approval-message');
+    var count = document.getElementById('approval-selection-count');
+    var busy = false;
+    function updateSelection() {
+        var total = form.querySelectorAll('input[name="categoryIds"]:checked').length;
+        count.textContent = total ? 'Đã chọn ' + total + ' lĩnh vực' : 'Chưa chọn lĩnh vực';
+        button.disabled = busy || total === 0;
+    }
+    form.addEventListener('change', updateSelection);
+    updateSelection();
+    form.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        if (busy || !form.querySelector('input[name="categoryIds"]:checked')) return;
+        busy = true; updateSelection(); label.textContent = 'Đang duyệt…'; message.hidden = true;
+        var body = new URLSearchParams(new FormData(form));
+        form.querySelectorAll('input[type="checkbox"]').forEach(function(input) { input.disabled = true; });
+        try {
+            var response = await fetch(form.action, { method: 'POST', body: body, headers: { 'Accept': 'application/json' } });
+            var data = await response.json();
+            if (data.success) { window.location.href = '@Url.Action("Index")'; return; }
+            message.textContent = data.message || 'Chưa duyệt được hồ sơ. Vui lòng thử lại.';
+            message.hidden = false;
+        } catch(error) {
+            message.textContent = 'Chưa kết nối được máy chủ. Vui lòng thử lại.';
+            message.hidden = false;
+        } finally {
+            busy = false; label.textContent = 'Duyệt hồ sơ';
+            form.querySelectorAll('input[type="checkbox"]').forEach(function(input) { input.disabled = false; });
+            updateSelection();
+        }
+    });
+})();
+</script>
+}

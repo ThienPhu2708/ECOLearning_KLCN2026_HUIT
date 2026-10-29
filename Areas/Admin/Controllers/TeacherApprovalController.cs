@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Models;
@@ -30,10 +30,22 @@ namespace ECOLearning.Areas.Admin.Controllers
             return View(allApps);
         }
 
+        [HttpGet]
+        public ActionResult Review(string appId) {
+            var app = TeacherApplicationService.GetById(appId);
+            if (app == null) return HttpNotFound();
+            ViewBag.Categories = db.DanhMuc.Where(c => c.trangThai != false).OrderBy(c => c.tenDanhMuc).ToList();
+            ViewBag.Requested = new TeacherSpecialtyService(db).Requested(appId);
+            ViewBag.BreadcrumbParent = "Duyệt hồ sơ giáo viên";
+            ViewBag.BreadcrumbParentUrl = Url.Action("Index");
+            ViewBag.BreadcrumbCurrent = "Chi tiết hồ sơ";
+            return View(app);
+        }
+
         // POST: Admin/TeacherApproval/Approve (Phê duyệt hồ sơ -> Cấp vai trò GiaoVien)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public JsonResult Approve(string appId)
+        public JsonResult Approve(string appId, string[] categoryIds)
         {
             if (string.IsNullOrWhiteSpace(appId))
             {
@@ -48,31 +60,8 @@ namespace ECOLearning.Areas.Admin.Controllers
                     return Json(new { success = false, message = "Không tìm thấy hồ sơ xét duyệt!" });
                 }
 
-                // 1. Cập nhật vai trò người dùng trong CSDL SQL Server
-                var user = db.NguoiDung.Find(app.UserId);
-                if (user == null)
-                {
-                    user = db.NguoiDung.FirstOrDefault(u => u.email.ToLower() == app.Email.ToLower());
-                }
-
-                if (user != null)
-                {
-                    user.vaiTro = "GiaoVien";
-                    db.SaveChanges();
-                }
-
-                // 2. Cập nhật trạng thái đơn đăng ký
-                int? adminId = Session["UserId"] != null ? Convert.ToInt32(Session["UserId"]) : (int?)null;
-                bool updated = TeacherApplicationService.UpdateStatus(appId, "Approved", null, adminId);
-
-                if (updated)
-                {
-                    return Json(new { success = true, message = "Đã phê duyệt thành công! Tài khoản " + app.Email + " đã được cấp vai trò Giảng viên (GiaoVien)." });
-                }
-                else
-                {
-                    return Json(new { success = false, message = "Không thể cập nhật trạng thái hồ sơ!" });
-                }
+                new TeacherSpecialtyService(db).ApproveApplication(appId, categoryIds, Convert.ToInt32(Session["UserId"]));
+                return Json(new { success = true, message = "Đã duyệt hồ sơ và lĩnh vực giảng dạy." });
             }
             catch (Exception ex)
             {

@@ -1,0 +1,88 @@
+﻿@using ECOLearning.Services
+@model List<TeacherSpecialtyRequest>
+@{
+    ViewBag.Title = "Chuyên môn giáo viên";
+    var teacher = ViewBag.Teacher as ECOLearning.Models.NguoiDung;
+    var profile = ViewBag.Profile as ECOLearning.Models.TeacherApplication;
+    var categories = ViewBag.Categories as List<ECOLearning.Models.DanhMuc> ?? new List<ECOLearning.Models.DanhMuc>();
+    var approved = ViewBag.Approved as List<string> ?? new List<string>();
+
+    string avatar = string.IsNullOrWhiteSpace(teacher.anhDaiDien) ? null : (teacher.anhDaiDien.StartsWith("http") ? teacher.anhDaiDien : Url.Content("~/" + teacher.anhDaiDien.TrimStart('~', '/')));
+    string initial = string.IsNullOrWhiteSpace(teacher.hoTen) ? "G" : teacher.hoTen.Trim().Substring(0, 1).ToUpper();
+}
+<link rel="stylesheet" href="~/assets/css/teacher-specialty.css?v=2" />
+<div class="specialty-page sp-manage">
+    <header class="sp-page-heading">
+        <div><h2>Chuyên môn giảng dạy</h2><p>Xét duyệt lĩnh vực giáo viên được phép tạo khóa học.</p></div>
+        <a class="btn btn-outline" href="@Url.Action("Details", "Teacher", new { id = teacher.maNguoiDung })"><i class="bi bi-person-vcard" aria-hidden="true"></i> Hồ sơ giáo viên</a>
+    </header>
+    @if (TempData["SpecialtyMessage"] != null) {<div class="sp-message" role="status">@TempData["SpecialtyMessage"]</div>}
+    <div class="sp-manage-grid">
+        <aside class="sp-card sp-profile-card">
+            <div class="sp-teacher">
+                @if (avatar != null) {<img class="sp-avatar" src="@avatar" alt="" />} else {<span class="sp-avatar">@initial</span>}
+                <div><h3>@teacher.hoTen</h3><span class="sp-teacher-role">Giáo viên · #@teacher.maNguoiDung</span></div>
+            </div>
+            <div class="sp-profile-section">
+                @if (profile != null && !string.IsNullOrWhiteSpace(profile.BioExperience)) {
+                    <details class="sp-bio"><summary>Giới thiệu và kinh nghiệm <i class="bi bi-chevron-down" aria-hidden="true"></i></summary><p class="sp-description">@profile.BioExperience</p></details>
+                }
+                @if (profile != null && !string.IsNullOrEmpty(profile.CertificateFilePath)) {
+                    <a class="sp-evidence" href="@Url.Content(profile.CertificateFilePath)" target="_blank" rel="noopener"><span class="sp-evidence-icon"><i class="bi bi-file-earmark-check" aria-hidden="true"></i></span><span>Bằng cấp / chứng chỉ<small>Xem minh chứng hồ sơ</small></span><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>
+                }
+            </div>
+            <div class="sp-profile-section">
+                <div class="sp-section-heading"><h3>Đã được duyệt</h3><span class="sp-number">@approved.Count</span></div>
+                @if (approved.Any()) {
+                    <div class="sp-approved-list">@foreach (var c in categories.Where(c => approved.Contains(c.maDanhMuc))) {<div><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>@c.tenDanhMuc @(c.trangThai == false ? "(tạm ngưng)" : "")</span></div>}</div>
+                } else {
+                    <div class="sp-empty-permission"><i class="bi bi-patch-check" aria-hidden="true"></i><p>@(ViewBag.Legacy == true ? "Không yêu cầu chọn lại lĩnh vực." : "Chưa có lĩnh vực được duyệt.")</p></div>
+                }
+            </div>
+        </aside>
+        <section class="sp-card sp-assignment-card">
+            <div class="sp-section-heading"><h3>Phạm vi giảng dạy</h3><span class="sp-soft-icon"><i class="bi bi-patch-check" aria-hidden="true"></i></span></div>
+            @if (ViewBag.Legacy == true) {<p>Tài khoản giáo viên hiện có tiếp tục tạo và quản lý khóa học như trước, không cần xác nhận lại chuyên môn.</p>}
+            else {<p>Lĩnh vực được duyệt cùng hồ sơ đăng ký giảng dạy. Nếu giáo viên gửi yêu cầu bổ sung, quản trị viên xét duyệt bên dưới.</p>}
+            <a class="btn btn-outline" href="@Url.Action("Index", "TeacherSpecialty")">Danh sách yêu cầu bổ sung</a>
+        </section>
+    </div>
+    @if (Model.Any()) {
+        <div class="sp-section-heading sp-requests-heading"><h3>Yêu cầu bổ sung chuyên môn</h3><span class="sp-number">@Model.Count</span></div>
+    }
+    @foreach (var r in Model) {
+        <section class="sp-card sp-request-card">
+            <div class="sp-section-heading"><div><h3>Yêu cầu #@r.Id</h3><p class="sp-request-date">@r.CreatedAt.ToString("dd/MM/yyyy · HH:mm")</p></div><span class="sp-request-status @(r.Status == "Pending" ? "is-pending" : r.Status == "Approved" ? "is-approved" : "is-rejected")">@(r.Status == "Pending" ? "Chờ duyệt" : r.Status == "Approved" ? "Đã duyệt" : "Đã từ chối")</span></div>
+            <div class="sp-request-detail"><p class="sp-description">@r.Description</p><a class="sp-text-link" href="@Url.Content(r.EvidenceUrl)" target="_blank" rel="noopener"><i class="bi bi-paperclip" aria-hidden="true"></i> Xem minh chứng đính kèm <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></div>
+            @if (r.Status == "Pending") {
+                <form method="post" action="@Url.Action("Review")" class="sp-select-form">
+                    @Html.AntiForgeryToken()<input type="hidden" name="id" value="@r.Id" /><input type="hidden" name="teacherId" value="@teacher.maNguoiDung" />
+                    <span class="sp-label">LĨNH VỰC ĐĂNG KÝ BỔ SUNG</span>
+                    <div class="sp-grid sp-category-grid">@foreach (var c in categories.Where(c => r.CategoryIds.Contains(c.maDanhMuc))) {<label class="sp-choice"><input type="checkbox" name="categoryIds" value="@c.maDanhMuc" disabled="@(c.trangThai == false)" /><span>@c.tenDanhMuc @(c.trangThai == false ? "(tạm ngưng)" : "")</span></label>}</div>
+                    <label for="reason-@r.Id">Phản hồi xét duyệt <span class="sp-optional">Bắt buộc khi từ chối</span></label>
+                    <textarea class="form-control" name="reason" id="reason-@r.Id" maxlength="2000" placeholder="Ghi rõ nội dung cần bổ sung hoặc lý do từ chối…"></textarea>
+                    <div class="sp-form-footer"><span class="sp-selected-count" aria-live="polite">Chưa chọn lĩnh vực</span><div class="sp-footer-actions"><button name="approve" value="false" class="btn btn-outline">Từ chối yêu cầu</button><button name="approve" value="true" class="btn btn-primary">Duyệt lĩnh vực đã chọn</button></div></div>
+                </form>
+            } else {
+                <div class="sp-tags">@foreach (var c in categories.Where(c => (r.Status == "Approved" ? r.GrantedCategoryIds : r.CategoryIds).Contains(c.maDanhMuc))) {<span class="sp-tag">@c.tenDanhMuc</span>}</div>
+                if (!string.IsNullOrWhiteSpace(r.Reason)) {<p><strong>Phản hồi:</strong> @r.Reason</p>}
+            }
+        </section>
+    }
+</div>
+@section Scripts {
+<script>
+document.querySelectorAll('.sp-select-form').forEach(function(form) {
+    var choices = form.querySelectorAll('input[name="categoryIds"]');
+    var count = form.querySelector('.sp-selected-count');
+    var confirm = form.querySelector('button[value="true"],button[type="submit"]');
+    function updateSelection() {
+        var total = form.querySelectorAll('input[name="categoryIds"]:checked:not(:disabled)').length;
+        count.textContent = total ? 'Đã chọn ' + total + ' lĩnh vực' : 'Chưa chọn lĩnh vực';
+        if (confirm) confirm.disabled = total === 0;
+    }
+    choices.forEach(function(input) { input.addEventListener('change', updateSelection); });
+    updateSelection();
+});
+</script>
+}

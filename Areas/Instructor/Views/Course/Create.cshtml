@@ -68,6 +68,12 @@
     </div>
 </div>
 
+@if (ViewBag.LegacySpecialtyAccess != true) {
+<div style="margin-bottom:16px;padding:14px 18px;background:#EEF2FF;border-radius:12px;">
+    Chỉ tạo khóa học trong lĩnh vực đã được duyệt.
+    <a href="@Url.Action("Index", "Specialty", new { area = "Instructor" })">Xem chuyên môn hoặc gửi yêu cầu bổ sung</a>
+</div>
+}
 @using (Html.BeginForm(isEditing ? "Edit" : "Create", "Course", new { area = "Instructor" }, FormMethod.Post, new { id = "course-wizard-form", enctype = "multipart/form-data", novalidate = "novalidate" }))
 {
     @Html.AntiForgeryToken()

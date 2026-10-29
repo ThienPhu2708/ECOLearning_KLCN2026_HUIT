@@ -1,0 +1,44 @@
+﻿@using ECOLearning.Services
+@model List<TeacherSpecialtyRequest>
+@{
+ ViewBag.Title="Chuyên môn giảng dạy";
+ var categories=ViewBag.Categories as List<ECOLearning.Models.DanhMuc> ?? new List<ECOLearning.Models.DanhMuc>();
+ var approved=ViewBag.Approved as List<string> ?? new List<string>();
+ bool legacy=ViewBag.Legacy==true;
+ bool installed=ViewBag.Installed==true, pending=Model.Any(r=>r.Status=="Pending");
+}
+<link rel="stylesheet" href="~/assets/css/teacher-specialty.css?v=1" />
+<div class="specialty-page">
+ @if(TempData["SpecialtyMessage"]!=null){<div class="sp-message" role="status">@TempData["SpecialtyMessage"]</div>}
+ @if(!installed){<div class="sp-message">Chức năng chưa được cài đặt. Vui lòng liên hệ quản trị viên.</div>}
+ <section class="sp-card">
+ <h3>Lĩnh vực đã được duyệt</h3>
+ <div class="sp-tags">@foreach(var c in categories.Where(c=>approved.Contains(c.maDanhMuc))){<span class="sp-tag">@c.tenDanhMuc @(c.trangThai==false?"(tạm ngưng)":"")</span>}</div>
+ @if(!approved.Any()&&!legacy){<p>Chưa có lĩnh vực được duyệt.</p>}
+ </section>
+ @if(installed&&!pending&&!legacy){
+ <section class="sp-card">
+ <h3>Đăng ký bổ sung lĩnh vực</h3>
+ <form action="@Url.Action("Submit")" method="post" enctype="multipart/form-data">
+ @Html.AntiForgeryToken()
+ <div class="sp-grid">@foreach(var c in categories.Where(c=>c.trangThai!=false&&!approved.Contains(c.maDanhMuc))){<label class="sp-choice"><input type="checkbox" name="categoryIds" value="@c.maDanhMuc" />@c.tenDanhMuc</label>}</div>
+ <label for="specialty-description">Kinh nghiệm và năng lực trong lĩnh vực đăng ký</label>
+ <textarea class="form-control" id="specialty-description" name="description" maxlength="2000" required></textarea>
+ <label for="specialty-evidence">Bằng cấp hoặc chứng chỉ minh chứng</label>
+ <input id="specialty-evidence" name="evidence" type="file" accept=".pdf,.png,.jpg,.jpeg" required />
+ <p>PDF, JPG hoặc PNG, tối đa 5 MB.</p>
+ <div class="sp-actions"><button class="btn btn-primary" type="submit">Gửi xét duyệt</button></div>
+ </form>
+ </section>
+ }else if(pending){<div class="sp-message">Bạn có yêu cầu đang chờ duyệt. Các lĩnh vực đã được duyệt vẫn sử dụng bình thường.</div>}
+ <section class="sp-card"><h3>Lịch sử yêu cầu</h3>
+ @if(!Model.Any()){<p>Chưa có yêu cầu bổ sung.</p>}
+ @foreach(var r in Model){<div class="sp-history">
+ <span class="sp-status">@(r.Status=="Pending"?"Chờ duyệt":r.Status=="Approved"?"Đã duyệt":"Đã từ chối")</span> <small>@r.CreatedAt.ToString("dd/MM/yyyy HH:mm")</small>
+ <p>Lĩnh vực đã yêu cầu:</p><div class="sp-tags">@foreach(var c in categories.Where(c=>r.CategoryIds.Contains(c.maDanhMuc))){<span class="sp-tag">@c.tenDanhMuc</span>}</div>
+ @if(r.Status=="Approved"){<p><strong>Được duyệt:</strong> @string.Join(", ",categories.Where(c=>r.GrantedCategoryIds.Contains(c.maDanhMuc)).Select(c=>c.tenDanhMuc))</p>}
+ <p class="sp-description">@r.Description</p>
+ @if(!string.IsNullOrEmpty(r.Reason)){<p><strong>Phản hồi:</strong> @r.Reason</p>}
+ </div>}
+ </section>
+</div>

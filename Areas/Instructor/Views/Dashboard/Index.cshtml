@@ -146,7 +146,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <div>
                     <h3 class="h3">Biến động doanh thu giảng dạy (VNĐ)</h3>
-                    <span class="caption">Cập nhật thời gian thực theo từng tháng</span>
+                    <span class="caption">Doanh thu đơn đã thanh toán · Đơn vị: VNĐ</span>
                 </div>
                 <div class="custom-select-wrapper" style="position: relative; width: 140px;">
                     <div class="form-control dropdown-btn" onclick="toggleCustomDropdown(event)" style="width: 100%; height: 36px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #fff; user-select: none;">
@@ -316,23 +316,20 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        // ── Biểu đồ doanh thu 12 tháng từ DB ──────────────────────────────
-        var revData    = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RevenueChartData));
-        var chartLabels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartLabels));
-
-        if (window.AdminCharts) {
-            AdminCharts.line(document.getElementById('instructor-revenue-chart'), {
-                labels: chartLabels, data: revData, name: 'Doanh thu', color: '#0D9488', fill: 'rgba(13, 148, 136, 0.08)',
-                ariaLabel: 'Biểu đồ doanh thu 12 tháng',
-                axis: function (v) { return (Math.round(v * 10) / 10).toLocaleString('vi-VN'); },
-                format: function (v) { return Number(v).toLocaleString('vi-VN') + ' triệu đ'; }
-            });
-        }
-
-        window.updateRevenueChart = function(val) {
-            console.log('Bộ lọc biểu đồ thay đổi:', val);
-            // Có thể dùng AJAX gọi API lấy dữ liệu mới rồi update lại biểu đồ
+        // ── Biểu đồ doanh thu: Năm nay (12 tháng) / Tháng này / 7 ngày qua, số liệu đ từ DashboardController ──
+        var revenueFilters = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ViewBag.RevenueChartFilters));
+        window.updateRevenueChart = function (value) {
+            var series = revenueFilters[value] || revenueFilters.year;
+            if (window.AdminCharts) {
+                AdminCharts.line(document.getElementById('instructor-revenue-chart'), {
+                    labels: series.labels, data: series.data, name: 'Doanh thu', color: '#0D9488', fill: 'rgba(13, 148, 136, 0.08)',
+                    ariaLabel: 'Biểu đồ doanh thu',
+                    axis: AdminCharts.fmtShort,
+                    format: AdminCharts.fmtMoney
+                });
+            }
         };
+        window.updateRevenueChart('year');
 
         @if (Model.TotalReviews > 0)
         {

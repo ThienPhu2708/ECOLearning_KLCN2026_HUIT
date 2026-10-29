@@ -35,6 +35,7 @@ namespace ECOLearning.Services {
   }
   public List<CourseRevisionRow> Pending() {return !Installed()?new List<CourseRevisionRow>():db.Database.SqlQuery<CourseRevisionRow>("SELECT * FROM dbo.CourseRevision WHERE Status='Pending' ORDER BY SubmittedAt").ToList();}
   public void Save(KhoaHoc course, CourseCreateOrEditViewModel model, Dictionary<string,string[]> uploads, bool submit) {
+   new TeacherSpecialtyService(db).Require(course.maGiaoVien,model.MaDanhMuc);
    if(!Installed()) throw new InvalidOperationException("Cần chạy migration 019 trước khi lưu bản sửa. Khóa đang hoạt động không bị thay đổi.");
    using(var tx=db.Database.BeginTransaction(IsolationLevel.Serializable)) {
     var old=db.Database.SqlQuery<CourseRevisionRow>("SELECT * FROM dbo.CourseRevision WITH (UPDLOCK,HOLDLOCK) WHERE CourseId=@p0",course.maKhoaHoc).SingleOrDefault();
@@ -70,6 +71,7 @@ namespace ECOLearning.Services {
     if(approve) {
      if(!Published(course.trangThai) || course.NguoiDung.trangThai==false) throw new InvalidOperationException("Khóa học hoặc giáo viên không còn được phép xuất bản.");
      var p=row.Read();Validate(p);
+     new TeacherSpecialtyService(db).Require(course.maGiaoVien,p.Model.MaDanhMuc);
      if(!db.DanhMuc.Any(c=>c.maDanhMuc==p.Model.MaDanhMuc && c.trangThai!=false)) throw new InvalidOperationException("Danh mục không còn hoạt động.");
      db.Database.ExecuteSqlCommand(@"INSERT dbo.CourseCompletionProtection(CourseId,StudentId,CompletedAt)
 SELECT @p0,d.maHocVien,GETDATE() FROM dbo.DangKyKhoaHoc d WHERE d.maKhoaHoc=@p0

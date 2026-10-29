@@ -861,4 +861,18 @@
   </Target>
   <Target Name="AfterBuild">
   </Target> -->
+
+  <ItemGroup>
+    <Compile Include="Services\TeacherSpecialtyService.cs" />
+    <Compile Include="Areas\Instructor\Controllers\SpecialtyController.cs" />
+    <Compile Include="Areas\Admin\Controllers\TeacherSpecialtyController.cs" />
+    <Content Include="Database\Migrations\022_TeacherSpecialties.sql" />
+    <Content Include="assets\css\teacher-specialty.css" />
+    <Content Include="Areas\Instructor\Views\Specialty\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\TeacherSpecialty\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\TeacherSpecialty\Manage.cshtml" />
+    <Content Include="Areas\Admin\Views\TeacherApproval\Review.cshtml" />
+    <Content Include="Tests\TeacherSpecialtyIntegration.cs" />
+    <Content Include="Tests\Run-TeacherSpecialtyTests.ps1" />
+  </ItemGroup>
 </Project>

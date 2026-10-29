@@ -28,19 +28,15 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 .ToList();
 
             var paidDetails = allOrderDetails
-                .Where(ct => ct.DonHang != null && (ct.DonHang.trangThai == "Đã thanh toán" || ct.DonHang.trangThai == "Hoàn tất" || ct.DonHang.trangThai == "Success" || ct.DonHang.trangThai == null))
+                .Where(ct => ct.DonHang != null && (ct.DonHang.trangThai == "Đã thanh toán" || ct.DonHang.trangThai == "Hoàn tất" || ct.DonHang.trangThai == "Success"))
                 .ToList();
-
-            // Fallback nếu chưa có trạng thái thanh toán
-            if (!paidDetails.Any() && allOrderDetails.Any())
-            {
-                paidDetails = allOrderDetails;
-            }
 
             model.TotalRevenue = paidDetails.Sum(ct => (decimal?)ct.donGia) ?? 0;
 
-            int currentMonth = DateTime.Now.Month;
-            int currentYear = DateTime.Now.Year;
+            var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+                TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date;
+            int currentMonth = today.Month;
+            int currentYear = today.Year;
 
             model.MonthRevenue = paidDetails
                 .Where(ct => ct.DonHang != null && ct.DonHang.ngayDat.HasValue && ct.DonHang.ngayDat.Value.Month == currentMonth && ct.DonHang.ngayDat.Value.Year == currentYear)
@@ -85,8 +81,25 @@ namespace ECOLearning.Areas.Instructor.Controllers
                     .Where(ct => ct.DonHang != null && ct.DonHang.ngayDat.HasValue && ct.DonHang.ngayDat.Value.Month == m && ct.DonHang.ngayDat.Value.Year == currentYear)
                     .Sum(ct => (decimal?)ct.donGia) ?? 0;
                 
-                model.RevenueChartData.Add(Math.Round(mRev / 1000000m, 2));
+                model.RevenueChartData.Add(mRev);
             }
+
+            // The three filters share the same paid orders; missing dates are zero-filled.
+            var dailyRevenue = paidDetails
+                .Where(ct => ct.DonHang != null && ct.DonHang.ngayDat.HasValue)
+                .GroupBy(ct => ct.DonHang.ngayDat.Value.Date)
+                .ToDictionary(g => g.Key, g => g.Sum(ct => ct.donGia));
+            var monthDates = Enumerable.Range(1, DateTime.DaysInMonth(currentYear, currentMonth))
+                .Select(day => new DateTime(currentYear, currentMonth, day)).ToList();
+            var weekDates = Enumerable.Range(0, 7).Select(day => today.AddDays(day - 6)).ToList();
+            ViewBag.RevenueChartFilters = new
+            {
+                year = new { labels = model.ChartLabels, data = model.RevenueChartData },
+                month = new { labels = monthDates.Select(d => d.ToString("dd/MM")),
+                    data = monthDates.Select(d => dailyRevenue.ContainsKey(d) ? dailyRevenue[d] : 0) },
+                week = new { labels = weekDates.Select(d => d.ToString("dd/MM")),
+                    data = weekDates.Select(d => dailyRevenue.ContainsKey(d) ? dailyRevenue[d] : 0) }
+            };
 
             // 6. Top 3 khóa học mang lại doanh thu cao nhất
             // Khóa giáo viên đã xóa vẫn tính doanh thu ở trên nhưng không hiện trong danh sách khóa học

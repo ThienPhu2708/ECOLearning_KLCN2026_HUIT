@@ -200,8 +200,9 @@
 
                             <form id="form-teacher-profile" onsubmit="event.preventDefault(); handleSaveTeacherProfile();">
                                 <div class="form-group" style="margin-bottom: 20px;">
-                                    <label class="form-label" for="teacher-specialization">Chuyên môn giảng dạy <span class="required" style="color: #EF4444;">*</span></label>
-                                    <input type="text" id="teacher-specialization" class="form-control" value="@Model.Specialization" placeholder="VD: Lập trình Web FullStack, AI & Machine Learning, Data Science..." required>
+                                    <label class="form-label" for="teacher-specialization">Lĩnh vực giảng dạy đã được duyệt</label>
+                                    <input type="text" id="teacher-specialization" class="form-control" value="@(ViewBag.LegacySpecialtyAccess == true ? "Giữ quyền giảng dạy hiện tại" : Model.Specialization)" readonly>
+                                    <a href="@Url.Action("Index", "Specialty", new { area = "Instructor" })" style="display:inline-block;margin-top:8px;font-size:12px;">Xem lĩnh vực giảng dạy</a>
                                 </div>
 
                                 <div class="form-group" style="margin-bottom: 20px;">
@@ -367,7 +368,6 @@
 
         // AJAX Update Teacher Profile
         function handleSaveTeacherProfile() {
-            const specialization = document.getElementById('teacher-specialization') ? document.getElementById('teacher-specialization').value.trim() : '';
             const bioExperience = document.getElementById('teacher-experience') ? document.getElementById('teacher-experience').value.trim() : '';
             // Ngân hàng chỉ chọn trong danh mục (assets/js/bank-picker.js); số TK chỉ gồm chữ số; tên chủ TK in hoa không dấu
             const bankPicker = BankPicker.get(document.getElementById('teacher-bank-search'));
@@ -379,11 +379,6 @@
             const accountName = accountNameEl ? accountNameEl.value : '';
             const certInput = document.getElementById('teacher-cert-file');
 
-            if (!specialization) {
-                showToast('Vui lòng nhập chuyên môn giảng dạy!', 'error');
-                if (document.getElementById('teacher-specialization')) document.getElementById('teacher-specialization').focus();
-                return;
-            }
             if (bankPicker && !bankPicker.validate()) {
                 showToast('Vui lòng chọn ngân hàng thụ hưởng trong danh sách!', 'error');
                 return;
@@ -406,7 +401,6 @@
             }
 
             const formData = new FormData();
-            formData.append('specialization', specialization);
             formData.append('bioExperience', bioExperience);
             formData.append('bankCode', bankCode);
             formData.append('accountNumber', accountNumber);

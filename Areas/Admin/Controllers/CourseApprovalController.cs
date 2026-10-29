@@ -334,6 +334,9 @@ namespace ECOLearning.Areas.Admin.Controllers
                     return Json(new { success = false, message = "Giáo viên của khóa học đang bị khóa tài khoản nên chưa thể xuất bản. Mở khóa giáo viên ở trang Quản lý giáo viên trước." });
                 }
 
+                try { new ECOLearning.Services.TeacherSpecialtyService(db).Require(k.maGiaoVien, k.maDanhMuc); }
+                catch (InvalidOperationException ex) { return Json(new { success = false, message = ex.Message }); }
+
                 // Kiểm tra lại nội dung trước khi xuất bản: tài nguyên có thể bị xóa sau khi giáo viên gửi duyệt
                 var thieu = new ECOLearning.Services.CourseContentService(db, Server.MapPath).KiemTraKhoaHoc(k.maKhoaHoc);
                 if (thieu.Any())

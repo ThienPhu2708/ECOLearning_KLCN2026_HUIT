@@ -1,10 +1,11 @@
-@model List<ECOLearning.Models.TeacherApplication>
+﻿@model List<ECOLearning.Models.TeacherApplication>
 @{
 ViewBag.Title = "Xét Duyệt Hồ Sơ Giảng Viên";
 Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
 string currentFilter = ViewBag.StatusFilter as string ?? "All";
 }
 
+<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><a class="btn btn-outline" href="@Url.Action("Index", "TeacherSpecialty", new { area = "Admin" })">Yêu cầu bổ sung chuyên môn</a></div>
 <style>
     .modal-overlay {
         transition: opacity 0.25s ease, visibility 0.25s ease;
@@ -258,65 +259,7 @@ if (detModal) {
 }
 
 function approveApplication(appId) {
-    Swal.fire({
-        title: 'Phê duyệt hồ sơ giảng viên?',
-        html: 'Bạn có chắc chắn muốn <strong>Phê duyệt</strong> đơn đăng ký giảng viên này không?<br><span style="font-size:13px; color:#64748B; display:block; margin-top:6px;">Tài khoản người dùng sẽ được tự động nâng cấp vai trò thành Giảng viên trên toàn hệ thống.</span>',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Phê duyệt',
-        cancelButtonText: 'Hủy bỏ',
-        confirmButtonColor: '#10B981',
-        cancelButtonColor: '#94A3B8',
-        reverseButtons: true
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire({
-                title: 'Đang phê duyệt...',
-                text: 'Hệ thống đang cập nhật quyền tài khoản, vui lòng chờ trong giây lát.',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-
-            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-
-            fetch('@Url.Action("Approve", "TeacherApproval", new { area = "Admin" })', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `appId=${encodeURIComponent(appId)}&__RequestVerificationToken=${encodeURIComponent(token)}`
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Phê duyệt thành công!',
-                        text: data.message,
-                        confirmButtonColor: '#10B981',
-                        timer: 2000,
-                        timerProgressBar: true
-                    }).then(() => location.reload());
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Không thể phê duyệt',
-                        text: data.message,
-                        confirmButtonColor: '#EF4444'
-                    });
-                }
-            })
-            .catch(err => {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Lỗi kết nối',
-                    text: 'Không thể kết nối đến máy chủ. Vui lòng thử lại!',
-                    confirmButtonColor: '#EF4444'
-                });
-            });
-        }
-    });
+    window.location.href = '@Url.Action("Review", "TeacherApproval", new { area = "Admin" })?appId=' + encodeURIComponent(appId);
 }
 
 function openRejectModal(appId) {

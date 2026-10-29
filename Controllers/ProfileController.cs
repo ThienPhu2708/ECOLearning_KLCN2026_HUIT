@@ -117,6 +117,12 @@ namespace ECOLearning.Controllers
                     }
                 }
 
+                if (isTeacher) {
+                    var specialty = new TeacherSpecialtyService(db);
+                    ViewBag.LegacySpecialtyAccess = specialty.IsLegacy(user.maNguoiDung);
+                    var ids = specialty.Approved(user.maNguoiDung);
+                    model.Specialization = string.Join(", ", db.DanhMuc.Where(c => ids.Contains(c.maDanhMuc)).Select(c => c.tenDanhMuc).ToList());
+                }
                 return View(model);
             }
             catch (Exception ex)
@@ -316,7 +322,7 @@ namespace ECOLearning.Controllers
 
         // POST: Profile/UpdateTeacherProfile (Cập nhật hồ sơ giáo viên và đồng bộ CSDL)
         [HttpPost]
-        public JsonResult UpdateTeacherProfile(string specialization, string bioExperience, string bankCode, string accountNumber, string accountName, HttpPostedFileBase certificateFile)
+        public JsonResult UpdateTeacherProfile(string bioExperience, string bankCode, string accountNumber, string accountName, HttpPostedFileBase certificateFile)
         {
             int? userId = GetCurrentUserId();
             if (!userId.HasValue)
@@ -371,7 +377,8 @@ namespace ECOLearning.Controllers
                     };
                 }
 
-                app.Specialization = specialization?.Trim();
+                // Teaching categories are reviewed with the application, never edited as free text.
+                app.Specialization = app.Specialization ?? "";
                 app.BioExperience = bioExperience?.Trim();
                 app.BankName = nganHang.ShortName;
                 app.AccountNumber = soTaiKhoan;

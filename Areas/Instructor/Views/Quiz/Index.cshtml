@@ -9,7 +9,7 @@
     var active = Model.Where(q => q.Active).ToList();
     var topics = Model.Select(q => q.Topic).Distinct().OrderBy(t => t).ToList();
 }
-<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=7" />
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=8" />
 <div class="question-bank">
     @if (TempData["QuizMessage"] != null) {<div class="qb-message" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i> @TempData["QuizMessage"]</div>}
     <section class="qb-course-card qb-filter-card" aria-label="Chọn khóa học">

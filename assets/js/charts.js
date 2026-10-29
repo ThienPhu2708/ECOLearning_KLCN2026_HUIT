@@ -46,7 +46,7 @@ const Charts = {
     coords.forEach(pt => {
       circles += `
         <circle cx="${pt.x}" cy="${pt.y}" r="4" fill="#FFFFFF" stroke="${strokeColor}" stroke-width="2.5" class="chart-dot" data-val="${pt.val}">
-          <title>${pt.label}: ${pt.val}</title>
+          <title>${pt.label}: ${pt.val.toLocaleString('vi-VN')}${options.unit ? ' ' + options.unit : ''}</title>
         </circle>
       `;
     });

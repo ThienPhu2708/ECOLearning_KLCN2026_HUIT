@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Web;
@@ -47,6 +47,8 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 }
             }
 
+            ViewBag.SpecialtyCategories = db.DanhMuc.Where(c => c.trangThai != false).OrderBy(c => c.tenDanhMuc).ToList();
+            ViewBag.SelectedSpecialties = Request.HttpMethod == "POST" ? (Request.Form.GetValues("categoryIds") ?? new string[0]) : new string[0];
             ViewBag.User = user;
             ViewBag.ExistingApp = existingApp;
 
@@ -56,7 +58,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
             {
                 // Tên ngân hàng cũ có thể gõ tự do ("ACB Chi nhánh Gò Mây"): nhận ra ngân hàng trong danh mục, nhắc kiểm tra lại
                 var bank = BankDirectory.DoanNganHang(existingApp.BankName);
-                form.Specialization = existingApp.Specialization;
+
                 form.BioExperience = existingApp.BioExperience;
                 form.BankCode = bank != null ? bank.Code : null;
                 form.BankNote = BankDirectory.GhiChuTenCu(existingApp.BankName, bank);
@@ -70,7 +72,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
         // POST: /Instructor/TeacherApplication/Register (Xử lý nộp hồ sơ)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Register(string specialization, string bioExperience, string bankCode, string accountNumber, string accountName, bool termsAgreed = false, HttpPostedFileBase certificateFile = null)
+        public ActionResult Register(string bioExperience, string bankCode, string accountNumber, string accountName, bool termsAgreed = false, HttpPostedFileBase certificateFile = null, string[] categoryIds = null)
         {
             int? userId = GetCurrentUserId();
             if (!userId.HasValue)
@@ -84,24 +86,27 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 return RedirectToAction("Login", "Account", new { area = "" });
             }
 
+            ViewBag.SpecialtyCategories = db.DanhMuc.Where(c => c.trangThai != false).OrderBy(c => c.tenDanhMuc).ToList();
+            ViewBag.SelectedSpecialties = Request.HttpMethod == "POST" ? (Request.Form.GetValues("categoryIds") ?? new string[0]) : new string[0];
             ViewBag.User = user;
             ViewBag.ExistingApp = TeacherApplicationService.GetByUserId(user.maNguoiDung);
             // Giữ lại giá trị đã nhập nếu phải hiện lại form vì lỗi
             ViewBag.Form = new TeacherRegisterFormViewModel
             {
-                Specialization = specialization,
+
                 BioExperience = bioExperience,
                 BankCode = bankCode,
                 AccountNumber = accountNumber,
                 AccountName = accountName
             };
 
-            // 1. Kiểm tra validation các trường thông tin
-            if (string.IsNullOrWhiteSpace(specialization))
-            {
-                ModelState.AddModelError("specialization", "Vui lòng nhập Lĩnh vực chuyên môn giảng dạy!");
-            }
+            var priorApp = TeacherApplicationService.GetByUserId(user.maNguoiDung);
+            if (user.vaiTro == "GiaoVien" || user.vaiTro == "Admin" || (priorApp != null && priorApp.Status == "Pending"))
+                return RedirectToAction("Status");
+            try { new TeacherSpecialtyService(db).ValidateSelection(categoryIds); }
+            catch (InvalidOperationException ex) { ModelState.AddModelError("categoryIds", ex.Message); }
 
+            // 1. Kiểm tra validation các trường thông tin
             if (string.IsNullOrWhiteSpace(bioExperience) || bioExperience.Trim().Length < 50)
             {
                 ModelState.AddModelError("bioExperience", "Mô tả giới thiệu bản thân & kinh nghiệm phải có tối thiểu 50 ký tự!");
@@ -185,6 +190,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 return View();
             }
 
+            // Display summary only; category IDs are the authoritative specialty selection.
+            string specialtySummary = string.Join(", ", db.DanhMuc.Where(c => categoryIds.Contains(c.maDanhMuc)).Select(c => c.tenDanhMuc).ToList());
+            if (specialtySummary.Length > 200) specialtySummary = specialtySummary.Substring(0, 197) + "...";
             // 4. Tạo bản ghi hồ sơ mới
             TeacherApplication app = new TeacherApplication
             {
@@ -193,7 +201,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 FullName = user.hoTen,
                 Email = user.email,
                 Phone = user.soDienThoai,
-                Specialization = specialization.Trim(),
+                Specialization = specialtySummary,
                 BioExperience = bioExperience.Trim(),
                 BankName = tenNganHang,
                 AccountNumber = soTaiKhoan,
@@ -205,6 +213,8 @@ namespace ECOLearning.Areas.Instructor.Controllers
             };
 
             TeacherApplicationService.Save(app);
+            try { new TeacherSpecialtyService(db).SaveRequested(app.ApplicationId, user.maNguoiDung, categoryIds); }
+            catch (InvalidOperationException ex) { ModelState.AddModelError("categoryIds", ex.Message); return View(); }
 
             return RedirectToAction("Status");
         }

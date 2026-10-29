@@ -161,10 +161,16 @@
                 <div class="tr-section">
                     <div class="tr-section-head"><span class="tr-step">2</span><h2>Năng lực chuyên môn &amp; giảng dạy</h2></div>
                     <div class="tr-field">
-                        <label class="tr-label" for="specialization">Lĩnh vực chuyên môn chính <span class="tr-req">*</span></label>
-                        <input type="text" id="specialization" name="specialization" class="tr-input @(coLoi("specialization") ? "is-invalid" : "")" maxlength="200" required
-                               value="@form.Specialization" placeholder="VD: Lập trình Web Fullstack, Thiết kế UI/UX, AI & Machine Learning..." />
-                        <span class="tr-error">@loi("specialization")</span>
+                        <label class="tr-label">Lĩnh vực đăng ký giảng dạy <span class="tr-req">*</span></label>
+                        <div id="categoryIds" tabindex="-1" role="group" aria-label="Lĩnh vực đăng ký giảng dạy" style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
+                        @foreach (var category in (ViewBag.SpecialtyCategories as List<ECOLearning.Models.DanhMuc> ?? new List<ECOLearning.Models.DanhMuc>())) {
+                            <label style="display:flex;gap:8px;align-items:center;padding:12px;border:1px solid #E2E8F0;border-radius:10px;">
+                                <input type="checkbox" name="categoryIds" value="@category.maDanhMuc" checked="@(((string[])ViewBag.SelectedSpecialties ?? new string[0]).Contains(category.maDanhMuc))" /> @category.tenDanhMuc
+                            </label>
+                        }
+                        </div>
+                        @Html.ValidationMessage("categoryIds", new { @class = "tr-error" })
+                        <small class="tr-hint">Quản trị viên sẽ xét minh chứng để duyệt lĩnh vực được phép tạo khóa học.</small>
                     </div>
                     <div class="tr-field">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -443,7 +449,7 @@
             function validate() {
                 var file = document.getElementById('certificateFile').files[0];
                 var errors = [
-                    error('specialization', document.getElementById('specialization').value.trim() ? '' : 'Vui lòng nhập lĩnh vực chuyên môn.'),
+                    error('categoryIds', form.querySelector('input[name="categoryIds"]:checked') ? '' : 'Vui lòng chọn ít nhất một lĩnh vực giảng dạy.'),
                     error('bioExperience', bio.value.trim().length >= 50 ? '' : 'Vui lòng giới thiệu bản thân và kinh nghiệm tối thiểu 50 ký tự.'),
                     error('certificateFile', !file || !file.size ? 'Vui lòng chọn tệp bằng cấp hoặc chứng chỉ.' :
                         !/\.(pdf|png|jpe?g)$/i.test(file.name) ? 'Chỉ nhận tệp PDF, PNG, JPG hoặc JPEG.' :

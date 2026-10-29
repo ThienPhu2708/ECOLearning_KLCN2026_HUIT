@@ -1,4 +1,4 @@
-@using ECOLearning.Services
+﻿@using ECOLearning.Services
 @*
     Admin / Quản lý giáo viên: giáo viên đã duyệt kèm số khóa học, học viên, đánh giá, doanh thu thực thu,
     tiền chờ chi trả và báo cáo vi phạm. Mặc định xếp những người cần chú ý (vi phạm chờ xử lý, đang bị khóa) lên đầu.
@@ -25,6 +25,7 @@
     <a href="@Url.Action("Index", "TeacherApproval")" class="btn btn-outline"><i class="bi bi-person-check me-1"></i> Hồ sơ đăng ký mới</a>
 </div>
 
+<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><a class="btn btn-outline" href="@Url.Action("Index", "TeacherSpecialty", new { area = "Admin" })">Duyệt bổ sung chuyên môn</a></div>
 @Html.Partial("_AdminFlash")
 
 @if (chuaKhoiTao)

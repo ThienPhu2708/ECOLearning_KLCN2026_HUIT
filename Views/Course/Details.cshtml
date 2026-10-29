@@ -570,19 +570,7 @@
                     }
                     <div class="d-flex align-items-center gap-1">
                         <span class="fw-bold" style="color: @(headerScore > 0 ? "#F59E0B" : "#94A3B8"); font-size: 15px;">@headerScore.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)</span>
-                        <div class="d-flex gap-1 ms-1" style="color: @(headerScore > 0 ? "#F59E0B" : "#CBD5E1");">
-                            @for (int i = 1; i <= 5; i++)
-                            {
-                                if (headerScore > 0 && i <= Math.Round(headerScore))
-                                {
-                                    <i class="bi bi-star-fill"></i>
-                                }
-                                else
-                                {
-                                    <i class="bi bi-star"></i>
-                                }
-                            }
-                        </div>
+                        @ECOLearning.Services.RatingStars.Html(headerScore, "ms-1 star-rating-dark")
                         <span class="ms-1" style="color: #CBD5E1;">(@headerReviews đánh giá)</span>
                     </div>
                     <span style="color: #475569;">•</span>

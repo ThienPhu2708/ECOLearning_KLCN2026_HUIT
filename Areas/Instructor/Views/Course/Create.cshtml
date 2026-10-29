@@ -68,9 +68,14 @@
     </div>
 </div>
 
-@if (ViewBag.LegacySpecialtyAccess != true) {
+@if (ViewBag.NeedsSpecialty == true) {
+<div style="margin-bottom:16px;padding:14px 18px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;color:#9A3412;">
+    Bạn chưa có chuyên môn được duyệt. Khóa học này vẫn giữ lĩnh vực hiện tại; muốn đổi lĩnh vực hoặc tạo khóa mới, hãy gửi đề xuất chuyên môn.
+    <a href="@Url.Action("Index", "Specialty", new { area = "Instructor" })">@(ViewBag.SpecialtyPending == true ? "Xem đề xuất đang chờ duyệt" : "Đề xuất chuyên môn")</a>
+</div>
+} else {
 <div style="margin-bottom:16px;padding:14px 18px;background:#EEF2FF;border-radius:12px;">
-    Chỉ tạo khóa học trong lĩnh vực đã được duyệt.
+    Chỉ chọn lĩnh vực đã được duyệt@(isEditing ? " (khóa có sẵn được giữ lĩnh vực hiện tại)" : "").
     <a href="@Url.Action("Index", "Specialty", new { area = "Instructor" })">Xem chuyên môn hoặc gửi yêu cầu bổ sung</a>
 </div>
 }

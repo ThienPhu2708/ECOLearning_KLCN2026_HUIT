@@ -119,7 +119,6 @@ namespace ECOLearning.Controllers
 
                 if (isTeacher) {
                     var specialty = new TeacherSpecialtyService(db);
-                    ViewBag.LegacySpecialtyAccess = specialty.IsLegacy(user.maNguoiDung);
                     var ids = specialty.Approved(user.maNguoiDung);
                     model.Specialization = string.Join(", ", db.DanhMuc.Where(c => ids.Contains(c.maDanhMuc)).Select(c => c.tenDanhMuc).ToList());
                 }

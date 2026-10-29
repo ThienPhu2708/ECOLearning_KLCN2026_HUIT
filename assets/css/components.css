@@ -804,6 +804,13 @@ html.js-course-img .course-card.is-ready .course-body {
   color: var(--status-warning);
 }
 
+/* Sao theo điểm thật (Services/RatingStars): nền xám, lớp vàng cắt theo phần trăm */
+.star-rating { display: inline-flex; align-items: center; line-height: 1; }
+.star-rating .star-cell { position: relative; display: inline-block; line-height: 1; }
+.star-rating .star-bg { color: #E2E8F0; }
+.star-rating .star-fg { position: absolute; top: 0; left: 0; height: 100%; overflow: hidden; white-space: nowrap; color: #F59E0B; }
+.star-rating-dark .star-bg { color: rgba(255, 255, 255, 0.25); }
+
 .rating-score {
   font-size: var(--fs-caption);
   font-weight: 700;

@@ -25,6 +25,100 @@
 .dashboard-stat-rating .kpi-value,.dashboard-stat-rating .dashboard-stat-icon { color:#b7791f; }
 </style>
 
+@if (ViewBag.NeedsSpecialty == true)
+{
+    bool specialtyPending = ViewBag.SpecialtyPending == true;
+    bool termsAgreed = ViewBag.ShowSpecialtyPopup != true;
+    <dialog id="specialty-notice-dialog" aria-labelledby="specialty-notice-title" data-auto-open="@(termsAgreed ? "0" : "1")">
+        <form id="specialty-notice-dismiss" action="@Url.Action("DismissNotice", "Specialty", new { area = "Instructor" })" method="post">@Html.AntiForgeryToken()<input type="hidden" name="agreed" value="true" /></form>
+        <div class="sn-view" id="sn-view-main">
+            <button type="button" class="sn-close" id="sn-close" aria-label="Đóng" @(termsAgreed ? "" : "disabled")><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+            <div class="sn-icon @(specialtyPending ? "is-pending" : "")"><i class="bi @(specialtyPending ? "bi-hourglass-split" : "bi-patch-exclamation")" aria-hidden="true"></i></div>
+            <h3 id="specialty-notice-title">@(specialtyPending ? "Đề xuất chuyên môn đang chờ duyệt" : "Bạn chưa có chuyên môn được duyệt")</h3>
+            <p>@(specialtyPending ? "Sau khi quản trị viên duyệt, bạn tạo được khóa học mới trong các lĩnh vực đó." : "Hệ thống đã áp dụng quy định giảng dạy theo chuyên môn. Hãy chọn lĩnh vực và gửi xét duyệt để tạo khóa học mới.")</p>
+            <ul class="sn-points">
+                <li><i class="bi bi-x-circle" aria-hidden="true"></i> Chưa tạo được khóa học mới cho đến khi có lĩnh vực được duyệt</li>
+                <li><i class="bi bi-check-circle" aria-hidden="true"></i> Khóa học đã tạo vẫn bán, cập nhật và nhận thanh toán bình thường</li>
+            </ul>
+            <label class="sn-agree">
+                <input type="checkbox" id="sn-agree" @(termsAgreed ? "checked" : "disabled") />
+                <span>Tôi đã đọc và đồng ý với <button type="button" class="sn-terms-inline" id="sn-open-terms" aria-controls="sn-view-terms">Điều khoản giáo viên</button></span>
+            </label>
+            <p class="sn-hint" id="sn-hint" @(termsAgreed ? "hidden" : "")>Bấm vào Điều khoản giáo viên để đọc, sau đó tích đồng ý để đóng thông báo.</p>
+            <div class="sn-actions">
+                <button type="button" class="btn btn-secondary" id="sn-later" @(termsAgreed ? "" : "disabled")>Để sau</button>
+                <a class="btn btn-primary" id="sn-propose" href="@Url.Action("Index", "Specialty", new { area = "Instructor" })">@(specialtyPending ? "Xem đề xuất" : "Đề xuất chuyên môn")</a>
+            </div>
+        </div>
+        <div class="sn-view" id="sn-view-terms" hidden>
+            <div class="sn-terms-head">
+                <button type="button" class="sn-back" id="sn-back" aria-label="Quay lại"><i class="bi bi-arrow-left" aria-hidden="true"></i></button>
+                <div><h3>Điều khoản giáo viên</h3><p>Điều khoản hợp tác đối tác giảng dạy trên E-Learning</p></div>
+            </div>
+            <div class="sn-terms-body" id="sn-terms-body" tabindex="0">
+                <div class="sn-update">
+                    <i class="bi bi-megaphone" aria-hidden="true"></i>
+                    <div><strong>Cập nhật: Chuyên môn giảng dạy</strong>Bổ sung mục 3: giáo viên chỉ tạo khóa học mới trong lĩnh vực đã được duyệt; giáo viên cũ gửi đề xuất chuyên môn, khóa học đã tạo được giữ nguyên. <button type="button" class="sn-terms-inline" id="sn-goto-specialty">Xem mục 3</button></div>
+                </div>
+                @Html.Partial("_TeacherTerms")
+            </div>
+            <div class="sn-actions">
+                <button type="button" class="btn btn-secondary" id="sn-terms-back">Quay lại</button>
+                <button type="button" class="btn btn-primary" id="sn-terms-agree">Tôi đã đọc và đồng ý</button>
+            </div>
+        </div>
+    </dialog>
+    <style>
+    #specialty-notice-dialog { position:fixed;inset:0;margin:auto;padding:0;width:500px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow:hidden;border:1px solid var(--border-color);border-radius:20px;background:var(--bg-surface,#fff);box-shadow:0 24px 64px rgba(15,23,42,.22); }
+    #specialty-notice-dialog[open] { display:flex;flex-direction:column; }
+    #specialty-notice-dialog::backdrop { background:rgba(15,23,42,.45); }
+    #specialty-notice-dialog .sn-view { position:relative;padding:28px 28px 24px;overflow:auto;min-height:0; }
+    #specialty-notice-dialog .sn-view[hidden] { display:none; }
+    #specialty-notice-dialog #sn-view-terms:not([hidden]) { display:flex;flex-direction:column; }
+    #specialty-notice-dialog .sn-close,#specialty-notice-dialog .sn-back { width:34px;height:34px;border:0;border-radius:10px;background:transparent;color:#64748B;cursor:pointer;flex-shrink:0; }
+    #specialty-notice-dialog .sn-close { position:absolute;top:14px;right:14px; }
+    #specialty-notice-dialog .sn-close:not(:disabled):hover,#specialty-notice-dialog .sn-back:hover { background:#F1F5F9; }
+    #specialty-notice-dialog .sn-close:disabled { opacity:.35;cursor:not-allowed; }
+    #specialty-notice-dialog .sn-icon { width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:26px;background:#FFF7ED;color:#C2410C;margin-bottom:16px; }
+    #specialty-notice-dialog .sn-icon.is-pending { background:#EEF2FF;color:#4338CA; }
+    #specialty-notice-dialog h3 { font-size:19px;margin:0 0 8px;padding-right:32px;color:var(--text-heading); }
+    #specialty-notice-dialog p { font-size:14px;line-height:1.6;color:var(--text-secondary);margin:0 0 14px; }
+    #specialty-notice-dialog .sn-points { list-style:none;padding:14px 16px;margin:0;background:#F8FAFC;border-radius:12px;display:grid;gap:10px; }
+    #specialty-notice-dialog .sn-points li { display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.5;color:#334155; }
+    #specialty-notice-dialog .sn-points .bi-x-circle { color:#DC2626;margin-top:2px; }
+    #specialty-notice-dialog .sn-points .bi-check-circle { color:#059669;margin-top:2px; }
+    #specialty-notice-dialog .sn-agree input:focus-visible,#specialty-notice-dialog .sn-terms-inline:focus-visible { outline:2px solid #A5B4FC;outline-offset:2px; }
+    #specialty-notice-dialog .sn-terms-inline { display:inline;padding:0;border:0;background:none;font:inherit;font-weight:700;color:#434CE8;text-decoration:underline;text-underline-offset:3px;cursor:pointer; }
+    #specialty-notice-dialog .sn-terms-inline:hover { color:#3730A3; }
+    #specialty-notice-dialog .sn-update { display:flex;gap:10px;align-items:flex-start;padding:12px 14px;margin:0 0 14px;border:1px solid #FED7AA;border-radius:12px;background:#FFF7ED;font-size:13px;line-height:1.55;color:#7C2D12; }
+    #specialty-notice-dialog .sn-update > i { color:#C2410C;font-size:17px;margin-top:1px; }
+    #specialty-notice-dialog .sn-update strong { display:block;color:#9A3412;margin-bottom:2px; }
+    #specialty-notice-dialog .sn-agree { display:flex;align-items:flex-start;gap:10px;margin-top:18px;font-size:13.5px;line-height:1.5;color:#334155;cursor:pointer; }
+    #specialty-notice-dialog .sn-agree input { width:17px;height:17px;margin-top:1px;flex-shrink:0;accent-color:#434CE8; }
+    #specialty-notice-dialog .sn-agree:has(input:disabled) { color:#94A3B8;cursor:default; }
+    #specialty-notice-dialog .sn-hint { font-size:12.5px;color:#B45309;margin:6px 0 0 27px; }
+    #specialty-notice-dialog .sn-hint.is-alert { color:#DC2626;font-weight:600; }
+    #specialty-notice-dialog .sn-actions { display:flex;justify-content:flex-end;gap:10px;margin-top:20px;flex-wrap:wrap; }
+    #specialty-notice-dialog .sn-actions .btn:disabled { opacity:.45;cursor:not-allowed; }
+    #specialty-notice-dialog .sn-terms-head { display:flex;align-items:flex-start;gap:10px;padding-bottom:14px;border-bottom:1px solid #E2E8F0; }
+    #specialty-notice-dialog .sn-terms-head h3 { margin:4px 0 2px;padding:0; }
+    #specialty-notice-dialog .sn-terms-head p { font-size:12.5px;margin:0; }
+    #specialty-notice-dialog .sn-terms-body { flex:1;min-height:0;overflow-y:auto;padding:14px 6px 4px 0;font-size:13.5px;line-height:1.65;color:#334155;max-height:52vh; }
+    #specialty-notice-dialog .sn-terms-body:focus { outline:none; }
+    #specialty-notice-dialog .sn-terms-body:focus-visible { outline:2px solid #C7D2FE;outline-offset:2px;border-radius:6px; }
+    #specialty-notice-dialog .sn-terms-body h3 { font-size:14.5px;margin:16px 0 6px;padding:0; }
+    #specialty-notice-dialog .sn-terms-body p { font-size:13.5px;color:#334155;margin:0 0 6px; }
+    #specialty-notice-dialog .sn-terms-body ul { margin:0 0 4px;padding-left:20px;list-style:disc; }
+    #specialty-notice-dialog .sn-terms-body li { margin-bottom:4px; }
+    #specialty-notice-dialog .sn-terms-body li::marker { color:#434CE8; }
+    #specialty-notice-dialog .tr-terms-highlight { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 6px; }
+    #specialty-notice-dialog .tr-terms-highlight div { padding:10px;border-radius:12px;background:#EEF2FF;text-align:center; }
+    #specialty-notice-dialog .tr-terms-highlight strong { display:block;font-size:17px;font-weight:800;color:#434CE8; }
+    #specialty-notice-dialog .tr-terms-highlight span { font-size:12px;color:#475569; }
+    @@media (max-width:520px) { #specialty-notice-dialog .sn-view { padding:22px 18px 18px; } #specialty-notice-dialog .tr-terms-highlight { grid-template-columns:1fr; } #specialty-notice-dialog .sn-actions .btn { flex:1; } }
+    </style>
+}
+
 <!-- Page Header -->
 <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 28px;">
     <div>
@@ -289,6 +383,56 @@
 
 @section Scripts {
 <script>
+// Popup chuyên môn: tự mở sau 3 giây, một lần mỗi phiên đăng nhập. Phải mở "Điều khoản giáo viên" và tích đồng ý
+// mới đóng được (nút ✕, "Để sau", Esc); khi đóng, server ghi nhận vào Session (Specialty/DismissNotice).
+// Nút tạo khóa học trên trang luôn mở lại popup khi chưa có chuyên môn được duyệt (server cũng chặn trang tạo khóa).
+(function () {
+    var dialog = document.getElementById('specialty-notice-dialog');
+    if (!dialog) return;
+    var byId = function (id) { return document.getElementById(id); };
+    var main = byId('sn-view-main'), terms = byId('sn-view-terms'), agree = byId('sn-agree'), hint = byId('sn-hint');
+    var saved = dialog.getAttribute('data-auto-open') !== '1';
+    function agreed() { return agree.checked; }
+    function sync() {
+        byId('sn-close').disabled = !agreed();
+        byId('sn-later').disabled = !agreed();
+        hint.hidden = agreed();
+    }
+    function showView(v) {
+        main.hidden = v !== 'main'; terms.hidden = v !== 'terms';
+        if (v === 'terms') { byId('sn-terms-body').scrollTop = 0; byId('sn-terms-body').focus(); }
+    }
+    function remind() { showView('main'); hint.hidden = false; hint.classList.add('is-alert'); }
+    function tryClose() { if (agreed()) dialog.close(); else remind(); }
+    function save() {
+        if (saved) return;
+        saved = true;
+        var form = byId('specialty-notice-dismiss');
+        try { fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin' }); } catch (e) { }
+    }
+    byId('sn-open-terms').addEventListener('click', function (e) { e.preventDefault(); agree.disabled = false; showView('terms'); });
+    byId('sn-goto-specialty').addEventListener('click', function () {
+        var body = byId('sn-terms-body'), target = byId('terms-specialty');
+        if (target) body.scrollTop = target.offsetTop - body.offsetTop - 8;
+    });
+    byId('sn-back').addEventListener('click', function () { showView('main'); });
+    byId('sn-terms-back').addEventListener('click', function () { showView('main'); });
+    byId('sn-terms-agree').addEventListener('click', function () { agree.disabled = false; agree.checked = true; hint.classList.remove('is-alert'); sync(); showView('main'); });
+    agree.addEventListener('change', function () { hint.classList.remove('is-alert'); sync(); });
+    byId('sn-close').addEventListener('click', tryClose);
+    byId('sn-later').addEventListener('click', tryClose);
+    byId('sn-propose').addEventListener('click', function (e) { if (!agreed()) { e.preventDefault(); remind(); } else save(); });
+    dialog.addEventListener('cancel', function (e) { if (!agreed()) { e.preventDefault(); remind(); } });
+    dialog.addEventListener('close', function () {
+        if (!agreed()) { dialog.showModal(); return; }
+        save(); showView('main');
+    });
+    var createUrl = '@Url.Action("Create", "Course", new { area = "Instructor" })';
+    document.querySelectorAll('a[href="' + createUrl + '"]').forEach(function (a) {
+        a.addEventListener('click', function (e) { e.preventDefault(); if (!dialog.open) dialog.showModal(); });
+    });
+    if (!saved) setTimeout(function () { if (!dialog.open) dialog.showModal(); }, 3000);
+})();
     function toggleCustomDropdown(e) {
         e.stopPropagation();
         var menu = document.getElementById('revenue-chart-menu');

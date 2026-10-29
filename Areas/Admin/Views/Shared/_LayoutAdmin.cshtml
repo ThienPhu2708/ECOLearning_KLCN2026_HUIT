@@ -145,6 +145,11 @@
                     Duyệt hồ sơ Giáo viên
                     @ChamDo("teachers", choXuLy.GiaoVien, "hồ sơ")
                 </a>
+                <a href="@Url.Action("Index", "TeacherSpecialty", new { area = "Admin" })" class="sidebar-item @(currentController == "TeacherSpecialty" ? "active" : "")">
+                    <i class="bi bi-patch-plus" style="font-size: 17px; width: 18px; text-align: center;"></i>
+                    Yêu cầu bổ sung chuyên môn
+                    @ChamDo("specialties", choXuLy.ChuyenMon, "yêu cầu")
+                </a>
                 <a href="@Url.Action("Index", "ViolationReport", new { area = "Admin" })" class="sidebar-item @(currentController == "ViolationReport" ? "active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>

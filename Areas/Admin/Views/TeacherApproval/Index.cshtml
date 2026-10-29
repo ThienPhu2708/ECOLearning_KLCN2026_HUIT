@@ -5,7 +5,6 @@ Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
 string currentFilter = ViewBag.StatusFilter as string ?? "All";
 }
 
-<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><a class="btn btn-outline" href="@Url.Action("Index", "TeacherSpecialty", new { area = "Admin" })">Yêu cầu bổ sung chuyên môn</a></div>
 <style>
     .modal-overlay {
         transition: opacity 0.25s ease, visibility 0.25s ease;

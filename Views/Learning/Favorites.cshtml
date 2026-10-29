@@ -71,8 +71,8 @@
                                 <div class="course-rating">
                                     @if (item.SoDanhGia > 0)
                                     {
-                                        <span class="rating-score">@item.DiemDanhGia.ToString("0.00")</span>
-                                        <div class="stars" style="color: #F59E0B;"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
+                                        <span class="rating-score">@item.DiemDanhGia.ToString("0.0")</span>
+                                        @ECOLearning.Services.RatingStars.Html(item.DiemDanhGia)
                                         <span class="rating-count">(@item.SoDanhGia)</span>
                                     }
                                     else

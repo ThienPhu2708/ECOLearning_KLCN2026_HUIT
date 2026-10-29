@@ -23,7 +23,18 @@ namespace ECOLearning.Services {
   void Ready() {if(!Installed()) throw new InvalidOperationException("Chưa cài đặt quản lý chuyên môn. Cần chạy migration 022_TeacherSpecialties.sql.");}
   public List<string> Approved(int teacher) {return !Installed()?new List<string>():db.Database.SqlQuery<string>("SELECT CategoryId FROM dbo.TeacherSpecialty WHERE TeacherId=@p0",teacher).ToList();}
   public bool IsLegacy(int teacher) {return Installed() && db.Database.SqlQuery<int>("SELECT COUNT(*) FROM dbo.TeacherSpecialtyPolicy WHERE TeacherId=@p0 AND LegacyAccess=1",teacher).Single()==1;}
-  public List<string> Allowed(int teacher) {return IsLegacy(teacher)?db.DanhMuc.Where(c=>c.trangThai!=false).Select(c=>c.maDanhMuc).ToList():Approved(teacher);}
+  // Mọi giáo viên (kể cả giáo viên cũ) chỉ chọn lĩnh vực đã được duyệt cho khóa mới hoặc khi đổi lĩnh vực.
+  public List<string> Allowed(int teacher) {return Approved(teacher);}
+  // Giáo viên chưa có lĩnh vực nào được duyệt: không tạo được khóa mới, cần gửi đề xuất chuyên môn.
+  public bool NeedsSpecialty(int teacher) {return Installed() && !Approved(teacher).Any();}
+  public bool HasPending(int teacher) {return Installed() && db.Database.SqlQuery<int>("SELECT COUNT(*) FROM dbo.TeacherSpecialtyRequest WHERE TeacherId=@p0 AND Status='Pending'",teacher).Single()>0;}
+  // Lĩnh vực của các khóa giáo viên đã tạo nhưng chưa được duyệt: gợi ý tích sẵn khi giáo viên cũ đề xuất chuyên môn.
+  public List<string> SuggestedFromCourses(int teacher) {
+   var approved=Approved(teacher);
+   var active=db.DanhMuc.Where(c=>c.trangThai!=false).Select(c=>c.maDanhMuc).ToList();
+   return db.KhoaHoc.Where(k=>k.maGiaoVien==teacher&&k.trangThai!=CourseStatus.DaXoa&&k.maDanhMuc!=null).Select(k=>k.maDanhMuc).Distinct().ToList()
+    .Where(id=>!approved.Contains(id)&&active.Contains(id)).ToList();
+  }
   public List<string> Requested(string app) {return !Installed()?new List<string>():db.Database.SqlQuery<string>("SELECT CategoryId FROM dbo.TeacherApplicationSpecialty WHERE ApplicationId=@p0",app).ToList();}
   List<string> Validate(IEnumerable<string> categories) {
    Ready();var ids=(categories??Enumerable.Empty<string>()).Where(x=>!string.IsNullOrWhiteSpace(x)).Distinct().ToList();
@@ -33,7 +44,10 @@ namespace ECOLearning.Services {
   }
   void Admin(int id) {if(!db.NguoiDung.Any(u=>u.maNguoiDung==id&&u.vaiTro=="Admin"&&u.trangThai!=false)) throw new InvalidOperationException("Không có quyền duyệt chuyên môn.");}
   void Teacher(int id) {if(!db.NguoiDung.Any(u=>u.maNguoiDung==id&&(u.vaiTro=="GiaoVien"||u.vaiTro=="Giáo viên")&&u.trangThai!=false)) throw new InvalidOperationException("Giáo viên không còn hoạt động.");}
-  public void Require(int teacher,string category) {
+  // currentCategory: lĩnh vực đang lưu của khóa có sẵn. Khóa tạo trước khi áp dụng chuyên môn được giữ nguyên lĩnh vực đó
+  // (vẫn sửa, gửi duyệt bản sửa bình thường); chỉ khi đổi sang lĩnh vực khác mới phải thuộc lĩnh vực đã duyệt.
+  public void Require(int teacher,string category,string currentCategory=null) {
+   if(!string.IsNullOrEmpty(category) && category==currentCategory) return;
    Ready();
    if(!Allowed(teacher).Contains(category) || !db.DanhMuc.Any(c=>c.maDanhMuc==category&&c.trangThai!=false))
     throw new InvalidOperationException("Danh mục khóa học chưa thuộc lĩnh vực được duyệt của bạn. Vào Chuyên môn giảng dạy để gửi yêu cầu hoặc liên hệ quản trị viên.");
@@ -73,6 +87,10 @@ namespace ECOLearning.Services {
    if(!Installed()) return new List<TeacherSpecialtyRequest>();
    return teacher.HasValue?db.Database.SqlQuery<TeacherSpecialtyRequest>("SELECT * FROM dbo.TeacherSpecialtyRequest WHERE TeacherId=@p0 ORDER BY CreatedAt DESC",teacher.Value).ToList():db.Database.SqlQuery<TeacherSpecialtyRequest>("SELECT * FROM dbo.TeacherSpecialtyRequest WHERE Status='Pending' ORDER BY CreatedAt").ToList();
   }
+  // Mọi yêu cầu bổ sung chuyên môn (mới nhất trước) cho trang Admin "Yêu cầu bổ sung chuyên môn"
+  public List<TeacherSpecialtyRequest> AllRequests() {
+   return !Installed()?new List<TeacherSpecialtyRequest>():db.Database.SqlQuery<TeacherSpecialtyRequest>("SELECT * FROM dbo.TeacherSpecialtyRequest ORDER BY CreatedAt DESC").ToList();
+  }
   public void Submit(int teacher,IEnumerable<string> categories,string evidence,string description) {
    var ids=Validate(categories);Teacher(teacher);
    if(string.IsNullOrWhiteSpace(evidence)||string.IsNullOrWhiteSpace(description)||description.Length>2000) throw new InvalidOperationException("Vui lòng bổ sung minh chứng và mô tả (tối đa 2000 ký tự).");
@@ -89,7 +107,9 @@ namespace ECOLearning.Services {
     var row=db.Database.SqlQuery<TeacherSpecialtyRequest>("SELECT * FROM dbo.TeacherSpecialtyRequest WITH(UPDLOCK,HOLDLOCK) WHERE Id=@p0 AND TeacherId=@p1 AND Status='Pending'",id,teacher).SingleOrDefault();
     if(row==null) throw new InvalidOperationException("Yêu cầu đã được xử lý hoặc không tồn tại.");
     List<string> granted=null;
-    if(approve) {Teacher(teacher);var ids=Validate(categories);granted=ids;if(ids.Except(row.CategoryIds).Any()) throw new InvalidOperationException("Lĩnh vực được duyệt phải thuộc yêu cầu.");Grant(teacher,ids,admin);}
+    if(approve) {Teacher(teacher);var ids=Validate(categories);granted=ids;if(ids.Except(row.CategoryIds).Any()) throw new InvalidOperationException("Lĩnh vực được duyệt phải thuộc yêu cầu.");Grant(teacher,ids,admin);
+     // Giáo viên cũ được duyệt chuyên môn lần đầu: từ đây theo quy tắc chuyên môn như giáo viên mới.
+     db.Database.ExecuteSqlCommand("UPDATE dbo.TeacherSpecialtyPolicy SET LegacyAccess=0 WHERE TeacherId=@p0",teacher);}
     else if(string.IsNullOrWhiteSpace(reason)||reason.Length>2000) throw new InvalidOperationException("Vui lòng nhập lý do từ chối (tối đa 2000 ký tự).");
     db.Database.ExecuteSqlCommand("UPDATE dbo.TeacherSpecialtyRequest SET Status=@p1,Reason=@p2,ReviewedBy=@p3,ReviewedAt=GETDATE(),ApprovedCategories=@p4 WHERE Id=@p0",id,approve?"Approved":"Rejected",(object)reason??DBNull.Value,admin,(object)(granted==null?null:JsonConvert.SerializeObject(granted))??DBNull.Value);
     tx.Commit();

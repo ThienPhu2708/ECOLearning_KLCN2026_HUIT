@@ -101,10 +101,12 @@ namespace ECOLearning.Areas.Instructor.Controllers
         private List<SelectListItem> BuildCategoryOptions(string currentCategoryId = null)
         {
             var specialty = new TeacherSpecialtyService(db);
-            ViewBag.LegacySpecialtyAccess = specialty.IsLegacy(CurrentTeacherId);
             var allowed = specialty.Allowed(CurrentTeacherId);
+            ViewBag.NeedsSpecialty = specialty.NeedsSpecialty(CurrentTeacherId);
+            ViewBag.SpecialtyPending = specialty.HasPending(CurrentTeacherId);
+            // Khóa có sẵn giữ được lĩnh vực hiện tại dù chưa thuộc chuyên môn đã duyệt (khóa tạo trước khi áp dụng chuyên môn)
             return db.DanhMuc
-                .Where(c => allowed.Contains(c.maDanhMuc))
+                .Where(c => allowed.Contains(c.maDanhMuc) || c.maDanhMuc == currentCategoryId)
                 .Where(c => c.trangThai == null || c.trangThai == true || c.maDanhMuc == currentCategoryId)
                 .OrderBy(c => c.tenDanhMuc)
                 .ToList()
@@ -119,7 +121,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
         // Danh mục được chọn phải tồn tại và đang hoạt động (trừ khi giữ nguyên danh mục cũ của khóa học)
         private void ValidateCategory(string maDanhMuc, string currentCategoryId = null)
         {
-            try { new TeacherSpecialtyService(db).Require(CurrentTeacherId, maDanhMuc); }
+            try { new TeacherSpecialtyService(db).Require(CurrentTeacherId, maDanhMuc, currentCategoryId); }
             catch (InvalidOperationException ex) { ModelState.AddModelError("MaDanhMuc", ex.Message); return; }
             if (string.IsNullOrEmpty(maDanhMuc))
             {
@@ -221,6 +223,12 @@ namespace ECOLearning.Areas.Instructor.Controllers
         // GET: Instructor/Course/Create
         public ActionResult Create()
         {
+            // Chưa có lĩnh vực nào được duyệt (giáo viên cũ chưa đề xuất chuyên môn): đưa sang trang đề xuất thay vì mở form trống danh mục
+            if (new TeacherSpecialtyService(db).NeedsSpecialty(CurrentTeacherId))
+            {
+                TempData["SpecialtyMessage"] = "Bạn chưa có chuyên môn được duyệt nên chưa tạo được khóa học mới. Hãy gửi đề xuất chuyên môn bên dưới. Các khóa học đã tạo vẫn quản lý và cập nhật bình thường.";
+                return RedirectToAction("Index", "Specialty");
+            }
             var model = new CourseCreateOrEditViewModel();
             model.Categories = BuildCategoryOptions();
 
@@ -601,8 +609,6 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 return RedirectToAction("Edit", new { id });
             }
 
-            try { new TeacherSpecialtyService(db).Require(teacherId, course.maDanhMuc); }
-            catch (InvalidOperationException ex) { TempData["ErrorMessage"] = ex.Message; return RedirectToAction("Index"); }
 
             // Kiểm tra nội dung đã lưu: có chương, có bài, mỗi bài có video còn tồn tại (CourseContentService)
             var thieu = new CourseContentService(db, Server.MapPath).KiemTraKhoaHoc(course.maKhoaHoc);

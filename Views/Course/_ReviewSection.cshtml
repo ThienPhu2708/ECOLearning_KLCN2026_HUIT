@@ -12,12 +12,7 @@
     <div class="rv-summary">
         <div class="rv-score">
             <div class="rv-score-num">@Model.DiemTrungBinh.ToString("0.0")</div>
-            <div class="rv-stars rv-stars-lg" aria-hidden="true">
-                @for (int i = 1; i <= 5; i++)
-                {
-                    <i class="bi @(Model.TongSo > 0 && i <= Math.Round(Model.DiemTrungBinh) ? "bi-star-fill" : "bi-star")"></i>
-                }
-            </div>
+            @ECOLearning.Services.RatingStars.Html(Model.TongSo > 0 ? Model.DiemTrungBinh : 0, "rv-stars rv-stars-lg")
             <div class="rv-score-count">@Model.TongSo.ToString("N0") lượt đánh giá</div>
         </div>
         <div class="rv-bars">

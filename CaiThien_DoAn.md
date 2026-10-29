@@ -1289,7 +1289,44 @@ nên giáo viên tải tài liệu lên là cả web và app thấy ngay, không
   theo tài khoản), K1–K3 (gọi Gemini thật, lịch sử 1 lượt, tài khoản khác không thấy, xóa lịch sử). Chưa chạy: gửi email liên hệ thật
   (`--send-email`), giới hạn 429 (cần gửi thật nhiều lần), A12 với token Google thật (thử bằng app).
 
-## 38. Việc còn lại / cần quyết định
+## 38. Hiển thị sao đánh giá theo đúng điểm + giáo viên cũ theo chuyên môn (**chưa commit**)
+
+- **Sao đánh giá**: thẻ khóa học vẽ cứng 5 sao vàng, trang chi tiết dùng `Math.Round` (4,5 làm tròn về 4). Thêm `Services/RatingStars.cs`
+  (nền xám + lớp vàng cắt theo % điểm, làm tròn 10%) dùng ở `_CourseCard`, `_RecommendedCourseCard`, `Home/Index`, `Favorites`,
+  phần đầu `Course/Details` (biến thể `star-rating-dark`) và `_ReviewSection`. Điểm trên thẻ hiện 1 chữ số thập phân. `components.css?v=3.0`.
+- **Giáo viên cũ (legacy) theo chuyên môn**:
+  - `TeacherSpecialtyService.Allowed` = chỉ lĩnh vực đã duyệt (bỏ quyền "mọi lĩnh vực" của legacy).
+  - `Require(teacher, category, currentCategory)`: khóa có sẵn giữ nguyên lĩnh vực hiện tại (vẫn sửa, gửi bản sửa, Admin duyệt bình thường);
+    đổi sang lĩnh vực khác phải thuộc lĩnh vực đã duyệt. Bỏ kiểm tra chuyên môn ở `SubmitForApproval` và Admin `Approve` (lĩnh vực đã được
+    kiểm tra lúc tạo / sửa).
+  - Chưa có lĩnh vực nào được duyệt: `Course/Create` chuyển sang trang Chuyên môn giảng dạy kèm thông báo; Dashboard giáo viên hiện **popup**
+    "Bạn chưa có chuyên môn được duyệt" (hoặc "đang chờ duyệt"), tự mở **sau 3 giây**, một lần mỗi phiên đăng nhập. Dòng
+    "Tôi đã đọc và đồng ý với **Điều khoản giáo viên**" có chữ "Điều khoản giáo viên" là link mở điều khoản ngay trong popup (đầu trang có
+    khung "Cập nhật: Chuyên môn giảng dạy" + nút "Xem mục 3"); phải mở điều khoản và tích đồng ý thì nút ✕ / "Để sau" / Esc mới đóng được. Khi đóng gọi `Specialty/DismissNotice?agreed=true` (thiếu `agreed` → 400), lưu `Session["SpecialtyNoticeDismissed"]`.
+    Nút "Tạo khóa học mới" luôn mở lại popup. **Đã gửi đề xuất (đang chờ duyệt)** thì popup không tự hiện nữa, kể cả đăng nhập lại
+    (gửi đề xuất cũng ghi nhận đã đồng ý điều khoản); **đã được duyệt** thì không còn popup; **bị từ chối** thì popup hiện lại để gửi lại. Nội dung điều khoản tách ra `Areas/Instructor/Views/Shared/_TeacherTerms.cshtml`, dùng chung
+    với form đăng ký giáo viên; thêm mục **3. Chuyên môn giảng dạy** (đăng ký / duyệt từng lĩnh vực, đề xuất bổ sung, giáo viên cũ, giữ
+    lĩnh vực khóa cũ, đổi lĩnh vực, xử lý sai lĩnh vực), các mục sau đánh số lại 4–9.
+    Kiểm thử: server 11/11, Edge headless qua DevTools Protocol 18/18.
+  - Trang Chuyên môn giảng dạy hiện form "Đề xuất chuyên môn" cho giáo viên cũ, tích sẵn lĩnh vực của các khóa đang có.
+  - Form **điền sẵn thông tin đã kê khai**: kinh nghiệm + chứng chỉ lấy từ đề xuất chuyên môn gần nhất, chưa có thì từ hồ sơ đăng ký
+    giáo viên (`DangKyGiaoVien.kinhNghiem`, `tepChungChi`). Giáo viên giữ nguyên để gửi luôn, sửa / bổ sung phần kinh nghiệm, hoặc tải
+    tệp mới để thay minh chứng (không bắt buộc). Không tải tệp thì máy chủ dùng lại chứng chỉ cũ (đường dẫn lấy từ CSDL, chỉ khi tệp còn
+    trên máy chủ). Kiểm thử 13/13.
+  - Admin duyệt yêu cầu đầu tiên → `LegacyAccess = 0`. Không cần migration mới.
+  - Admin: tab menu riêng **"Yêu cầu bổ sung chuyên môn"** (`Admin/TeacherSpecialty`) tách khỏi "Duyệt hồ sơ Giáo viên" (bỏ nút dẫn ở trang
+    đó), có chấm đỏ (`AdminPendingCounts.ChuyenMon`, `PendingCounts.specialties`), thẻ đếm Chờ duyệt / Đã duyệt / Đã từ chối, lọc trạng thái
+    (mặc định Chờ duyệt, cũ nhất trước), bảng: mã, giáo viên, lĩnh vực đề xuất (+ lĩnh vực được duyệt), minh chứng, ngày gửi / xử lý, nút
+    "Xét duyệt" → trang Manage (breadcrumb quay về tab này). Test 45/45 (thêm 7 bài cho tab Admin).
+    Kết quả duyệt / từ chối / lỗi ở trang Manage hiện bằng **thông báo nổi tự tắt** (`showToast` của `assets/js/app.js`, ~3,5 giây),
+    không còn khung thông báo cố định. Trang Manage: bỏ nút "Danh sách yêu cầu bổ sung"; cột phải xếp "Phạm vi giảng dạy" (rút gọn) rồi
+    card "Yêu cầu bổ sung chuyên môn" (yêu cầu chờ duyệt kèm form duyệt, yêu cầu đã xử lý dạng dòng gọn: mã, ngày, trạng thái, lĩnh vực,
+    phản hồi, minh chứng); không còn khoảng trống dưới card. `teacher-specialty.css?v=3`.
+  - 6 giáo viên cũ trên CSDL **không tạo được khóa mới** cho đến khi gửi đề xuất và được duyệt; tài khoản dùng demo nên được duyệt trước.
+- **Kiểm thử**: `Tests/Run-TeacherSpecialtyTests.ps1` **39/39** (sửa các bài kiểm tra hành vi legacy cũ, thêm 7 bài mới); kiểm thử giao diện
+  bằng tài khoản `bao.pham` **8/8**. Đã chạy migration 019 trên CSDL local; `Run-CourseRevisionTests.ps1` **26/26**.
+
+## 39. Việc còn lại / cần quyết định
 
 | Việc | Ghi chú |
 | :--- | :--- |

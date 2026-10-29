@@ -285,6 +285,7 @@
     <Compile Include="Services\CourseContentService.cs" />
     <Compile Include="Services\CourseLifecycleService.cs" />
     <Compile Include="Services\CourseOutcomes.cs" />
+    <Compile Include="Services\RatingStars.cs" />
     <Compile Include="Services\CourseRevisionService.cs" />
     <Compile Include="Areas\Admin\Controllers\CourseRevisionController.cs" />
     <Compile Include="Services\SlugHelper.cs" />
@@ -749,6 +750,7 @@
     <!-- View, font, thư viện từng bị mất khỏi project: thiếu thì Publish không đưa lên hosting -->
     <Content Include="Areas\Admin\Views\TeacherApproval\Index.cshtml" />
     <Content Include="Areas\Instructor\Views\TeacherApplication\Register.cshtml" />
+    <Content Include="Areas\Instructor\Views\Shared\_TeacherTerms.cshtml" />
     <Content Include="Areas\Instructor\Views\TeacherApplication\Status.cshtml" />
     <Content Include="Views\Course\Details.cshtml" />
     <Content Include="Views\Course\Index.cshtml" />

@@ -159,6 +159,16 @@ namespace ECOLearning.Areas.Instructor.Controllers
             // Số khóa học đang bị tạm khóa do vi phạm và chờ giáo viên xử lý
             ViewBag.ViolationWaitingCount = new ECOLearning.Services.ViolationReportService(db).CountWaitingForTeacher(teacherId);
 
+            // Giáo viên chưa có chuyên môn được duyệt (giáo viên cũ): nhắc gửi đề xuất để tạo khóa mới
+            var specialty = new ECOLearning.Services.TeacherSpecialtyService(db);
+            bool needsSpecialty = specialty.NeedsSpecialty(teacherId);
+            ViewBag.NeedsSpecialty = needsSpecialty;
+            bool specialtyPending = needsSpecialty && specialty.HasPending(teacherId);
+            ViewBag.SpecialtyPending = specialtyPending;
+            // Tự mở popup (bắt đồng ý điều khoản) chỉ khi chưa gửi đề xuất và chưa tắt trong phiên này.
+            // Đã gửi đề xuất (đang chờ duyệt) = đã đồng ý điều khoản: không tự hiện lại; nút "Tạo khóa học mới" vẫn mở popup "đang chờ duyệt".
+            ViewBag.ShowSpecialtyPopup = needsSpecialty && !specialtyPending && Session[SpecialtyController.NoticeDismissedKey] == null;
+
             ViewBag.BreadcrumbCurrent = "Dashboard tổng quan";
             return View(model);
         }

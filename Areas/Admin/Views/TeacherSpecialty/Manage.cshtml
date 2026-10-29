@@ -10,13 +10,12 @@
     string avatar = string.IsNullOrWhiteSpace(teacher.anhDaiDien) ? null : (teacher.anhDaiDien.StartsWith("http") ? teacher.anhDaiDien : Url.Content("~/" + teacher.anhDaiDien.TrimStart('~', '/')));
     string initial = string.IsNullOrWhiteSpace(teacher.hoTen) ? "G" : teacher.hoTen.Trim().Substring(0, 1).ToUpper();
 }
-<link rel="stylesheet" href="~/assets/css/teacher-specialty.css?v=2" />
+<link rel="stylesheet" href="~/assets/css/teacher-specialty.css?v=3" />
 <div class="specialty-page sp-manage">
     <header class="sp-page-heading">
         <div><h2>Chuyên môn giảng dạy</h2><p>Xét duyệt lĩnh vực giáo viên được phép tạo khóa học.</p></div>
         <a class="btn btn-outline" href="@Url.Action("Details", "Teacher", new { id = teacher.maNguoiDung })"><i class="bi bi-person-vcard" aria-hidden="true"></i> Hồ sơ giáo viên</a>
     </header>
-    @if (TempData["SpecialtyMessage"] != null) {<div class="sp-message" role="status">@TempData["SpecialtyMessage"]</div>}
     <div class="sp-manage-grid">
         <aside class="sp-card sp-profile-card">
             <div class="sp-teacher">
@@ -36,42 +35,53 @@
                 @if (approved.Any()) {
                     <div class="sp-approved-list">@foreach (var c in categories.Where(c => approved.Contains(c.maDanhMuc))) {<div><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>@c.tenDanhMuc @(c.trangThai == false ? "(tạm ngưng)" : "")</span></div>}</div>
                 } else {
-                    <div class="sp-empty-permission"><i class="bi bi-patch-check" aria-hidden="true"></i><p>@(ViewBag.Legacy == true ? "Không yêu cầu chọn lại lĩnh vực." : "Chưa có lĩnh vực được duyệt.")</p></div>
+                    <div class="sp-empty-permission"><i class="bi bi-patch-check" aria-hidden="true"></i><p>@(ViewBag.Legacy == true ? "Giáo viên cũ chưa đề xuất chuyên môn." : "Chưa có lĩnh vực được duyệt.")</p></div>
                 }
             </div>
         </aside>
-        <section class="sp-card sp-assignment-card">
-            <div class="sp-section-heading"><h3>Phạm vi giảng dạy</h3><span class="sp-soft-icon"><i class="bi bi-patch-check" aria-hidden="true"></i></span></div>
-            @if (ViewBag.Legacy == true) {<p>Tài khoản giáo viên hiện có tiếp tục tạo và quản lý khóa học như trước, không cần xác nhận lại chuyên môn.</p>}
-            else {<p>Lĩnh vực được duyệt cùng hồ sơ đăng ký giảng dạy. Nếu giáo viên gửi yêu cầu bổ sung, quản trị viên xét duyệt bên dưới.</p>}
-            <a class="btn btn-outline" href="@Url.Action("Index", "TeacherSpecialty")">Danh sách yêu cầu bổ sung</a>
-        </section>
+        <div class="sp-main-col">
+            <section class="sp-card sp-assignment-card">
+                <div class="sp-section-heading"><h3>Phạm vi giảng dạy</h3><span class="sp-soft-icon"><i class="bi bi-patch-check" aria-hidden="true"></i></span></div>
+                @if (ViewBag.Legacy == true) {<p>Giáo viên cũ: khóa học đã tạo giữ nguyên lĩnh vực. Cần được duyệt chuyên môn để tạo khóa học mới.</p>}
+                else {<p>Lĩnh vực được duyệt cùng hồ sơ đăng ký giảng dạy. Yêu cầu bổ sung được xét duyệt bên dưới.</p>}
+            </section>
+            <section class="sp-card sp-requests-card">
+                <div class="sp-section-heading"><h3>Yêu cầu bổ sung chuyên môn</h3><span class="sp-number">@Model.Count</span></div>
+                @if (!Model.Any()) {<p class="sp-req-empty">Giáo viên chưa gửi yêu cầu bổ sung chuyên môn.</p>}
+                @foreach (var r in Model.Where(x => x.Status == "Pending")) {
+                    <div class="sp-req is-pending">
+                        <div class="sp-req-head"><span class="sp-req-meta"><strong>#@r.Id</strong> · @r.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span><span class="sp-request-status is-pending">Chờ duyệt</span></div>
+                        <p class="sp-req-desc">@r.Description</p>
+                        <a class="sp-text-link" href="@Url.Content(r.EvidenceUrl)" target="_blank" rel="noopener"><i class="bi bi-paperclip" aria-hidden="true"></i> Xem minh chứng đính kèm <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>
+                        <form method="post" action="@Url.Action("Review")" class="sp-select-form">
+                            @Html.AntiForgeryToken()<input type="hidden" name="id" value="@r.Id" /><input type="hidden" name="teacherId" value="@teacher.maNguoiDung" />
+                            <span class="sp-label">LĨNH VỰC ĐỀ XUẤT</span>
+                            <div class="sp-grid sp-category-grid">@foreach (var c in categories.Where(c => r.CategoryIds.Contains(c.maDanhMuc))) {<label class="sp-choice"><input type="checkbox" name="categoryIds" value="@c.maDanhMuc" disabled="@(c.trangThai == false)" /><span>@c.tenDanhMuc @(c.trangThai == false ? "(tạm ngưng)" : "")</span></label>}</div>
+                            <label for="reason-@r.Id">Phản hồi xét duyệt <span class="sp-optional">Bắt buộc khi từ chối</span></label>
+                            <textarea class="form-control" name="reason" id="reason-@r.Id" maxlength="2000" placeholder="Ghi rõ nội dung cần bổ sung hoặc lý do từ chối…"></textarea>
+                            <div class="sp-form-footer"><span class="sp-selected-count" aria-live="polite">Chưa chọn lĩnh vực</span><div class="sp-footer-actions"><button name="approve" value="false" class="btn btn-outline">Từ chối yêu cầu</button><button name="approve" value="true" class="btn btn-primary">Duyệt lĩnh vực đã chọn</button></div></div>
+                        </form>
+                    </div>
+                }
+                @foreach (var r in Model.Where(x => x.Status != "Pending")) {
+                    <div class="sp-req">
+                        <div class="sp-req-head"><span class="sp-req-meta"><strong>#@r.Id</strong> · @r.CreatedAt.ToString("dd/MM/yyyy HH:mm")@(r.ReviewedAt.HasValue ? " · xử lý " + r.ReviewedAt.Value.ToString("dd/MM/yyyy") : "")</span><span class="sp-request-status @(r.Status == "Approved" ? "is-approved" : "is-rejected")">@(r.Status == "Approved" ? "Đã duyệt" : "Đã từ chối")</span></div>
+                        <div class="sp-tags">@foreach (var c in categories.Where(c => (r.Status == "Approved" ? r.GrantedCategoryIds : r.CategoryIds).Contains(c.maDanhMuc))) {<span class="sp-tag">@c.tenDanhMuc</span>}</div>
+                        @if (!string.IsNullOrWhiteSpace(r.Reason)) {<p class="sp-req-reason"><strong>Phản hồi:</strong> @r.Reason</p>}
+                        <a class="sp-text-link" href="@Url.Content(r.EvidenceUrl)" target="_blank" rel="noopener"><i class="bi bi-paperclip" aria-hidden="true"></i> Minh chứng</a>
+                    </div>
+                }
+            </section>
+        </div>
     </div>
-    @if (Model.Any()) {
-        <div class="sp-section-heading sp-requests-heading"><h3>Yêu cầu bổ sung chuyên môn</h3><span class="sp-number">@Model.Count</span></div>
-    }
-    @foreach (var r in Model) {
-        <section class="sp-card sp-request-card">
-            <div class="sp-section-heading"><div><h3>Yêu cầu #@r.Id</h3><p class="sp-request-date">@r.CreatedAt.ToString("dd/MM/yyyy · HH:mm")</p></div><span class="sp-request-status @(r.Status == "Pending" ? "is-pending" : r.Status == "Approved" ? "is-approved" : "is-rejected")">@(r.Status == "Pending" ? "Chờ duyệt" : r.Status == "Approved" ? "Đã duyệt" : "Đã từ chối")</span></div>
-            <div class="sp-request-detail"><p class="sp-description">@r.Description</p><a class="sp-text-link" href="@Url.Content(r.EvidenceUrl)" target="_blank" rel="noopener"><i class="bi bi-paperclip" aria-hidden="true"></i> Xem minh chứng đính kèm <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></div>
-            @if (r.Status == "Pending") {
-                <form method="post" action="@Url.Action("Review")" class="sp-select-form">
-                    @Html.AntiForgeryToken()<input type="hidden" name="id" value="@r.Id" /><input type="hidden" name="teacherId" value="@teacher.maNguoiDung" />
-                    <span class="sp-label">LĨNH VỰC ĐĂNG KÝ BỔ SUNG</span>
-                    <div class="sp-grid sp-category-grid">@foreach (var c in categories.Where(c => r.CategoryIds.Contains(c.maDanhMuc))) {<label class="sp-choice"><input type="checkbox" name="categoryIds" value="@c.maDanhMuc" disabled="@(c.trangThai == false)" /><span>@c.tenDanhMuc @(c.trangThai == false ? "(tạm ngưng)" : "")</span></label>}</div>
-                    <label for="reason-@r.Id">Phản hồi xét duyệt <span class="sp-optional">Bắt buộc khi từ chối</span></label>
-                    <textarea class="form-control" name="reason" id="reason-@r.Id" maxlength="2000" placeholder="Ghi rõ nội dung cần bổ sung hoặc lý do từ chối…"></textarea>
-                    <div class="sp-form-footer"><span class="sp-selected-count" aria-live="polite">Chưa chọn lĩnh vực</span><div class="sp-footer-actions"><button name="approve" value="false" class="btn btn-outline">Từ chối yêu cầu</button><button name="approve" value="true" class="btn btn-primary">Duyệt lĩnh vực đã chọn</button></div></div>
-                </form>
-            } else {
-                <div class="sp-tags">@foreach (var c in categories.Where(c => (r.Status == "Approved" ? r.GrantedCategoryIds : r.CategoryIds).Contains(c.maDanhMuc))) {<span class="sp-tag">@c.tenDanhMuc</span>}</div>
-                if (!string.IsNullOrWhiteSpace(r.Reason)) {<p><strong>Phản hồi:</strong> @r.Reason</p>}
-            }
-        </section>
-    }
 </div>
 @section Scripts {
 <script>
+@if (TempData["SpecialtyMessage"] != null)
+{
+    // Thông báo kết quả duyệt / từ chối: hiện nổi rồi tự tắt (showToast trong assets/js/app.js chèn HTML nên mã hóa nội dung trước)
+    <text>if (window.showToast) showToast('@Html.Raw(HttpUtility.JavaScriptStringEncode(HttpUtility.HtmlEncode(TempData["SpecialtyMessage"].ToString())))', '@(TempData["SpecialtyMessageType"] as string ?? "info")');</text>
+}
 document.querySelectorAll('.sp-select-form').forEach(function(form) {
     var choices = form.querySelectorAll('input[name="categoryIds"]');
     var count = form.querySelector('.sp-selected-count');

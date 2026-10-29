@@ -13,7 +13,7 @@ namespace ECOLearning.Services
     /// </summary>
     public class AdminTeacherService
     {
-        public const decimal TyLeGiaoVien = 0.8m;
+        public const decimal TyLeGiaoVien = RevenueService.TyLeGiaoVien;
 
         private static readonly string[] DangBan = { CourseStatus.DaXuatBan, "Đã duyệt", "Active", "Đang hoạt động" };
         private static readonly string[] ChoDuyet = { CourseStatus.ChoDuyet, "Chờ kiểm duyệt", "Chờ xét duyệt", "Pending" };

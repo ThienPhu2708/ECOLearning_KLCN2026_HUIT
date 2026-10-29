@@ -50,7 +50,7 @@ namespace ECOLearning.Services
             return JArray.Parse(@"[
   {
     ""name"": ""tim_khoa_hoc"",
-    ""description"": ""Tìm khóa học đang bán trên ECOLearning theo từ khóa chủ đề, giá tối đa, cấp độ. Chỉ trả khóa mà người dùng chưa sở hữu. Dùng cho mọi câu hỏi tìm / gợi ý / so sánh giá khóa học. Từ khóa là chủ đề ngắn (Python, thiết kế, tiếng Anh...), không phải cả câu hỏi. Bỏ trống từ khóa để xem các khóa phổ biến hoặc rẻ nhất."",
+    ""description"": ""Tìm khóa học đang bán trên E-Learning theo từ khóa chủ đề, giá tối đa, cấp độ. Chỉ trả khóa mà người dùng chưa sở hữu. Dùng cho mọi câu hỏi tìm / gợi ý / so sánh giá khóa học. Từ khóa là chủ đề ngắn (Python, thiết kế, tiếng Anh...), không phải cả câu hỏi. Bỏ trống từ khóa để xem các khóa phổ biến hoặc rẻ nhất."",
     ""parameters"": {
       ""type"": ""object"",
       ""properties"": {

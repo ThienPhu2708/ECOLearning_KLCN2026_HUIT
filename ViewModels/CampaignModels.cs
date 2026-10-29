@@ -152,12 +152,21 @@ namespace ECOLearning.ViewModels
         public string Email { get; set; }
         public int SoKhoaHoc { get; set; }
 
-        /// <summary>Tổng đơn giá các khóa (trước coupon).</summary>
+        /// <summary>Tổng giá gốc các khóa (trước giảm trực tiếp và coupon).</summary>
         public decimal TienTruocGiam { get; set; }
+
+        /// <summary>Giảm trực tiếp (khuyến mãi tự áp dụng): giá gốc - đơn giá.</summary>
+        public decimal TienGiamTrucTiep { get; set; }
+
+        /// <summary>Giảm bởi mã coupon.</summary>
         public decimal TienGiam { get; set; }
 
-        /// <summary>Số tiền thực thu = trước giảm - giảm (khớp DonHang.tongTien).</summary>
+        /// <summary>Số tiền thực thu = trước giảm - giảm trực tiếp - giảm coupon (khớp DonHang.tongTien).</summary>
         public decimal ThucThu { get; set; }
+
+        /// <summary>Phần của giáo viên (80% thực thu) và doanh thu nền tảng (phần còn lại).</summary>
+        public decimal PhanGiaoVien { get; set; }
+        public decimal NenTang { get; set; }
         public string MaCode { get; set; }
     }
 
@@ -166,6 +175,7 @@ namespace ECOLearning.ViewModels
         public DateTime Ngay { get; set; }
         public int SoDon { get; set; }
         public decimal ThucThu { get; set; }
+        public decimal NenTang { get; set; }
     }
 
     /// <summary>Báo cáo doanh thu theo khoảng ngày (Admin).</summary>
@@ -176,8 +186,11 @@ namespace ECOLearning.ViewModels
         public string ThongBaoLoi { get; set; }
         public int SoDonHang { get; set; }
         public decimal TienTruocGiam { get; set; }
+        public decimal TienGiamTrucTiep { get; set; }
         public decimal TienGiam { get; set; }
         public decimal ThucThu { get; set; }
+        public decimal PhanGiaoVien { get; set; }
+        public decimal NenTang { get; set; }
         public List<DoanhThuTheoNgay> TheoNgay { get; set; } = new List<DoanhThuTheoNgay>();
         public List<DoanhThuDonHang> DonHang { get; set; } = new List<DoanhThuDonHang>();
     }

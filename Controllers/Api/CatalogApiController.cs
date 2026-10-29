@@ -289,7 +289,11 @@ namespace ECOLearning.Controllers.Api
                     comment = r.NoiDung,
                     createdAt = ApiFormat.Date(r.NgayDanhGia),
                     helpfulCount = r.SoHuuIch,
-                    reply = r.CoPhanHoi ? new { content = r.PhanHoiNoiDung, createdAt = ApiFormat.Date(r.PhanHoiNgayCapNhat ?? r.PhanHoiNgayTao) } : null
+                    notHelpfulCount = r.SoKhongHuuIch,
+                    // Bình chọn của người đang xem (E2): true / false / null (chưa chọn hoặc chưa đăng nhập)
+                    myVote = r.BinhChonCuaToi.HasValue ? (bool?)(r.BinhChonCuaToi.Value == 1) : null,
+                    isMine = CurrentUserId > 0 && r.MaHocVien == CurrentUserId,
+                    reply =r.CoPhanHoi ? new { content = r.PhanHoiNoiDung, createdAt = ApiFormat.Date(r.PhanHoiNgayCapNhat ?? r.PhanHoiNgayTao) } : null
                 }).ToList(),
                 page = ds.Trang,
                 pageSize = ECOLearning.ViewModels.DanhSachDanhGiaViewModel.SoMoiTrang,
@@ -358,6 +362,37 @@ namespace ECOLearning.Controllers.Api
                 Db.SaveChanges();
             }
             return Ok(new { deleted = true }, "Đã xóa đánh giá của bạn.");
+        }
+
+        public class HelpfulRequest
+        {
+            public bool? Helpful { get; set; }
+        }
+
+        // E2. POST /api/v1/reviews/{reviewId}/helpful  { helpful: true | false }
+        // "Bạn thấy hữu ích?" như Review/Helpful của website: gửi lại đúng lựa chọn đang có thì bỏ bình chọn
+        [HttpPost, Route("reviews/{reviewId}/helpful"), ApiAuthorize]
+        public ActionResult ReviewHelpful(string reviewId)
+        {
+            var req = Body<HelpfulRequest>();
+            if (!req.Helpful.HasValue) return BadRequest("Vui lòng chọn Hữu ích hoặc Không hữu ích.");
+
+            var service = new CourseReviewService(Db);
+            if (!service.IsInstalled()) return Fail(503, "NOT_INSTALLED", "Chức năng chưa sẵn sàng (cần chạy migration 011).");
+
+            var dg = Db.DanhGiaKhoaHoc.Where(d => d.maDanhGia == reviewId).Select(d => new { d.maHocVien }).FirstOrDefault();
+            if (dg == null) return NotFoundJson("Không tìm thấy đánh giá.", "REVIEW_NOT_FOUND");
+            if (dg.maHocVien == CurrentUserId) return Forbidden("Bạn không thể tự bình chọn đánh giá của mình.", "OWN_REVIEW");
+
+            var kq = service.BinhChon(reviewId, CurrentUserId, req.Helpful.Value);
+            if (!kq.Success) return BadRequest(kq.Message);
+            return Ok(new
+            {
+                reviewId,
+                helpfulCount = kq.SoHuuIch,
+                notHelpfulCount = kq.SoKhongHuuIch,
+                myVote = kq.BinhChon.HasValue ? (bool?)(kq.BinhChon.Value == 1) : null
+            }, kq.BinhChon.HasValue ? "Cảm ơn bạn đã bình chọn!" : "Đã bỏ bình chọn.");
         }
 
         // B5. GET /api/v1/search/suggest?q=

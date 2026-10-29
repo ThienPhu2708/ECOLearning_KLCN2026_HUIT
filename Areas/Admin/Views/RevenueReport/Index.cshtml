@@ -4,6 +4,8 @@
     string tu = Model.TuNgay.ToString("yyyy-MM-dd");
     string den = Model.DenNgay.ToString("yyyy-MM-dd");
     decimal maxNgay = Model.TheoNgay.Count > 0 ? Math.Max(1, Model.TheoNgay.Max(d => d.ThucThu)) : 1;
+    string ptGiaoVien = (ECOLearning.Services.RevenueService.TyLeGiaoVien * 100).ToString("0.##") + "%";
+    string ptNenTang = ((1 - ECOLearning.Services.RevenueService.TyLeGiaoVien) * 100).ToString("0.##") + "%";
 }
 
 <style>
@@ -15,15 +17,21 @@
     .rv-stat-label { font-size: 12.5px; color: var(--text-secondary, #64748B); font-weight: 600; }
     .rv-stat-value { font-size: 22px; font-weight: 800; color: var(--text-heading, #0F172A); margin-top: 6px; }
     .rv-bars { display: flex; align-items: flex-end; gap: 3px; height: 150px; border-bottom: 1px solid var(--border-color, #E2E8F0); }
-    .rv-bar { flex: 1; min-width: 3px; background: #A5B4FC; border-radius: 4px 4px 0 0; }
-    .rv-bar:hover { background: #434CE8; }
+    .rv-bar { flex: 1; min-width: 3px; background: #A5B4FC; border-radius: 4px 4px 0 0; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+    .rv-bar:hover { background: #818CF8; }
+    .rv-bar-nt { background: #434CE8; }
+    .rv-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .rv-split .rv-stat { border-left: 4px solid #A5B4FC; }
+    .rv-split .rv-stat.nt { border-left-color: #434CE8; background: #EEF2FF; }
+    .rv-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+    .rv-legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
     .rv-note { font-size: 12.5px; color: var(--text-muted, #94A3B8); }
 </style>
 
 <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 20px;">
     <div>
         <h1 class="h2" style="margin-bottom: 6px;">Doanh thu theo khoảng ngày</h1>
-        <p class="body-2" style="color: var(--text-secondary); margin: 0;">Chỉ tính đơn hàng đã thanh toán, theo ngày đặt đơn. Thực thu = tổng giá khóa học − tiền giảm của coupon.</p>
+        <p class="body-2" style="color: var(--text-secondary); margin: 0;">Chỉ tính đơn hàng đã thanh toán, theo ngày đặt đơn. Thực thu = giá gốc − giảm trực tiếp − giảm coupon; thực thu chia giáo viên @ptGiaoVien, nền tảng @ptNenTang.</p>
     </div>
     @if (Model.ThongBaoLoi == null)
     {
@@ -53,9 +61,24 @@ else
 {
     <div class="rv-stats">
         <div class="card rv-stat"><div class="rv-stat-label">Đơn hàng thành công</div><div class="rv-stat-value">@Model.SoDonHang</div></div>
-        <div class="card rv-stat"><div class="rv-stat-label">Doanh thu trước giảm</div><div class="rv-stat-value">@Model.TienTruocGiam.ToString("N0") đ</div></div>
-        <div class="card rv-stat"><div class="rv-stat-label">Tiền giảm (coupon)</div><div class="rv-stat-value">@Model.TienGiam.ToString("N0") đ</div></div>
-        <div class="card rv-stat"><div class="rv-stat-label">Thực thu</div><div class="rv-stat-value" style="color: #434CE8;">@Model.ThucThu.ToString("N0") đ</div></div>
+        <div class="card rv-stat"><div class="rv-stat-label">Doanh thu trước giảm (giá gốc)</div><div class="rv-stat-value">@Model.TienTruocGiam.ToString("N0") đ</div></div>
+        <div class="card rv-stat"><div class="rv-stat-label">Giảm trực tiếp</div><div class="rv-stat-value">@Model.TienGiamTrucTiep.ToString("N0") đ</div></div>
+        <div class="card rv-stat"><div class="rv-stat-label">Giảm coupon</div><div class="rv-stat-value">@Model.TienGiam.ToString("N0") đ</div></div>
+        <div class="card rv-stat"><div class="rv-stat-label">Thực thu (học viên đã trả)</div><div class="rv-stat-value" style="color: #434CE8;">@Model.ThucThu.ToString("N0") đ</div></div>
+    </div>
+
+    @* Thực thu = phần giáo viên + doanh thu nền tảng (RevenueService.TyLeGiaoVien); tiền giảm hai bên cùng chịu theo tỷ lệ *@
+    <div class="rv-split">
+        <div class="card rv-stat">
+            <div class="rv-stat-label">Phần của giáo viên (@ptGiaoVien thực thu)</div>
+            <div class="rv-stat-value">@Model.PhanGiaoVien.ToString("N0") đ</div>
+            <div class="rv-note" style="margin-top: 4px;">Khoản phải trả giáo viên, chi qua mục Chi trả giáo viên.</div>
+        </div>
+        <div class="card rv-stat nt">
+            <div class="rv-stat-label">Doanh thu nền tảng (@ptNenTang thực thu)</div>
+            <div class="rv-stat-value" style="color: #434CE8;">@Model.NenTang.ToString("N0") đ</div>
+            <div class="rv-note" style="margin-top: 4px;">Phần nền tảng giữ lại sau khi chia cho giáo viên.</div>
+        </div>
     </div>
 
     <div class="card" style="padding: 20px 22px; margin-bottom: 20px;">
@@ -66,11 +89,20 @@ else
         }
         else
         {
-            <div class="rv-bars" role="img" aria-label="Biểu đồ thực thu theo ngày">
+            <div class="rv-legend rv-note">
+                <span style="--c: #434CE8;">Doanh thu nền tảng</span>
+                <span style="--c: #A5B4FC;">Phần giáo viên</span>
+            </div>
+            <div class="rv-bars" role="img" aria-label="Biểu đồ thực thu theo ngày, phần dưới đậm là doanh thu nền tảng">
                 @foreach (var d in Model.TheoNgay)
                 {
                     <div class="rv-bar" style="height: @(d.ThucThu == 0 ? 0 : Math.Max(3, (int)(d.ThucThu * 100 / maxNgay)))%;"
-                         title="@d.Ngay.ToString("dd/MM/yyyy"): @d.ThucThu.ToString("N0") đ (@d.SoDon đơn)"></div>
+                         title="@d.Ngay.ToString("dd/MM/yyyy"): thực thu @d.ThucThu.ToString("N0") đ, nền tảng @d.NenTang.ToString("N0") đ (@d.SoDon đơn)">
+                        @if (d.ThucThu > 0)
+                        {
+                            <div class="rv-bar-nt" style="height: @((int)(d.NenTang * 100 / d.ThucThu))%;"></div>
+                        }
+                    </div>
                 }
             </div>
             <div style="display: flex; justify-content: space-between;" class="rv-note">
@@ -91,6 +123,7 @@ else
                         <th style="text-align: right;">Trước giảm</th>
                         <th style="text-align: right;">Giảm</th>
                         <th style="text-align: right;">Thực thu</th>
+                        <th style="text-align: right;">Nền tảng (@ptNenTang)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -102,13 +135,23 @@ else
                             <td>@d.HoTen<div class="rv-note">@d.Email</div></td>
                             <td style="text-align: right;">@d.SoKhoaHoc</td>
                             <td style="text-align: right;">@d.TienTruocGiam.ToString("N0") đ</td>
-                            <td style="text-align: right; color: #DC2626;">@(d.TienGiam > 0 ? "- " + d.TienGiam.ToString("N0") + " đ" : "")@(string.IsNullOrEmpty(d.MaCode) ? "" : " (" + d.MaCode + ")")</td>
+                            <td style="text-align: right; color: #DC2626;">
+                                @if (d.TienGiamTrucTiep > 0)
+                                {
+                                    <div>- @d.TienGiamTrucTiep.ToString("N0") đ <span class="rv-note">(trực tiếp)</span></div>
+                                }
+                                @if (d.TienGiam > 0)
+                                {
+                                    <div>- @d.TienGiam.ToString("N0") đ <span class="rv-note">(@(string.IsNullOrEmpty(d.MaCode) ? "coupon" : d.MaCode))</span></div>
+                                }
+                            </td>
                             <td style="text-align: right; font-weight: 700;">@d.ThucThu.ToString("N0") đ</td>
+                            <td style="text-align: right; color: #434CE8; font-weight: 600;">@d.NenTang.ToString("N0") đ</td>
                         </tr>
                     }
                     @if (!Model.DonHang.Any())
                     {
-                        <tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">Không có đơn hàng nào.</td></tr>
+                        <tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-secondary);">Không có đơn hàng nào.</td></tr>
                     }
                 </tbody>
             </table>

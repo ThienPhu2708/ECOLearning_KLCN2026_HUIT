@@ -11,7 +11,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
     public class PayoutController : InstructorBaseController
     {
         /// <summary>Giáo viên nhận 80% doanh thu thực thu; nền tảng giữ 20%. Phí 20% đã trừ ở đây nên phiếu chi không trừ thêm.</summary>
-        public const decimal TyLeGiaoVien = 0.8m;
+        public const decimal TyLeGiaoVien = RevenueService.TyLeGiaoVien;
 
         /// <summary>
         /// Doanh thu thực thu của các khóa thuộc giáo viên: chỉ đơn đã thanh toán (đơn chờ / thất bại / hết hạn không tính),

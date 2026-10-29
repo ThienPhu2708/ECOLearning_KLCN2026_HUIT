@@ -10,7 +10,8 @@ namespace ECOLearning.Areas.Admin.Controllers
 {
     /// <summary>
     /// Báo cáo doanh thu tổng thể theo khoảng ngày (chỉ Admin). Quy tắc tính ở RevenueService:
-    /// đơn "Đã thanh toán", lọc theo ngày đặt đơn, lấy trọn ngày kết thúc, thực thu = tổng đơn giá - tiền giảm coupon.
+    /// đơn "Đã thanh toán", lọc theo ngày đặt đơn, lấy trọn ngày kết thúc, thực thu = giá gốc - giảm trực tiếp - giảm coupon;
+    /// thực thu chia phần giáo viên (80%) và doanh thu nền tảng (20%).
     /// </summary>
     public class RevenueReportController : AdminBaseController
     {
@@ -38,18 +39,26 @@ namespace ECOLearning.Areas.Admin.Controllers
             sb.AppendLine("Từ ngày " + m.TuNgay.ToString("dd/MM/yyyy") + " đến ngày " + m.DenNgay.ToString("dd/MM/yyyy") + " (theo ngày đặt đơn, chỉ đơn đã thanh toán)");
             sb.AppendLine("Thời gian xuất: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
             sb.AppendLine();
-            sb.AppendLine("Mã đơn,Ngày đặt,Học viên,Email,Số khóa,Trước giảm (VNĐ),Giảm (VNĐ),Thực thu (VNĐ),Mã coupon");
+            sb.AppendLine("Mã đơn,Ngày đặt,Học viên,Email,Số khóa,Trước giảm (VNĐ),Giảm trực tiếp (VNĐ),Giảm coupon (VNĐ),Thực thu (VNĐ),"
+                + "Phần giáo viên " + TyLe(RevenueService.TyLeGiaoVien) + " (VNĐ),Doanh thu nền tảng " + TyLe(1 - RevenueService.TyLeGiaoVien) + " (VNĐ),Mã coupon");
             foreach (var d in m.DonHang)
             {
                 sb.AppendLine(string.Join(",", d.MaDonHang, d.NgayDat.ToString("dd/MM/yyyy HH:mm"), Csv(d.HoTen), Csv(d.Email), d.SoKhoaHoc,
-                    d.TienTruocGiam.ToString("F0"), d.TienGiam.ToString("F0"), d.ThucThu.ToString("F0"), Csv(d.MaCode)));
+                    d.TienTruocGiam.ToString("F0"), d.TienGiamTrucTiep.ToString("F0"), d.TienGiam.ToString("F0"), d.ThucThu.ToString("F0"),
+                    d.PhanGiaoVien.ToString("F0"), d.NenTang.ToString("F0"), Csv(d.MaCode)));
             }
             sb.AppendLine();
             sb.AppendLine(string.Join(",", "Tổng cộng", "", "", "", m.SoDonHang + " đơn",
-                m.TienTruocGiam.ToString("F0"), m.TienGiam.ToString("F0"), m.ThucThu.ToString("F0"), ""));
+                m.TienTruocGiam.ToString("F0"), m.TienGiamTrucTiep.ToString("F0"), m.TienGiam.ToString("F0"), m.ThucThu.ToString("F0"),
+                m.PhanGiaoVien.ToString("F0"), m.NenTang.ToString("F0"), ""));
 
             string fileName = "DoanhThu_" + m.TuNgay.ToString("yyyyMMdd") + "_" + m.DenNgay.ToString("yyyyMMdd") + ".csv";
             return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv; charset=utf-8", fileName);
+        }
+
+        private static string TyLe(decimal tyLe)
+        {
+            return (tyLe * 100).ToString("0.##", CultureInfo.InvariantCulture) + "%";
         }
 
         private static string Csv(string s)

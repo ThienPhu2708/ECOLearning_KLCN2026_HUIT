@@ -250,6 +250,8 @@
     <Compile Include="ViewModels\PhanTrangViewModel.cs" />
     <Compile Include="ViewModels\ExploreMenuViewModels.cs" />
     <Compile Include="Services\EmailService.cs" />
+    <Compile Include="Services\GoogleAuthService.cs" />
+    <Compile Include="Services\RateLimiter.cs" />
     <Compile Include="Services\PasswordHasher.cs" />
     <Compile Include="Services\TeacherApplicationService.cs" />
     <Compile Include="Models\TeacherApplication.cs" />
@@ -300,6 +302,8 @@
     <Compile Include="Controllers\Api\ApiRules.cs" />
     <Compile Include="Controllers\Api\PingApiController.cs" />
     <Compile Include="Controllers\Api\AuthApiController.cs" />
+    <Compile Include="Controllers\Api\ChatbotApiController.cs" />
+    <Compile Include="Controllers\Api\SupportApiController.cs" />
     <Compile Include="Controllers\Api\ProfileApiController.cs" />
     <Compile Include="Controllers\Api\CatalogApiController.cs" />
     <Compile Include="Controllers\Api\RecommendationApiController.cs" />

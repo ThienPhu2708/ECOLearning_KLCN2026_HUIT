@@ -991,7 +991,7 @@ bộ Postman: `Tuan10\ECOLearning_API.postman_collection.json`; app Flutter: rep
   401 / 403 / 404 / 409 / 429, đăng ký OTP 3 bước, đổi / đặt lại mật khẩu thu hồi token, tìm kiếm không dấu, ghi lượt xem / click, gợi ý
   "Vì bạn đã xem…", và trọn luồng: tạo đơn → trả bằng thẻ NCB trên VNPay Sandbox → đơn `paid` → học 8 bài (video tua được, HTTP 206)
   → quiz 10/10 → nhận chứng chỉ → đánh giá → thống kê hồ sơ.
-- **Chưa làm**: A12 đăng nhập Google (P3); link video có hạn dùng (video nội bộ vẫn mở công khai theo tên file như website).
+- **Chưa làm**: link video có hạn dùng (video nội bộ vẫn mở công khai theo tên file như website). A12 đăng nhập Google: đã làm, xem mục 37.
 
 ---
 
@@ -1248,7 +1248,48 @@ nên giáo viên tải tài liệu lên là cả web và app thấy ngay, không
 - **Kiểm thử**: 31/31 (nút đúng theo trạng thái, tạm ngưng → ẩn trang bán / API / giỏ hàng nhưng học viên vẫn học, chặn sửa và đề cương,
   mở bán lại, xóa hẳn khóa nháp và khóa đang bán chưa có học viên, xóa mềm khóa có học viên, chặn khóa chờ duyệt / khóa người khác / xóa lại).
 
-## 36. Việc còn lại / cần quyết định
+## 36. Báo cáo doanh thu Admin: giảm trực tiếp + chia giáo viên / nền tảng (**chưa commit**)
+
+- **Trước**: báo cáo "Doanh thu theo ngày" chỉ có Trước giảm, Giảm (coupon), Thực thu. Thực thu là 100% tiền học viên trả nên dễ hiểu nhầm
+  là doanh thu của nền tảng; khuyến mãi giảm trực tiếp (migration 021) không hiện vì "Trước giảm" lấy giá đã giảm.
+- **Nay** (`Services/RevenueService.cs`, `Areas/Admin/Views/RevenueReport/Index.cshtml`, CSV ở `RevenueReportController`):
+  - Trước giảm = **giá gốc** (`ChiTietDonHang.giaGoc`; đơn cũ / chưa chạy 021 thì = đơn giá), thêm **Giảm trực tiếp** = giá gốc − đơn giá,
+    Giảm coupon như cũ. Thực thu không đổi (tổng đơn giá − coupon).
+  - Thêm **Phần của giáo viên (80%)** và **Doanh thu nền tảng (20%)**: tính từng đơn, nền tảng = thực thu − phần giáo viên nên tổng luôn khớp.
+    Tiền giảm hai bên cùng chịu theo tỷ lệ, giống trang Nhận thanh toán. Biểu đồ theo ngày tô đậm phần nền tảng, bảng và CSV có cột tương ứng.
+  - Tỷ lệ 80% gom về một hằng số `RevenueService.TyLeGiaoVien` (Nhận thanh toán của giáo viên và Quản lý giáo viên dùng lại).
+- **Kiểm thử**: câu SQL + phép tính đúng trên đơn thử (giá gốc 700k, giảm trực tiếp 100k, coupon 60k → thực thu 540k, GV 432k, nền tảng 108k);
+  41 đơn thật trong 1 năm: thực thu khớp công thức cũ, GV + nền tảng = thực thu. Trang Admin + file CSV: 12/12 (ô tổng, dòng đơn, biểu đồ, cột CSV, dòng tổng cộng).
+
+## 37. API học viên: Google, đánh giá hữu ích, báo cáo vi phạm, liên hệ, Trợ lý ECO (**chưa commit**)
+
+Đưa các chức năng học viên còn thiếu trên app sang API, dùng chung service và quy tắc với website.
+
+| Mã | Endpoint | Ghi chú |
+| :--- | :--- | :--- |
+| A12 | `POST /api/v1/auth/google` | Body `{ "idToken" }` (ID token của `google_sign_in`, `serverClientId` = Client ID web). Trả như A1. Token sai: 401 `GOOGLE_INVALID_TOKEN`; khóa / sai vai trò như A1 |
+| B4 | `GET /api/v1/courses/{id}/reviews` | Thêm `notHelpfulCount`, `myVote` (`true` / `false` / `null`), `isMine` |
+| E2 | `POST /api/v1/reviews/{reviewId}/helpful` | Cần token. Body `{ "helpful": true \| false }`; gửi lại lựa chọn đang có = bỏ bình chọn. Trả `{ helpfulCount, notHelpfulCount, myVote }`. 403 `OWN_REVIEW`, 404 `REVIEW_NOT_FOUND` |
+| J1 | `GET /api/v1/violation-types` | 6 loại vi phạm (như website) |
+| J2 | `POST /api/v1/courses/{id}/reports` | Cần token. Body `{ "type", "description", "lessonId"? }`. 400 (lỗi theo trường), 403 `NOT_ENROLLED` / `OWN_COURSE`, 404 `COURSE_NOT_FOUND`, 409 `REPORT_PENDING` |
+| J3 | `POST /api/v1/contact` | Body `{ "fullName", "email", "subject"?, "content" }`; đã đăng nhập thì bỏ trống họ tên / email = lấy theo tài khoản. Tối đa 5 lần / 10 phút (429), lỗi gửi mail 502 `EMAIL_FAILED` |
+| K1 | `POST /api/v1/chatbot/ask` | Body `{ "question" }` (≤ 500 ký tự) → `{ reply, courses: [{ id, title, thumbnail, category, instructor, price, rating, reviewCount }] }`. Gemini lỗi: 503 `CHATBOT_QUOTA` / `CHATBOT_BUSY` / `CHATBOT_UNAVAILABLE` |
+| K2 | `GET /api/v1/chatbot/history` | `{ messages: [{ role: user \| model, content }] }` |
+| K3 | `DELETE /api/v1/chatbot/history` | Bắt đầu cuộc trò chuyện mới |
+
+- **Dùng chung với website**: `Services/GoogleAuthService.cs` (tách từ `AccountController.GoogleLogin`: xác thực token, tạo / cập nhật tài khoản),
+  `CourseReviewService.BinhChon`, `ViolationReportService.CreateReport`, `ChatbotService`, `EmailService.SendContactMessage`.
+  `Services/RateLimiter.cs` thay bộ đếm riêng của `ChatbotController`: hỏi trợ lý trên web và app tính chung 20 câu / 10 phút.
+- **Trợ lý trên app**: tắt theo `Chatbot:Enabled` như website (mọi đường dẫn K trả 404 `CHATBOT_DISABLED`). App không có Session nên lịch sử
+  lưu trên máy chủ theo tài khoản (giữ 2 giờ từ lần dùng cuối, mất khi khởi động lại IIS); khách vẫn hỏi được nhưng không nhớ câu trước.
+- **Code**: `Controllers/Api/SupportApiController.cs` (J), `Controllers/Api/ChatbotApiController.cs` (K), `CatalogApiController` (B4, E2), `AuthApiController` (A12).
+- **Kiểm thử** `Tests/StudentSupportApiSmoke.py` (IIS Express trên máy, tài khoản demo, dọn dữ liệu tạm trong `finally`): **52/52** đạt, gồm
+  A12 (thiếu / sai token), E2 (chọn, đổi, bỏ bình chọn; đối chiếu DB; B4 hiện đúng `myVote`, `isMine` cho người chọn / tác giả / khách),
+  J2 (mọi lỗi 400 / 403 / 404 / 409 không ghi DB, báo cáo hợp lệ ghi đúng 1 dòng "Chờ xử lý" kèm bài học), J3 (lỗi theo trường, lấy tên / email
+  theo tài khoản), K1–K3 (gọi Gemini thật, lịch sử 1 lượt, tài khoản khác không thấy, xóa lịch sử). Chưa chạy: gửi email liên hệ thật
+  (`--send-email`), giới hạn 429 (cần gửi thật nhiều lần), A12 với token Google thật (thử bằng app).
+
+## 38. Việc còn lại / cần quyết định
 
 | Việc | Ghi chú |
 | :--- | :--- |

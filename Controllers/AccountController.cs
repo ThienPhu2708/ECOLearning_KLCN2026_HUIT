@@ -619,23 +619,19 @@ namespace ECOLearning.Controllers
             Session.Remove("Register_OtpVerified_Email");
         }
 
-        // Client ID OAuth của web (không phải khóa bí mật), phải trùng client_id trong Views/Account/Login.cshtml
-        private const string GoogleClientId = "16112335076-7inckr0r5mo4og4gmi70c5t10j82bg4o.apps.googleusercontent.com";
-
         // POST: Account/GoogleLogin (Xác thực token với Google rồi Đăng nhập / Đăng ký)
-        // Chỉ tin thông tin máy chủ Google trả về, KHÔNG tin email/họ tên do trình duyệt gửi lên
-        // (nếu tin, ai cũng có thể gửi email của người khác, kể cả Admin, để đăng nhập không cần mật khẩu).
+        // Xác thực token và tạo / cập nhật tài khoản: GoogleAuthService (dùng chung với API A12 của app)
         [HttpPost]
         public JsonResult GoogleLogin(string idToken, string accessToken)
         {
-            GoogleTokenPayload hoSo = null;
+            GoogleAuthService.GoogleTokenPayload hoSo = null;
             if (!string.IsNullOrWhiteSpace(idToken))
             {
-                hoSo = VerifyGoogleIdToken(idToken);
+                hoSo = GoogleAuthService.VerifyIdToken(idToken);
             }
             else if (!string.IsNullOrWhiteSpace(accessToken))
             {
-                hoSo = VerifyGoogleAccessToken(accessToken);
+                hoSo = GoogleAuthService.VerifyAccessToken(accessToken);
             }
 
             if (hoSo == null)
@@ -643,88 +639,20 @@ namespace ECOLearning.Controllers
                 return Json(new { success = false, message = "Không xác thực được tài khoản Google. Vui lòng thử lại!" });
             }
 
-            string email = hoSo.Email.Trim().ToLower();
-
-            // 1. Họ và tên đầy đủ từ Google (ưu tiên Họ + Tên nếu có)
-            string name = "";
-            if (!string.IsNullOrWhiteSpace(hoSo.FamilyName) && !string.IsNullOrWhiteSpace(hoSo.GivenName))
-            {
-                name = $"{hoSo.FamilyName.Trim()} {hoSo.GivenName.Trim()}";
-            }
-            else if (!string.IsNullOrWhiteSpace(hoSo.Name))
-            {
-                name = hoSo.Name.Trim();
-            }
-            else if (!string.IsNullOrWhiteSpace(hoSo.GivenName))
-            {
-                name = hoSo.GivenName.Trim();
-            }
-
-            string avatar = string.IsNullOrWhiteSpace(hoSo.Picture) ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" : hoSo.Picture.Trim();
-
-            // Tuyệt đối không lấy tên tài khoản / tiền tố email làm họ tên
-            if (string.IsNullOrWhiteSpace(name) || name.Equals(email.Split('@')[0], StringComparison.OrdinalIgnoreCase))
-            {
-                name = "Học viên Google";
-            }
-
             try
             {
-                // 3. Tra cứu tài khoản trong CSDL SQL Server (NguoiDung)
-                var user = db.NguoiDung.FirstOrDefault(u => u.email.ToLower() == email);
-                if (user == null)
+                var user = GoogleAuthService.TimHoacTaoNguoiDung(db, hoSo);
+                if (user.trangThai.HasValue && !user.trangThai.Value)
                 {
-                    // Tạo mới bản ghi Học viên với họ tên đầy đủ từ Google
-                    user = new NguoiDung
-                    {
-                        hoTen = name,
-                        email = email,
-                        // Mật khẩu ngẫu nhiên, không ai biết: muốn đăng nhập bằng mật khẩu thì dùng "Quên mật khẩu" để đặt
-                        matKhau = PasswordHasher.HashPassword(Guid.NewGuid().ToString("N") + "Aa1!"),
-                        vaiTro = "HocVien",
-                        trangThai = true,
-                        anhDaiDien = avatar
-                    };
-                    db.NguoiDung.Add(user);
-                    db.SaveChanges();
+                    AccountAdminService.MoKhoaHetHanKhiDangNhap(db, user.maNguoiDung);
+                    db.Entry(user).Reload();
                 }
-                else
+                if (user.trangThai.HasValue && !user.trangThai.Value)
                 {
-                    if (user.trangThai.HasValue && !user.trangThai.Value)
-                    {
-                        AccountAdminService.MoKhoaHetHanKhiDangNhap(db, user.maNguoiDung);
-                        db.Entry(user).Reload();
-                    }
-                    if (user.trangThai.HasValue && !user.trangThai.Value)
-                    {
-                        return Json(new { success = false, message = AccountAdminService.CauBaoKhoa(db, user.maNguoiDung) });
-                    }
-
-                    bool isUpdated = false;
-                    if (!string.IsNullOrEmpty(avatar) && user.anhDaiDien != avatar)
-                    {
-                        user.anhDaiDien = avatar;
-                        isUpdated = true;
-                    }
-
-                    // CẬP NHẬT họ và tên đầy đủ từ Google vào csdl
-                    if (!string.IsNullOrWhiteSpace(name) && name != "Học viên Google")
-                    {
-                        // Cập nhật nếu tên trong DB khác tên Google, hoặc DB đang chứa tên tài khoản/email prefix
-                        if (user.hoTen != name || user.hoTen.Equals(email.Split('@')[0], StringComparison.OrdinalIgnoreCase) || user.hoTen.Equals("Học viên Google", StringComparison.OrdinalIgnoreCase))
-                        {
-                            user.hoTen = name;
-                            isUpdated = true;
-                        }
-                    }
-
-                    if (isUpdated)
-                    {
-                        db.SaveChanges();
-                    }
+                    return Json(new { success = false, message = AccountAdminService.CauBaoKhoa(db, user.maNguoiDung) });
                 }
 
-                // 4. Tạo Session và FormsAuthentication Cookie riêng của hệ thống với họ tên đầy đủ
+                // Tạo Session và FormsAuthentication Cookie riêng của hệ thống với họ tên đầy đủ
                 SetUserSessionAndAuthCookie(user.maNguoiDung, user.hoTen, user.email, user.vaiTro, user.anhDaiDien, false);
                 return Json(new { success = true, message = "Đăng nhập xác thực bằng tài khoản Google thành công!", redirectUrl = Url.Action("Index", "Home") });
             }
@@ -734,90 +662,6 @@ namespace ECOLearning.Controllers
             }
 
             return Json(new { success = false, message = "Đã xảy ra lỗi khi kết nối hệ thống. Vui lòng thử lại sau!" });
-        }
-
-        // ID Token (One Tap): Google kiểm tra chữ ký + hạn dùng; ta kiểm tra token cấp cho đúng web này và email đã xác minh
-        private GoogleTokenPayload VerifyGoogleIdToken(string idToken)
-        {
-            var dict = GoiGoogle("https://oauth2.googleapis.com/tokeninfo?id_token=" + Uri.EscapeDataString(idToken), null);
-            if (dict == null || GiaTri(dict, "aud") != GoogleClientId) return null;
-
-            string iss = GiaTri(dict, "iss");
-            if (iss != "accounts.google.com" && iss != "https://accounts.google.com") return null;
-
-            return TaoHoSoGoogle(dict);
-        }
-
-        // Access Token (cửa sổ popup): kiểm tra token cấp cho đúng web này rồi mới lấy thông tin người dùng
-        private GoogleTokenPayload VerifyGoogleAccessToken(string accessToken)
-        {
-            var info = GoiGoogle("https://oauth2.googleapis.com/tokeninfo?access_token=" + Uri.EscapeDataString(accessToken), null);
-            if (info == null || GiaTri(info, "aud") != GoogleClientId) return null;
-
-            var dict = GoiGoogle("https://www.googleapis.com/oauth2/v3/userinfo", accessToken);
-            if (dict == null || GiaTri(dict, "sub") != GiaTri(info, "sub")) return null;
-
-            return TaoHoSoGoogle(dict);
-        }
-
-        private static GoogleTokenPayload TaoHoSoGoogle(Dictionary<string, object> dict)
-        {
-            string email = GiaTri(dict, "email");
-            // email_verified: tokeninfo trả chuỗi "true", userinfo trả kiểu bool
-            if (string.IsNullOrWhiteSpace(email) || !string.Equals(GiaTri(dict, "email_verified"), "true", StringComparison.OrdinalIgnoreCase))
-            {
-                return null;
-            }
-
-            return new GoogleTokenPayload
-            {
-                Email = email,
-                Name = GiaTri(dict, "name"),
-                GivenName = GiaTri(dict, "given_name"),
-                FamilyName = GiaTri(dict, "family_name"),
-                Picture = GiaTri(dict, "picture"),
-                Sub = GiaTri(dict, "sub")
-            };
-        }
-
-        // Gọi API Google, token sai/hết hạn (HTTP 400/401) hoặc lỗi mạng thì trả null
-        private static Dictionary<string, object> GoiGoogle(string url, string bearerToken)
-        {
-            try
-            {
-                System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;
-                using (var client = new System.Net.WebClient())
-                {
-                    client.Encoding = System.Text.Encoding.UTF8;
-                    if (bearerToken != null)
-                    {
-                        client.Headers[System.Net.HttpRequestHeader.Authorization] = "Bearer " + bearerToken;
-                    }
-                    string json = client.DownloadString(url);
-                    return new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<Dictionary<string, object>>(json);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine("Google token validation error: " + ex.Message);
-                return null;
-            }
-        }
-
-        private static string GiaTri(Dictionary<string, object> dict, string key)
-        {
-            object v;
-            return dict.TryGetValue(key, out v) && v != null ? Convert.ToString(v) : null;
-        }
-
-        public class GoogleTokenPayload
-        {
-            public string Email { get; set; }
-            public string Name { get; set; }
-            public string GivenName { get; set; }
-            public string FamilyName { get; set; }
-            public string Picture { get; set; }
-            public string Sub { get; set; }
         }
 
         // GET: Account/Logout

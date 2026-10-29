@@ -232,6 +232,35 @@ namespace ECOLearning.Controllers.Api
             return Ok(null, "Đã đăng xuất.");
         }
 
+        public class GoogleRequest
+        {
+            public string IdToken { get; set; }
+        }
+
+        // A12. POST /api/v1/auth/google
+        // App lấy ID token bằng google_sign_in (serverClientId = Client ID của web) nên dùng chung cách xác thực với website
+        [HttpPost, Route("auth/google")]
+        public ActionResult Google()
+        {
+            var req = Body<GoogleRequest>();
+            if (string.IsNullOrWhiteSpace(req.IdToken)) return BadRequest("Thiếu thông tin xác thực Google!");
+
+            var hoSo = GoogleAuthService.VerifyIdToken(req.IdToken);
+            if (hoSo == null) return Fail(401, "GOOGLE_INVALID_TOKEN", "Không xác thực được tài khoản Google. Vui lòng thử lại!");
+
+            var user = GoogleAuthService.TimHoacTaoNguoiDung(Db, hoSo);
+            if (user.trangThai == false)
+            {
+                AccountAdminService.MoKhoaHetHanKhiDangNhap(Db, user.maNguoiDung);
+                Db.Entry(user).Reload();
+                if (user.trangThai == false) return Fail(403, "ACCOUNT_LOCKED", AccountAdminService.CauBaoKhoa(Db, user.maNguoiDung));
+            }
+            if (!VaiTroDuocDung.Contains(user.vaiTro))
+                return Fail(403, "ROLE_NOT_ALLOWED", "Ứng dụng dành cho học viên. Tài khoản quản trị vui lòng đăng nhập trên website.");
+
+            return PhienDangNhap(user, "Đăng nhập bằng Google thành công!");
+        }
+
         private ActionResult GuiOtp(string email, string mucDich, string hoTen, Func<string, (bool Success, string Message)> gui)
         {
             var otp = new ApiOtpService(Db);

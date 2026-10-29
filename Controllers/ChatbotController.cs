@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
@@ -11,7 +10,7 @@ using ECOLearning.Services;
 namespace ECOLearning.Controllers
 {
     /// <summary>
-    /// Trợ lý ECO (Gemini + công cụ tra dữ liệu, Services/ChatbotService.cs):
+    /// Trợ lý Elearning (Gemini + công cụ tra dữ liệu, Services/ChatbotService.cs):
     ///   GET  /Chatbot        trang chat thử nghiệm
     ///   POST /Chatbot/Hoi    gửi câu hỏi, trả JSON { reply, courses, debug }
     ///   GET  /Chatbot/LichSu lịch sử của phiên (bong bóng chat ở trang chủ, Views/Shared/_ChatBubble.cshtml)
@@ -21,9 +20,9 @@ namespace ECOLearning.Controllers
     public class ChatbotController : Controller
     {
         private const string KhoaLichSu = "Chatbot:LichSu";
-        private const int SoCauToiDa = 20;
-        private static readonly TimeSpan CuaSoGioiHan = TimeSpan.FromMinutes(10);
-        private static readonly ConcurrentDictionary<string, List<DateTime>> LuotHoi = new ConcurrentDictionary<string, List<DateTime>>();
+        // API của app (ChatbotApiController) dùng chung giới hạn và khóa đếm này
+        public const int SoCauToiDa = 20;
+        public static readonly TimeSpan CuaSoGioiHan = TimeSpan.FromMinutes(10);
 
         private QL_HETHONG_CUNGCAP_KHOAHOCEntities1 db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1();
 
@@ -123,17 +122,10 @@ namespace ECOLearning.Controllers
         /// <summary>Tối đa <see cref="SoCauToiDa"/> câu trong 10 phút cho mỗi người (theo tài khoản, khách thì theo địa chỉ IP).</summary>
         private bool VuotGioiHan()
         {
-            string khoa = UserId > 0 ? "u" + UserId : "ip" + Request.UserHostAddress;
-            var ds = LuotHoi.GetOrAdd(khoa, _ => new List<DateTime>());
-            lock (ds)
-            {
-                var moc = DateTime.UtcNow - CuaSoGioiHan;
-                ds.RemoveAll(t => t < moc);
-                if (ds.Count >= SoCauToiDa) return true;
-                ds.Add(DateTime.UtcNow);
-                return false;
-            }
+            return RateLimiter.VuotGioiHan(KhoaGioiHan(UserId, Request.UserHostAddress), SoCauToiDa, CuaSoGioiHan);
         }
+
+        public static string KhoaGioiHan(int userId, string ip) => "chat:" + (userId > 0 ? "u" + userId : "ip" + ip);
 
         private string DuongDan(string duongDan)
         {

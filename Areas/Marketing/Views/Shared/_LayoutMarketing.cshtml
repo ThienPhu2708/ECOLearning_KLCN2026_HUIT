@@ -7,17 +7,19 @@
     <link rel="stylesheet" href="~/assets/css/variables.css">
     <link rel="stylesheet" href="~/assets/css/base.css">
     <link rel="stylesheet" href="~/assets/css/components.css">
+    <link rel="stylesheet" href="~/assets/css/dashboard-tables.css?v=4">
     <link rel="stylesheet" href="~/assets/vendor/bootstrap-icons/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/assets/css/marketing.css?v=1.0">
+    <link rel="stylesheet" href="~/assets/css/staff-ui.css?v=1.3">
     @RenderSection("Styles", required: false)
 </head>
-<body>
+<body class="staff-ui">
     <div class="dashboard-layout">
         <!-- SIDEBAR -->
-        <aside class="dashboard-sidebar">
+        <aside class="dashboard-sidebar" id="staff-sidebar">
             <div class="sidebar-logo">
                 <a href="@Url.Action("Index", "Dashboard", new { area = "Marketing" })" class="brand-logo">
-                    <div class="logo-icon" style="width: 34px; height: 34px; background: #E11D48;">
+                    <div class="logo-icon" style="width: 34px; height: 34px;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
                             <line x1="7" y1="7" x2="7.01" y2="7"></line>
@@ -29,62 +31,73 @@
 
             @{
                 string currentCtrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Dashboard";
+                string staffName = Session["FullName"]?.ToString() ?? "Marketing";
+                string staffAvatar = Session["Avatar"]?.ToString();
+                string staffInitial = staffName.Trim().Length > 0 ? staffName.Trim().Substring(staffName.Trim().LastIndexOf(' ') + 1, 1).ToUpper() : "M";
             }
 
             <nav class="sidebar-menu">
+                <div class="sidebar-section">Tổng quan</div>
                 <a href="@Url.Action("Index", "Dashboard", new { area = "Marketing" })" class="sidebar-item @(currentCtrl == "Dashboard" ? "active" : "")">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="14" width="7" height="7"></rect>
-                        <rect x="3" y="14" width="7" height="7"></rect>
-                    </svg>
-                    Dashboard Marketing
+                    <i class="bi bi-grid-1x2"></i> Dashboard Marketing
                 </a>
+
+                <div class="sidebar-section">Khuyến mãi</div>
                 <a href="@Url.Action("Index", "Promotion", new { area = "Marketing" })" class="sidebar-item @(currentCtrl == "Promotion" ? "active" : "")">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                    </svg>
-                    Khuyến mãi & Coupon
+                    <i class="bi bi-tag"></i> Khuyến mãi &amp; Coupon
                 </a>
                 <a href="@Url.Action("Index", "Loyalty", new { area = "Marketing" })" class="sidebar-item @(currentCtrl == "Loyalty" ? "active" : "")">
-                    <i class="bi bi-award" style="font-size: 17px; width: 18px; text-align: center;"></i>
-                    Ưu đãi thân thiết
+                    <i class="bi bi-award"></i> Ưu đãi thân thiết
                 </a>
+
+                <div class="sidebar-section">Chiến dịch</div>
                 <a href="@Url.Action("Index", "Campaign", new { area = "Marketing" })" class="sidebar-item @(currentCtrl == "Campaign" ? "active" : "")">
-                    <i class="bi bi-megaphone" style="font-size: 17px; width: 18px; text-align: center;"></i>
-                    Chiến dịch Marketing
+                    <i class="bi bi-megaphone"></i> Chiến dịch Marketing
                 </a>
                 <a href="@Url.Action("Index", "CampaignReport", new { area = "Marketing" })" class="sidebar-item @(currentCtrl == "CampaignReport" ? "active" : "")">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="20" x2="18" y2="10"></line>
-                        <line x1="12" y1="20" x2="12" y2="4"></line>
-                        <line x1="6" y1="20" x2="6" y2="14"></line>
-                    </svg>
-                    Báo cáo Marketing
+                    <i class="bi bi-bar-chart-line"></i> Báo cáo Marketing
                 </a>
             </nav>
 
             <div class="sidebar-footer">
-                <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; cursor: pointer;" onclick="confirmMarketingLogout()">Đăng xuất</button>
+                <div class="staff-user">
+                    @if (!string.IsNullOrWhiteSpace(staffAvatar))
+                    {
+                        <img class="staff-avatar" src="@(staffAvatar.StartsWith("http") ? staffAvatar : Url.Content("~/" + staffAvatar.TrimStart('/')))" alt="" />
+                    }
+                    else
+                    {
+                        <span class="staff-avatar">@staffInitial</span>
+                    }
+                    <div class="staff-user-info">
+                        <div class="staff-user-name" title="@staffName">@staffName</div>
+                        <div class="staff-user-role">Nhân viên Marketing</div>
+                    </div>
+                    <button type="button" class="staff-logout" title="Đăng xuất" aria-label="Đăng xuất" onclick="confirmMarketingLogout()">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </button>
+                </div>
             </div>
         </aside>
+        <div class="staff-backdrop" id="staff-backdrop" onclick="toggleStaffSidebar(false)"></div>
 
         <!-- MAIN -->
         <main class="dashboard-main">
             <!-- TOP NAVIGATION BAR -->
             <header class="dashboard-topbar">
-                <nav class="breadcrumb-nav">
-                    <a href="@Url.Action("Index", "Dashboard", new { area = "Marketing" })">Marketing</a>
-                    @if (ViewBag.BreadcrumbCurrent != null)
-                    {
-                        <span class="separator">/</span>
-                        <span class="current">@ViewBag.BreadcrumbCurrent</span>
-                    }
-                </nav>
+                <div class="topbar-left">
+                    <button type="button" class="staff-menu-btn" aria-label="Mở menu" onclick="toggleStaffSidebar(true)"><i class="bi bi-list"></i></button>
+                    <nav class="breadcrumb-nav">
+                        <a href="@Url.Action("Index", "Dashboard", new { area = "Marketing" })">Marketing</a>
+                        @if (ViewBag.BreadcrumbCurrent != null)
+                        {
+                            <span class="separator">/</span>
+                            <span class="current">@ViewBag.BreadcrumbCurrent</span>
+                        }
+                    </nav>
+                </div>
                 <div class="topbar-actions">
-                    <a href="@Url.Action("Index", "Home", new { area = "" })" class="btn btn-outline btn-sm">Về Trang chủ</a>
+                    <a href="@Url.Action("Index", "Home", new { area = "" })" class="btn btn-outline btn-sm"><i class="bi bi-house-door"></i> <span class="staff-hide-sm">Về Trang chủ</span></a>
                 </div>
             </header>
 
@@ -116,8 +129,15 @@
     <!-- Scripts -->
     <script src="~/Scripts/jquery-3.7.0.min.js"></script>
     <script src="~/assets/js/charts.js"></script>
+    <script src="~/assets/js/admin-charts.js?v=2"></script>
     <script src="~/assets/js/app.js"></script>
     <script>
+        function toggleStaffSidebar(open) {
+            var sb = document.getElementById('staff-sidebar'), bd = document.getElementById('staff-backdrop');
+            if (sb) sb.classList.toggle('active', open);
+            if (bd) bd.classList.toggle('active', open);
+        }
+
         function confirmMarketingLogout() {
             const modal = document.getElementById('marketing-logout-modal');
             if (modal) {

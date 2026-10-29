@@ -320,12 +320,12 @@
         var revData    = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RevenueChartData));
         var chartLabels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartLabels));
 
-        if (window.Charts && typeof Charts.renderLineChart === 'function') {
-            Charts.renderLineChart('instructor-revenue-chart', {
-                data:      revData,
-                labels:    chartLabels,
-                color:     '#0D9488',
-                fillColor: 'rgba(13, 148, 136, 0.08)'
+        if (window.AdminCharts) {
+            AdminCharts.line(document.getElementById('instructor-revenue-chart'), {
+                labels: chartLabels, data: revData, name: 'Doanh thu', color: '#0D9488', fill: 'rgba(13, 148, 136, 0.08)',
+                ariaLabel: 'Biểu đồ doanh thu 12 tháng',
+                axis: function (v) { return (Math.round(v * 10) / 10).toLocaleString('vi-VN'); },
+                format: function (v) { return Number(v).toLocaleString('vi-VN') + ' triệu đ'; }
             });
         }
 

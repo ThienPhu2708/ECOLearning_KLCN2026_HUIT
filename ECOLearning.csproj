@@ -569,6 +569,7 @@
     <Content Include="assets\css\base.css" />
     <Content Include="assets\css\components.css" />
     <Content Include="assets\css\marketing.css" />
+    <Content Include="assets\css\staff-ui.css" />
     <Content Include="assets\css\coupon.css" />
     <Content Include="assets\css\pagination.css" />
     <Content Include="assets\css\search.css" />

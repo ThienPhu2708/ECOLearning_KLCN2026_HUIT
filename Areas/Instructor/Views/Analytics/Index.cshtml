@@ -4,7 +4,6 @@
 }
 
 <style>
-#analytics-registration-chart svg { height:180px !important;width:100%; }
 .report-summary { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-bottom:24px; }
 .report-metric { padding:22px;border:1px solid var(--border-color);border-radius:14px;background:#eef0ff; }
 .report-metric:nth-child(2) { background:#edf9f3; } .report-metric:nth-child(3) { background:#eef6ff; } .report-metric:nth-child(4) { background:#fff7e9; }
@@ -35,10 +34,8 @@
 .course-performance .tp-pager[hidden] { display:none !important; }
 .course-performance .tp-pager { margin:0;border:0;border-top:1px solid var(--border-color);border-radius:0;padding:16px 24px; }
 @@media(max-width:600px) { .course-performance-header { padding:20px;align-items:flex-start;flex-direction:column;gap:12px; } }
-@@media(max-width:800px) { #analytics-registration-chart svg { height:180px !important;width:100%; }
-.report-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@@media(max-width:480px) { #analytics-registration-chart svg { height:180px !important;width:100%; }
-.report-summary { grid-template-columns:1fr; } }
+@@media(max-width:800px) { .report-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@@media(max-width:480px) { .report-summary { grid-template-columns:1fr; } }
 </style>
 <!-- PERIOD FILTER TABS -->
 <div class="card" style="margin-bottom: 24px; padding: 14px 20px;">
@@ -199,13 +196,16 @@
         const revData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RevenueData));
         const chartLabels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ChartLabels));
 
-        if (window.Charts && typeof Charts.renderLineChart === 'function') {
-            Charts.renderLineChart('analytics-registration-chart', { height:180, data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RegistrationData)), labels: chartLabels, color: '#4f46e5', fillColor: 'rgba(79,70,229,.08)' });
-            Charts.renderLineChart('analytics-revenue-chart', {
-                data: revData,
-                labels: chartLabels,
-                color: '#0D9488',
-                fillColor: 'rgba(13, 148, 136, 0.08)'
+        if (window.AdminCharts) {
+            AdminCharts.line(document.getElementById('analytics-registration-chart'), {
+                labels: chartLabels, data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.RegistrationData)),
+                name: 'Lượt ghi danh', color: '#434CE8', fill: 'rgba(67, 76, 232, 0.08)', ariaLabel: 'Biểu đồ xu hướng ghi danh', height: 240
+            });
+            AdminCharts.line(document.getElementById('analytics-revenue-chart'), {
+                labels: chartLabels, data: revData, name: 'Doanh thu', color: '#0D9488', fill: 'rgba(13, 148, 136, 0.08)',
+                ariaLabel: 'Biểu đồ doanh thu',
+                axis: function (v) { return (Math.round(v * 10) / 10).toLocaleString('vi-VN'); },
+                format: function (v) { return Number(v).toLocaleString('vi-VN') + ' triệu đ'; }
             });
         }
     });

@@ -33,7 +33,7 @@
     </div>
 }
 
-@using (Html.BeginForm(laSua ? "Edit" : "Create", "Promotion", laSua ? new { id = Model.MaKhuyenMai } : null, FormMethod.Post, new { id = "promo-form", novalidate = "novalidate" }))
+@using (Html.BeginForm(laSua ? "Edit" : "Create", "Promotion", laSua ? new { id = Model.MaKhuyenMai } : null, FormMethod.Post, new { id = "promo-form", novalidate = "novalidate", enctype = "multipart/form-data" }))
 {
     @Html.AntiForgeryToken()
     <div class="mk-form">
@@ -229,6 +229,8 @@
                     @loi("ChinhSach")
                 </div>
             </div>
+
+            @Html.Partial("~/Areas/Marketing/Views/Shared/_QuangCaoFields.cshtml")
 
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <a href="@(laSua ? Url.Action("Details", "Promotion", new { id = Model.MaKhuyenMai }) : Url.Action("Index", "Promotion"))" class="btn btn-outline">Hủy</a>

@@ -64,6 +64,53 @@ namespace ECOLearning.Controllers
             return View(vm);
         }
 
+        // GET: Coupon/QuangCao — ảnh quảng cáo chiến dịch / chương trình đang chạy cho popup trang chủ (công khai, chỉ đọc)
+        [HttpGet]
+        public JsonResult QuangCao()
+        {
+            var ds = new QuangCaoService(db).LayDangChay(CoViMa ? UserId : 0);
+            return Json(new
+            {
+                items = ds.Select(a => new
+                {
+                    type = a.Loai,
+                    id = a.Ma,
+                    title = a.Ten,
+                    image = Url.Content("~" + a.Anh),
+                    url = Url.Action(a.Loai, "UuDai", new { id = a.Ma }),
+                    expiresAt = a.NgayKetThuc.ToString("dd/MM/yyyy")
+                }).ToList()
+            }, JsonRequestBehavior.AllowGet);
+        }
+
+        // GET: Coupon/LoyaltyPopup — dữ liệu popup "Ưu đãi dành riêng cho học viên thân thiết" ở trang chủ (chỉ đọc)
+        [HttpGet]
+        public JsonResult LoyaltyPopup()
+        {
+            var khong = Json(new { show = false }, JsonRequestBehavior.AllowGet);
+            if (!CoViMa) return khong;
+            var service = new PromotionService(db);
+            if (!service.IsInstalled()) return khong;
+
+            var p = service.LayPopupThanThiet(UserId);
+            if (p == null) return khong;
+            return Json(new
+            {
+                show = true,
+                kind = p.Loai,
+                id = p.MaKhuyenMai,
+                code = p.MaCode,
+                title = p.TieuDe,
+                discountText = p.GiaTriNgan,
+                note = p.GhiChuGiaTri,
+                description = p.MoTa,
+                conditions = p.DieuKien,
+                expiresAt = p.HanDung.HasValue ? p.HanDung.Value.ToString("dd/MM/yyyy") : null,
+                progress = p.TienDo,
+                walletUrl = Url.Action("Index", "Coupon", new { tab = "thuthap" })
+            }, JsonRequestBehavior.AllowGet);
+        }
+
         // POST: Coupon/Collect — lưu mã vào ví (đã xác nhận ở hộp thoại; không hoàn tác được)
         [HttpPost]
         [ValidateAntiForgeryToken]

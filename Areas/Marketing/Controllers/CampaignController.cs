@@ -64,18 +64,22 @@ namespace ECOLearning.Areas.Marketing.Controllers
         // POST: Marketing/Campaign/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create(CampaignFormViewModel f)
+        public ActionResult Create(CampaignFormViewModel f, System.Web.HttpPostedFileBase anhQuangCao = null, bool hienPopup = false)
         {
             if (!DaKhoiTao) return View("~/Areas/Marketing/Views/Shared/_ChuaKhoiTao.cshtml");
             f.MaChienDich = null;
             DocNgayForm(f);
             var service = Service;
             var loi = service.KiemTraForm(f, null);
-            if (loi.Count > 0) return HienThiLoi(f, loi);
+            AnhDaXuLy anh;
+            var loiAnh = new QuangCaoService(db).KiemTraForm(QuangCaoService.LoaiChienDich, null, anhQuangCao, false, hienPopup, out anh);
+            if (loiAnh != null) ViewBag.QuangCaoLoi = loiAnh;
+            if (loi.Count > 0 || loiAnh != null) return HienThiLoi(f, loi);
 
             try
             {
                 string ma = service.Tao(f, MaNguoiDungHienTai);
+                new QuangCaoService(db).LuuTuForm(QuangCaoService.LoaiChienDich, ma, anh, false, hienPopup, Server);
                 TempData["Success"] = "Đã tạo chiến dịch \"" + f.TenChienDich + "\".";
                 return RedirectToAction("Details", new { id = ma });
             }
@@ -105,7 +109,7 @@ namespace ECOLearning.Areas.Marketing.Controllers
         // POST: Marketing/Campaign/Edit/CD...
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(string id, CampaignFormViewModel f)
+        public ActionResult Edit(string id, CampaignFormViewModel f, System.Web.HttpPostedFileBase anhQuangCao = null, bool xoaAnh = false, bool hienPopup = false)
         {
             if (!DaKhoiTao) return View("~/Areas/Marketing/Views/Shared/_ChuaKhoiTao.cshtml");
             var service = Service;
@@ -120,11 +124,15 @@ namespace ECOLearning.Areas.Marketing.Controllers
             f.MaChienDich = c.MaChienDich;
             DocNgayForm(f);
             var loi = service.KiemTraForm(f, c);
-            if (loi.Count > 0) return HienThiLoi(f, loi);
+            AnhDaXuLy anh;
+            var loiAnh = new QuangCaoService(db).KiemTraForm(QuangCaoService.LoaiChienDich, c.MaChienDich, anhQuangCao, xoaAnh, hienPopup, out anh);
+            if (loiAnh != null) ViewBag.QuangCaoLoi = loiAnh;
+            if (loi.Count > 0 || loiAnh != null) return HienThiLoi(f, loi);
 
             try
             {
                 service.CapNhat(c.MaChienDich, f);
+                new QuangCaoService(db).LuuTuForm(QuangCaoService.LoaiChienDich, c.MaChienDich, anh, xoaAnh, hienPopup, Server);
                 TempData["Success"] = "Đã cập nhật chiến dịch \"" + f.TenChienDich + "\".";
                 return RedirectToAction("Details", new { id });
             }
@@ -176,6 +184,9 @@ namespace ECOLearning.Areas.Marketing.Controllers
         private ActionResult HienThiForm(CampaignFormViewModel f)
         {
             f.ChuongTrinhLuaChon = Service.LayChuongTrinhCoTheGan(f.MaChienDich);
+            var qc = new QuangCaoService(db);
+            ViewBag.QuangCaoCoSan = qc.IsInstalled();
+            ViewBag.QuangCao = qc.Lay(QuangCaoService.LoaiChienDich, f.MaChienDich);
             ViewBag.BreadcrumbCurrent = f.LaChinhSua ? "Sửa chiến dịch" : "Tạo chiến dịch";
             return View("Form", f);
         }

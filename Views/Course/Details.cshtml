@@ -63,6 +63,28 @@
             pointer-events: none;
         }
 
+        .details-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            padding: 7px 16px 7px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            color: #FFFFFF;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .details-back:hover {
+            background: rgba(255, 255, 255, 0.26);
+            color: #FFFFFF;
+            transform: translateX(-2px);
+        }
+
         .breadcrumb-link {
             color: #94A3B8;
             text-decoration: none;
@@ -519,6 +541,26 @@
             min-height: 320px;
         }
 
+        @@media (max-width: 640px) {
+            .details-hero { padding: 28px 0 34px; margin-bottom: 22px; }
+            .details-hero .safe-container { padding-left: 16px; padding-right: 16px; }
+            .course-title-main { font-size: clamp(24px, 7vw, 32px); line-height: 1.2; overflow-wrap: anywhere; }
+            .details-hero .breadcrumb-item { overflow-wrap: anywhere; }
+            .details-page-main .details-layout-grid { gap: 20px; }
+            .details-page-main .details-left-content .p-4 { padding: 16px !important; }
+            .sticky-course-card { border-radius: 16px; }
+            .preview-media-container img { height: auto; aspect-ratio: 16 / 9; }
+            .price-tag-big { font-size: 24px; }
+            .chapter-header { gap: 10px; padding: 14px; }
+            .lesson-item-row { gap: 10px; padding: 12px 14px; }
+            .badge-preview { flex: 0 0 auto; padding: 4px 8px; }
+            .custom-modal-overlay { padding: 12px; min-height: 100dvh; height: 100dvh; }
+            .custom-modal-dialog { max-height: calc(100dvh - 24px); display: flex; flex-direction: column; }
+            .custom-modal-header { padding: 12px 14px; gap: 10px; }
+            .custom-modal-body { min-height: 0; flex: 1 1 auto; }
+            .video-placeholder-container { padding: 28px 16px !important; }
+        }
+
     </style>
 }
 
@@ -539,6 +581,20 @@
         <!-- Header Hero Section -->
         <div class="details-hero">
             <div class="safe-container">
+                @* Quay về trang trước (danh sách, tìm kiếm, trang chủ...); mở khóa ở tab mới hoặc vào thẳng đường dẫn thì về danh sách khóa học *@
+                <a href="@Url.Action("Index", "Course")" class="details-back" id="details-back">
+                    <i class="bi bi-arrow-left"></i> Quay lại
+                </a>
+                <script>
+                    document.getElementById('details-back').addEventListener('click', function (e) {
+                        try {
+                            if (window.history.length > 1 && document.referrer && new URL(document.referrer).origin === window.location.origin) {
+                                e.preventDefault();
+                                window.history.back();
+                            }
+                        } catch (err) { /* dùng liên kết mặc định về danh sách khóa học */ }
+                    });
+                </script>
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb bg-transparent p-0 mb-3">
                         <li class="breadcrumb-item active text-light opacity-75" aria-current="page">@Model.tenKhoaHoc</li>

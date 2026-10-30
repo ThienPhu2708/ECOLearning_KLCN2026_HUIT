@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="~/assets/css/dashboard-tables.css?v=4">
     <link rel="stylesheet" href="~/assets/vendor/bootstrap-icons/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/assets/css/marketing.css?v=1.0">
-    <link rel="stylesheet" href="~/assets/css/staff-ui.css?v=1.3">
+    <link rel="stylesheet" href="~/assets/css/staff-ui.css?v=1.4">
     @RenderSection("Styles", required: false)
 </head>
 <body class="staff-ui">
@@ -56,6 +56,9 @@
                 </a>
                 <a href="@Url.Action("Index", "CampaignReport", new { area = "Marketing" })" class="sidebar-item @(currentCtrl == "CampaignReport" ? "active" : "")">
                     <i class="bi bi-bar-chart-line"></i> Báo cáo Marketing
+                </a>
+                <a href="@Url.Action("Index", "CourseEngagement", new { area = "Marketing" })" class="sidebar-item @(currentCtrl == "CourseEngagement" ? "active" : "")">
+                    <i class="bi bi-activity"></i> Tương tác khóa học
                 </a>
             </nav>
 

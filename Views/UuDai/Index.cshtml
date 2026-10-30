@@ -1,0 +1,199 @@
+@model ECOLearning.ViewModels.UuDaiTrangViewModel
+@{
+    ViewBag.Title = Model.TieuDe;
+    Func<decimal, string> vnd = v => v.ToString("#,##0") + " đ";
+}
+
+@section styles {
+    <style>
+        .ud-page { padding: 28px 0 60px; background: var(--bg-canvas, #F8FAFC); min-height: 60vh; }
+        .ud-hero { border-radius: 22px; overflow: hidden; background: #fff; border: 1px solid var(--border-color, #E2E8F0); box-shadow: var(--shadow-card, 0 1px 3px rgba(15,23,42,.06)); margin-bottom: 26px; }
+        .ud-hero img { display: block; width: 100%; max-height: 420px; object-fit: cover; }
+        .ud-hero-body { padding: 22px 26px 24px; }
+        .ud-hero h1 { margin: 0 0 8px; font-size: 28px; line-height: 1.25; }
+        .ud-time { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: var(--primary-light, #EEF0FF); color: var(--primary, #434CE8); font-size: 13px; font-weight: 700; }
+        .ud-desc { margin: 12px 0 0; color: var(--text-secondary, #475569); line-height: 1.6; white-space: pre-line; }
+        .ud-grid { display: flex; flex-direction: column; gap: 18px; }
+        .ud-card { background: #fff; border: 1px solid var(--border-color, #E2E8F0); border-radius: 20px; padding: 22px 24px; box-shadow: var(--shadow-card, 0 1px 3px rgba(15,23,42,.06)); }
+        .ud-top { display: flex; gap: 20px; align-items: stretch; flex-wrap: wrap; }
+        .ud-value { flex: 0 0 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px; border-radius: 16px; background: linear-gradient(135deg, var(--primary, #434CE8), #6366F1); color: #fff; text-align: center; }
+        .ud-value strong { font-size: 34px; line-height: 1.1; font-weight: 800; }
+        .ud-value span { margin-top: 4px; font-size: 12px; opacity: .9; }
+        .ud-info { flex: 1; min-width: 240px; }
+        .ud-info h2 { margin: 0 0 8px; font-size: 18px; font-weight: 800; }
+        .ud-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+        .ud-tag { padding: 3px 10px; border-radius: 999px; background: #F1F5F9; color: #475569; font-size: 12px; font-weight: 600; }
+        .ud-tag.is-loyal { background: #FEF3C7; color: #92400E; }
+        .ud-list { margin: 0 0 12px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; font-size: 13.5px; color: var(--text-secondary, #475569); }
+        .ud-list li::before { content: "\2713"; color: #10B981; font-weight: 800; margin-right: 8px; }
+        .ud-code { display: inline-flex; align-items: center; gap: 20px; flex-wrap: wrap; max-width: 100%; padding: 8px 8px 8px 16px; border: 1.5px dashed var(--primary, #434CE8); border-radius: 12px; background: #F5F6FF; }
+        .ud-code strong { font-family: Consolas, monospace; font-size: 17px; letter-spacing: .06em; color: var(--primary, #434CE8); }
+        .ud-btn { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 18px; border: 0; border-radius: 10px; background: var(--primary, #434CE8); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none; }
+        .ud-btn[disabled] { opacity: .6; cursor: default; }
+        .ud-btn.is-ghost { background: #fff; color: var(--primary, #434CE8); border: 1.5px solid var(--primary, #434CE8); }
+        .ud-warn { padding: 10px 14px; border-radius: 12px; background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; font-size: 13.5px; font-weight: 600; }
+        .ud-msg { margin-top: 8px; font-size: 13px; font-weight: 600; color: #047857; }
+        .ud-msg.is-error { color: #B91C1C; }
+        .ud-courses-title { margin: 20px 0 12px; font-size: 14px; font-weight: 800; color: var(--text-heading, #0F172A); }
+        .ud-courses { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+        .ud-course { display: block; border: 1px solid var(--border-color, #E2E8F0); border-radius: 14px; overflow: hidden; background: #fff; text-decoration: none; color: inherit; transition: transform .15s ease, box-shadow .15s ease; }
+        .ud-course:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -12px rgba(15, 23, 42, .25); }
+        .ud-course img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #E2E8F0; }
+        .ud-course-body { padding: 10px 12px 12px; }
+        .ud-course-name { font-size: 13.5px; font-weight: 700; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 36px; }
+        .ud-price { margin-top: 8px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+        .ud-price strong { font-size: 15px; color: var(--primary, #434CE8); }
+        .ud-price s { font-size: 12px; color: #94A3B8; }
+        .ud-price em { font-style: normal; padding: 1px 6px; border-radius: 6px; background: #FEE2E2; color: #DC2626; font-size: 11.5px; font-weight: 700; }
+        .ud-more { margin-top: 12px; font-size: 13px; color: var(--text-secondary, #64748B); }
+        .ud-empty { padding: 40px 20px; text-align: center; color: var(--text-secondary, #64748B); background: #fff; border-radius: 20px; border: 1px dashed var(--border-color, #CBD5E1); }
+        @@media (max-width: 600px) { .ud-hero h1 { font-size: 22px; } .ud-value { flex-basis: 100%; } .ud-card { padding: 18px; } }
+    </style>
+}
+
+<main class="ud-page">
+    <div class="safe-container">
+        <section class="ud-hero">
+            @if (!string.IsNullOrEmpty(Model.Anh))
+            {
+                <img src="@Url.Content("~" + Model.Anh)" alt="@Model.TieuDe" />
+            }
+            <div class="ud-hero-body">
+                <h1>@Model.TieuDe</h1>
+                <span class="ud-time"><i class="bi bi-calendar-event"></i> @Model.NgayBatDau.ToString("dd/MM/yyyy") – @Model.NgayKetThuc.ToString("dd/MM/yyyy")</span>
+                @if (!string.IsNullOrWhiteSpace(Model.MoTa))
+                {
+                    <p class="ud-desc">@Model.MoTa</p>
+                }
+            </div>
+        </section>
+
+        @if (!Model.Muc.Any())
+        {
+            <div class="ud-empty"><i class="bi bi-tag" style="font-size: 28px;"></i><p style="margin: 8px 0 0;">Hiện chưa có ưu đãi nào đang áp dụng trong chương trình này.</p></div>
+        }
+        else
+        {
+            @Html.AntiForgeryToken()
+            <div class="ud-grid">
+                @foreach (var m in Model.Muc)
+                {
+                    <section class="ud-card">
+                        <div class="ud-top">
+                            <div class="ud-value"><strong>@m.GiaTri</strong><span>@(m.GhiChu ?? (m.LaGiamTrucTiep ? "Giảm trực tiếp" : "Mã giảm giá"))</span></div>
+                            <div class="ud-info">
+                                <h2>@m.Ten</h2>
+                                <div class="ud-tags">
+                                    <span class="ud-tag">@(m.LaGiamTrucTiep ? "Tự động áp dụng" : "Nhập mã khi thanh toán")</span>
+                                    @if (m.LaThanThiet) { <span class="ud-tag is-loyal"><i class="bi bi-award"></i> Học viên thân thiết</span> }
+                                    <span class="ud-tag">Đến @m.NgayKetThuc.ToString("dd/MM/yyyy")</span>
+                                </div>
+                                @if (m.DieuKien.Any())
+                                {
+                                    <ul class="ud-list">
+                                        @foreach (var d in m.DieuKien) { <li>@d</li> }
+                                    </ul>
+                                }
+
+                                @if (!string.IsNullOrEmpty(m.ThongBao))
+                                {
+                                    <div class="ud-warn"><i class="bi bi-lock"></i> @m.ThongBao</div>
+                                }
+                                else if (m.MaCode != null)
+                                {
+                                    <div class="ud-code">
+                                            <strong>@m.MaCode</strong>
+                                            @if (m.DaLuu)
+                                            {
+                                                <a class="ud-btn is-ghost" href="@Url.Action("Index", "Coupon", new { tab = "codung" })">Đã lưu · xem ví</a>
+                                            }
+                                            else if (Model.DaDangNhap && m.CoTheLuu)
+                                            {
+                                                <button type="button" class="ud-btn" data-save="@m.MaCode">Lưu vào ví</button>
+                                            }
+                                            else if (!Model.DaDangNhap)
+                                            {
+                                                <a class="ud-btn" href="@Url.Action("Login", "Account", new { returnUrl = Request.RawUrl })">Đăng nhập để lưu mã</a>
+                                            }
+                                        </div>
+                                    <div class="ud-msg" hidden></div>
+                                }
+                            </div>
+                        </div>
+
+                        @if (m.ApDungMoiKhoa)
+                        {
+                            <div class="ud-more">Áp dụng cho mọi khóa học trên hệ thống. <a href="@Url.Action("Index", "Course")" style="font-weight: 700;">Xem danh sách khóa học</a></div>
+                        }
+                        else if (m.Khoa.Any())
+                        {
+                            <div class="ud-courses-title">Khóa học được áp dụng (@m.TongSoKhoa)</div>
+                            if (m.DonToiThieu.HasValue)
+                            {
+                                <div class="ud-more" style="margin: -6px 0 12px;"><i class="bi bi-info-circle"></i> Ưu đãi tính trên <strong>tổng giá trị các khóa được áp dụng trong giỏ hàng</strong> từ @vnd(m.DonToiThieu.Value). Một khóa dưới mức này vẫn được áp dụng, bạn có thể mua kết hợp nhiều khóa để đạt đủ.</div>
+                            }
+                            <div class="ud-courses">
+                                @foreach (var k in m.Khoa)
+                                {
+                                    <a class="ud-course" href="@Url.Action("Details", "Course", new { id = k.MaKhoaHoc })">
+                                        <img src="@(string.IsNullOrEmpty(k.AnhBia) ? Url.Content("~/assets/images/defaults/course.png") : k.AnhBia)" alt="" loading="lazy" onerror="this.style.visibility='hidden'" />
+                                        <div class="ud-course-body">
+                                            <div class="ud-course-name">@k.Ten</div>
+                                            <div class="ud-price">
+                                                @if (k.DangGiam)
+                                                {
+                                                    <strong>@vnd(k.Gia)</strong><s>@vnd(k.GiaGoc)</s><em>-@k.PhanTram%</em>
+                                                }
+                                                else
+                                                {
+                                                    <strong>@vnd(k.GiaGoc)</strong>
+                                                }
+                                            </div>
+                                        </div>
+                                    </a>
+                                }
+                            </div>
+                            if (m.TongSoKhoa > m.Khoa.Count)
+                            {
+                                <div class="ud-more">Và @(m.TongSoKhoa - m.Khoa.Count) khóa học khác. <a href="@Url.Action("Index", "Course")" style="font-weight: 700;">Xem tất cả khóa học</a></div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="ud-more">Hiện chưa có khóa học nào đang mở bán trong phạm vi của ưu đãi này.</div>
+                        }
+                    </section>
+                }
+            </div>
+        }
+    </div>
+</main>
+
+@section scripts {
+    <script>
+        (function () {
+            var token = document.querySelector('input[name="__RequestVerificationToken"]');
+            document.querySelectorAll('[data-save]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var msg = btn.closest('.ud-info').querySelector('.ud-msg');
+                    btn.disabled = true;
+                    var body = new URLSearchParams();
+                    body.append('code', btn.getAttribute('data-save'));
+                    if (token) body.append('__RequestVerificationToken', token.value);
+                    fetch('@Url.Action("Collect", "Coupon")', {
+                        method: 'POST', credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                        body: body.toString()
+                    }).then(function (r) { return r.json(); }).then(function (res) {
+                        msg.hidden = false;
+                        msg.className = 'ud-msg' + (res.success ? '' : ' is-error');
+                        msg.textContent = res.message || (res.success ? 'Đã lưu mã vào ví.' : 'Không lưu được mã.');
+                        if (res.success || res.alreadySaved) { btn.textContent = 'Đã lưu'; }
+                        else if (res.requireLogin) { window.location.href = '@Url.Action("Login", "Account")'; }
+                        else { btn.disabled = false; }
+                    }).catch(function () { msg.hidden = false; msg.className = 'ud-msg is-error'; msg.textContent = 'Không kết nối được máy chủ.'; btn.disabled = false; });
+                });
+            });
+        })();
+    </script>
+}

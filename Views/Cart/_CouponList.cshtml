@@ -46,7 +46,13 @@
                     }
                     <div class="cp-item-title">@m.MoTaUuDai</div>
                     <div class="cp-item-name"><span class="cp-code">@m.MaCode</span> @m.TenKhuyenMai</div>
-                    <div class="cp-cond">@string.Join(" · ", m.DieuKien) · @(m.ChuaBatDau ? "Từ " + m.NgayBatDau.ToString("dd/MM/yyyy") + " · " : "")HSD @m.NgayKetThuc.ToString("dd/MM/yyyy")</div>
+                    <div class="cp-cond">
+                        @foreach (var dk in m.DieuKien)
+                        {
+                            <div class="cp-cond-line">@dk</div>
+                        }
+                        <div class="cp-cond-line">@(m.ChuaBatDau ? "Từ " + m.NgayBatDau.ToString("dd/MM/yyyy") + " · " : "")HSD @m.NgayKetThuc.ToString("dd/MM/yyyy")</div>
+                    </div>
                     @if (dungDuoc && m.TienGiam > 0)
                     {
                         <div class="cp-save">Giảm @m.TienGiam.ToString("N0") đ cho giỏ hàng này</div>

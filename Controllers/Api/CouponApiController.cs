@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Services;
+using ECOLearning.Services.Api;
 using ECOLearning.ViewModels;
 
 namespace ECOLearning.Controllers.Api
@@ -139,6 +140,90 @@ namespace ECOLearning.Controllers.Api
                     progress = u.TienDo
                 }).ToList(),
                 stats = hv == null ? null : new { coursesBought = hv.SoKhoa, totalSpent = ApiFormat.Money(hv.ChiTieu) }
+            });
+        }
+
+        // GET /api/v1/ads — ảnh quảng cáo chiến dịch / chương trình đang chạy cho popup trang chủ app (token tùy chọn).
+        // Ưu đãi thân thiết chỉ có trong danh sách khi người dùng đã đăng nhập và đủ điều kiện.
+        [HttpGet, Route("ads")]
+        public ActionResult Ads()
+        {
+            var qc = new QuangCaoService(Db);
+            if (!qc.IsInstalled()) return Ok(new { items = new object[0] });
+            var items = qc.LayDangChay(CurrentUserId).Select(a => new
+            {
+                type = a.Loai == QuangCaoService.LoaiChienDich ? "campaign" : "promotion",
+                id = a.Ma,
+                title = a.Ten,
+                imageUrl = AbsoluteUrl(a.Anh),
+                expiresAt = ApiFormat.Day(a.NgayKetThuc)
+            }).ToList();
+            return Ok(new { items });
+        }
+
+        // GET /api/v1/ads/{type}/{id} — trang ưu đãi mở ra khi bấm ảnh quảng cáo; type = campaign | promotion
+        [HttpGet, Route("ads/{type}/{id}")]
+        public ActionResult AdDetail(string type, string id)
+        {
+            string loai = type == "campaign" ? QuangCaoService.LoaiChienDich : type == "promotion" ? QuangCaoService.LoaiChuongTrinh : null;
+            if (loai == null) return NotFoundJson("Loại ưu đãi không hợp lệ.", "OFFER_TYPE_INVALID");
+            var qc = new QuangCaoService(Db);
+            var trang = qc.LayTrang(loai, id, CurrentUserId);
+            if (trang == null) return NotFoundJson("Ưu đãi không còn hiệu lực.", "OFFER_NOT_FOUND");
+
+            var mapper = new ApiCourseMapper(Db, AbsoluteUrl);
+            return Ok(new
+            {
+                type,
+                id = trang.Ma,
+                title = trang.TieuDe,
+                description = trang.MoTa,
+                imageUrl = AbsoluteUrl(trang.Anh),
+                startsAt = ApiFormat.Day(trang.NgayBatDau),
+                endsAt = ApiFormat.Day(trang.NgayKetThuc),
+                offers = trang.Muc.Select(m => new
+                {
+                    id = m.MaKhuyenMai,
+                    title = m.Ten,
+                    discountText = m.GiaTri,
+                    note = m.GhiChu,
+                    conditions = m.DieuKien,
+                    expiresAt = ApiFormat.Day(m.NgayKetThuc),
+                    isDirectDiscount = m.LaGiamTrucTiep,
+                    isLoyalty = m.LaThanThiet,
+                    minOrder = m.DonToiThieu.HasValue ? (long?)ApiFormat.Money(m.DonToiThieu.Value) : null,
+                    code = m.MaCode,
+                    canSave = m.CoTheLuu,
+                    saved = m.DaLuu,
+                    message = m.ThongBao,
+                    appliesToAll = m.ApDungMoiKhoa,
+                    totalCourses = m.TongSoKhoa,
+                    courses = m.Khoa.Count == 0 ? new List<CourseSummaryDto>() : mapper.Map(m.Khoa.Select(k => k.MaKhoaHoc).ToList())
+                }).ToList()
+            });
+        }
+
+        // GET /api/v1/coupons/loyalty-popup — popup "Ưu đãi dành riêng cho học viên thân thiết" (chỉ đọc; app tự quyết định tần suất hiện)
+        [HttpGet, Route("coupons/loyalty-popup"), ApiAuthorize]
+        public ActionResult LoyaltyPopup()
+        {
+            var promotions = Promotions;
+            if (!promotions.IsInstalled()) return ChuaSanSang();
+            var p = promotions.LayPopupThanThiet(CurrentUserId);
+            if (p == null) return Ok(new { show = false });
+            return Ok(new
+            {
+                show = true,
+                kind = p.Loai == "dat" ? "eligible" : "upcoming",
+                promotionId = p.MaKhuyenMai,
+                code = p.MaCode,
+                title = p.TieuDe,
+                discountText = p.GiaTriNgan,
+                note = p.GhiChuGiaTri,
+                description = p.MoTa,
+                conditions = p.DieuKien,
+                expiresAt = p.HanDung.HasValue ? ApiFormat.Day(p.HanDung.Value) : null,
+                progress = p.TienDo
             });
         }
 

@@ -226,8 +226,14 @@
     <Compile Include="Areas\Marketing\Controllers\LoyaltyController.cs" />
     <Compile Include="Areas\Marketing\Controllers\CampaignController.cs" />
     <Compile Include="Areas\Marketing\Controllers\CampaignReportController.cs" />
+    <Compile Include="Areas\Marketing\Controllers\CourseEngagementController.cs" />
+    <Compile Include="Controllers\UuDaiController.cs" />
+    <Compile Include="Services\QuangCaoService.cs" />
+    <Compile Include="ViewModels\UuDaiModels.cs" />
     <Compile Include="Areas\Marketing\Models\MarketingViewModels.cs" />
     <Compile Include="Areas\Marketing\Models\MarketingReportModels.cs" />
+    <Compile Include="Areas\Marketing\Models\CourseEngagementModels.cs" />
+    <Compile Include="Services\CourseEngagementService.cs" />
     <Compile Include="Controllers\AccountController.cs" />
     <Compile Include="ViewModels\LoginViewModel.cs" />
     <Compile Include="ViewModels\RegisterViewModels.cs" />
@@ -576,6 +582,7 @@
     <Content Include="assets\css\components.css" />
     <Content Include="assets\css\marketing.css" />
     <Content Include="assets\css\staff-ui.css" />
+    <Content Include="assets\css\responsive-student.css" />
     <Content Include="assets\css\coupon.css" />
     <Content Include="assets\css\pagination.css" />
     <Content Include="assets\css\search.css" />
@@ -669,6 +676,11 @@
     <Content Include="Areas\Marketing\Views\Shared\_Flash.cshtml" />
     <Content Include="Areas\Marketing\Views\Shared\_ChuaKhoiTao.cshtml" />
     <Content Include="Areas\Marketing\Views\CampaignReport\Index.cshtml" />
+    <Content Include="Areas\Marketing\Views\CourseEngagement\Index.cshtml" />
+    <Content Include="Views\Shared\_UuDaiThanThietPopup.cshtml" />
+    <Content Include="Views\UuDai\Index.cshtml" />
+    <Content Include="Views\UuDai\HetHan.cshtml" />
+    <Content Include="Areas\Marketing\Views\Shared\_QuangCaoFields.cshtml" />
     <Content Include="Views\User\Index.cshtml" />
     <Content Include="Views\User\Courses.cshtml" />
     <Content Include="Views\Learning\Favorites.cshtml" />

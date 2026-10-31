@@ -1,0 +1,51 @@
+﻿@model ECOLearning.Services.QuizQuestionReport
+@{
+    ViewBag.Title = "Xem xét điều chỉnh câu lỗi";
+    ViewBag.BreadcrumbCurrent = ViewBag.Title;
+    ViewBag.ShowQuestionBankBreadcrumb = true;
+    ViewBag.QuestionBankCourseId = Model.CourseId;
+    var q = Model.Question;
+}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=23" />
+<div class="question-editor qcr-page">
+    <div class="qs-toolbar"><span class="qe-course"><i class="bi bi-journal-bookmark" aria-hidden="true"></i> @Model.CourseName</span><a class="btn btn-outline" href="@Url.Action("Reports", new { courseId = Model.CourseId })"><i class="bi bi-arrow-left" aria-hidden="true"></i> Báo lỗi câu hỏi</a></div>
+    @if (TempData["ReportMessage"] != null) {<div class="qcr-alert" role="alert"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> @TempData["ReportMessage"]</div>}
+    <div class="qe-layout">
+        <div class="qe-main">
+            <section class="card qe-card">
+                <div class="qe-section-heading"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><div><h2>Câu hỏi cần xem xét</h2><p>Báo cáo #@Model.Id · @Model.StudentName · Lượt #@Model.AttemptId</p></div></div>
+                <h3 class="qcr-question">@q.Text</h3>
+                <div class="qcr-report"><span class="qa-label">Phản ánh của học viên</span><strong>@Model.Reason</strong><p>@(string.IsNullOrWhiteSpace(Model.Content) ? "Không có mô tả thêm." : Model.Content)</p></div>
+            </section>
+            <form action="@Url.Action("PreviewCorrection")" method="post" id="correction-form">
+                @Html.AntiForgeryToken()<input type="hidden" name="reportId" value="@Model.Id" />
+                <section class="card qe-card">
+                    <div class="qe-section-heading"><i class="bi bi-check2-square" aria-hidden="true"></i><div><h2>Cách xử lý câu hỏi</h2><p>Chọn các đáp án được chấp nhận sau khi kiểm tra.</p></div></div>
+                    <fieldset class="qcr-options" id="correction-options"><legend class="qb-sr-only">Các đáp án được chấp nhận</legend>
+                    @for (int i = 0; i < q.Options.Length; i++) {
+                        <label class="qcr-option"><input type="checkbox" name="accepted" value="@i" checked="@(i == q.CorrectOption)" /><span class="qcr-option-letter">@((char)('A' + i))</span><span class="qcr-option-content">@q.Options[i] @if (i == q.CorrectOption) {<small>Đáp án gốc</small>}</span></label>
+                    }
+                    </fieldset>
+                    <label class="qcr-all-credit" for="all-credit"><input type="checkbox" name="allCredit" id="all-credit" value="true" /><span><strong>Câu hỏi không hợp lệ</strong><small>Công nhận điểm câu này cho tất cả học viên gặp câu, kể cả chưa chọn đáp án.</small></span></label>
+                    <div class="qcr-reason"><label class="form-label" for="correction-reason">Lý do điều chỉnh <span class="required">*</span></label><p class="qe-hint">Nội dung này sẽ được lưu và thông báo cho học viên bị ảnh hưởng.</p><textarea class="form-control" id="correction-reason" name="reason" required maxlength="2000" rows="4" placeholder="Nêu lỗi đã xác minh và cách xử lý…"></textarea></div>
+                    <div class="qcr-form-footer"><span><i class="bi bi-info-circle" aria-hidden="true"></i> Chưa thay đổi điểm ở bước này.</span><button class="btn btn-primary" type="submit">Xem trước điểm <i class="bi bi-arrow-right" aria-hidden="true"></i></button></div>
+                </section>
+            </form>
+        </div>
+        <aside class="card qe-card qcr-guide">
+            <div class="qe-section-heading"><i class="bi bi-shield-check" aria-hidden="true"></i><div><h2>Phạm vi điều chỉnh</h2><p>Áp dụng cho cùng phiên bản câu hỏi.</p></div></div>
+            <ul class="qcr-scope"><li><i class="bi bi-people" aria-hidden="true"></i><span>Tất cả lượt thi gặp câu này được xem xét, không chỉ người báo lỗi.</span></li><li><i class="bi bi-award" aria-hidden="true"></i><span>Giữ điểm có lợi và chứng chỉ đã cấp.</span></li><li><i class="bi bi-eye" aria-hidden="true"></i><span>Xem trước ảnh hưởng, sau đó mới xác nhận.</span></li></ul>
+            <details class="qcr-help"><summary><span><i class="bi bi-question-circle" aria-hidden="true"></i> Cách tính điểm</span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary><p>Đối chiếu theo nội dung đáp án nên vẫn áp dụng được khi đề đã đảo thứ tự. Các lượt đang làm được áp dụng khi nộp bài. Quy tắc không làm giảm điểm hoặc kỹ năng đã được công nhận.</p></details>
+            <div class="qcr-bank"><h3>Cập nhật ngân hàng câu hỏi</h3><p>Điều chỉnh điểm không tự sửa nội dung câu hỏi cho các đề mới.</p><a class="btn btn-outline" href="@Url.Action("Edit", new { courseId = Model.CourseId, id = q.Id })" target="_blank" rel="noopener"><i class="bi bi-pencil" aria-hidden="true"></i> Sửa câu hỏi <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></div>
+        </aside>
+    </div>
+</div>
+<script>
+(function () {
+    const allCredit = document.getElementById('all-credit');
+    const options = document.getElementById('correction-options');
+    function update() { options.disabled = allCredit.checked; }
+    allCredit.addEventListener('change', update);
+    update();
+})();
+</script>

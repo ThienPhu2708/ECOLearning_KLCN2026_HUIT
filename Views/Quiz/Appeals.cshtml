@@ -1,0 +1,94 @@
+﻿@model List<ECOLearning.Services.QuizAppeal>
+@{bool teacher=ViewBag.IsTeacher==true;ViewBag.Title=teacher?"Phúc khảo học viên":"Phúc khảo & thông báo điểm";ViewBag.BreadcrumbCurrent=ViewBag.Title;ViewBag.ShowQuestionBankBreadcrumb=teacher;Layout=teacher?"~/Areas/Instructor/Views/Shared/_LayoutInstructor.cshtml":"~/Views/Shared/_Layout.cshtml";var notices=ViewBag.Notices as List<ECOLearning.Services.QuizGradeAudit>??new List<ECOLearning.Services.QuizGradeAudit>();var attempts=ViewBag.AppealAttempts as List<ECOLearning.ViewModels.QuizAttempt>??new List<ECOLearning.ViewModels.QuizAttempt>();}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=28" />
+<div class="qa-page">
+    @if (!teacher) {
+    <header class="qa-heading">
+        <div><span class="qa-eyebrow">QUIZ CUỐI KHÓA</span><h1>@ViewBag.Title</h1><p>@(teacher ? "Theo dõi yêu cầu, xem lại bài thi và phản hồi cho học viên." : "Gửi yêu cầu xem xét bài thi và theo dõi phản hồi từ giáo viên.")</p></div>
+        <div class="qa-heading-actions">
+        @if (teacher) {<a class="btn qa-button" href="@Url.Action("Index")"><i class="bi bi-arrow-left" aria-hidden="true"></i> Ngân hàng câu hỏi</a><a class="btn qa-button" href="@Url.Action("Reports")"><i class="bi bi-flag" aria-hidden="true"></i> Báo lỗi câu hỏi</a>}
+        else {<a class="btn qa-button" href="@Url.Action("Index", "Learning")"><i class="bi bi-arrow-left" aria-hidden="true"></i> Khóa học của tôi</a>}
+        </div>
+    </header>
+    }
+@if(TempData["AppealMessage"]!=null){<p role="status" class="qa-reply">@TempData["AppealMessage"]</p>}
+@if(!teacher){<div>
+<h2 style="font-size:20px;margin-top:26px">Thông báo điều chỉnh điểm (@notices.Count)</h2>
+@foreach(var n in notices){<section class="qa-card"><strong>@n.CourseName · Lượt #@n.AttemptId</strong><p style="font-size:12px;color:#64748b;margin-top:8px">@n.CreatedAt.AddHours(7).ToString("dd/MM/yyyy HH:mm") · @n.TeacherName</p><p class="qa-text">@n.Reason</p><p>Điểm trước: @n.OldScore · Tính lại: @n.CalculatedScore · Công nhận: <strong>@n.RecognizedScore /10</strong></p><p>@(n.RecognizedPassed?"Đã đạt":"Chưa đạt") · Chứng chỉ đã cấp giữ nguyên.</p><a href="@Url.Action("Take",new{id=n.AttemptId})">Xem lượt thi và kỹ năng</a></section>}
+@if(attempts.Any()){<section class="qa-card"><h2 style="font-size:18px">Gửi yêu cầu phúc khảo</h2><p class="qe-hint" style="margin:10px 0">Mỗi học viên chỉ được gửi một yêu cầu cho mỗi khóa học. Chọn lượt thi và ghi đầy đủ nội dung cần xem xét trước khi gửi.</p><form method="post" action="@Url.Action("Appeal")">@Html.AntiForgeryToken()<label>Lượt thi<select class="form-control" name="attemptId">@foreach(var a in attempts){<option value="@a.Id">Lượt #@a.Id · @a.Score/10 · @a.SubmittedAt.Value.AddHours(7).ToString("dd/MM/yyyy HH:mm")</option>}</select></label><label for="appeal-content">Nội dung cần xem xét</label><textarea class="form-control" id="appeal-content" name="content" required maxlength="2000" rows="4"></textarea><button class="btn btn-primary">Gửi giáo viên</button></form></section>}
+@if (ViewBag.HasUsedAppeal == true) {<div class="qa-reply" role="status"><strong>Bạn đã sử dụng lượt phúc khảo của khóa học này.</strong><p class="qa-text">Theo dõi yêu cầu và phản hồi của giáo viên bên dưới. Sau khi được giải quyết, bạn cũng không thể gửi thêm yêu cầu cho khóa học này.</p></div>}
+</div>}
+@if (teacher) {
+    var integrity = ViewBag.RetakeCases as List<ECOLearning.Services.QuizRetakeRequest> ?? new List<ECOLearning.Services.QuizRetakeRequest>();
+    if (integrity.Any()) {
+    <section class="qa-inbox qret-inbox"><div class="qa-inbox-heading"><h2>Yêu cầu làm lại quiz <span class="qa-count">@integrity.Count</span></h2><p>Đối chiếu bài làm lại với bài thi cũ của học viên.</p></div>
+    @foreach (var item in integrity) {<div class="qret-inbox-row"><div><strong>@item.StudentName · @item.CourseName</strong><small>Lượt #@item.AttemptId · @item.StatusText</small></div><a class="btn qa-button" href="@Url.Action("Review", "Quiz", new { area = "Instructor", id = item.AttemptId, tab = "log" })">Xem bài làm lại <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>}
+    </section>
+    }
+}
+<section class="qa-inbox" aria-label="Yêu cầu phúc khảo">
+    <div class="qa-inbox-heading qa-inbox-toolbar"><div><h2>Yêu cầu phúc khảo <span class="qa-count">@Model.Count</span></h2><p>Mọi phản hồi được lưu theo từng lượt thi.</p></div>
+    @if (teacher) {<a class="btn qa-button" href="@Url.Action("Reports")"><i class="bi bi-flag" aria-hidden="true"></i> Báo lỗi câu hỏi</a>}
+    </div>
+    <div class="qa-tabs" role="group" aria-label="Lọc trạng thái">
+        <button type="button" class="is-active" data-appeal-filter="" aria-pressed="true">Tất cả <span>@Model.Count</span></button>
+        <button type="button" data-appeal-filter="Pending" aria-pressed="false">Chờ xử lý <span>@Model.Count(x => x.Status != "Processing" && x.Status != "Answered")</span></button>
+        <button type="button" data-appeal-filter="Processing" aria-pressed="false">Đang xem xét <span>@Model.Count(x => x.Status == "Processing")</span></button>
+        <button type="button" data-appeal-filter="Answered" aria-pressed="false">Đã phản hồi <span>@Model.Count(x => x.Status == "Answered")</span></button>
+    </div>
+    <div class="qa-empty" id="appealEmpty" @(Model.Any() ? "hidden" : "")>
+        <span class="qa-empty-icon"><i class="bi bi-chat-square-text" aria-hidden="true"></i></span>
+        <h3 id="appealEmptyTitle">Chưa có yêu cầu phúc khảo</h3>
+        <p>@(teacher ? "Khi học viên gửi yêu cầu, nội dung sẽ xuất hiện tại đây để bạn xem xét và phản hồi." : "Các yêu cầu bạn gửi và phản hồi của giáo viên sẽ xuất hiện tại đây.")</p>
+    </div>
+@foreach(var a in Model){<section class="qa-card qa-request" data-appeal-status="@(a.Status == "Answered" ? "Answered" : a.Status == "Processing" ? "Processing" : "Pending")">
+<div class="qa-request-heading"><div><h3>@a.CourseName</h3><p><i class="bi bi-person" aria-hidden="true"></i> @a.StudentName <span>·</span> Lượt #@a.AttemptId <span>·</span> @a.CreatedAt.AddHours(7).ToString("dd/MM/yyyy HH:mm")</p></div><span class="qa-status @(a.Status == "Answered" ? "is-answered" : a.Status == "Processing" ? "is-processing" : "is-pending")">@(a.Status=="Answered"?"Đã phản hồi":a.Status=="Processing"?"Đang xem xét":"Chờ xử lý")</span></div>
+<div class="qa-content"><span class="qa-label">Nội dung yêu cầu</span><p class="qa-text">@a.Content</p></div>
+@if (a.Replies.Any()) {
+    <details class="qa-reply-history" open="@(!teacher)"><summary><span><i class="bi bi-chat-left-text" aria-hidden="true"></i> Lịch sử phản hồi (@a.Replies.Count)</span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+    @foreach (var reply in a.Replies) {<div class="qa-reply"><div class="qa-reply-meta"><strong>@reply.TeacherName</strong><time>@reply.CreatedAt.AddHours(7).ToString("dd/MM/yyyy HH:mm")</time></div><p class="qa-text">@reply.Content</p></div>}
+    </details>
+}
+@if (teacher) {
+    <div class="qa-request-actions"><a class="btn qa-button" href="@Url.Action("Review", new { id = a.AttemptId })"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> Xem bài đã nộp</a></div>
+    <details class="qa-resolution qa-review-panel"><summary><span><i class="bi bi-pencil-square" aria-hidden="true"></i> Xử lý phúc khảo</span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+        <div class="qa-resolution-body">
+            <form method="post" action="@Url.Action("ReplyAppeal")" class="qa-feedback-form">
+                @Html.AntiForgeryToken()<input type="hidden" name="id" value="@a.Id" />
+                <div class="qa-review-heading"><h4>Phản hồi học viên</h4><p>Ghi kết quả xem xét hoặc nội dung cần làm rõ.</p></div>
+                <label for="reply-@a.Id" class="qb-sr-only">Nội dung phản hồi cho @a.StudentName</label>
+                <textarea class="form-control" id="reply-@a.Id" name="response" required maxlength="2000" rows="4" placeholder="Nhập phản hồi cho học viên…"></textarea>
+                <div class="qa-feedback-footer"><label for="appeal-status-@a.Id">Trạng thái sau phản hồi<select class="form-control" id="appeal-status-@a.Id" name="status"><option value="Processing" selected="@(a.Status != "Answered")">Đang xem xét</option><option value="Answered" selected="@(a.Status == "Answered")">Đã phản hồi</option></select></label><button class="btn btn-primary" type="submit"><i class="bi bi-send" aria-hidden="true"></i> Gửi phản hồi</button></div>
+            </form>
+            <details class="qa-question-check"><summary><span><i class="bi bi-search" aria-hidden="true"></i> Kiểm tra câu hỏi và điều chỉnh điểm</span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+                <div class="qa-question-check-body"><p>Chọn câu học viên phản ánh để kiểm tra đáp án và xem trước ảnh hưởng đến điểm.</p>
+                    <form method="post" action="@Url.Action("AppealQuestion")">
+                        @Html.AntiForgeryToken()<input type="hidden" name="id" value="@a.Id" />
+                        <label for="appeal-question-@a.Id">Câu hỏi cần kiểm tra<select class="form-control" id="appeal-question-@a.Id" name="questionId">@foreach (var q in a.Questions) {<option value="@q.Id">#@q.Id · @(q.Text.Length > 100 ? q.Text.Substring(0, 100) + "…" : q.Text)</option>}</select></label>
+                        <button class="btn qa-button" type="submit"><i class="bi bi-arrow-right" aria-hidden="true"></i> Kiểm tra câu hỏi</button>
+                    </form>
+                </div>
+            </details>
+        </div>
+    </details>
+}
+</section>}
+</section>
+</div>
+<script>
+(function () {
+    const buttons = document.querySelectorAll('[data-appeal-filter]');
+    const requests = document.querySelectorAll('[data-appeal-status]');
+    const empty = document.getElementById('appealEmpty');
+    buttons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            const status = button.dataset.appealFilter;
+            let visible = 0;
+            requests.forEach(function (request) { request.hidden = !!status && request.dataset.appealStatus !== status; if (!request.hidden) visible++; });
+            buttons.forEach(function (item) { const selected = item === button; item.classList.toggle('is-active', selected); item.setAttribute('aria-pressed', selected ? 'true' : 'false'); });
+            empty.hidden = visible > 0;
+            document.getElementById('appealEmptyTitle').textContent = status ? 'Chưa có yêu cầu ở trạng thái này' : 'Chưa có yêu cầu phúc khảo';
+        });
+    });
+})();
+</script>

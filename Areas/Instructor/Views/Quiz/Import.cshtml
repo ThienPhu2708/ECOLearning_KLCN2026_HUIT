@@ -1,6 +1,6 @@
 ﻿@{
-    ViewBag.Title = "Nhập câu hỏi từ Excel";
-    ViewBag.BreadcrumbCurrent = "Nhập câu hỏi từ Excel";
+    ViewBag.Title = "Nhập quiz từ Excel";
+    ViewBag.BreadcrumbCurrent = "Nhập quiz từ Excel";
     ViewBag.ShowQuestionBankBreadcrumb = true;
     ViewBag.QuestionBankCourseId = ViewBag.CourseId;
     var bankUrl = Url.Action("Index", new { courseId = ViewBag.CourseId });
@@ -11,21 +11,22 @@
     @if (TempData["QuizMessage"] != null) {<div class="qb-message" role="status">@TempData["QuizMessage"]</div>}
     <div class="qi-layout">
         <section class="card qe-card">
-            <div class="qe-section-heading"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i><div><h2>Tải lên file câu hỏi</h2><p>Kiểm tra nội dung trước khi thêm vào ngân hàng câu hỏi.</p></div></div>
+            <div class="qe-section-heading"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i><div><h2>Nhập câu hỏi và phân bổ đề</h2><p>Một file gồm hai sheet. Có thể chỉ điền câu hỏi hoặc chỉ điền phân bổ đề.</p></div></div>
             @using (Html.BeginForm("Import", "Quiz", FormMethod.Post, new { enctype = "multipart/form-data", id = "question-import-form" }))
             {
                 @Html.AntiForgeryToken()<input type="hidden" name="courseId" value="@ViewBag.CourseId" />
                 <label class="qi-file-picker" for="question-upload"><span class="qi-upload-icon"><i class="bi bi-file-earmark-excel" aria-hidden="true"></i></span><strong id="upload-title">Chọn file Excel để tải lên</strong><span class="qi-file-meta" id="upload-meta">Định dạng .xlsx · Tối đa 2 MB · 500 câu hỏi</span><span class="btn btn-outline qi-browse">Chọn file</span><input id="question-upload" type="file" name="upload" accept=".xlsx" required aria-describedby="upload-meta upload-feedback" /></label>
                 <p id="upload-feedback" class="qi-feedback" role="status" hidden></p>
-                <div class="qe-note"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Câu hỏi chỉ được lưu sau khi bạn kiểm tra bản xem trước và xác nhận nhập.</span></div>
+                <div class="qe-note"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Xem trước rồi xác nhận. Có phân bổ đề: lưu quiz thành bản nháp, chưa mở cho học viên.</span></div>
                 <div class="qi-form-actions"><a class="btn btn-outline" href="@bankUrl">Hủy</a><button class="btn btn-primary" type="submit"><i class="bi bi-arrow-right" aria-hidden="true"></i> Kiểm tra &amp; xem trước</button></div>
             }
         </section>
         <aside class="card qe-card qi-guide">
             <div class="qe-section-heading"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i><div><h2>Chuẩn bị file nhập</h2><p>Sử dụng mẫu để nhập đúng cấu trúc.</p></div></div>
             <a class="btn btn-outline qi-template" href="@Url.Action("Template")"><i class="bi bi-download" aria-hidden="true"></i> Tải file mẫu .xlsx</a>
-            <ol class="qi-steps"><li><strong>Điền câu hỏi theo mẫu</strong><p>Mỗi dòng là một câu hỏi gồm 4 lựa chọn và một đáp án đúng. Giữ nguyên tên các cột.</p></li><li><strong>Tải file đã hoàn thành</strong><p>Hệ thống kiểm tra dữ liệu và hiển thị lỗi cần sửa.</p></li><li><strong>Xem trước và xác nhận</strong><p>Kiểm tra danh sách câu hỏi trước khi nhập vào khóa học.</p></li></ol>
-            <details class="qi-format"><summary>Quy ước các cột <i class="bi bi-chevron-down" aria-hidden="true"></i></summary><dl><dt>MucDo</dt><dd>1 = Dễ · 2 = Trung bình · 3 = Khó</dd><dt>DapAnDung</dt><dd>A, B, C hoặc D</dd><dt>ChoDaoDapAn</dt><dd>1 = Cho phép · 0 = Không đảo</dd></dl></details>
+            <ol class="qi-steps"><li><strong>Sheet Câu hỏi</strong><p>Mỗi dòng gồm câu hỏi, 4 đáp án, đáp án đúng và kỹ năng. Kỹ năng được tạo tự động theo tên.</p></li><li><strong>Sheet Phân bổ đề (tùy chọn)</strong><p>Điền số câu dễ/vừa/khó, mức đạt và bắt buộc đạt cho từng kỹ năng. Để sheet trống nếu chỉ nhập thêm câu hỏi.</p></li><li><strong>Xem trước và xác nhận</strong><p>Hệ thống kiểm tra đủ câu theo kỹ năng và độ khó. Có thể chỉ nhập phân bổ nếu ngân hàng đã có câu hỏi.</p></li></ol>
+            <details class="qi-format"><summary>Quy ước các cột <i class="bi bi-chevron-down" aria-hidden="true"></i></summary><dl><dt>KyNang</dt><dd>Cùng tên ở hai sheet, tối đa 120 ký tự</dd><dt>MucDo</dt><dd>1 = Dễ · 2 = Trung bình · 3 = Khó</dd><dt>DapAnDung</dt><dd>A, B, C hoặc D</dd><dt>ChoDaoDapAn</dt><dd>1 = Cho phép · 0 = Không đảo</dd><dt>BatBuocDat</dt><dd>Có / Không (hoặc 1 / 0)</dd><dt>MucDatPhanTram</dt><dd>Số nguyên 1–100, ví dụ 75 (không nhập 75%)</dd></dl></details>
+            <p class="qe-hint">Giữ nguyên tên sheet và tiêu đề cột. Xóa các dòng ví dụ trước khi điền. File mẫu câu hỏi cũ vẫn dùng được.</p>
         </aside>
     </div>
 </div>

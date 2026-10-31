@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -39,6 +39,7 @@ namespace ECOLearning.Controllers.Api
         [HttpPost, Route("chatbot/ask")]
         public async Task<ActionResult> Ask()
         {
+            if(new QuizWriterService(Db).Active(CurrentUserId))return Forbidden("Trợ lý tạm khóa trong khi bạn đang làm quiz.","QUIZ_IN_PROGRESS");
             string cauHoi = (Body<AskRequest>().Question ?? "").Trim();
             if (cauHoi.Length == 0) return BadRequest("Bạn hãy nhập câu hỏi nhé.");
             if (cauHoi.Length > ChatbotService.DoDaiCauHoiToiDa)
@@ -92,6 +93,7 @@ namespace ECOLearning.Controllers.Api
         [HttpGet, Route("chatbot/history")]
         public ActionResult History()
         {
+            if(new QuizWriterService(Db).Active(CurrentUserId))return Forbidden("Trợ lý tạm khóa trong khi làm quiz.","QUIZ_IN_PROGRESS");
             var lichSu = LichSuCuaToi(taoMoi: false);
             List<object> tinNhan;
             if (lichSu == null) tinNhan = new List<object>();

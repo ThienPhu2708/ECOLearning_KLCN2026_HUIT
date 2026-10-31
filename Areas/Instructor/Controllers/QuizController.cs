@@ -15,11 +15,12 @@ namespace ECOLearning.Areas.Instructor.Controllers
         private bool Course(string courseId)
         {
             if(!Service.Owns(courseId,CurrentTeacherId))return false;
-            ViewBag.CourseId=courseId;ViewBag.CourseName=db.KhoaHoc.Find(courseId).tenKhoaHoc;return true;
+            ViewBag.CourseId=courseId;ViewBag.CourseName=db.KhoaHoc.Find(courseId).tenKhoaHoc;ViewBag.Skills=new QuizAssessmentService(db).Skills(courseId);return true;
         }
         public ActionResult Index(string courseId)
         {
             ViewBag.Courses=db.KhoaHoc.Where(k=>k.maGiaoVien==CurrentTeacherId).ToList();
+            ViewBag.QuizNotifications=new QuizQuestionReportService(db).TeacherNotifications(CurrentTeacherId,courseId);
             if(string.IsNullOrEmpty(courseId))
             {
                 var courses = (List<ECOLearning.Models.KhoaHoc>)ViewBag.Courses;
@@ -28,6 +29,23 @@ namespace ECOLearning.Areas.Instructor.Controllers
             if(!Course(courseId))return HttpNotFound();
             ViewBag.Config=Service.Config(courseId);return View(Service.Questions(courseId));
         }
+        [HttpGet,OutputCache(NoStore=true,Duration=0,VaryByParam="*")]
+        public ActionResult NotificationCounts(string courseId) {
+            if(!string.IsNullOrWhiteSpace(courseId)&&!Service.Owns(courseId,CurrentTeacherId))return HttpNotFound();
+            return Json(new QuizQuestionReportService(db).TeacherNotifications(CurrentTeacherId,courseId),JsonRequestBehavior.AllowGet);
+        }
+        public ActionResult Reports(string courseId) {
+            if(!string.IsNullOrEmpty(courseId) && !Course(courseId))return HttpNotFound();
+            ViewBag.IsTeacher=true;ViewBag.CourseId=courseId;ViewBag.BreadcrumbCurrent="Báo lỗi câu hỏi";
+            try {return View("~/Views/Quiz/Reports.cshtml",new QuizQuestionReportService(db).List(CurrentTeacherId,true,courseId));}
+            catch(InvalidOperationException ex){ViewBag.ReportError=ex.Message;return View("~/Views/Quiz/Reports.cshtml",new List<QuizQuestionReport>());}
+        }
+        [HttpPost,ValidateAntiForgeryToken]
+        public ActionResult RespondReport(int id,string status,string response) {
+            try {new QuizQuestionReportService(db).Respond(CurrentTeacherId,id,status,response);TempData["ReportMessage"]="Đã cập nhật báo cáo.";}
+            catch(InvalidOperationException ex){TempData["ReportMessage"]=ex.Message;}
+            return RedirectToAction("Reports");
+        }
         public ActionResult Edit(string courseId,int id=0)
         {
             if(!Course(courseId))return HttpNotFound();
@@ -35,11 +53,11 @@ namespace ECOLearning.Areas.Instructor.Controllers
             if(q==null)return HttpNotFound();return View(q);
         }
         [HttpPost,ValidateAntiForgeryToken]
-        public ActionResult Edit(QuizQuestion model)
+        public ActionResult Edit(QuizQuestion model,string newSkillName)
         {
-            if(!Course(model.CourseId))return HttpNotFound();
-            try {if(!ModelState.IsValid)throw new InvalidOperationException("Kiểm tra các trường thông tin.");bool wasOpen=Service.Config(model.CourseId)?.Published==true;Service.SaveQuestion(model);TempData["QuizMessage"]="Đã lưu câu hỏi."+(wasOpen && Service.Config(model.CourseId)?.Published!=true?" Quiz chuyển về nháp vì ngân hàng không còn đủ câu theo cấu hình. Hãy kiểm tra và mở lại quiz.":"");return RedirectToAction("Index",new{courseId=model.CourseId});}
-            catch(InvalidOperationException ex){ModelState.AddModelError("",ex.Message);return View(model);}
+            if(!Course(model.CourseId))return HttpNotFound();ViewBag.NewSkillName=newSkillName;
+            try {if(!ModelState.IsValid)throw new InvalidOperationException("Kiểm tra các trường thông tin.");bool wasOpen=Service.Config(model.CourseId)?.Published==true;new QuizAssessmentService(db).SaveQuestionWithSkill(model,CurrentTeacherId,newSkillName);TempData["QuizMessage"]="Đã lưu câu hỏi."+(wasOpen && Service.Config(model.CourseId)?.Published!=true?" Quiz chuyển về nháp vì ngân hàng không còn đủ câu theo cấu hình. Hãy kiểm tra và mở lại quiz.":"");return RedirectToAction("Index",new{courseId=model.CourseId});}
+            catch(InvalidOperationException ex){ModelState.AddModelError("",ex.Message);ViewBag.Skills=new QuizAssessmentService(db).Skills(model.CourseId);return View(model);}
         }
         [HttpPost,ValidateAntiForgeryToken]
         public ActionResult RenameTopic(string courseId,string oldTopic,string newTopic)
@@ -70,33 +88,50 @@ namespace ECOLearning.Areas.Instructor.Controllers
             if(!Course(courseId))return HttpNotFound();var c=Service.Config(courseId);
             if(c==null)return RedirectToAction("Configure",new{courseId});
             try {Service.ValidateConfig(c);}catch(InvalidOperationException ex){TempData["QuizMessage"]=ex.Message;return RedirectToAction("Configure",new{courseId});}
-            ViewBag.Config=c;var pool=Service.Questions(courseId,true);
-            var ids=JsonConvert.DeserializeObject<int[]>(c.SelectedIdsJson);
-            pool=pool.Where(q=>c.RandomSelection ? string.IsNullOrWhiteSpace(c.Topic) || q.Topic==c.Topic : ids.Contains(q.Id)).ToList();
-            var counts=new[]{c.EasyCount,c.MediumCount,c.HardCount};
-            return View(pool.GroupBy(q=>q.Difficulty).SelectMany(g=>g.Take(counts[g.Key-1])).ToList());
+            ViewBag.Config=c;return View(Service.SelectQuestions(c));
         }
-        public ActionResult Template() => File(QuizExcel.Write(QuizExcel.Headers,new[]{new[]{"Chương 1","1","2 + 2 bằng bao nhiêu?","3","4","5","6","B","2 + 2 = 4","1"}}),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","MauCauHoi.xlsx");
+        public ActionResult Skills(string courseId){if(!Course(courseId))return HttpNotFound();return View(new QuizAssessmentService(db).Skills(courseId));}
+        [HttpPost,ValidateAntiForgeryToken,StaffReadOnly]
+        public ActionResult AddSkill(string courseId,string name){if(!Course(courseId))return HttpNotFound();try{new QuizAssessmentService(db).AddSkill(courseId,CurrentTeacherId,name);TempData["QuizMessage"]="Đã thêm kỹ năng.";}catch(InvalidOperationException ex){TempData["QuizMessage"]=ex.Message;}return RedirectToAction("Skills",new{courseId});}
+        [HttpPost,ValidateAntiForgeryToken,StaffReadOnly]
+        public ActionResult DeleteSkill(string courseId,int id){if(!Course(courseId))return HttpNotFound();try{new QuizAssessmentService(db).DeleteSkill(courseId,CurrentTeacherId,id);TempData["QuizMessage"]="Đã xóa kỹ năng.";}catch(InvalidOperationException ex){TempData["QuizMessage"]=ex.Message;}return RedirectToAction("Skills",new{courseId});}
+        public ActionResult Correction(int reportId){var report=new QuizQuestionReportService(db).List(CurrentTeacherId,true).SingleOrDefault(r=>r.Id==reportId);if(report==null)return HttpNotFound();ViewBag.CourseId=report.CourseId;return View(report);}
+        [HttpPost,ValidateAntiForgeryToken,StaffReadOnly]
+        public ActionResult PreviewCorrection(int reportId,int[] accepted,bool allCredit=false,string reason=null){try{var plan=new QuizRegradeService(db).Preview(CurrentTeacherId,reportId,accepted,allCredit,reason);return RedirectToAction("CorrectionPreview",new{id=plan.Id});}catch(InvalidOperationException ex){TempData["ReportMessage"]=ex.Message;return RedirectToAction("Correction",new{reportId});}}
+        public ActionResult CorrectionPreview(string id){try{return View(new QuizRegradeService(db).GetPreview(id,CurrentTeacherId));}catch(InvalidOperationException ex){TempData["ReportMessage"]=ex.Message;return RedirectToAction("Reports");}}
+        [HttpPost,ValidateAntiForgeryToken,StaffReadOnly]
+        public ActionResult ConfirmCorrection(string id){try{new QuizRegradeService(db).Confirm(id,CurrentTeacherId);TempData["ReportMessage"]="Đã xác nhận. Toàn bộ lượt thi cùng phiên bản đã được xem xét; thông báo và lịch sử điểm đã lưu. Lượt đang làm áp dụng quy tắc khi nộp bài.";}catch(InvalidOperationException ex){TempData["ReportMessage"]=ex.Message;}return RedirectToAction("Reports");}
+        public ActionResult GradeHistory(){return View(new QuizRegradeService(db).GradeHistory(CurrentTeacherId,true));}
+        public ActionResult Appeals(string courseId){if(!string.IsNullOrWhiteSpace(courseId)&&!Course(courseId))return HttpNotFound();ViewBag.IsTeacher=true;ViewBag.CourseId=courseId;ViewBag.Notices=new List<QuizGradeAudit>();ViewBag.RetakeCases=new QuizRetakeService(db).ForTeacherList(CurrentTeacherId,courseId);var requests=new QuizRegradeService(db).Appeals(CurrentTeacherId,true);if(!string.IsNullOrWhiteSpace(courseId))requests=requests.Where(r=>r.CourseId==courseId).ToList();return View("~/Views/Quiz/Appeals.cshtml",requests);}
+        [HttpPost,ValidateAntiForgeryToken,StaffReadOnly]
+        public ActionResult ReplyAppeal(int id,string status,string response){try{new QuizRegradeService(db).ReplyAppeal(CurrentTeacherId,id,status,response);TempData["AppealMessage"]="Đã lưu phản hồi cho học viên.";}catch(InvalidOperationException ex){TempData["AppealMessage"]=ex.Message;}return RedirectToAction("Appeals");}
+        [HttpPost,ValidateAntiForgeryToken,StaffReadOnly]
+        public ActionResult AppealQuestion(int id,int questionId){try{return RedirectToAction("Correction",new{reportId=new QuizRegradeService(db).QuestionFromAppeal(CurrentTeacherId,id,questionId)});}catch(InvalidOperationException ex){TempData["AppealMessage"]=ex.Message;return RedirectToAction("Appeals");}}
+        public ActionResult Template() => File(QuizWorkbookService.Template(),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","MauQuizHaiSheet.xlsx");
         public ActionResult Import(string courseId) {if(!Course(courseId))return HttpNotFound();return View();}
-        [HttpPost,ValidateAntiForgeryToken]
+        [HttpPost,ValidateAntiForgeryToken,StaffReadOnly]
         public ActionResult Import(string courseId,HttpPostedFileBase upload)
         {
-            if(!Course(courseId))return HttpNotFound();var errors=new List<string>();var rows=new List<QuizQuestion>();
+            if(!Course(courseId))return HttpNotFound();var errors=new List<string>();var bundle=new QuizWorkbookImport{CourseId=courseId};
             try {
                 if(upload==null || upload.ContentLength==0 || upload.ContentLength>2*1024*1024 || !upload.FileName.EndsWith(".xlsx",StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("Chọn file .xlsx, tối đa 2 MB.");
-                rows=QuizExcel.Read(upload.InputStream,courseId,errors);
-            }catch(Exception ex) when(ex is InvalidOperationException || ex is System.IO.InvalidDataException || ex is System.Xml.XmlException || ex is System.IO.IOException) {errors.Add("Không đọc được file Excel: "+ex.Message);}
-            ViewBag.Errors=errors;
-            if(errors.Count==0) {var token=Guid.NewGuid().ToString("N");TempData["QuizImport_"+token]=rows;ViewBag.Token=token;}
-            return View("ImportPreview",rows);
+                bundle=QuizWorkbookService.Read(upload.InputStream,courseId,errors);
+                if(errors.Count==0)new QuizWorkbookService(db).Validate(bundle);
+            }catch(Exception ex) when(ex is InvalidOperationException || ex is System.IO.InvalidDataException || ex is System.Xml.XmlException || ex is System.IO.IOException) {errors.Add(ex.Message);}
+            ViewBag.Errors=errors;ViewBag.Workbook=bundle;
+            if(errors.Count==0) {var token=Guid.NewGuid().ToString("N");TempData["QuizImport_"+token]=bundle;ViewBag.Token=token;}
+            return View("ImportPreview",bundle.Questions);
         }
-        [HttpPost,ValidateAntiForgeryToken]
+        [HttpPost,ValidateAntiForgeryToken,StaffReadOnly]
         public ActionResult ConfirmImport(string courseId,string token)
         {
-            if(!Course(courseId))return HttpNotFound();var rows=TempData["QuizImport_"+token] as List<QuizQuestion>;
-            if(rows==null || rows.Any(q=>q.CourseId!=courseId)) {TempData["QuizMessage"]="Bản xem trước đã hết hạn. Hãy tải lại file.";return RedirectToAction("Import",new{courseId});}
-            using(var tx=db.Database.BeginTransaction()){foreach(var q in rows)Service.SaveQuestion(q);tx.Commit();}
-            TempData["QuizMessage"]="Đã nhập "+rows.Count+" câu hỏi.";return RedirectToAction("Index",new{courseId});
+            if(!Course(courseId))return HttpNotFound();var bundle=TempData["QuizImport_"+token] as QuizWorkbookImport;
+            if(bundle==null || bundle.CourseId!=courseId || bundle.Questions.Any(q=>q.CourseId!=courseId)) {TempData["QuizMessage"]="Bản xem trước đã hết hạn. Hãy tải lại file.";return RedirectToAction("Import",new{courseId});}
+            try {
+                new QuizWorkbookService(db).Apply(bundle,CurrentTeacherId);
+                TempData["QuizMessage"]="Đã nhập "+bundle.Questions.Count+" câu hỏi."+(bundle.Rules.Any()?" Đã lưu phân bổ đề thành bản nháp. Kiểm tra thời gian, số lượt và điểm tổng trước khi mở quiz.":"");
+                return RedirectToAction(bundle.Rules.Any()?"Configure":"Index",new{courseId});
+            }catch(InvalidOperationException ex){TempData["QuizMessage"]="Chưa nhập dữ liệu: "+ex.Message;return RedirectToAction("Import",new{courseId});}
         }
         public ActionResult Results(string courseId,string search="",string status="")
         {
@@ -121,14 +156,30 @@ namespace ECOLearning.Areas.Instructor.Controllers
             ViewBag.Config=Service.Config(courseId);ViewBag.Grants=Service.Grants(courseId,studentId);
             ViewBag.Lessons=db.BaiHoc.Where(b=>(b.ChuongHoc!=null && b.ChuongHoc.maKhoaHoc==courseId) || (b.maChuong==null && b.maBaiHoc.StartsWith(courseId+"_"))).OrderBy(b=>b.thuTu).ToList();
             ViewBag.CompletedLessonIds=db.TienDoBaiHoc.Where(t=>t.maHocVien==studentId && t.daHoanThanh==true).Select(t=>t.maBaiHoc).ToList();
+            ViewBag.VisibilityCounts=new QuizVisibilityService(db).CountsForTeacher(CurrentTeacherId,courseId,studentId);
             return View(Service.Attempts(courseId,studentId));
         }
-        public ActionResult Review(int id)
+        public ActionResult Visibility(int id) {return RedirectToAction("Review",new{id,tab="log"});}
+        public ActionResult Review(int id,string tab="paper")
         {
             var a=Service.Attempt(id);if(a==null || !Course(a.CourseId))return HttpNotFound();
-            if(!a.SubmittedAt.HasValue)return new HttpStatusCodeResult(409,"Bài thi đang làm.");
-            ViewBag.ShowSolutions=true;return View("~/Views/Quiz/Take.cshtml",new QuizTakeViewModel{Attempt=a,Questions=JsonConvert.DeserializeObject<List<QuizSnapshotQuestion>>(a.SnapshotJson),Answers=JsonConvert.DeserializeObject<int[]>(a.AnswersJson),Review=true});
+            var visibility=new QuizVisibilityService(db);var events=visibility.ForTeacher(CurrentTeacherId,id);
+            if(events.Any())visibility.MarkReviewed(CurrentTeacherId,id,events.Max(e=>e.Id));
+            new QuizRetakeService(db).MarkSeen(CurrentTeacherId,id);
+            ViewBag.RetakeCase=new QuizRetakeService(db).ForTeacher(CurrentTeacherId,id);ViewBag.RetakeAvailable=new QuizRetakeService(db).Installed();
+            ViewBag.AttemptPendingReview=a.ReviewPending;ViewBag.AttemptReviewNote=a.ReviewNote;
+            ViewBag.AttemptScore=a.Score;ViewBag.AttemptIsVerification=a.IsVerification;
+            ViewBag.AttemptDetail=true;ViewBag.AttemptId=id;ViewBag.StudentId=a.StudentId;ViewBag.VisibilityCount=events.Count;ViewBag.AttemptSubmitted=a.SubmittedAt.HasValue;
+            ViewBag.AttemptTab=tab=="log"||!a.SubmittedAt.HasValue?"log":"paper";
+            ViewBag.BreadcrumbCurrent="Chi tiết lượt thi";ViewBag.ShowQuestionBankBreadcrumb=true;
+            if(ViewBag.AttemptTab=="log")return View("Visibility",events);
+            ViewBag.Corrections=new QuizAssessmentService(db).Corrections(a.CourseId);
+            ViewBag.ShowSolutions=true;return View("~/Views/Quiz/Take.cshtml",new QuizTakeViewModel{Attempt=a,Questions=JsonConvert.DeserializeObject<List<QuizSnapshotQuestion>>(a.SnapshotJson),Answers=JsonConvert.DeserializeObject<int[]>(a.AnswersJson??"[]"),Review=true});
         }
+        [HttpPost,ValidateAntiForgeryToken,StaffReadOnly]
+        public ActionResult ApproveResult(int attemptId,string note){try{new QuizVisibilityService(db).ApproveResult(CurrentTeacherId,attemptId,note);TempData["RetakeMessage"]="Đã công nhận kết quả. Học viên nhận chứng chỉ nếu đủ điều kiện.";}catch(InvalidOperationException ex){TempData["RetakeMessage"]=ex.Message;}return RedirectToAction("Review",new{id=attemptId,tab="log"});}
+        [HttpPost,ValidateAntiForgeryToken,StaffReadOnly]
+        public ActionResult RequestRetake(int attemptId,string content){try{new QuizRetakeService(db).RequestRetake(CurrentTeacherId,attemptId,content);TempData["RetakeMessage"]="Đã gửi yêu cầu làm lại cho học viên.";}catch(InvalidOperationException ex){TempData["RetakeMessage"]=ex.Message;}return RedirectToAction("Review",new{id=attemptId,tab="log"});}
         [HttpPost,ValidateAntiForgeryToken]
         public ActionResult GrantAttempt(string courseId,int studentId,string reason)
         {

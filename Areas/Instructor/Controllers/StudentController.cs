@@ -9,6 +9,18 @@ namespace ECOLearning.Areas.Instructor.Controllers
 {
     public class StudentController : InstructorBaseController
     {
+        [HttpGet,OutputCache(NoStore=true,Duration=0,VaryByParam="*")]
+        public ActionResult ReviewNotificationCount(){return Json(new{count=new ECOLearning.Services.QuizVisibilityService(db).UnreadCount(CurrentTeacherId)},JsonRequestBehavior.AllowGet);}
+        public ActionResult NeedsReview(string courseId="",string search="",bool includeSeen=false,int page=1)
+        {
+            var courses=db.KhoaHoc.Where(k=>k.maGiaoVien==CurrentTeacherId).ToList();
+            if(!string.IsNullOrWhiteSpace(courseId)&&!courses.Any(c=>c.maKhoaHoc==courseId))return HttpNotFound();
+            var rows=new ECOLearning.Services.QuizVisibilityService(db).Alerts(CurrentTeacherId,courseId,search,includeSeen);
+            int pages=Math.Max(1,(int)Math.Ceiling(rows.Count/10.0));page=Math.Max(1,Math.Min(page,pages));
+            ViewBag.TeacherCourses=courses;ViewBag.SelectedCourseId=courseId;ViewBag.Search=search;ViewBag.IncludeSeen=includeSeen;ViewBag.Page=page;ViewBag.Pages=pages;ViewBag.Total=rows.Count;
+            return View(rows.Skip((page-1)*10).Take(10).ToList());
+        }
+
         public ActionResult CourseStudents(string courseId, string search = "", string sort = "date_desc", string status = "")
         {
             int teacherId = CurrentTeacherId;

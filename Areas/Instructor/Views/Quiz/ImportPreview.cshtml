@@ -1,9 +1,10 @@
-@model List<ECOLearning.ViewModels.QuizQuestion>
+﻿@model List<ECOLearning.ViewModels.QuizQuestion>
 @{
-    ViewBag.Title = "Kiểm tra file câu hỏi";
+    ViewBag.Title = "Kiểm tra file quiz";
     ViewBag.BreadcrumbCurrent = ViewBag.Title;
     ViewBag.ShowQuestionBankBreadcrumb = true;
     ViewBag.QuestionBankCourseId = ViewBag.CourseId;
+    var workbook = ViewBag.Workbook as ECOLearning.Services.QuizWorkbookImport ?? new ECOLearning.Services.QuizWorkbookImport();
     var errors = ViewBag.Errors as List<string> ?? new List<string>();
     var importUrl = Url.Action("Import", new { courseId = ViewBag.CourseId });
 }
@@ -22,18 +23,27 @@
             @for (int i = 0; i < Model.Count; i++)
             {
                 var q = Model[i];
-                <tr><td><div class="qip-question"><span class="qh-lesson-number">@((i + 1).ToString("00"))</span><span>@q.Text</span></div></td><td><span class="qip-topic">@q.Topic</span></td><td><span class="qb-difficulty level-@q.Difficulty">@q.Level</span></td><td><div class="qip-answer"><span class="qip-answer-letter">@((char)('A' + q.CorrectOption))</span><span>@q.Options[q.CorrectOption]</span></div></td></tr>
+                <tr><td><div class="qip-question"><span class="qh-lesson-number">@((i + 1).ToString("00"))</span><span>@q.Text</span></div></td><td><span class="qip-topic">@q.Topic</span>@if (workbook.QuestionSkills.Count > i && !string.IsNullOrEmpty(workbook.QuestionSkills[i])) {<small style="display:block;margin-top:6px;color:#655bd2">Kỹ năng: @workbook.QuestionSkills[i]</small>}</td><td><span class="qb-difficulty level-@q.Difficulty">@q.Level</span></td><td><div class="qip-answer"><span class="qip-answer-letter">@((char)('A' + q.CorrectOption))</span><span>@q.Options[q.CorrectOption]</span></div></td></tr>
             }
             </tbody></table></div>
         }
-        else {<div class="qh-empty"><h3>Chưa có câu hỏi để xem trước</h3><p>Kiểm tra cấu trúc và nội dung file theo mẫu rồi tải lại.</p></div>}
+        else {<div class="qh-empty"><h3>Không có câu hỏi mới</h3><p>Nếu chỉ nhập phân bổ đề, hệ thống sử dụng các câu hỏi đã có trong ngân hàng.</p></div>}
     </section>
-    <footer class="qe-footer"><span><i class="bi bi-info-circle" aria-hidden="true"></i> Câu hỏi chỉ được lưu sau khi xác nhận.</span><div><a class="btn btn-outline" href="@importUrl"><i class="bi bi-upload" aria-hidden="true"></i> Chọn file khác</a>
-    @if (!errors.Any() && Model.Any())
+    @if (workbook.Rules.Any()) {
+    <section class="card" style="padding:22px;margin-top:20px;min-width:0">
+        <div class="qe-section-heading"><i class="bi bi-grid" aria-hidden="true"></i><div><h2>Phân bổ đề · @workbook.Rules.Sum(r => r.Total) câu</h2><p>Lưu thành bản nháp, thay thế phân bổ hiện tại. Quiz chưa mở cho học viên.</p></div></div>
+        <div class="table-responsive"><table class="table"><thead><tr><th>Kỹ năng</th><th>Dễ</th><th>Trung bình</th><th>Khó</th><th>Mức đạt</th><th>Bắt buộc đạt</th></tr></thead><tbody>
+        @foreach (var rule in workbook.Rules) {<tr><td>@rule.Name</td><td>@rule.Easy</td><td>@rule.Medium</td><td>@rule.Hard</td><td>@rule.PassPercent%</td><td>@(rule.Required ? "Có" : "Không")</td></tr>}
+        </tbody></table></div>
+        <p class="qe-hint">Tự tạo kỹ năng còn thiếu và gắn vào câu hỏi theo tên. Câu hỏi được thêm vào ngân hàng; thời gian, số lượt và điểm tổng của quiz hiện tại được giữ lại. Các lượt thi đã bắt đầu giữ nguyên đề cũ.</p>
+    </section>
+    }
+    <footer class="qe-footer"><span><i class="bi bi-info-circle" aria-hidden="true"></i> Dữ liệu chỉ được lưu sau khi xác nhận. Nếu có phân bổ đề, quiz sẽ chuyển về bản nháp.</span><div><a class="btn btn-outline" href="@importUrl"><i class="bi bi-upload" aria-hidden="true"></i> Chọn file khác</a>
+    @if (!errors.Any() && (Model.Any() || workbook.Rules.Any()))
     {
         using (Html.BeginForm("ConfirmImport", "Quiz"))
         {
-            @Html.AntiForgeryToken()<input type="hidden" name="courseId" value="@ViewBag.CourseId" /><input type="hidden" name="token" value="@ViewBag.Token" /><button type="submit" class="btn btn-primary"><i class="bi bi-check2" aria-hidden="true"></i> Xác nhận nhập @Model.Count câu hỏi</button>
+            @Html.AntiForgeryToken()<input type="hidden" name="courseId" value="@ViewBag.CourseId" /><input type="hidden" name="token" value="@ViewBag.Token" /><button type="submit" class="btn btn-primary"><i class="bi bi-check2" aria-hidden="true"></i> Xác nhận nhập dữ liệu</button>
         }
     }
     </div></footer>

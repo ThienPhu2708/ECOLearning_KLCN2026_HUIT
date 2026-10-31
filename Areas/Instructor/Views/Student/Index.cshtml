@@ -70,6 +70,7 @@ var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
         <p class="caption" style="margin-top:6px;">Học viên đã ghi danh và tiến độ học tập trong khóa học này</p>
     </div>
 }
+<div style="display:flex;justify-content:flex-end;margin-bottom:16px"><a class="btn btn-outline" href="@Url.Action("NeedsReview", "Student", new { area = "Instructor", courseId = ViewBag.SelectedCourseId })"><i class="bi bi-window-stack" aria-hidden="true"></i> Lượt thi cần xem xét</a></div>
 @Html.Partial("_QuizSummary", ViewBag.QuizRows as List<ECOLearning.ViewModels.QuizStudentRow>)
 <div class="card student-filter-card" style="margin-bottom: 24px; padding: 16px 20px;">
     <form id="student-filter-form" method="get" action="@Url.Action(ViewBag.IsCourseStudentPage == true ? "CourseStudents" : "Index", "Student", new { area = "Instructor" })" style="display: flex; align-items: center; flex-wrap: wrap; gap: 16px;">

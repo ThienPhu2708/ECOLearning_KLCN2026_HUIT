@@ -1,4 +1,4 @@
-// Integration checks use isolated temporary records and remove them in finally.
+﻿// Integration checks use isolated temporary records and remove them in finally.
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -41,7 +41,23 @@ class QuizIntegration
                 config.RandomSelection=false;config.SelectedIdsJson=JsonConvert.SerializeObject(new[]{qs[0].Id,qs[1].Id});service.SaveConfig(config);
                 foreach(int id in new[]{student,second})db.TienDoBaiHoc.Add(new TienDoBaiHoc{maHocVien=id,maBaiHoc=course+"_1",daHoanThanh=true,ngayHoanThanh=DateTime.Now});db.SaveChanges();
                 Check(service.Student(course,student).Progress==100,"canonical lesson progress");
-                var a=service.Start(course,student);Check(service.Start(course,student).Id==a.Id,"reload reuses active attempt");
+                var a=service.Start(course,student);
+                var writers=new QuizWriterService(db);string client1=Guid.NewGuid().ToString("N"),client2=Guid.NewGuid().ToString("N");
+                string writer1=writers.Acquire(a.Id,student,client1,false);
+                Check(writers.Acquire(a.Id,student,client1,false)==writer1,"same writer resumes without rotating token");
+                Reject(()=>writers.Acquire(a.Id,second,client2,true),"other learner cannot take over");
+                Reject(()=>writers.Acquire(a.Id,student,client2,false),"second client needs explicit takeover");
+                Check(service.SaveDraft(a.Id,student,new[]{0,-1},writer1,true),"writer can save");
+                Reject(()=>service.SaveDraft(a.Id,student,new[]{1,1},null,true),"missing token cannot save");
+                string writer2=writers.Acquire(a.Id,student,client2,true);
+                Reject(()=>service.SaveDraft(a.Id,student,new[]{1,1},writer1,true),"old writer cannot overwrite after takeover");
+                Reject(()=>service.Submit(a.Id,student,new[]{1,1},writer1,true),"old writer cannot submit early");
+                Check(service.SaveDraft(a.Id,student,new[]{0,-1},writer2,true),"new writer can save");
+                Check(service.Start(course,student).Id==a.Id,"resume does not consume another attempt");
+                Check(service.Attempt(a.Id).ExpiresAt==a.ExpiresAt,"takeover does not reset deadline");
+                Check(new QuizWriterService(db).Active(student),"chatbot is blocked by active attempt");
+                Check(!new QuizWriterService(db).Active(second),"another student's quiz does not block chatbot");
+Check(service.Start(course,student).Id==a.Id,"reload reuses active attempt");
                 var snapshot=JsonConvert.DeserializeObject<List<QuizSnapshotQuestion>>(a.SnapshotJson);
                 Check(snapshot.Count==2 && snapshot.All(q=>q.Options[q.CorrectOption]=="Đáp án đúng"),"shuffled answers preserve correct answer");
                 Check(snapshot.Single(q=>q.Difficulty==2).CorrectOption==0,"question opt-out preserves answer order");
@@ -106,7 +122,7 @@ class QuizIntegration
                 Console.WriteLine("ALL "+checks+" CHECKS PASSED");return 0;
             }catch(Exception ex){Console.Error.WriteLine(ex);return 1;}
             finally {
-                Sql(db,@"DELETE dbo.QuizAttemptGrant WHERE CourseId=@c;DELETE dbo.QuizCertificate WHERE CourseId=@c;DELETE dbo.QuizAttempt WHERE CourseId=@c;DELETE dbo.QuizConfig WHERE CourseId=@c;DELETE dbo.QuizQuestion WHERE CourseId=@c;
+                Sql(db,@"DELETE dbo.QuizAttemptGrant WHERE CourseId=@c;DELETE dbo.QuizCertificate WHERE CourseId=@c;DELETE dbo.QuizWriter WHERE AttemptId IN (SELECT Id FROM dbo.QuizAttempt WHERE CourseId=@c);DELETE dbo.QuizAttempt WHERE CourseId=@c;DELETE dbo.QuizConfig WHERE CourseId=@c;DELETE dbo.QuizQuestion WHERE CourseId=@c;
 DELETE dbo.TienDoBaiHoc WHERE maBaiHoc=@c+'_1';DELETE dbo.TienDoHocTap WHERE maKhoaHoc=@c;DELETE dbo.DangKyKhoaHoc WHERE maKhoaHoc=@c;
 DELETE dbo.BaiHoc WHERE maChuong=@c+'C';DELETE dbo.ChuongHoc WHERE maKhoaHoc=@c;DELETE dbo.KhoaHoc WHERE maKhoaHoc=@c;",course);
                 db.Database.ExecuteSqlCommand("DELETE dbo.NguoiDung WHERE email IN (@e,@e2)",new SqlParameter("@e",email),new SqlParameter("@e2","2"+email));

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
@@ -113,7 +113,7 @@ namespace ECOLearning.Services
 
             nd.SoChungChi = db.Database.SqlQuery<int>(@"
                 SELECT CASE WHEN OBJECT_ID('dbo.QuizCertificate') IS NULL THEN 0
-                            ELSE (SELECT COUNT(*) FROM dbo.QuizCertificate WHERE StudentId = @id AND IssuedAt IS NOT NULL) END",
+                            ELSE (SELECT COUNT(*) FROM dbo.QuizValidCertificate WHERE StudentId = @id AND IssuedAt IS NOT NULL) END",
                 new SqlParameter("@id", maNguoiDung)).Single();
 
             nd.NhatKy = new AccountAdminService(db).LayNhatKy(AccountAdminService.DoiTuongNguoiDung, maNguoiDung.ToString());

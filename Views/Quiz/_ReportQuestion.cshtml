@@ -1,0 +1,27 @@
+﻿@model ECOLearning.ViewModels.QuizTakeViewModel
+<dialog id="question-report-dialog" style="width:min(520px,calc(100% - 32px));margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 20px 60px #0f172a30">
+<form id="question-report-form" action="@Url.Action("ReportQuestion","Quiz",new{area=""})" method="post">
+@Html.AntiForgeryToken()<input type="hidden" name="attemptId" value="@Model.Attempt.Id"/><input id="report-question-id" type="hidden" name="questionId"/>
+<h2 style="font-size:20px;margin-bottom:8px">Báo lỗi câu hỏi</h2>
+<p id="report-question-label" style="color:#64748b;margin-bottom:18px"></p>
+<label for="report-reason">Lý do</label><select id="report-reason" name="reason" required class="form-control" style="margin:8px 0 16px">@foreach(var reason in ECOLearning.Services.QuizQuestionReportService.Reasons){<option>@reason</option>}</select>
+<label for="report-content">Nội dung mô tả</label><textarea id="report-content" name="content" maxlength="2000" rows="4" class="form-control" style="margin-top:8px" placeholder="Bạn thấy câu hỏi hoặc đáp án có vấn đề gì?"></textarea>
+<p style="font-size:12px;color:#64748b;margin-top:10px">Báo lỗi không dừng thời gian làm bài hoặc thay đổi điểm.</p>
+<p id="report-message" role="status" style="margin:12px 0"></p>
+<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px"><button type="button" class="btn btn-outline" id="report-cancel">Đóng</button><button type="submit" class="btn btn-primary" id="report-send">Gửi báo cáo</button></div>
+</form></dialog>
+<script>
+(function(){
+const dialog=document.getElementById('question-report-dialog'),form=document.getElementById('question-report-form'),message=document.getElementById('report-message'),send=document.getElementById('report-send');
+let busy=false;
+document.querySelectorAll('[data-report-question]').forEach(function(button){button.addEventListener('click',function(){form.reset();message.textContent='';document.getElementById('report-question-id').value=button.dataset.reportQuestion;document.getElementById('report-question-label').textContent='Câu '+button.dataset.reportNumber;dialog.showModal();});});
+document.getElementById('report-cancel').onclick=function(){if(!busy)dialog.close();};
+dialog.addEventListener('cancel',function(e){if(busy)e.preventDefault();});
+form.addEventListener('submit',async function(e){e.preventDefault();if(busy)return;
+const content=document.getElementById('report-content');if(document.getElementById('report-reason').value==='Vấn đề khác'&&!content.value.trim()){message.textContent='Vui lòng nhập nội dung mô tả.';content.focus();return;}
+busy=true;send.disabled=true;message.textContent='Đang gửi…';
+try{const result=await fetch(form.action,{method:'POST',body:new URLSearchParams(new FormData(form)),credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest'}});if(!result.ok)throw new Error();const data=await result.json();message.textContent=data.message;if(data.success)form.querySelector('textarea').value='';}
+catch(_){message.textContent='Chưa gửi được báo cáo. Vui lòng kiểm tra kết nối và thử lại.';}
+finally{busy=false;send.disabled=false;}
+});
+})();</script>

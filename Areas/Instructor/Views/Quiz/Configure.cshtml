@@ -6,9 +6,11 @@
     ViewBag.QuestionBankCourseId = Model.CourseId;
     var questions = ViewBag.Questions as List<ECOLearning.ViewModels.QuizQuestion> ?? new List<ECOLearning.ViewModels.QuizQuestion>();
     var ids = Newtonsoft.Json.JsonConvert.DeserializeObject<int[]>(Model.SelectedIdsJson ?? "[]") ?? new int[0];
+    var matrixSkills = (ViewBag.Skills as List<ECOLearning.ViewModels.QuizSkill> ?? new List<ECOLearning.ViewModels.QuizSkill>()).Where(skill => skill.Active).ToList();
+    var savedRules = Model.SkillRules ?? Newtonsoft.Json.JsonConvert.DeserializeObject<List<ECOLearning.ViewModels.QuizSkillRule>>(Model.MatrixJson ?? "[]") ?? new List<ECOLearning.ViewModels.QuizSkillRule>();
     var bankUrl = Url.Action("Index", new { courseId = Model.CourseId });
 }
-<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=6" />
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=19" />
 <div class="question-editor quiz-config-editor">
     <div style="display:flex;justify-content:flex-start;margin-bottom:24px;"><span class="qe-course"><i class="bi bi-journal-bookmark" aria-hidden="true"></i> @ViewBag.CourseName</span></div>
     @if (TempData["QuizMessage"] != null) {<div class="qb-message" role="status">@TempData["QuizMessage"]</div>}
@@ -28,20 +30,51 @@
                     </div>
                     <p class="qe-hint">Ghi nhận điểm cao nhất. Học viên đạt quiz không cần thi lại.</p>
                 </section>
-                <section class="card qe-card">
-                    <div class="qe-section-heading"><i class="bi bi-collection" aria-hidden="true"></i><div><h2>Chọn câu hỏi</h2><p>Xây dựng cơ cấu đề theo chủ đề và mức độ.</p></div></div>
-                    <div class="qc-setting qc-selection"><label for="RandomSelection">@Html.CheckBoxFor(m => m.RandomSelection)<span>Lấy câu hỏi ngẫu nhiên</span></label><p class="qe-hint">Hệ thống chọn câu từ ngân hàng theo số lượng từng mức độ bên dưới.</p></div>
+                <section class="card qe-card qm-card">
+                    <div class="qe-section-heading"><i class="bi bi-grid" aria-hidden="true"></i><div><h2>Phân bổ đề</h2><p>Chọn một cách phân bổ số câu cho bài quiz.</p></div></div>
+                    <div class="qm-toolbar">
+                        <fieldset class="qc-allocation-modes"><legend class="qb-sr-only">Cách phân bổ đề</legend><label for="allocation-difficulty">@Html.RadioButtonFor(m => m.UseMatrix, false, new { id = "allocation-difficulty" })<span>Theo độ khó</span></label><label for="allocation-skills">@Html.RadioButtonFor(m => m.UseMatrix, true, new { id = "allocation-skills" })<span>Theo kỹ năng</span></label></fieldset>
+                        <div class="qm-actions"><a class="btn btn-outline" href="@Url.Action("Edit", new { courseId = Model.CourseId })"><i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm câu hỏi</a><a class="btn btn-outline" href="@Url.Action("Import", new { courseId = Model.CourseId })"><i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Nhập từ Excel</a></div>
+                    </div>
+                    <div id="legacy-selection" hidden="@Model.UseMatrix">
                     <div class="form-group"><label class="form-label" for="Topic">Chủ đề câu hỏi</label>@Html.DropDownListFor(m => m.Topic, new[] { new SelectListItem { Value = "", Text = "Tất cả chủ đề" } }.Concat(questions.Select(q => q.Topic).Distinct().Select(t => new SelectListItem { Value = t, Text = t })), new { @class = "form-control" })</div>
-                    <div class="qc-fields qc-counts">
+                    <div class="qc-fields qc-counts" id="legacy-counts">
                         <div class="form-group"><label class="form-label" for="EasyCount"><b class="qc-dot easy"></b> Số câu dễ</label>@Html.TextBoxFor(m => m.EasyCount, new { @class = "form-control", type = "number", min = 0, max = 100, required = "required" })</div>
                         <div class="form-group"><label class="form-label" for="MediumCount"><b class="qc-dot medium"></b> Số câu trung bình</label>@Html.TextBoxFor(m => m.MediumCount, new { @class = "form-control", type = "number", min = 0, max = 100, required = "required" })</div>
                         <div class="form-group"><label class="form-label" for="HardCount"><b class="qc-dot hard"></b> Số câu khó</label>@Html.TextBoxFor(m => m.HardCount, new { @class = "form-control", type = "number", min = 0, max = 100, required = "required" })</div>
                     </div>
-                    <p class="qe-hint">Tổng từ 1–100 câu. Chủ đề chỉ áp dụng khi lấy ngẫu nhiên.</p>
-                    <details class="qc-manual"><summary><span><i class="bi bi-list-check" aria-hidden="true"></i> Chọn câu thủ công <span class="qb-count">@questions.Count</span></span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary><div class="qc-manual-body"><p class="qe-hint">Bỏ chọn “Lấy câu hỏi ngẫu nhiên”, sau đó chọn đủ câu theo số lượng mỗi mức độ đã thiết lập.</p>
-                    @foreach (var q in questions) {<label class="qc-question"><input type="checkbox" name="selectedIds" value="@q.Id" checked="@(ids.Contains(q.Id))" /><span><span class="qc-question-meta">@q.Level · @q.Topic</span><span>@q.Text</span></span></label>}
+                    <p class="qe-hint" id="legacy-total" role="status" aria-live="polite">Tổng từ 1–100 câu. Chủ đề chỉ áp dụng khi lấy ngẫu nhiên.</p>
+                    </div>
+                    <div id="skill-allocation" hidden="@(!Model.UseMatrix)">
+                    @if (!matrixSkills.Any()) {
+                    <div class="qm-empty"><span><i class="bi bi-diagram-3" aria-hidden="true"></i></span><h3>Chưa có phân bổ câu hỏi</h3><p>Chọn hoặc thêm kỹ năng khi tạo câu hỏi. Sau đó quay lại đây để phân bổ đề, hoặc nhập từ Excel.</p></div>
+                    } else {
+                    <div class="qm-table-wrap"><table class="qm-table"><thead><tr><th>Kỹ năng</th><th>Dễ</th><th>Vừa</th><th>Khó</th><th>Mức đạt %</th><th>Bắt buộc đạt</th></tr></thead><tbody>
+                    @for (int i = 0; i < matrixSkills.Count; i++) {
+                        var skill = matrixSkills[i];
+                        var rule = savedRules.FirstOrDefault(x => x.SkillId == skill.Id) ?? new ECOLearning.ViewModels.QuizSkillRule { SkillId = skill.Id, Required = false };
+                        var available = new[] { questions.Count(q => q.SkillId == skill.Id && q.Difficulty == 1), questions.Count(q => q.SkillId == skill.Id && q.Difficulty == 2), questions.Count(q => q.SkillId == skill.Id && q.Difficulty == 3) };
+                        <tr data-matrix-skill="@skill.Id" data-available="@string.Join(",", available)">
+                            <td><strong>@skill.Name</strong><small>@available.Sum() câu trong ngân hàng</small><input type="hidden" name="SkillRules[@i].SkillId" value="@skill.Id" /><span class="qm-row-warning" data-row-warning hidden></span></td>
+                            <td><input aria-label="Số câu dễ của @skill.Name" type="number" name="SkillRules[@i].Easy" value="@rule.Easy" min="0" max="100" required data-matrix-count="1" /><small>Có @available[0]</small></td>
+                            <td><input aria-label="Số câu vừa của @skill.Name" type="number" name="SkillRules[@i].Medium" value="@rule.Medium" min="0" max="100" required data-matrix-count="2" /><small>Có @available[1]</small></td>
+                            <td><input aria-label="Số câu khó của @skill.Name" type="number" name="SkillRules[@i].Hard" value="@rule.Hard" min="0" max="100" required data-matrix-count="3" /><small>Có @available[2]</small></td>
+                            <td><div class="qm-percent"><input aria-label="Mức đạt của @skill.Name" type="number" name="SkillRules[@i].PassPercent" value="@rule.PassPercent" min="1" max="100" required data-matrix-pass /><span>%</span></div></td>
+                            <td><label class="qm-required"><input aria-label="Bắt buộc đạt kỹ năng @skill.Name" type="checkbox" name="SkillRules[@i].Required" value="true" checked="@rule.Required" data-matrix-required /><span>Bắt buộc</span></label><input type="hidden" name="SkillRules[@i].Required" value="false" /></td>
+                        </tr>
+                    }
+                    </tbody></table></div>
+                    }
+                    <div class="qm-summary" id="matrix-summary" role="status" aria-live="polite"><i class="bi bi-info-circle" aria-hidden="true"></i><div><strong id="matrix-total">Chưa bật phân bổ theo kỹ năng</strong><p id="matrix-feedback">Bật để áp dụng số câu và mức đạt ở bảng này.</p></div></div>
+                    <details class="qm-help"><summary><i class="bi bi-question-circle" aria-hidden="true"></i> Cách sử dụng</summary><ul><li>Kỹ năng được thêm và gắn khi tạo/sửa câu hỏi. Tại đây chỉ phân bổ số câu dễ, vừa và khó muốn lấy.</li><li>Không dùng kỹ năng nào: đặt cả ba số bằng 0 và bỏ “Bắt buộc”.</li><li>Học viên cần đạt điểm tổng và mức tối thiểu của mọi kỹ năng bắt buộc.</li><li>Nhập Excel xong vẫn có thể sửa trực tiếp tại đây. Các lượt thi đã bắt đầu giữ nguyên cấu hình cũ.</li></ul></details>
+                    </div>
+                    <div class="qc-source"><h3>Cách lấy câu hỏi</h3><p class="qe-hint">Áp dụng cho cách phân bổ đã chọn ở trên.</p>
+                    <div class="qc-setting qc-selection"><label for="RandomSelection">@Html.CheckBoxFor(m => m.RandomSelection)<span>Lấy câu hỏi ngẫu nhiên</span></label><p class="qe-hint" id="selection-hint">Hệ thống chọn câu từ ngân hàng theo số lượng từng mức độ bên dưới.</p></div>
+                    <details class="qc-manual" id="manual-questions" hidden="@Model.RandomSelection" open="@(!Model.RandomSelection)"><summary><span><i class="bi bi-list-check" aria-hidden="true"></i> Chọn câu thủ công <span class="qb-count">@questions.Count</span></span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary><div class="qc-manual-body"><p class="qe-hint">Chọn đúng số câu theo phân bổ ở trên. Khi lưu, hệ thống sẽ kiểm tra độ khó và kỹ năng tương ứng.</p>
+                    @foreach (var q in questions) {<label class="qc-question"><input type="checkbox" name="selectedIds" data-skill="@q.SkillId" data-difficulty="@q.Difficulty" value="@q.Id" checked="@(ids.Contains(q.Id))" /><span><span class="qc-question-meta">@q.Level · @q.Topic</span><span>@q.Text</span></span></label>}
                     @if (!questions.Any()) {<p class="qc-no-questions">Chưa có câu hỏi đang dùng. Thêm câu hỏi vào ngân hàng trước khi mở quiz.</p>}
                     </div></details>
+                    </div>
                 </section>
             </div>
             <aside class="card qe-card">
@@ -55,3 +88,64 @@
         <footer class="qe-footer"><span><i class="bi bi-shield-check" aria-hidden="true"></i> Các lượt thi đã bắt đầu giữ nguyên cấu hình.</span><div><a class="btn btn-outline" href="@bankUrl">Hủy</a><button type="submit" class="btn btn-primary"><i class="bi bi-check2" aria-hidden="true"></i> Lưu cấu hình</button></div></footer>
     }
 </div>
+
+<script>
+(function () {
+    const toggle = document.getElementById('allocation-skills');
+    const modes = Array.from(document.querySelectorAll('input[name="UseMatrix"]'));
+    const random = document.getElementById('RandomSelection');
+    const rows = Array.from(document.querySelectorAll('[data-matrix-skill]'));
+    const selected = Array.from(document.querySelectorAll('input[name="selectedIds"]'));
+    function updateMatrix() {
+        const enabled = toggle.checked;
+        ['EasyCount', 'MediumCount', 'HardCount', 'Topic'].forEach(function (id) { document.getElementById(id).disabled = enabled; });
+        document.getElementById('legacy-selection').hidden = enabled;
+        document.getElementById('skill-allocation').hidden = !enabled;
+        const manual = document.getElementById('manual-questions');
+        manual.hidden = random.checked;
+        if (!random.checked) manual.open = true;
+        document.getElementById('selection-hint').textContent = !random.checked ? 'Bạn chọn từng câu trong ngân hàng để tạo đề cố định.' : enabled ? 'Hệ thống lấy ngẫu nhiên đúng số câu từng kỹ năng và mức độ đã phân bổ.' : 'Hệ thống lấy ngẫu nhiên đúng số câu dễ, vừa và khó đã phân bổ.';
+        const legacyTotal = ['EasyCount', 'MediumCount', 'HardCount'].reduce(function (sum, id) { return sum + Math.max(0, Number(document.getElementById(id).value) || 0); }, 0);
+        document.getElementById('legacy-total').textContent = 'Đề gồm ' + legacyTotal + ' câu. Tổng số câu phải từ 1–100.';
+        let total = 0, skills = 0, warnings = 0;
+        rows.forEach(function (row) {
+            const counts = Array.from(row.querySelectorAll('[data-matrix-count]'));
+            const available = row.dataset.available.split(',').map(Number);
+            const required = row.querySelector('[data-matrix-required]');
+            row.querySelectorAll('input:not([type="hidden"])').forEach(function (input) { input.disabled = !enabled; });
+            const messages = [];
+            let sum = 0;
+            counts.forEach(function (input, i) {
+                const n = Number(input.value);
+                const capacity = random.checked ? available[i] : selected.filter(function (q) { return q.checked && q.dataset.skill === row.dataset.matrixSkill && Number(q.dataset.difficulty) === i + 1; }).length;
+                const invalid = input.value === '' || !Number.isInteger(n) || n < 0 || n > 100;
+                const shortage = n > capacity;
+                const mismatch = !random.checked && n !== capacity;
+                input.classList.toggle('is-short', enabled && (invalid || shortage || mismatch));
+                if (invalid) messages.push('Số câu phải từ 0–100');
+                else if (shortage) messages.push(['Dễ', 'Vừa', 'Khó'][i] + ': thiếu ' + (n - capacity) + ' câu' + (random.checked ? '' : ' được chọn'));
+                else if (mismatch) messages.push(['Dễ', 'Vừa', 'Khó'][i] + ': đang chọn ' + capacity + '/' + n + ' câu');
+                if (!invalid) sum += n;
+            });
+            if (sum > 0) skills++;
+            total += sum;
+            if (required.checked && sum === 0) messages.push('Kỹ năng bắt buộc cần ít nhất 1 câu');
+            const warning = row.querySelector('[data-row-warning]');
+            warning.textContent = messages.join(' · ');
+            warning.hidden = !enabled || messages.length === 0;
+            if (messages.length) warnings++;
+        });
+        if (enabled && !random.checked && selected.some(function (q) { return q.checked && !rows.some(function (row) { return row.dataset.matrixSkill === q.dataset.skill; }); })) warnings++;
+        const summary = document.getElementById('matrix-summary');
+        summary.classList.toggle('has-warning', enabled && (warnings > 0 || total < 1 || total > 100));
+        document.getElementById('matrix-total').textContent = enabled ? 'Đề gồm ' + total + ' câu · ' + skills + ' kỹ năng' : 'Chưa bật phân bổ theo kỹ năng';
+        document.getElementById('matrix-feedback').textContent = !enabled ? 'Bật để áp dụng số câu và mức đạt ở bảng này.' : total < 1 ? 'Thêm kỹ năng và nhập số câu để bắt đầu.' : total > 100 ? 'Đề chỉ được có tối đa 100 câu.' : warnings ? 'Kiểm tra các dòng cảnh báo và câu đã chọn. Có thể lưu nháp, cần đủ câu trước khi mở quiz.' : 'Đủ câu theo phân bổ. Học viên cần đạt điểm tổng và các kỹ năng bắt buộc.';
+    }
+    modes.forEach(function (mode) { mode.addEventListener('change', updateMatrix); });
+    ['EasyCount', 'MediumCount', 'HardCount'].forEach(function (id) { document.getElementById(id).addEventListener('input', updateMatrix); });
+    random.addEventListener('change', updateMatrix);
+    rows.forEach(function (row) { row.addEventListener('input', updateMatrix); row.addEventListener('change', updateMatrix); });
+    selected.forEach(function (input) { input.addEventListener('change', updateMatrix); });
+    updateMatrix();
+})();
+</script>

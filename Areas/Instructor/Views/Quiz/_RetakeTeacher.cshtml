@@ -1,0 +1,26 @@
+﻿@{
+    var request = ViewBag.RetakeCase as ECOLearning.Services.QuizRetakeRequest;
+    var reason = request == null ? null : request.Events.LastOrDefault(e => e.Kind == "Decision");
+}
+<section class="qa-inbox qret-panel">
+    <div class="qa-inbox-heading qa-inbox-toolbar"><div><h2>Yêu cầu làm lại quiz</h2><p>Kết quả mới thay thế điểm cũ và quyết định điều kiện nhận chứng chỉ.</p></div>@if(request != null){<span class="qa-status @(request.Retake != null && request.Retake.SubmittedAt.HasValue ? "is-answered" : "is-processing")">@request.StatusText</span>}</div>
+    <div class="qret-body">
+    @if(TempData["RetakeMessage"] != null){<div class="qa-reply" role="status">@TempData["RetakeMessage"]</div>}
+    @if(ViewBag.AttemptPendingReview == true){
+        <div class="qa-reply"><strong>Kết quả đang chờ xem xét</strong><p>Học viên đã rời màn hình từ 3 lần. Kiểm tra nhật ký và bài làm trước khi quyết định; chưa tự kết luận gian lận.</p></div>
+        <form method="post" action="@Url.Action("ApproveResult", "Quiz", new { area = "Instructor" })" class="qret-form">@Html.AntiForgeryToken()<input type="hidden" name="attemptId" value="@ViewBag.AttemptId" /><label for="approve-result-note">Lý do công nhận kết quả</label><textarea id="approve-result-note" name="note" rows="2" required maxlength="2000" placeholder="Ghi nhận sau khi xem bài và nhật ký…"></textarea><div class="qret-actions"><span>Công nhận kết quả chấm hiện tại, không tự đổi điểm.</span><button class="btn btn-primary" type="submit">Công nhận kết quả</button></div></form>
+    }
+    @if(ViewBag.AttemptReviewNote != null){<div class="qa-reply"><strong>Đã công nhận kết quả</strong><p>@ViewBag.AttemptReviewNote</p></div>}
+    @if(ViewBag.RetakeAvailable != true){<p class="qe-hint">Cần chạy migration 028 để dùng chức năng yêu cầu làm lại.</p>}
+    else if(ViewBag.AttemptSubmitted != true){<p class="qe-hint">Chờ học viên nộp bài trước khi yêu cầu làm lại.</p>}
+    else if(ViewBag.AttemptIsVerification == true){<p class="qe-hint">Đây là lượt làm lại. Kết quả lượt này được dùng thay kết quả cũ để xét chứng chỉ.</p>}
+    else if(request != null){<div class="qret-existing">
+        @if(reason != null){<div class="qret-reason"><span class="qa-label">Lý do yêu cầu làm lại</span><p>@reason.Content</p><small>@reason.AuthorName · @reason.CreatedAt.AddHours(7).ToString("dd/MM/yyyy HH:mm")</small></div>}
+        @if(request.Retake != null){<div class="qret-result"><div><span>Bài thi cũ</span><strong>@request.OriginalScore /10</strong></div><i class="bi bi-arrow-right" aria-hidden="true"></i><div><span>Lượt làm lại #@request.Retake.Id</span><strong>@(request.Retake.SubmittedAt.HasValue ? request.Retake.Score + " /10" : "Đang làm")</strong></div><a class="btn qa-button" href="@Url.Action("Review", new { id = request.Retake.Id })">Xem bài làm lại</a></div>}
+        else{<p class="qe-hint">Đã gửi yêu cầu. Khi học viên làm lại, kết quả sẽ hiển thị tại đây.</p>}
+    </div>}
+    else {
+        <form method="post" action="@Url.Action("RequestRetake", "Quiz", new { area = "Instructor" })" class="qret-form">@Html.AntiForgeryToken()<input type="hidden" name="attemptId" value="@ViewBag.AttemptId" /><label for="retake-reason">Lý do yêu cầu làm lại</label><textarea id="retake-reason" name="content" rows="3" required maxlength="2000" placeholder="Ghi lý do để học viên biết vì sao cần làm lại…"></textarea><div class="qret-actions"><span>Kết quả cũ hết hiệu lực ngay khi gửi. Chứng chỉ đã cấp bị thu hồi; chỉ cấp lại khi kết quả mới đạt.</span><button class="btn btn-primary" type="submit">Gửi yêu cầu làm lại</button></div></form>
+    }
+    </div>
+</section>

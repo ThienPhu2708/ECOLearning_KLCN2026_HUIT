@@ -6,6 +6,8 @@
     int completedCount = Model != null ? Model.SoHoanThanh : 0;
     int totalCount = Model != null ? Model.TotalCount : 0;
     bool tabHoanThanh = Model != null && Model.LaTabHoanThanh;
+    bool tabChungChi = Model != null && Model.LaTabChungChi;
+    int certificateCount = Model != null ? Model.SoChungChi : 0;
 }
 
 <style>
@@ -28,11 +30,18 @@
     }
 
     .tab-nav {
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
+        padding-bottom: 3px;
+        scrollbar-width: none;
         display: flex;
         border-bottom: 1px solid var(--border-color, #E2E8F0);
         gap: 32px;
         margin-bottom: 28px;
     }
+
+    .tab-nav::-webkit-scrollbar { display: none; }
 
     .tab-btn {
         padding: 14px 0;
@@ -109,6 +118,7 @@
     .completed-course-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:4px 0 22px;font-size:12px;color:#8290a3;line-height:1.7}
     .completed-course-meta>span{display:inline-flex;align-items:center;gap:7px}
     .completed-quiz-badge{padding:5px 9px;border-radius:7px;background:#f0eeff;color:#7560b7;font-size:11px;font-weight:500}
+    .completed-quiz-badge.is-retake{background:#fff4df;color:#996014}
     .completed-quiz-badge.is-passed{background:#ebf7ef;color:#3e8864}
     .completed-course-actions{display:flex;align-items:stretch;gap:10px;padding-top:18px;border-top:1px solid #edf0f5}
     .completed-course-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:600;line-height:1.5;text-decoration:none;white-space:nowrap}
@@ -270,17 +280,20 @@
         }
         else
         {
-            <!-- Tab Navigation (Đang học / Đã học đủ bài): mỗi tab là một link, phân trang riêng 12 khóa / trang -->
+            <!-- Tab Navigation (Đang học / Đã học đủ bài / Đã nhận chứng chỉ): mỗi tab là một link, phân trang riêng 12 khóa / trang -->
             <nav id="ds-khoa-hoc" class="tab-nav" style="scroll-margin-top: 96px;">
-                <a class="tab-btn @(tabHoanThanh ? "" : "active")" href="@Url.Action("MyCourses", "Learning")" aria-current="@(tabHoanThanh ? null : "page")">
+                <a class="tab-btn @(!tabHoanThanh && !tabChungChi ? "active" : "")" href="@Url.Action("MyCourses", "Learning")" aria-current="@(!tabHoanThanh && !tabChungChi ? "page" : null)">
                     Đang học (@ongoingCount)
                 </a>
                 <a class="tab-btn @(tabHoanThanh ? "active" : "")" href="@Url.Action("MyCourses", "Learning", new { tab = ECOLearning.ViewModels.MyCoursesViewModel.TabHoanThanh })" aria-current="@(tabHoanThanh ? "page" : null)">
                     Đã học đủ bài (@completedCount)
                 </a>
+                <a class="tab-btn @(tabChungChi ? "active" : "")" href="@Url.Action("MyCourses", "Learning", new { tab = ECOLearning.ViewModels.MyCoursesViewModel.TabChungChi })" aria-current="@(tabChungChi ? "page" : null)">
+                    Đã nhận chứng chỉ (@certificateCount)
+                </a>
             </nav>
 
-            if (!tabHoanThanh)
+            if (!tabHoanThanh && !tabChungChi)
             {
             <!-- TAB 1: ONGOING COURSES (ĐANG HỌC) -->
             <div id="tab-ongoing" class="tab-content">
@@ -352,12 +365,12 @@
             {
             <!-- TAB 2: COMPLETED COURSES (ĐÃ HOÀN THÀNH) -->
             <div id="tab-completed" class="tab-content">
-                @if (completedCount == 0)
+                @if (Model.PhanTrang.TongSo == 0)
                 {
                     <div style="text-align: center; padding: 48px 20px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--border-color, #E2E8F0);">
                         <i class="bi bi-trophy text-warning" style="font-size: 36px; display: block; margin-bottom: 8px;"></i>
-                        <h4 style="font-weight: 700; color: #0F172A; font-size: 18px; margin-bottom: 6px;">Bạn chưa hoàn thành khóa học nào</h4>
-                        <p style="color: var(--text-secondary, #64748B); font-size: 14px; margin-bottom: 16px;">Học đủ bài, đạt quiz cuối khóa rồi bấm Nhận chứng chỉ để được cấp tự động.</p>
+                        <h4 style="font-weight: 700; color: #0F172A; font-size: 18px; margin-bottom: 6px;">@(tabChungChi ? "Bạn chưa nhận chứng chỉ nào" : "Chưa có khóa học chờ hoàn tất quiz và chứng chỉ")</h4>
+                        <p style="color: var(--text-secondary, #64748B); font-size: 14px; margin-bottom: 16px;">@(tabChungChi ? "Chứng chỉ hợp lệ sẽ xuất hiện tại đây sau khi bạn nhận chứng chỉ." : "Các khóa đã học đủ bài nhưng chưa nhận chứng chỉ sẽ xuất hiện tại đây.")</p>
                     </div>
                 }
                 else
@@ -368,14 +381,16 @@
                             var quizStates = ViewBag.CompletedQuizStates as Dictionary<string, ECOLearning.ViewModels.QuizStudentRow>;
                             ECOLearning.ViewModels.QuizStudentRow quizState = null;
                             if (quizStates != null) { quizStates.TryGetValue(item.MaKhoaHoc, out quizState); }
-                            string quizLabel = quizState == null ? "Chưa có kết quả quiz" : quizState.IssuedAt.HasValue ? "Đã cấp chứng chỉ" : quizState.Passed ? "Đã đạt quiz · Có thể nhận chứng chỉ" : quizState.HasOpenAttempt ? "Đang làm quiz" : quizState.Attempts > 0 ? "Quiz chưa đạt" : "Chưa làm quiz";
+                            bool retakeRequired = quizState != null && quizState.RetakeRequired;
+                            bool hasCertificate = quizState != null && !retakeRequired && quizState.Passed && quizState.IssuedAt.HasValue;
+                            string quizLabel = quizState != null && quizState.PendingReview ? "Chờ giáo viên xem xét" : retakeRequired ? "Yêu cầu làm lại quiz" : hasCertificate ? "Đã cấp chứng chỉ" : quizState == null ? "Chưa có kết quả quiz" : quizState.Passed ? "Đã đạt quiz · Có thể nhận chứng chỉ" : quizState.HasOpenAttempt ? "Đang làm quiz" : quizState.Attempts > 0 ? "Quiz chưa đạt" : "Chưa làm quiz";
                             string studyUrl = Url.Action("Study", "Learning", new { courseId = item.MaKhoaHoc });
-                            bool hasCertificate = quizState != null && quizState.IssuedAt.HasValue;
-                            string certUrl = hasCertificate
-                                ? Url.Action("Certificate", "Learning", new { courseId = item.MaKhoaHoc })
+                            string certUrl = retakeRequired
+                                ? Url.Action("Retakes", "Quiz", new { courseId = item.MaKhoaHoc })
+                                : hasCertificate ? Url.Action("Certificate", "Learning", new { courseId = item.MaKhoaHoc })
                                 : Url.Action("Index", "Quiz", new { courseId = item.MaKhoaHoc });
-                            string quizActionLabel = hasCertificate ? "Xem chứng chỉ" : quizState != null && quizState.Passed ? "Xem kết quả quiz" : "Làm Quizz ngay";
-                            string quizActionIcon = hasCertificate ? "bi-award" : quizState != null && quizState.Passed ? "bi-clipboard-check" : "bi-pencil-square";
+                            string quizActionLabel = quizState != null && quizState.PendingReview ? "Xem trạng thái quiz" : retakeRequired ? (quizState.HasOpenAttempt ? "Tiếp tục làm lại" : "Làm lại quiz") : hasCertificate ? "Xem chứng chỉ" : quizState != null && quizState.Passed ? "Xem kết quả quiz" : "Làm quiz ngay";
+                            string quizActionIcon = retakeRequired ? "bi-arrow-repeat" : hasCertificate ? "bi-award" : quizState != null && quizState.Passed ? "bi-clipboard-check" : "bi-pencil-square";
                             string completeDate = item.NgayHoanThanh.HasValue ? item.NgayHoanThanh.Value.ToString("dd/MM/yyyy") : DateTime.Now.ToString("dd/MM/yyyy");
 
                             <div>
@@ -396,7 +411,7 @@
                                             @item.TenKhoaHoc
                                         </h3>
 
-                                        <div class="completed-course-meta"><span><i class="bi bi-calendar-check" aria-hidden="true"></i> Học xong @completeDate</span><span class="completed-quiz-badge @(quizState != null && quizState.Passed ? "is-passed" : "")"><i class="bi @(quizState != null && quizState.Passed ? "bi-check-circle" : "bi-clipboard")" aria-hidden="true"></i> @quizLabel</span></div>
+                                        <div class="completed-course-meta"><span><i class="bi bi-calendar-check" aria-hidden="true"></i> Học xong @completeDate</span><span class="completed-quiz-badge @(retakeRequired || (quizState != null && quizState.PendingReview) ? "is-retake" : quizState != null && quizState.Passed ? "is-passed" : "")"><i class="bi @(retakeRequired ? "bi-arrow-repeat" : quizState != null && quizState.Passed ? "bi-check-circle" : "bi-clipboard")" aria-hidden="true"></i> @quizLabel</span></div>
 
                                         <!-- Progress Bar 100% -->
                                         <div class="my-course-progress">
@@ -430,7 +445,7 @@
             <!-- Total Courses Summary Footer (nhiều trang thì thanh phân trang đã có dòng tóm tắt) -->
             <div style="margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--border-color, #E2E8F0); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div style="font-size: 14px; color: var(--text-secondary, #64748B);">
-                    Hiển thị <strong>@Model.Items.Count</strong> @(tabHoanThanh ? "khóa đã học đủ bài" : "khóa đang học") trên tổng số <strong>@totalCount</strong> khóa học của bạn
+                    Hiển thị <strong>@Model.Items.Count</strong> @(tabChungChi ? "khóa đã nhận chứng chỉ" : tabHoanThanh ? "khóa đã học đủ bài" : "khóa đang học") trên tổng số <strong>@totalCount</strong> khóa học của bạn
                 </div>
             </div>
             }
@@ -441,7 +456,7 @@
 
 @section scripts {
 <script>
-    // Hai tab là link thường (?tab=hoan-thanh) để mỗi tab có phân trang riêng, không cần JS chuyển tab
+    // Các tab là link thường (?tab=hoan-thanh) để mỗi tab có phân trang riêng, không cần JS chuyển tab
     document.addEventListener('DOMContentLoaded', function () {
         @if (TempData["ErrorMessage"] != null)
         {

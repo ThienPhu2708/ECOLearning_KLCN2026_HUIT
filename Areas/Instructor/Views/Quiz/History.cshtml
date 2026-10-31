@@ -4,13 +4,14 @@
     ViewBag.BreadcrumbCurrent = "Chi tiết học viên";
     ViewBag.ShowStudentBreadcrumb = true;
     var student = ViewBag.Student as ECOLearning.ViewModels.QuizStudentRow;
+    var visibilityCounts = ViewBag.VisibilityCounts as Dictionary<int, int> ?? new Dictionary<int, int>();
     var config = ViewBag.Config as ECOLearning.ViewModels.QuizConfig;
     var grants = ViewBag.Grants as List<ECOLearning.ViewModels.QuizAttemptGrant>;
     var lessons = ViewBag.Lessons as List<ECOLearning.Models.BaiHoc>;
     var completed = ViewBag.CompletedLessonIds as List<string> ?? new List<string>();
     int allowed = (config?.MaxAttempts ?? 0) + (student?.ExtraAttempts ?? 0);
 }
-<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=3" />
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=26" />
 <div class="student-quiz-history">
     <header class="qe-heading"><div><h1>@(student?.Name)</h1><p>Theo dõi kết quả quiz và tiến độ học tập trong khóa học.</p></div><span class="qe-course"><i class="bi bi-journal-bookmark" aria-hidden="true"></i> @ViewBag.CourseName</span></header>
     @if (TempData["QuizMessage"] != null) {<div class="qb-message" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i> @TempData["QuizMessage"]</div>}
@@ -29,7 +30,7 @@
             <div class="table-responsive"><table class="table"><thead><tr><th>Lượt</th><th>Bắt đầu</th><th>Nộp bài</th><th>Số câu đúng</th><th>Điểm /10</th><th>Kết quả</th><th><span class="qb-sr-only">Thao tác</span></th></tr></thead><tbody>
             @foreach (var a in Model)
             {
-                <tr><td><strong>#@a.Id</strong></td><td>@a.StartedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td><td>@(a.SubmittedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Chưa nộp") @if (a.TimedOut) {<small class="qh-timeout">Hết giờ</small>}</td><td>@(a.SubmittedAt.HasValue ? a.Correct + "/" + a.Total : "—")</td><td><strong>@(a.Score.HasValue ? a.Score.Value.ToString("0.##") : "—")</strong></td><td><span class="qh-badge @(!a.SubmittedAt.HasValue ? "is-info" : a.Passed == true ? "is-success" : "is-warning")">@(!a.SubmittedAt.HasValue ? "Đang làm" : a.Passed == true ? "Đạt" : "Chưa đạt")</span></td><td>@if (a.SubmittedAt.HasValue) {<a class="qb-text-link" href="@Url.Action("Review", new { id = a.Id })">Xem bài làm <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>}</td></tr>
+                <tr><td><strong>#@a.Id</strong>@if(a.IsVerification){<small class="qh-timeout">Làm lại</small>}</td><td>@a.StartedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td><td>@(a.SubmittedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Chưa nộp") @if (a.TimedOut) {<small class="qh-timeout">Hết giờ</small>}</td><td>@(a.SubmittedAt.HasValue ? a.Correct + "/" + a.Total : "—")</td><td><strong>@(a.Score.HasValue ? a.Score.Value.ToString("0.##") : "—")</strong></td><td><span class="qh-badge @(!a.SubmittedAt.HasValue ? "is-info" : !a.IsVoided && !a.ReviewPending && a.Passed == true ? "is-success" : "is-warning")">@(!a.SubmittedAt.HasValue ? "Đang làm" : a.IsVoided ? "Hết hiệu lực" : a.ReviewPending ? "Chờ xem xét" : a.Passed == true ? "Đạt" : "Chưa đạt")</span></td><td><a class="qh-detail-link" href="@Url.Action("Review", new { id = a.Id })">Xem chi tiết @if (visibilityCounts.ContainsKey(a.Id) && visibilityCounts[a.Id] > 0) {<span class="qh-signal @(visibilityCounts[a.Id] >= 3 ? "needs-review" : "")" role="img" aria-label="@visibilityCounts[a.Id] lần rời màn hình được ghi nhận" title="@visibilityCounts[a.Id] lần rời màn hình được ghi nhận. Cần xem nhật ký, chưa xác nhận gian lận."></span>}<i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></td></tr>
             }
             </tbody></table></div>
         }

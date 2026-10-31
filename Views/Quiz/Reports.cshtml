@@ -1,0 +1,67 @@
+﻿@model List<ECOLearning.Services.QuizQuestionReport>
+@{bool teacher=ViewBag.IsTeacher==true;ViewBag.Title=teacher?"Báo lỗi câu hỏi":"Báo lỗi của tôi";ViewBag.BreadcrumbCurrent=ViewBag.Title;ViewBag.ShowQuestionBankBreadcrumb=teacher;Layout=teacher?"~/Areas/Instructor/Views/Shared/_LayoutInstructor.cshtml":"~/Views/Shared/_Layout.cshtml";}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=14" />
+<div class="qa-page qr-page">
+@if (!teacher) {
+<header class="qa-heading qr-heading">
+    <div><span class="qa-eyebrow">QUIZ CUỐI KHÓA</span><h1>@ViewBag.Title</h1><p>@(teacher ? "Xem phản ánh về câu hỏi, kiểm tra nội dung và phản hồi cho học viên." : "Theo dõi báo lỗi và phản hồi của giáo viên sau khi lượt thi kết thúc.")</p></div>
+    <div class="qa-heading-actions">
+        <a class="btn qa-button" href="@Url.Action("Index", "Quiz", new { area = teacher ? "Instructor" : "", courseId = ViewBag.CourseId })"><i class="bi bi-arrow-left" aria-hidden="true"></i> @(teacher ? "Ngân hàng câu hỏi" : "Quay lại quiz")</a>
+        @if (teacher) {<a class="btn qa-button" href="@Url.Action("GradeHistory", "Quiz", new { area = "Instructor" })"><i class="bi bi-clock-history" aria-hidden="true"></i> Lịch sử điều chỉnh</a><a class="btn qa-button" href="@Url.Action("Appeals", "Quiz", new { area = "Instructor" })"><i class="bi bi-chat-left-text" aria-hidden="true"></i> Phúc khảo học viên</a>}
+    </div>
+</header>
+}
+@if(ViewBag.ReportError!=null){<p role="alert" class="qr-card">@ViewBag.ReportError</p>}
+@if(TempData["ReportMessage"]!=null){<p role="status" class="qr-response">@TempData["ReportMessage"]</p>}
+<section class="qa-inbox" aria-label="Danh sách báo lỗi">
+    <div class="qa-inbox-heading qa-inbox-toolbar"><div><h2>Phản ánh câu hỏi <span class="qa-count">@Model.Count</span></h2><p>Theo dõi và xử lý từng báo lỗi theo trạng thái.</p></div>
+        @if (teacher) {
+        <div class="qa-heading-actions">
+            <a class="btn qa-button" href="@Url.Action("GradeHistory", "Quiz", new { area = "Instructor" })"><i class="bi bi-clock-history" aria-hidden="true"></i> Lịch sử điều chỉnh</a>
+            <a class="btn qa-button" href="@Url.Action("Appeals", "Quiz", new { area = "Instructor" })"><i class="bi bi-chat-left-text" aria-hidden="true"></i> Phúc khảo học viên</a>
+        </div>
+        }
+    </div>
+    <div class="qa-tabs" role="group" aria-label="Lọc báo lỗi">
+        <button type="button" class="is-active" data-report-filter="" aria-pressed="true">Tất cả <span>@Model.Count</span></button>
+        <button type="button" data-report-filter="Pending" aria-pressed="false">Chờ xử lý <span>@Model.Count(x => x.Status == "Pending")</span></button>
+        <button type="button" data-report-filter="Processing" aria-pressed="false">Đang xử lý <span>@Model.Count(x => x.Status == "Processing")</span></button>
+        <button type="button" data-report-filter="Resolved" aria-pressed="false">Đã xử lý <span>@Model.Count(x => x.Status == "Corrected" || x.Status == "Answered")</span></button>
+    </div>
+    <div class="qa-empty" id="reportEmpty" @(Model.Any() || ViewBag.ReportError != null ? "hidden" : "")>
+        <span class="qa-empty-icon"><i class="bi bi-flag" aria-hidden="true"></i></span>
+        <h3 id="reportEmptyTitle">Chưa có báo lỗi câu hỏi</h3>
+        <p>@(teacher ? "Khi học viên báo câu hỏi chưa rõ hoặc đáp án có vấn đề, phản ánh sẽ xuất hiện tại đây." : "Những câu hỏi bạn báo lỗi trong lúc làm quiz sẽ được theo dõi tại đây.")</p>
+    </div>
+@foreach(var r in Model){var q=r.Question;
+<section class="qr-card qa-request" data-report-status="@(r.Status == "Corrected" || r.Status == "Answered" ? "Resolved" : r.Status)"><div class="qr-meta"><span><strong>@r.CourseName</strong> · #@r.Id @if(teacher){<span>· @r.StudentName</span>}</span><span>@r.CreatedAt.AddHours(7).ToString("dd/MM/yyyy HH:mm") · <span class="qa-status @(r.Status == "Pending" ? "is-pending" : r.Status == "Processing" ? "is-processing" : "is-answered")">@r.StatusText</span></span></div>
+<div class="qr-question"><span class="qa-label">Nội dung câu hỏi · #@r.QuestionId</span><h3>@q.Text</h3><ol type="A" class="qr-options">@for(int i=0;i<q.Options.Length;i++){<li>@q.Options[i] @if(teacher && i==q.CorrectOption){<strong> — Đáp án của lượt thi</strong>}</li>}</ol></div>
+<div class="qa-content"><span class="qa-label">Phản ánh của học viên</span><p class="qr-reason">@r.Reason</p><p class="qr-note">@r.Content</p></div>
+@if(!string.IsNullOrWhiteSpace(r.Response)){<div class="qr-response"><strong>Phản hồi giáo viên</strong><p class="qr-note">@r.Response</p></div>}
+@if(teacher){<details class="qa-resolution"><summary><span><i class="bi bi-pencil-square" aria-hidden="true"></i> Xử lý và phản hồi</span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary><div class="qa-resolution-body"><div class="qr-tools">
+<a class="btn qa-button" href="@Url.Action("Correction","Quiz",new{area="Instructor",reportId=r.Id})">Xem trước điều chỉnh điểm</a>
+<a class="btn qa-button" href="@Url.Action("Edit","Quiz",new{area="Instructor",courseId=r.CourseId,id=r.QuestionId})">Mở câu hỏi để chỉnh sửa</a>
+</div><form method="post" action="@Url.Action("RespondReport","Quiz",new{area="Instructor"})">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@r.Id"/>
+<label>Trạng thái<select name="status" class="form-control"><option value="Processing" selected="@(r.Status=="Processing")">Đang xử lý</option><option value="Corrected" selected="@(r.Status=="Corrected")">Đã chỉnh sửa</option><option value="Answered" selected="@(r.Status=="Answered")">Đã giải đáp</option></select></label>
+<label for="response-@r.Id">Phản hồi cho học viên</label><textarea id="response-@r.Id" name="response" class="form-control" maxlength="2000" rows="3">@r.Response</textarea><button class="btn btn-primary" type="submit">Lưu phản hồi</button></form></div></details>}
+</section>}
+</section>
+</div>
+<script>
+(function () {
+    const buttons = document.querySelectorAll('[data-report-filter]');
+    const rows = document.querySelectorAll('[data-report-status]');
+    const empty = document.getElementById('reportEmpty');
+    const hasError = @(ViewBag.ReportError != null ? "true" : "false");
+    buttons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            const status = button.dataset.reportFilter;
+            let visible = 0;
+            rows.forEach(function (row) { row.hidden = !!status && row.dataset.reportStatus !== status; if (!row.hidden) visible++; });
+            buttons.forEach(function (item) { const active = item === button; item.classList.toggle('is-active', active); item.setAttribute('aria-pressed', active ? 'true' : 'false'); });
+            empty.hidden = visible > 0 || hasError;
+            document.getElementById('reportEmptyTitle').textContent = status ? 'Chưa có báo lỗi ở trạng thái này' : 'Chưa có báo lỗi câu hỏi';
+        });
+    });
+})();
+</script>

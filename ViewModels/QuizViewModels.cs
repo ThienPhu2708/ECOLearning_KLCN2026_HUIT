@@ -5,6 +5,18 @@ using Newtonsoft.Json;
 
 namespace ECOLearning.ViewModels
 {
+    public class QuizSkill {public int Id {get;set;} public string CourseId {get;set;} public string Name {get;set;} public bool Active {get;set;}}
+    public class QuizSkillRule {
+        public int SkillId {get;set;} public string Name {get;set;}
+        public int Easy {get;set;} public int Medium {get;set;} public int Hard {get;set;}
+        public int PassPercent {get;set;} = 60; public bool Required {get;set;} = true;
+        public int Total => Easy+Medium+Hard;
+    }
+    public class QuizSkillResult {
+        public int SkillId {get;set;} public string Name {get;set;} public int Total {get;set;}
+        public int Correct {get;set;} public int CalculatedCorrect {get;set;} public int PassPercent {get;set;}
+        public bool Required {get;set;} public bool Passed {get;set;}
+    }
     public class QuizQuestion
     {
         public int Id { get; set; }
@@ -12,6 +24,7 @@ namespace ECOLearning.ViewModels
         [Required, StringLength(120)] public string Topic { get; set; }
         [Range(1,3)] public int Difficulty { get; set; } = 1;
         [Required, StringLength(4000)] public string Text { get; set; }
+        public int? SkillId { get; set; }
         public string OptionsJson { get; set; }
         [Range(0,3)] public int CorrectOption { get; set; }
         [StringLength(2000)] public string Explanation { get; set; }
@@ -37,6 +50,9 @@ namespace ECOLearning.ViewModels
         public string SelectedIdsJson { get; set; } = "[]";
         public bool ShuffleQuestions { get; set; } = true;
         public bool ShuffleAnswers { get; set; } = true;
+        public bool UseMatrix { get; set; }
+        public string MatrixJson { get; set; } = "[]";
+        public List<QuizSkillRule> SkillRules { get; set; }
         public bool Published { get; set; }
         public int Total => EasyCount + MediumCount + HardCount;
     }
@@ -45,6 +61,10 @@ namespace ECOLearning.ViewModels
         public int Id { get; set; }
         public string Text { get; set; }
         public string[] Options { get; set; }
+        public int? SkillId {get;set;}
+        public string SkillName {get;set;}
+        public int SkillPassPercent {get;set;}
+        public bool SkillRequired {get;set;}
         public int CorrectOption { get; set; }
         public string Explanation { get; set; }
         public int Difficulty { get; set; }
@@ -65,8 +85,16 @@ namespace ECOLearning.ViewModels
         public decimal? Score { get; set; }
         public bool? Passed { get; set; }
         public bool TimedOut { get; set; }
+        public bool IsVerification { get; set; }
+        public bool IsVoided { get; set; }
+        public bool ReviewRequired { get; set; }
+        public DateTime? ReviewApprovedAt { get; set; }
+        public int? ReviewApprovedBy { get; set; }
+        public string ReviewNote { get; set; }
+        public bool ReviewPending => SubmittedAt.HasValue && ReviewRequired && !ReviewApprovedAt.HasValue && !IsVoided;
         public int PassPercent { get; set; }
         public string Title { get; set; }
+        public string SkillResultsJson {get;set;}
     }
     public class QuizCertificate
     {
@@ -93,14 +121,16 @@ namespace ECOLearning.ViewModels
         public int? BestTotal { get; set; }
         public bool Passed { get; set; }
         public bool HasOpenAttempt { get; set; }
+        public bool RetakeRequired { get; set; }
+        public bool PendingReview { get; set; }
         public DateTime? RequestedAt { get; set; }
         public DateTime? IssuedAt { get; set; }
         public string Code { get; set; }
         public bool CompletedBeforeRevision { get; set; }
         public bool LessonsDone => CompletedBeforeRevision || (TotalLessons > 0 && CompletedLessons >= TotalLessons);
         public int Progress => CompletedBeforeRevision ? 100 : TotalLessons == 0 ? 0 : Math.Min(100, (int)Math.Floor(100.0 * CompletedLessons / TotalLessons));
-        public string QuizStatus => Passed ? "Đã đạt" : HasOpenAttempt ? "Đang làm" : Attempts > 0 ? "Chưa đạt" : !LessonsDone ? "Chưa đủ điều kiện làm" : "Chưa làm";
-        public string CertificateStatus => IssuedAt.HasValue ? "Đã cấp" : LessonsDone && Passed ? "Đủ điều kiện nhận" : "Chưa đủ điều kiện";
+        public string QuizStatus => PendingReview ? "Chờ giáo viên xem xét" : RetakeRequired ? "Yêu cầu làm lại" : Passed ? "Đã đạt" : HasOpenAttempt ? "Đang làm" : Attempts > 0 ? "Chưa đạt" : !LessonsDone ? "Chưa đủ điều kiện làm" : "Chưa làm";
+        public string CertificateStatus => PendingReview ? "Chờ giáo viên xem xét" : RetakeRequired ? "Chờ kết quả làm lại" : IssuedAt.HasValue ? "Đã cấp" : LessonsDone && Passed ? "Đủ điều kiện nhận" : "Chưa đủ điều kiện";
     }
     public class QuizAttemptGrant
     {
@@ -119,6 +149,9 @@ namespace ECOLearning.ViewModels
         public QuizConfig Config { get; set; }
         public QuizStudentRow Student { get; set; }
         public List<QuizAttempt> Attempts { get; set; }
+        public bool HasQuestionReports { get; set; }
+        public bool CanAppeal => Attempts != null && Attempts.Exists(a => a.SubmittedAt.HasValue);
+        public int RegularAttempts => Attempts == null ? 0 : Attempts.FindAll(a => !a.IsVerification).Count;
         public int AllowedAttempts => (Config?.MaxAttempts ?? 0) + (Student?.ExtraAttempts ?? 0);
     }
     public class QuizTakeViewModel

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
@@ -30,7 +30,7 @@ namespace ECOLearning.Services
         private static readonly string[][] BangPhu =
         {
             new[] { "KiemDuyetKhoaHoc", "maKhoaHoc" }, new[] { "KhoaHocKhuyenNghi", "maKhoaHoc" }, new[] { "KhoaHocTamAn", "maKhoaHoc" },
-            new[] { "QuizQuestion", "CourseId" }, new[] { "QuizConfig", "CourseId" }, new[] { "CourseRevision", "CourseId" }
+            new[] { "QuizQuestion", "CourseId" }, new[] { "QuizConfig", "CourseId" }, new[] { "QuizSkill", "CourseId" }, new[] { "CourseRevision", "CourseId" }
         };
 
         private static readonly string[] DangChoDuyet = { CourseStatus.ChoDuyet, "ChoDuyet", "Chờ kiểm duyệt", "Chờ xét duyệt", "Pending" };

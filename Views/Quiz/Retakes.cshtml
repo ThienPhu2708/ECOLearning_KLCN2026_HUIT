@@ -1,0 +1,46 @@
+﻿@model List<ECOLearning.Services.QuizRetakeRequest>
+@{
+    ViewBag.Title = "Yêu cầu làm lại quiz";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var config = ViewBag.VerificationConfig as ECOLearning.ViewModels.QuizConfig;
+}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=31" />
+<main class="qa-page qret-student qrs-page">
+    <header class="qa-heading qrs-heading"><div><span class="qa-eyebrow">@ViewBag.CourseName</span><h1>Yêu cầu làm lại quiz</h1><p>Xem yêu cầu từ giáo viên và hoàn thành bài làm lại.</p></div><a class="btn qa-button" href="@Url.Action("Index", new { courseId = ViewBag.CourseId })"><i class="bi bi-arrow-left" aria-hidden="true"></i> Về trang quiz</a></header>
+    @if(TempData["RetakeMessage"] != null){<div class="qa-reply" role="status">@TempData["RetakeMessage"]</div>}
+    @if(!Model.Any()){<section class="qa-inbox"><div class="qa-empty"><span class="qa-empty-icon"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></span><h3>Chưa có yêu cầu làm lại</h3><p>Yêu cầu của giáo viên sẽ xuất hiện tại đây.</p></div></section>}
+    @foreach(var request in Model){
+        var reason = request.Events.LastOrDefault(e => e.Kind == "Decision");
+        bool submitted = request.Retake != null && request.Retake.SubmittedAt.HasValue;
+        bool passed = submitted && !request.Retake.IsVoided && !request.Retake.ReviewPending && request.Retake.Passed == true;
+        <section class="qrs-card" aria-labelledby="retake-title-@request.Id">
+            <header class="qrs-card-heading"><div class="qrs-heading-icon"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></div><div class="qrs-card-title"><h2 id="retake-title-@request.Id">Làm lại bài kiểm tra</h2><p>Yêu cầu cho lượt #@request.AttemptId <span>·</span> @((reason != null ? reason.CreatedAt : request.CreatedAt).AddHours(7).ToString("dd/MM/yyyy HH:mm"))</p></div><span class="qa-status @(submitted ? "is-answered" : "is-processing")">@(submitted ? "Đã làm lại" : request.Retake != null ? "Đang làm lại" : "Chờ làm lại")</span></header>
+            <div class="qrs-grid">
+                <div class="qrs-context">
+                    <div class="qrs-label"><i class="bi bi-chat-left-text" aria-hidden="true"></i> Lý do từ giáo viên</div>
+                    @if(reason != null){<p class="qrs-message">@reason.Content</p><div class="qrs-author"><span>@reason.AuthorName<small>Giáo viên phụ trách</small></span></div>}
+                    else{<p class="qrs-message">Giáo viên yêu cầu bạn thực hiện lại bài kiểm tra.</p>}
+                    <div class="qrs-policy"><i class="bi bi-info-circle" aria-hidden="true"></i><div><strong>Kết quả cũ đã hết hiệu lực</strong><p>Kết quả làm lại thay thế điểm cũ, kể cả thấp hơn. Bạn cần đạt bài làm lại để được nhận chứng chỉ.</p></div></div>
+                    <div class="qrs-old-result"><span>Lượt cũ #@request.AttemptId</span><span><s>@request.OriginalScore /10</s><small>Hết hiệu lực</small></span></div>
+                </div>
+                <aside class="qrs-exam" aria-label="Thông tin bài làm lại">
+                    @if(request.CanRetake){
+                        <h3>Bài làm lại của bạn</h3><p class="qrs-exam-caption">Một lượt riêng, không trừ lượt thông thường.</p>
+                        if(config != null && config.Published){
+                            <div class="qrs-metrics"><div><i class="bi bi-list-check" aria-hidden="true"></i><strong>@config.Total<span>câu hỏi</span></strong></div><div><i class="bi bi-clock" aria-hidden="true"></i><strong>@config.Minutes<span>phút làm bài</span></strong></div></div>
+                            <div class="qrs-pass"><i class="bi bi-check-circle" aria-hidden="true"></i> Đạt từ <strong>@config.PassPercent%</strong></div>
+                            <form method="post" action="@Url.Action("StartVerification")">@Html.AntiForgeryToken()<input type="hidden" name="courseId" value="@request.CourseId" /><input type="hidden" name="reviewId" value="@request.Id" /><button class="btn btn-primary qrs-primary" type="submit">Bắt đầu làm lại <i class="bi bi-arrow-right" aria-hidden="true"></i></button></form>
+                            <p class="qrs-clock-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Đồng hồ chạy ngay khi bắt đầu.</p><p class="qrs-result-note">Rời màn hình từ 3 lần: kết quả chờ giáo viên xem xét trước khi được công nhận.</p>
+                        }else{<div class="qrs-policy"><i class="bi bi-lock" aria-hidden="true"></i><div><strong>Quiz chưa mở</strong><p>Liên hệ giáo viên để mở bài làm lại.</p></div></div>}
+                    }
+                    @if(request.Retake != null){
+                        <h3>@(submitted ? "Kết quả làm lại" : "Bài làm đang diễn ra")</h3><p class="qrs-exam-caption">Lượt #@request.Retake.Id</p>
+                        if(submitted){<div class="qrs-new-score @(passed ? "is-passed" : "")"><strong>@(request.Retake.ReviewPending ? "—" : request.Retake.Score.ToString())<small>/10</small></strong><span>@(request.Retake.ReviewPending ? "Chờ giáo viên xem xét" : request.Retake.IsVoided ? "Hết hiệu lực" : passed ? "Đạt yêu cầu" : "Chưa đạt yêu cầu")</span></div><p class="qrs-result-note">@(request.Retake.ReviewPending ? "Bạn đã rời màn hình từ 3 lần. Kết quả cần được giáo viên xem xét trước khi công nhận." : request.Retake.IsVoided ? "Xem yêu cầu mới nhất để thực hiện bài làm lại." : passed ? "Bạn có thể trở về trang quiz để nhận chứng chỉ." : "Kết quả này chưa đủ điều kiện nhận chứng chỉ.")</p>}
+                        else{<div class="qrs-resume"><i class="bi bi-clock-history" aria-hidden="true"></i><p>Đề thi và thời gian được giữ nguyên. Tiếp tục bài làm trước khi hết giờ.</p></div>}
+                        <a class="btn btn-primary qrs-primary" href="@Url.Action("Take", new { id = request.Retake.Id })">@(submitted ? "Xem kết quả" : "Tiếp tục làm bài") <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                    }
+                </aside>
+            </div>
+        </section>
+    }
+</main>

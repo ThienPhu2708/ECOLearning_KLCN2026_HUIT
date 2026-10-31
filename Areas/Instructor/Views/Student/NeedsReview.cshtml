@@ -1,0 +1,31 @@
+@model List<ECOLearning.Services.QuizVisibilityAlert>
+@{
+    ViewBag.Title = "Lượt thi cần xem xét";
+    ViewBag.BreadcrumbCurrent = ViewBag.Title;
+    ViewBag.ShowStudentBreadcrumb = true;
+    var courses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc> ?? new List<ECOLearning.Models.KhoaHoc>();
+    bool includeSeen = ViewBag.IncludeSeen == true;
+    int page = (int)ViewBag.Page, pages = (int)ViewBag.Pages;
+}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=29" />
+<div class="qva-page">
+    <header class="qa-heading"><div><span class="qa-eyebrow">QUẢN LÝ HỌC VIÊN</span><h1>Lượt thi cần xem xét</h1><p>Các lượt ghi nhận rời màn hình từ 3 lần. Dấu mới xuất hiện khi có tín hiệu chưa được xem.</p></div><a class="btn qa-button" href="@Url.Action("Index")"><i class="bi bi-arrow-left" aria-hidden="true"></i> Tất cả học viên</a></header>
+    <form class="qva-filters" method="get" action="@Url.Action("NeedsReview")">
+        <label><span class="qb-sr-only">Khóa học</span><select name="courseId"><option value="">Tất cả khóa học</option>@foreach(var course in courses){<option value="@course.maKhoaHoc" selected="@(course.maKhoaHoc == (ViewBag.SelectedCourseId as string))">@course.tenKhoaHoc</option>}</select></label>
+        <label><span class="qb-sr-only">Tìm học viên hoặc khóa học</span><input type="search" name="search" value="@ViewBag.Search" placeholder="Tìm tên học viên, khóa học…" /></label>
+        <label class="qva-show-seen"><input type="checkbox" name="includeSeen" value="true" checked="@includeSeen" /> Bao gồm đã xem</label>
+        <button class="btn btn-primary" type="submit">Lọc</button>
+    </form>
+    <section class="qa-inbox">
+        <div class="qa-inbox-heading qa-inbox-toolbar"><div><h2>@(includeSeen ? "Lượt thi được ghi nhận" : "Lượt thi mới cần xem") <span class="qa-count">@ViewBag.Total</span></h2><p>Mở chi tiết để xem bài làm, nhật ký hoặc yêu cầu học viên làm lại.</p></div></div>
+        @if(!Model.Any()){
+            <div class="qa-empty"><span class="qa-empty-icon"><i class="bi bi-check2-circle" aria-hidden="true"></i></span><h3>@(includeSeen ? "Không có lượt thi phù hợp" : "Không có lượt thi mới cần xem")</h3><p>Thử thay đổi bộ lọc hoặc chọn “Bao gồm đã xem” để mở lại các lượt đã kiểm tra.</p></div>
+        }else{
+            <div class="qva-table-wrap"><table class="qva-table"><thead><tr><th>Học viên / khóa học</th><th>Lượt thi</th><th>Rời màn hình</th><th>Tín hiệu gần nhất</th><th><span class="qb-sr-only">Thao tác</span></th></tr></thead><tbody>
+            @foreach(var item in Model){<tr><td><strong>@item.StudentName</strong><small>@item.CourseName</small></td><td><strong>#@item.AttemptId</strong><small>@(item.SubmittedAt.HasValue ? "Đã nộp" : "Đang làm bài")</small></td><td><span class="qva-event-count">@item.Count lần</span><small>@item.Seconds giây ghi nhận</small></td><td><strong>@item.LastLeftAt.AddHours(7).ToString("HH:mm:ss")</strong><small>@item.LastLeftAt.AddHours(7).ToString("dd/MM/yyyy") @if(item.IsUnread){<span class="qva-new">Mới</span>}</small></td><td><a class="qh-detail-link" href="@Url.Action("Review", "Quiz", new { id = item.AttemptId, tab = "log" })">Xem chi tiết <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></td></tr>}
+            </tbody></table></div>
+        }
+        <div class="qv-footnote"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Đây là tín hiệu để kiểm tra, không tự xác nhận gian lận hay trừ điểm. Nhật ký được giữ lại sau khi đã xem.</span></div>
+    </section>
+    @if(pages > 1){<nav class="qva-pagination" aria-label="Trang danh sách cần xem xét">@if(page > 1){<a class="btn qa-button" href="@Url.Action("NeedsReview", new { courseId = ViewBag.SelectedCourseId, search = ViewBag.Search, includeSeen, page = page - 1 })">Trang trước</a>}<span>Trang @page / @pages</span>@if(page < pages){<a class="btn qa-button" href="@Url.Action("NeedsReview", new { courseId = ViewBag.SelectedCourseId, search = ViewBag.Search, includeSeen, page = page + 1 })">Trang sau</a>}</nav>}
+</div>

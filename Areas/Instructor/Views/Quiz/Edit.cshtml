@@ -6,7 +6,7 @@
     ViewBag.QuestionBankCourseId = Model.CourseId;
     var bankUrl = Url.Action("Index", new { courseId = Model.CourseId });
 }
-<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=2" />
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=18" />
 <div class="question-editor">
     <div style="display:flex;justify-content:flex-start;margin-bottom:24px;"><span class="qe-course"><i class="bi bi-journal-bookmark" aria-hidden="true"></i> @ViewBag.CourseName</span></div>
     @using (Html.BeginForm())
@@ -36,6 +36,16 @@
             <aside class="card qe-card qe-settings">
                 <div class="qe-section-heading"><i class="bi bi-sliders" aria-hidden="true"></i><div><h2>Thiết lập câu hỏi</h2><p>Phân loại và cách hiển thị đáp án.</p></div></div>
                 <div class="form-group"><label class="form-label" for="Topic">Chủ đề <span class="required">*</span></label>@Html.TextBoxFor(m => m.Topic, new { @class = "form-control", maxlength = 120, required = "required", placeholder = "Ví dụ: Chương 1" })<p class="qe-hint">Nhóm các câu hỏi cùng nội dung vào một chủ đề.</p></div>
+                <div class="form-group qe-skill-field">
+                    <label class="form-label" for="SkillId">Kỹ năng đánh giá</label>
+                    @Html.DropDownListFor(m => m.SkillId, new[] { new SelectListItem { Value = "", Text = "Chọn kỹ năng" } }.Concat(((List<ECOLearning.ViewModels.QuizSkill>)ViewBag.Skills).Where(x => x.Active).Select(x => new SelectListItem { Value = x.Id.ToString(), Text = x.Name })), new { @class = "form-control" })
+                    <p class="qe-hint">Gắn kỹ năng để câu hỏi được dùng khi phân bổ đề quiz.</p>
+                    <details class="qe-new-skill" id="new-skill-panel" open="@(!string.IsNullOrWhiteSpace(ViewBag.NewSkillName as string))">
+                        <summary><i class="bi bi-plus-circle" aria-hidden="true"></i> Thêm kỹ năng mới</summary>
+                        <div class="qe-new-skill-body"><label for="new-skill-name">Tên kỹ năng mới</label><input id="new-skill-name" class="form-control" type="text" name="newSkillName" value="@ViewBag.NewSkillName" maxlength="120" placeholder="Ví dụ: Điều kiện và vòng lặp" /><p class="qe-hint">Nhập tên để tạo và gắn khi lưu câu hỏi. Tên đã có sẽ dùng lại kỹ năng đó.</p><button type="button" class="qe-skill-cancel" id="cancel-new-skill">Dùng kỹ năng có sẵn</button></div>
+                    </details>
+                    <a class="qe-skill-manage" href="@Url.Action("Skills", new { courseId = Model.CourseId })" target="_blank" rel="noopener">Quản lý kỹ năng <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>
+                </div>
                 <div class="form-group"><label class="form-label" for="Difficulty">Mức độ</label>@Html.DropDownListFor(m => m.Difficulty, new[] { new SelectListItem { Value = "1", Text = "Dễ" }, new SelectListItem { Value = "2", Text = "Trung bình" }, new SelectListItem { Value = "3", Text = "Khó" } }, new { @class = "form-control" })</div>
                 <div class="qe-shuffle"><label for="ShuffleOptions">@Html.CheckBoxFor(m => m.ShuffleOptions)<span>Cho phép đảo đáp án</span></label><p class="qe-hint">Tắt nếu đáp án phụ thuộc vị trí, ví dụ “Cả A và B”.</p></div>
                 <div class="qe-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Thay đổi câu hỏi không ảnh hưởng đến nội dung các lượt thi đã bắt đầu.</span></div>
@@ -44,3 +54,16 @@
         <footer class="qe-footer"><span><span class="required">*</span> Thông tin bắt buộc</span><div><a class="btn btn-outline" href="@bankUrl">Hủy</a><button type="submit" class="btn btn-primary"><i class="bi bi-check2" aria-hidden="true"></i> Lưu câu hỏi</button></div></footer>
     }
 </div>
+
+<script>
+(function () {
+    const select = document.getElementById('SkillId');
+    const name = document.getElementById('new-skill-name');
+    const panel = document.getElementById('new-skill-panel');
+    function update() { select.disabled = name.value.trim().length > 0; }
+    name.addEventListener('input', update);
+    document.getElementById('cancel-new-skill').addEventListener('click', function () { name.value = ''; panel.open = false; update(); select.focus(); });
+    panel.addEventListener('toggle', function () { if (!panel.open) { name.value = ''; update(); } });
+    update();
+})();
+</script>

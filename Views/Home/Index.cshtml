@@ -630,6 +630,7 @@ if (yeuThich.Count > 0)
     .fv-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
     .fv-title { font-size: 14.5px; font-weight: 700; line-height: 1.35; margin: 0; color: var(--text-heading, #0F172A); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .fv-sub { font-size: 12.5px; color: var(--text-secondary, #64748B); }
+    .fv-rating { margin: 4px 0 0; flex-wrap: wrap; }
     .fv-price { margin-top: auto; padding-top: 8px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
     .fv-price strong { font-size: 16px; color: var(--text-heading, #0F172A); }
 </style>
@@ -658,16 +659,20 @@ if (yeuThich.Count > 0)
                                 <span class="caption" style="color: var(--primary); font-weight: 700;">@(c.DanhMuc != null ? c.DanhMuc.tenDanhMuc : "")</span>
                                 <h3 class="fv-title" title="@c.tenKhoaHoc">@c.tenKhoaHoc</h3>
                                 <span class="fv-sub"><i class="bi bi-person"></i> @(c.NguoiDung != null ? c.NguoiDung.hoTen : "")</span>
-                                <span class="fv-sub">
+                                @* Cùng kiểu hiển thị sao với thẻ khóa học (_CourseCard): điểm + 5 sao tô theo điểm + số đánh giá *@
+                                <div class="course-rating fv-rating">
                                     @if (f.SoDanhGia > 0)
                                     {
-                                        <span><i class="bi bi-star-fill" style="color: #F59E0B;"></i> @f.DiemDanhGia.ToString("0.0") (@f.SoDanhGia)</span>
+                                        <span class="rating-score">@f.DiemDanhGia.ToString("0.0")</span>
+                                        @ECOLearning.Services.RatingStars.Html((double)f.DiemDanhGia)
+                                        <span class="rating-count">(@f.SoDanhGia)</span>
                                     }
                                     else
                                     {
-                                        @:Chưa có đánh giá
+                                        <span class="rating-score" style="color: var(--text-muted, #94A3B8); font-size: 13px; font-weight: 500;">Chưa có đánh giá</span>
+                                        @ECOLearning.Services.RatingStars.Html(0)
                                     }
-                                </span>
+                                </div>
                                 <div class="fv-price">
                                     @{ var giaYeuThich = ECOLearning.Services.CourseDiscountService.Tinh(c); }
                                     <strong>@(giaYeuThich.GiaGoc <= 0 ? "Miễn phí" : giaYeuThich.Gia.ToString("N0") + " đ")</strong>

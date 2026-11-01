@@ -1,0 +1,175 @@
+@model ECOLearning.ViewModels.StudentChatIndexViewModel
+@{
+    ViewBag.Title = "Tin nhắn";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    int currentUserId = Session["UserId"] != null ? (int)Session["UserId"] : 0;
+}
+
+<link rel="stylesheet" href="~/assets/css/chat.css?v=1.0" />
+
+<div class="container my-4">
+    @if (!string.IsNullOrEmpty(ViewBag.Error))
+    {
+        <div class="alert alert-warning">@ViewBag.Error</div>
+    }
+
+    <div class="chat-app-container">
+        <!-- 1. SIDEBAR HỘI THOẠI -->
+        <div class="chat-sidebar">
+            <div class="chat-sidebar-header">
+                <h2><i class="bi bi-chat-dots-fill text-teal"></i> Tin nhắn của tôi</h2>
+            </div>
+
+            <div class="chat-conversation-list">
+                @if (Model.DanhSachHoiThoai == null || !Model.DanhSachHoiThoai.Any())
+                {
+                    <div class="p-4 text-center text-muted">
+                        <i class="bi bi-chat-square-text fs-2 mb-2 d-block"></i>
+                        Bạn chưa có cuộc trò chuyện nào với giáo viên.
+                        <p class="small mt-2">Vào trang khóa học đang học và bấm <b>"Hỏi giáo viên"</b> để bắt đầu trao đổi nhé!</p>
+                    </div>
+                }
+                else
+                {
+                    foreach (var c in Model.DanhSachHoiThoai)
+                    {
+                        bool isActive = Model.SelectedHoiThoaiId == c.MaHoiThoai;
+                        <a href="@Url.Action("Index", "Chat", new { id = c.MaHoiThoai })" 
+                           class="chat-conv-item @(isActive ? "active" : "")" 
+                           id="conv-item-@c.MaHoiThoai">
+                            <div class="chat-avatar-wrap">
+                                <img src="@(string.IsNullOrEmpty(c.AnhDaiDienGiaoVien) ? "/assets/images/default-avatar.png" : c.AnhDaiDienGiaoVien)" 
+                                     class="chat-avatar-img" alt="@c.TenGiaoVien" />
+                            </div>
+                            <div class="chat-conv-info">
+                                <div class="chat-conv-top">
+                                    <span class="chat-conv-name">@c.TenGiaoVien</span>
+                                    <span class="chat-conv-time">@(c.TinCuoiLuc.HasValue ? c.TinCuoiLuc.Value.ToString("dd/MM") : "")</span>
+                                </div>
+                                <div class="chat-conv-course">@c.TenKhoaHoc</div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="chat-conv-last-msg">@(string.IsNullOrEmpty(c.TinCuoiTomTat) ? "Bắt đầu cuộc trò chuyện..." : c.TinCuoiTomTat)</span>
+                                    @if (c.SoTinChuaDoc > 0)
+                                    {
+                                        <span class="chat-unread-badge">@c.SoTinChuaDoc</span>
+                                    }
+                                </div>
+                            </div>
+                        </a>
+                    }
+                }
+            </div>
+        </div>
+
+        <!-- 2. KHUNG CHAT CHÍNH -->
+        <div class="chat-main">
+            @if (Model.PhongChatHienTai != null)
+            {
+                var ht = Model.PhongChatHienTai.HoiThoai;
+                <div class="chat-main-header">
+                    <div class="chat-header-user">
+                        <img src="@(string.IsNullOrEmpty(ht.AnhDaiDienGiaoVien) ? "/assets/images/default-avatar.png" : ht.AnhDaiDienGiaoVien)" 
+                             class="chat-avatar-img" style="width: 42px; height: 42px;" alt="@ht.TenGiaoVien" />
+                        <div>
+                            <h3 class="chat-header-title">@ht.TenGiaoVien</h3>
+                            <div class="chat-header-sub"><i class="bi bi-book"></i> @ht.TenKhoaHoc</div>
+                        </div>
+                    </div>
+                    <div class="chat-header-actions">
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="reportConversation(@ht.MaHoiThoai)" title="Báo cáo vi phạm">
+                            <i class="bi bi-flag"></i> Báo cáo
+                        </button>
+                    </div>
+                </div>
+
+                <div class="chat-alert-banner">
+                    <i class="bi bi-shield-lock-fill"></i>
+                    <span>ECOLearning bảo vệ quyền lợi của bạn. Nghiêm cấm chia sẻ thông tin tài khoản hoặc chuyển tiền ngoài hệ thống.</span>
+                </div>
+
+                <!-- Thân tin nhắn -->
+                <div class="chat-messages-body" id="chat-messages-container">
+                    @foreach (var m in Model.PhongChatHienTai.DanhSachTinNhan)
+                    {
+                        bool isMine = m.LaCuaToi;
+                        <div class="chat-msg-row @(isMine ? "msg-mine" : "msg-other")" id="msg-row-@m.MaTinNhan">
+                            <img src="@(string.IsNullOrEmpty(m.AnhDaiDien) ? "/assets/images/default-avatar.png" : m.AnhDaiDien)" 
+                                 class="chat-msg-avatar" alt="@m.TenNguoiGui" />
+                            <div>
+                                <div class="chat-msg-bubble @(m.DaThuHoi ? "chat-msg-recalled" : "")">
+                                    @m.NoiDung
+                                </div>
+                                <div class="chat-msg-time">
+                                    @m.NgayGui.ToString("HH:mm - dd/MM")
+                                    @if (isMine && m.CoTheThuHoi)
+                                    {
+                                        <button type="button" class="chat-recall-btn" onclick="EcoChat.recallMessage(@m.MaTinNhan)" title="Thu hồi tin trong 5 phút">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="chat-typing-indicator" id="chat-typing-indicator">
+                    <i class="bi bi-pencil-fill"></i> Giáo viên đang soạn tin...
+                </div>
+
+                <!-- Ô nhập tin nhắn -->
+                <div class="chat-footer">
+                    @if (ht.TrangThai == "ChiDoc")
+                    {
+                        <div class="w-100 text-center text-muted py-2">
+                            <i class="bi bi-lock-fill"></i> Cuộc trò chuyện này ở chế độ chỉ đọc.
+                        </div>
+                    }
+                    else
+                    {
+                        <textarea class="chat-input" id="chat-message-input" rows="1" placeholder="Nhập câu hỏi hoặc nội dung trao đổi... (tối đa 2.000 ký tự)"></textarea>
+                        <button type="button" class="chat-send-btn" id="chat-send-btn" title="Gửi tin nhắn">
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="h-100 d-flex flex-column align-items-center justify-content-center text-muted">
+                    <i class="bi bi-chat-heart fs-1 mb-3 text-secondary"></i>
+                    <h5>Chọn một cuộc hội thoại</h5>
+                    <p class="small">Bấm vào danh sách bên trái để xem lại nội dung tin nhắn và tiếp tục trao đổi với giáo viên.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script src="~/Scripts/jquery.signalR-2.4.3.min.js"></script>
+    <script src="~/signalr/hubs"></script>
+    <script src="~/assets/js/chat.js?v=1.0"></script>
+    <script>
+        $(document).ready(function () {
+            var convId = @(Model.SelectedHoiThoaiId ?? 0);
+            var userId = @currentUserId;
+
+            if (userId > 0) {
+                EcoChat.init(userId, false);
+                if (convId > 0) {
+                    EcoChat.joinConversation(convId);
+                }
+            }
+        });
+
+        function reportConversation(convId) {
+            if (confirm('Bạn muốn báo cáo cuộc hội thoại này cho Quản trị viên kiểm tra nội dung vi phạm?')) {
+                $.post('@Url.Action("Report", "Chat")', { conversationId: convId, reason: 'Báo cáo từ học viên' }, function (res) {
+                    alert(res.message);
+                });
+            }
+        }
+    </script>
+}
+

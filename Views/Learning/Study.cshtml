@@ -133,9 +133,9 @@
             padding: 0;
         }
 
-        .player-btn:hover {
-            color: #434CE8;
-        }
+            .player-btn:hover {
+                color: #434CE8;
+            }
 
         .seek-bar-wrap {
             width: 100%;
@@ -156,18 +156,18 @@
             transition: width 0.1s linear;
         }
 
-        .seek-bar-fill::after {
-            content: '';
-            position: absolute;
-            right: -6px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: #fff;
-            box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
-        }
+            .seek-bar-fill::after {
+                content: '';
+                position: absolute;
+                right: -6px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                background: #fff;
+                box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+            }
 
         .curriculum-sidebar {
             width: 380px;
@@ -198,9 +198,9 @@
             letter-spacing: 0.5px;
         }
 
-        .sidebar-section-title:first-child {
-            margin-top: 4px;
-        }
+            .sidebar-section-title:first-child {
+                margin-top: 4px;
+            }
 
         .lesson-item {
             display: flex;
@@ -214,15 +214,15 @@
             color: #D1D5DB;
         }
 
-        .lesson-item:hover {
-            background: #1F2937;
-        }
+            .lesson-item:hover {
+                background: #1F2937;
+            }
 
-        .lesson-item.active {
-            background: rgba(67, 76, 232, 0.2);
-            border-left: 3px solid #434CE8;
-            color: #FFFFFF;
-        }
+            .lesson-item.active {
+                background: rgba(67, 76, 232, 0.2);
+                border-left: 3px solid #434CE8;
+                color: #FFFFFF;
+            }
 
         .check-icon {
             width: 22px;
@@ -239,62 +239,175 @@
             transition: all 0.2s ease;
         }
 
-        .check-icon.completed {
-            background: #10B981;
-            border-color: #10B981;
-            color: #fff;
-        }
+            .check-icon.completed {
+                background: #10B981;
+                border-color: #10B981;
+                color: #fff;
+            }
 
         /* Cảnh báo tua nhanh */
         .seek-warning-toast {
-            position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px);
-            background: #1E293B; color: #E2E8F0;
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: #1E293B;
+            color: #E2E8F0;
             border: 1px solid #475569;
-            padding: 13px 22px; border-radius: 12px; font-weight: 600; font-size: 13.5px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.45); z-index: 9999;
-            display: flex; align-items: center; gap: 10px;
-            opacity: 0; transition: all 0.3s ease; pointer-events: none;
+            padding: 13px 22px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 13.5px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
         }
-        .seek-warning-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+            .seek-warning-toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
 
         /* Thông báo bài khoá */
         .locked-lesson-toast {
-            position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px);
-            background: #1E293B; color: #E2E8F0;
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: #1E293B;
+            color: #E2E8F0;
             border: 1px solid #475569;
-            padding: 13px 22px; border-radius: 12px; font-weight: 600; font-size: 13.5px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.45); z-index: 9999;
-            display: flex; align-items: center; gap: 10px;
-            opacity: 0; transition: all 0.3s ease; pointer-events: none;
+            padding: 13px 22px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 13.5px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
         }
-        .locked-lesson-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-        .lesson-item.locked { cursor: not-allowed; opacity: 0.5; }
-        .lesson-item.locked:hover { background: rgba(239,68,68,0.08); }
-        .check-icon.locked-icon { background: #374151; border-color: #4B5563; color: #9CA3AF; font-size: 11px; }
+            .locked-lesson-toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+
+        .lesson-item.locked {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+            .lesson-item.locked:hover {
+                background: rgba(239,68,68,0.08);
+            }
+
+        .check-icon.locked-icon {
+            background: #374151;
+            border-color: #4B5563;
+            color: #9CA3AF;
+            font-size: 11px;
+        }
 
         /* Bảng ghi chú */
         .notes-panel {
-            position: fixed; bottom: 24px; right: 400px;
-            width: 360px; max-height: 480px; background: #1E293B;
-            border: 1px solid #334155; border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5); z-index: 200;
-            display: none; flex-direction: column; overflow: hidden;
+            position: fixed;
+            bottom: 24px;
+            right: 400px;
+            width: 360px;
+            max-height: 480px;
+            background: #1E293B;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
         }
-        .notes-panel.open { display: flex; }
-        .notes-header { padding: 14px 18px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
-        .notes-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
-        .notes-footer { padding: 12px 16px; border-top: 1px solid #334155; display: flex; flex-direction: column; gap: 8px; }
-        .note-item { padding: 10px 12px; background: #0F172A; border-radius: 10px; border-left: 3px solid #434CE8; margin-bottom: 8px; cursor: pointer; transition: background 0.15s; }
-        .note-item:hover { background: rgba(67,76,232,0.12); }
-        .note-timestamp { font-size: 11px; font-weight: 700; color: #434CE8; margin-bottom: 4px; }
-        .note-text { font-size: 13px; color: #CBD5E1; line-height: 18px; }
+
+            .notes-panel.open {
+                display: flex;
+            }
+
+        .notes-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notes-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px;
+        }
+
+        .notes-footer {
+            padding: 12px 16px;
+            border-top: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .note-item {
+            padding: 10px 12px;
+            background: #0F172A;
+            border-radius: 10px;
+            border-left: 3px solid #434CE8;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+            .note-item:hover {
+                background: rgba(67,76,232,0.12);
+            }
+
+        .note-timestamp {
+            font-size: 11px;
+            font-weight: 700;
+            color: #434CE8;
+            margin-bottom: 4px;
+        }
+
+        .note-text {
+            font-size: 13px;
+            color: #CBD5E1;
+            line-height: 18px;
+        }
 
         /* Locked overlay on video */
-        .locked-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; gap: 16px; }
+        .locked-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            gap: 16px;
+        }
 
         /* Star Rating Widget */
-        .star-box span { font-size: 28px; color: #CBD5E1; transition: color 0.15s ease; cursor: pointer; user-select: none; }
+        .star-box span {
+            font-size: 28px;
+            color: #CBD5E1;
+            transition: color 0.15s ease;
+            cursor: pointer;
+            user-select: none;
+        }
 
         /* Thanh trượt âm lượng */
         .volume-slider {
@@ -307,26 +420,29 @@
             outline: none;
             cursor: pointer;
         }
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #fff;
-            cursor: pointer;
-            box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
-        }
-        .volume-slider::-moz-range-thumb {
-            width: 12px;
-            height: 12px;
-            border: none;
-            border-radius: 50%;
-            background: #fff;
-            cursor: pointer;
-            box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
-        }
+
+            .volume-slider::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                background: #fff;
+                cursor: pointer;
+                box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+            }
+
+            .volume-slider::-moz-range-thumb {
+                width: 12px;
+                height: 12px;
+                border: none;
+                border-radius: 50%;
+                background: #fff;
+                cursor: pointer;
+                box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+            }
     </style>
+    <link rel="stylesheet" href="~/assets/css/chat.css?v=1.0" />
 }
 <!-- Locked Lesson Toast -->
 <div id="locked-lesson-toast" class="locked-lesson-toast">
@@ -346,7 +462,7 @@
     </div>
     <div class="notes-footer">
         <textarea id="note-input" placeholder="Nhập nội dung ghi chú..." rows="3"
-            style="background:#0F172A; border:1px solid #334155; color:#fff; border-radius:8px; padding:8px 12px; resize:none; font-size:13px; font-family:inherit; width:100%; box-sizing:border-box;"></textarea>
+                  style="background:#0F172A; border:1px solid #334155; color:#fff; border-radius:8px; padding:8px 12px; resize:none; font-size:13px; font-family:inherit; width:100%; box-sizing:border-box;"></textarea>
         <button onclick="saveNote()" style="background:#434CE8; color:#fff; border:none; border-radius:8px; padding:9px; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
             <i class="bi bi-pin-angle-fill"></i> Lưu ghi chú tại mốc hiện tại
         </button>
@@ -367,14 +483,14 @@
     </div>
 
     <div style="display: flex; align-items: center; gap: 20px;">
-    @if (course != null && ViewBag.IsPreview != true)
-    {
-        <a class="btn btn-primary btn-sm" href="@Url.Action("Index", "Quiz", new { courseId = course.maKhoaHoc })">Quiz &amp; Chứng chỉ</a>
-    }
-    else if (ViewBag.IsPreview == true)
-    {
-        <span style="color:#FBBF24;font-size:12px;">Xem trước · Không ghi nhận tiến độ</span>
-    }
+        @if (course != null && ViewBag.IsPreview != true)
+        {
+            <a class="btn btn-primary btn-sm" href="@Url.Action("Index", "Quiz", new { courseId = course.maKhoaHoc })">Quiz &amp; Chứng chỉ</a>
+        }
+        else if (ViewBag.IsPreview == true)
+        {
+            <span style="color:#FBBF24;font-size:12px;">Xem trước · Không ghi nhận tiến độ</span>
+        }
 
         <!-- Overall Progress -->
         <div style="display: flex; align-items: center; gap: 12px; width: 220px;">
@@ -453,7 +569,7 @@
             else if (activeLesson != null && !string.IsNullOrEmpty(activeLesson.duongDanVideo))
             {
                 @* Kích thước đặt trực tiếp (trang không nạp CSS Bootstrap nên class w-100 / h-100 không có tác dụng): video luôn vừa khung,
-                   không bị cắt mép khi khung nhỏ hơn video và phóng theo khi bấm Toàn màn hình *@
+                    không bị cắt mép khi khung nhỏ hơn video và phóng theo khi bấm Toàn màn hình *@
                 <video id="studyPlayer" preload="none" style="display:block; width:100%; height:100%; object-fit:contain; background:#000;" poster="@(course != null ? course.anhBia : "")">
                     <source data-src="@activeVideoSrc" type="video/mp4" />
                     Trình duyệt không hỗ trợ xem video.
@@ -575,6 +691,13 @@
                 <button style="background:#1E293B; color:#fff; border:1px solid #334155; border-radius:8px; padding:8px 16px; font-size:13.5px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:6px;" onclick="toggleNotesPanel()">
                     <i class="bi bi-journal-text"></i> Ghi chú bài học
                 </button>
+
+
+                @*hỏi giáo viên*@
+
+                <button style="background:#434CE8; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow: 0 4px 12px rgba(67, 76, 232, 0.25); transition: background 0.2s;" onclick="openStudyChat()" onmouseover="this.style.background='#363fc2'" onmouseout="this.style.background='#434CE8'">
+                    <i class="bi bi-chat-dots-fill"></i> Hỏi giáo viên
+                </button>
             </div>
             @if (activeLessonDocuments.Count == 0)
             {
@@ -602,12 +725,12 @@
                     <div class="sidebar-section-title">@(chapters.Count > 0 ? "Bài học độc lập" : "Danh sách bài học")</div>
                     foreach (var les in unchapteredLessons)
                     {
-                        bool isCur2  = (activeLesson != null && les.maBaiHoc == activeLesson.maBaiHoc);
+                        bool isCur2 = (activeLesson != null && les.maBaiHoc == activeLesson.maBaiHoc);
                         bool isDone2 = completedLessonIds.Contains(les.maBaiHoc);
                         int m2 = (les.thoiLuong ?? 0) / 60, s2 = (les.thoiLuong ?? 0) % 60;
                         string dStr2 = string.Format("{0:D2}:{1:D2}", m2, s2);
                         bool isLast2 = (allLessons.Count > 0 && les.maBaiHoc == allLessons.Last().maBaiHoc);
-                        bool lesOpen  = ViewBag.IsPreview == true || gIdx == 0 || isDone2 || (gIdx > 0 && completedLessonIds.Contains(allLessons[gIdx - 1].maBaiHoc));
+                        bool lesOpen = ViewBag.IsPreview == true || gIdx == 0 || isDone2 || (gIdx > 0 && completedLessonIds.Contains(allLessons[gIdx - 1].maBaiHoc));
                         gIdx++;
                         <div class="lesson-item @(isCur2 ? "active" : "") @(!lesOpen ? "locked" : "")"
                              id="lesson-item-@les.maBaiHoc"
@@ -634,12 +757,12 @@
                         <div class="sidebar-section-title">@chap.tenChuong</div>
                         foreach (var les in chapLessons2)
                         {
-                            bool isCur2  = (activeLesson != null && les.maBaiHoc == activeLesson.maBaiHoc);
+                            bool isCur2 = (activeLesson != null && les.maBaiHoc == activeLesson.maBaiHoc);
                             bool isDone2 = completedLessonIds.Contains(les.maBaiHoc);
                             int m2 = (les.thoiLuong ?? 0) / 60, s2 = (les.thoiLuong ?? 0) % 60;
                             string dStr2 = string.Format("{0:D2}:{1:D2}", m2, s2);
                             bool isLast2 = (allLessons.Count > 0 && les.maBaiHoc == allLessons.Last().maBaiHoc);
-                            bool lesOpen  = ViewBag.IsPreview == true || gIdx == 0 || isDone2 || (gIdx > 0 && completedLessonIds.Contains(allLessons[gIdx - 1].maBaiHoc));
+                            bool lesOpen = ViewBag.IsPreview == true || gIdx == 0 || isDone2 || (gIdx > 0 && completedLessonIds.Contains(allLessons[gIdx - 1].maBaiHoc));
                             gIdx++;
                             <div class="lesson-item @(isCur2 ? "active" : "") @(!lesOpen ? "locked" : "")"
                                  id="lesson-item-@les.maBaiHoc"
@@ -673,7 +796,9 @@
             <div class="modal-header" style="border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; padding: 18px 24px;">
                 <h3 class="h3" style="color: #fff; margin: 0; font-size: 18px; font-weight: 700;"><i class="bi bi-flag-fill" style="color: #F87171;"></i> Báo cáo vi phạm khóa học</h3>
                 <button class="btn btn-secondary btn-sm" style="background: #334155; color: #fff; border: none; cursor: pointer; border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;"
-                        data-modal-close><i class="bi bi-x-lg"></i></button>
+                        data-modal-close>
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
             <form id="violation-form" onsubmit="submitViolationReport(event)">
                 @Html.AntiForgeryToken()
@@ -713,7 +838,9 @@
         <div class="modal-header" style="border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; padding: 18px 24px;">
             <h3 class="h3" style="color: #fff; margin: 0; font-size: 18px; font-weight: 700;">Đánh giá khóa học</h3>
             <button class="btn btn-secondary btn-sm" style="background: #334155; color: #fff; border: none; cursor: pointer; border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;"
-                    data-modal-close><i class="bi bi-x-lg"></i></button>
+                    data-modal-close>
+                <i class="bi bi-x-lg"></i>
+            </button>
         </div>
         <div class="modal-body" style="padding: 24px;">
             <div class="alert alert-success"
@@ -745,6 +872,13 @@
         </div>
     </div>
 </div>
+
+<!-- Nút Chat Nổi Góc Phải -->
+<button onclick="openStudyChat()" title="Hỏi giáo viên" style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: #434CE8; color: #fff; border: none; box-shadow: 0 8px 24px rgba(67, 76, 232, 0.4); display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; z-index: 99; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+    <i class="bi bi-chat-dots-fill"></i>
+</button>
+
+@Html.Partial("_ChatPanel")
 
 @section scripts {
     <script>
@@ -1409,5 +1543,84 @@
                 error: function () { showToast('Lỗi đường truyền khi gửi đánh giá!', 'error'); }
             });
         }
+    </script>
+    <script src="~/Scripts/jquery.signalR-2.4.3.min.js"></script>
+    <script src="~/signalr/hubs"></script>
+    <script src="~/assets/js/chat.js?v=1.0"></script>
+    <script>
+        var currentChatConvId = 0;
+        var chatInitialized = false;
+
+        function openStudyChat() {
+            var backdrop = document.getElementById('study-chat-backdrop');
+            var panel = document.getElementById('study-chat-panel');
+            if (backdrop) backdrop.classList.add('active');
+            if (panel) panel.classList.add('active');
+
+            if (!chatInitialized) {
+                var currentUserId = @(Session["UserId"] ?? 0);
+                if (currentUserId > 0) {
+                    EcoChat.init(currentUserId, false);
+                    chatInitialized = true;
+                }
+            }
+
+            if (currentChatConvId === 0) {
+                loadStudyConversation();
+            }
+        }
+
+        function closeStudyChat() {
+            var backdrop = document.getElementById('study-chat-backdrop');
+            var panel = document.getElementById('study-chat-panel');
+            if (backdrop) backdrop.classList.remove('active');
+            if (panel) panel.classList.remove('active');
+        }
+
+        function loadStudyConversation() {
+            var courseId = '@(course != null ? course.maKhoaHoc : "")';
+            var container = $('#study-chat-messages');
+            var loading = $('#study-chat-loading');
+
+            $.get('@Url.Action("GetOrCreateForCourse", "Chat")', { courseId: courseId }, function (res) {
+                loading.hide();
+                if (res.success) {
+                    currentChatConvId = res.conversation.MaHoiThoai;
+                    EcoChat.currentConvId = currentChatConvId;
+                    if (EcoChat.hub && $.connection.hub.state === 1) {
+                        EcoChat.hub.server.thamGiaHoiThoai(currentChatConvId);
+                    }
+
+                    container.empty();
+                    if (res.messages && res.messages.length > 0) {
+                        res.messages.forEach(function (m) {
+                            EcoChat.appendMessage(m);
+                        });
+                        EcoChat.scrollToBottom();
+                    } else {
+                        container.html('<div class="p-4 text-center text-muted"><i class="bi bi-chat-quote fs-2 mb-2 d-block"></i>Báº¡n chÆ°a gá»­i cÃ¢u há»i nÃ o cho khÃ³a há»c nÃ y.<br>HÃ£y nháº­p tin nháº¯n bÃªn dÆ°á»›i Ä‘á»ƒ báº¯t Ä‘áº§u trao Ä‘á»•i vá»›i giÃ¡o viÃªn nhÃ©!</div>');
+                    }
+                } else {
+                    container.html('<div class="alert alert-warning m-3">' + res.message + '</div>');
+                }
+            });
+        }
+
+        // Bắt sự kiện gửi tin từ panel study
+        $(document).on('click', '#study-chat-send-btn', function () {
+            var input = $('#study-chat-input');
+            var text = input.val().trim();
+            if (!text || currentChatConvId <= 0) return;
+            EcoChat.currentConvId = currentChatConvId;
+            EcoChat.executeSend(text);
+            input.val('');
+        });
+
+        $(document).on('keydown', '#study-chat-input', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                $('#study-chat-send-btn').click();
+            }
+        });
     </script>
 }

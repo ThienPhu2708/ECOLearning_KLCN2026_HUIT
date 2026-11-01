@@ -336,6 +336,22 @@ function toggleTeacherMenu(open) {
 document.addEventListener('keydown', function(event) { if (event.key === 'Escape' && document.getElementById('teacher-sidebar').classList.contains('active')) toggleTeacherMenu(false); });
 window.addEventListener('resize', function() { if (window.innerWidth > 992 && document.getElementById('teacher-sidebar').classList.contains('active')) toggleTeacherMenu(false); });
 </script>
+    <script>
+        function checkUnreadMessages() {
+            $.get('/Chat/UnreadCount', function (res) {
+                var badge = $('.js-chat-unread-badge');
+                if (res && res.count > 0) {
+                    badge.text(res.count).show();
+                } else {
+                    badge.hide();
+                }
+            });
+        }
+        $(document).ready(function () {
+            checkUnreadMessages();
+            setInterval(checkUnreadMessages, 30000);
+        });
+    </script>
 @RenderSection("Scripts", required: false)
 </body>
 </html>

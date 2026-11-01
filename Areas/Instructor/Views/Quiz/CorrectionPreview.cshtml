@@ -1,0 +1,12 @@
+﻿@model ECOLearning.Services.QuizRegradePlan
+@{ViewBag.Title="Xem trước điều chỉnh điểm";ViewBag.BreadcrumbCurrent=ViewBag.Title;}
+<div class="card" style="padding:24px;max-width:100%"><h1 style="font-size:24px">Xem trước điều chỉnh điểm</h1>
+<p style="margin:16px 0;white-space:pre-wrap;overflow-wrap:anywhere">@Model.Rule.Reason</p>
+<p>@Model.Lines.Count lượt đã nộp · @Model.OpenAttempts lượt đang làm sẽ áp dụng khi nộp. Chứng chỉ đã cấp không bị thu hồi.</p>
+<p style="margin:12px 0;color:#64748b">“Tính lại” là điểm theo quy tắc mới. “Công nhận” giữ điểm và kỹ năng đã đạt trước đây nếu lỗi đề làm kết quả giảm. Mỗi phiên bản câu được xác nhận một quy tắc, cần kiểm tra kỹ trước khi lưu. Xem trước hết hạn sau 15 phút; có lượt nộp mới hoặc thay đổi điểm thì cần xem trước lại.</p>
+<div style="overflow-x:auto"><table style="min-width:720px;width:100%"><thead><tr><th>Học viên / lượt</th><th>Điểm cũ</th><th>Tính lại</th><th>Công nhận</th><th>Kết quả</th></tr></thead><tbody>
+@foreach(var line in Model.Lines){<tr><td>@line.StudentName · #@line.Attempt.Id</td><td>@line.Attempt.Score</td><td>@line.Grade.CalculatedScore</td><td>@line.Grade.Score</td><td>@(line.Attempt.Passed==true?"Đã đạt":line.Grade.Passed?"Chưa đạt → Đạt":"Chưa đạt")</td></tr>}
+</tbody></table></div>
+<form action="@Url.Action("ConfirmCorrection")" method="post" style="margin-top:24px">@Html.AntiForgeryToken()<input name="id" type="hidden" value="@Model.Id"/>
+<label style="display:block;margin-bottom:14px"><input type="checkbox" required/> Tôi đã xem ảnh hưởng trên toàn bộ lượt thi và xác nhận lý do xử lý.</label>
+<a class="btn btn-outline" href="@Url.Action("Correction",new{reportId=Model.ReportId})">Quay lại</a><button class="btn btn-primary" type="submit">Xác nhận điều chỉnh</button></form></div>

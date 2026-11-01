@@ -1,0 +1,38 @@
+﻿@model List<ECOLearning.Services.QuizVisibilityRow>
+@{
+    ViewBag.Title = ViewBag.AttemptDetail == true ? "Chi tiết lượt thi" : "Nhật ký rời màn hình";
+    ViewBag.BreadcrumbCurrent = ViewBag.Title;
+    ViewBag.ShowQuestionBankBreadcrumb = true;
+    ViewBag.QuestionBankCourseId = ViewBag.CourseId;
+    var total = Model.Sum(r => r.Seconds);
+    var longest = Model.Any() ? Model.Max(r => r.Seconds) : 0;
+    Func<int, string> duration = seconds => seconds >= 60 ? (seconds / 60) + " phút " + (seconds % 60) + " giây" : seconds + " giây";
+}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=28" />
+@if (ViewBag.AttemptDetail == true) {@Html.Partial("_AttemptTabs")}
+<div class="qv-page">
+    @if (ViewBag.AttemptDetail != true) {
+    <div class="qs-toolbar"><span class="qe-course"><i class="bi bi-journal-bookmark" aria-hidden="true"></i> @ViewBag.CourseName</span><a class="btn btn-outline" href="@Url.Action("History", new { courseId = ViewBag.CourseId, studentId = ViewBag.StudentId })"><i class="bi bi-arrow-left" aria-hidden="true"></i> Lịch sử quiz của học viên</a></div>
+    }
+    <header class="qv-heading"><div><span class="qa-eyebrow">LƯỢT THI #@ViewBag.AttemptId</span><h1>Nhật ký rời màn hình</h1><p>Theo dõi các lần trình duyệt ghi nhận học viên rời trang làm bài.</p></div>@if (Model.Count >= 3) {<span class="qv-review-tag"><i class="bi bi-info-circle" aria-hidden="true"></i> Cần xem xét · từ 3 lần</span>}</header>
+    <div class="qv-metrics">
+        <section><span class="qv-metric-icon"><i class="bi bi-window-stack" aria-hidden="true"></i></span><div><span>Số lần rời màn hình</span><strong>@Model.Count <small>lần</small></strong></div></section>
+        <section><span class="qv-metric-icon"><i class="bi bi-clock" aria-hidden="true"></i></span><div><span>Tổng thời gian ghi nhận</span><strong>@duration(total)</strong></div></section>
+        <section><span class="qv-metric-icon"><i class="bi bi-hourglass-split" aria-hidden="true"></i></span><div><span>Lần rời lâu nhất</span><strong>@duration(longest)</strong></div></section>
+    </div>
+    <section class="qa-inbox qv-log">
+        <div class="qa-inbox-heading qa-inbox-toolbar"><div><h2>Chi tiết từng lần <span class="qa-count">@Model.Count</span></h2><p>Thời điểm rời trang và quay lại được trình bày theo giờ Việt Nam.</p></div><span class="qv-timezone">UTC+7</span></div>
+        @if (!Model.Any()) {
+            <div class="qa-empty"><span class="qa-empty-icon"><i class="bi bi-window" aria-hidden="true"></i></span><h3>Chưa ghi nhận lần rời màn hình nào</h3><p>Nhật ký sẽ xuất hiện khi trình duyệt gửi tín hiệu rời trang. Không có tín hiệu chưa đủ để xác nhận học viên luôn ở trong trang.</p></div>
+        } else {
+            <div class="qv-table-wrap"><table class="qv-table"><thead><tr><th scope="col">Lần</th><th scope="col">Rời màn hình</th><th scope="col">Quay lại</th><th scope="col">Thời gian</th></tr></thead><tbody>
+            @for (int i = 0; i < Model.Count; i++) {var row = Model[i];
+                <tr><td><span class="qv-row-number">@((i + 1).ToString("00"))</span></td><td><strong>@row.LeftAt.AddHours(7).ToString("HH:mm:ss")</strong><small>@row.LeftAt.AddHours(7).ToString("dd/MM/yyyy")</small></td><td>@if (row.ReturnedAt.HasValue) {<strong>@row.ReturnedAt.Value.AddHours(7).ToString("HH:mm:ss")</strong><small>@row.ReturnedAt.Value.AddHours(7).ToString("dd/MM/yyyy")</small>} else {<span class="qv-unreturned">Chưa ghi nhận quay lại</span>}</td><td><span class="qv-duration">@duration(row.Seconds)</span>@if (!row.ReturnedAt.HasValue) {<small>Tạm tính đến hiện tại hoặc khi kết thúc lượt thi</small>}</td></tr>
+            }
+            </tbody></table></div>
+        }
+        <div class="qv-footnote"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Nhật ký dùng để giáo viên xem xét, không tự trừ điểm hoặc kết luận gian lận.</span></div>
+    </section>
+    @if (ViewBag.AttemptDetail == true) {@Html.Partial("_RetakeTeacher")}
+    <details class="qv-help"><summary><span><i class="bi bi-question-circle" aria-hidden="true"></i> Lưu ý khi đọc nhật ký</span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary><p>Dữ liệu do trình duyệt gửi nên có thể thiếu khi mất mạng hoặc đóng trình duyệt. Hệ thống không xác định được ứng dụng học viên đã mở. Với lần chưa có tín hiệu quay lại, thời gian được tạm tính và không vượt quá thời điểm kết thúc lượt thi.</p></details>
+</div>

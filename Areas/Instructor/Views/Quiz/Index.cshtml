@@ -7,15 +7,20 @@
     string courseId = ViewBag.CourseId as string;
     bool hasCourse = !string.IsNullOrEmpty(courseId), published = config != null && config.Published;
     var active = Model.Where(q => q.Active).ToList();
+    var notifications = ViewBag.QuizNotifications as ECOLearning.Services.QuizTeacherNotificationCounts ?? new ECOLearning.Services.QuizTeacherNotificationCounts();
     var topics = Model.Select(q => q.Topic).Distinct().OrderBy(t => t).ToList();
 }
-<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=8" />
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=21" />
 <div class="question-bank">
     @if (TempData["QuizMessage"] != null) {<div class="qb-message" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i> @TempData["QuizMessage"]</div>}
     <section class="qb-course-card qb-filter-card" aria-label="Chọn khóa học">
         <div class="qb-course-icon"><i class="bi bi-journal-bookmark" aria-hidden="true"></i></div>
         <form method="get" class="qb-course-form"><label for="qb-course">KHÓA HỌC ĐANG QUẢN LÝ</label><select id="qb-course" name="courseId" onchange="this.form.submit()"><option value="">Tất cả khóa học</option>@foreach (var c in courses) {<option value="@c.maKhoaHoc" selected="@(c.maKhoaHoc == courseId)">@c.tenKhoaHoc</option>}</select><noscript><button class="btn btn-primary">Chọn khóa học</button></noscript></form>
-        @if (hasCourse) {<a class="qb-text-link qb-students-link" href="@Url.Action("Index", "Student", new { courseId })">Quản lý học viên <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>}
+    <nav class="qb-review-actions" id="quiz-feedback-links" data-notification-url="@Url.Action("NotificationCounts", new { courseId })" aria-label="Phản hồi và kỹ năng quiz">
+        <a class="btn qb-secondary" href="@Url.Action("Appeals", new { courseId })"><i class="bi bi-chat-left-text" aria-hidden="true"></i> Phúc khảo &amp; phản hồi <span class="qb-notification-badge" data-quiz-count="Appeals" hidden="@(notifications.Appeals == 0)" aria-label="@notifications.Appeals yêu cầu phúc khảo cần xử lý" title="@notifications.Appeals yêu cầu phúc khảo cần xử lý">@(notifications.Appeals > 99 ? "99+" : notifications.Appeals.ToString())</span></a>
+        <a class="btn qb-secondary" href="@Url.Action("Reports", new { courseId })"><i class="bi bi-flag" aria-hidden="true"></i> Báo lỗi câu hỏi <span class="qb-notification-badge" data-quiz-count="Reports" hidden="@(notifications.Reports == 0)" aria-label="@notifications.Reports báo lỗi cần xử lý" title="@notifications.Reports báo lỗi cần xử lý">@(notifications.Reports > 99 ? "99+" : notifications.Reports.ToString())</span></a>
+        @if (hasCourse) {<a class="btn qb-secondary" href="@Url.Action("Skills", new { courseId })"><i class="bi bi-award" aria-hidden="true"></i> Kỹ năng đầu ra</a>}
+    </nav>
         <div class="qb-filters">
                     <label class="qb-search"><i class="bi bi-search" aria-hidden="true"></i><span class="qb-sr-only">Tìm câu hỏi</span><input id="questionSearch" type="search" placeholder="Tìm nội dung câu hỏi…" autocomplete="off" /></label>
                     <label><span class="qb-sr-only">Chủ đề</span><select id="topicFilter"><option value="">Tất cả chủ đề</option>@foreach (var topic in topics) {<option value="@topic">@topic</option>}</select></label>
@@ -23,6 +28,7 @@
                     <label><span class="qb-sr-only">Trạng thái</span><select id="questionStatus"><option value="">Mọi trạng thái</option><option value="active">Đang dùng</option><option value="archived">Đã ngừng</option></select></label>
                 </div>
     </section>
+
     @if (courses.Any())
     {
         <div class="qb-overview">
@@ -95,5 +101,34 @@
     [topic, level, status].forEach(function (input) { input.addEventListener('change', filter); });
     const clear = document.getElementById('clearQuestionFilters');
     if (clear) clear.addEventListener('click', function () {search.value = ''; [topic, level, status].forEach(function (input) {input.value = ''; input.dispatchEvent(new Event('change', {bubbles: true}));}); filter(); search.focus();});
+})();
+</script>
+
+<script>
+(function () {
+    const links = document.getElementById('quiz-feedback-links');
+    if (!links) return;
+    let busy = false;
+    async function refresh() {
+        if (busy || document.hidden) return;
+        busy = true;
+        try {
+            const response = await fetch(links.dataset.notificationUrl, { credentials: 'same-origin', cache: 'no-store', headers: { 'Accept': 'application/json' } });
+            if (!response.ok) return;
+            const counts = await response.json();
+            links.querySelectorAll('[data-quiz-count]').forEach(function (badge) {
+                const value = counts[badge.dataset.quizCount];
+                if (!Number.isInteger(value) || value < 0) return;
+                const label = value + (badge.dataset.quizCount === 'Appeals' ? ' yêu cầu phúc khảo cần xử lý' : ' báo lỗi cần xử lý');
+                badge.hidden = value === 0;
+                badge.textContent = value > 99 ? '99+' : String(value);
+                badge.setAttribute('aria-label', label); badge.title = label;
+            });
+        } catch (_) { /* Keep the last known counts if the connection is unavailable. */ }
+        finally { busy = false; }
+    }
+    setInterval(refresh, 30000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+    window.addEventListener('focus', refresh);
 })();
 </script>

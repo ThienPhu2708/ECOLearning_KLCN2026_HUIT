@@ -21,6 +21,9 @@ namespace ECOLearning.Controllers.Api
         public class AnswersRequest
         {
             public int[] Answers { get; set; }
+            public string WriterToken {get;set;}
+            public string ClientKey {get;set;}
+            public bool Takeover {get;set;}
         }
 
         private QuizService Quiz => new QuizService(Db);
@@ -41,13 +44,15 @@ namespace ECOLearning.Controllers.Api
             var st = quiz.Student(id, CurrentUserId);
             var luot = quiz.Attempts(id, CurrentUserId);
             var dangLam = luot.FirstOrDefault(a => !a.SubmittedAt.HasValue);
-            var ganNhat = luot.FirstOrDefault(a => a.SubmittedAt.HasValue);
+            var ganNhat = luot.FirstOrDefault(a => a.SubmittedAt.HasValue && !a.IsVoided);
             int duocPhep = cauHinh.MaxAttempts + (st?.ExtraAttempts ?? 0);
 
             string lyDo = null;
             if (dangLam == null)
             {
                 if (st == null || !st.LessonsDone) lyDo = "Học đủ 100% bài học trước khi làm quiz.";
+                else if (st.PendingReview) lyDo = "Kết quả đang chờ giáo viên xem xét do rời màn hình từ 3 lần.";
+                else if (st.RetakeRequired) lyDo = "Giáo viên yêu cầu làm lại quiz. Thực hiện lượt làm lại được chỉ định trên website.";
                 else if (st.Passed) lyDo = "Bạn đã đạt quiz của khóa học này.";
                 else if (st.Attempts >= duocPhep) lyDo = "Bạn đã hết lượt làm. Liên hệ giáo viên để được xem xét cấp thêm lượt.";
             }
@@ -56,6 +61,7 @@ namespace ECOLearning.Controllers.Api
                 title = cauHinh.Title,
                 questionCount = cauHinh.Total,
                 minutes = cauHinh.Minutes,
+                skillMatrix = cauHinh.UseMatrix?JsonConvert.DeserializeObject<List<QuizSkillRule>>(cauHinh.MatrixJson??"[]"):new List<QuizSkillRule>(),
                 passPercent = cauHinh.PassPercent,
                 attemptsUsed = st?.Attempts ?? 0,
                 attemptsAllowed = duocPhep,
@@ -66,6 +72,8 @@ namespace ECOLearning.Controllers.Api
                 activeAttemptId = dangLam?.Id,
                 passed = st != null && st.Passed,
                 bestScore = st?.BestScore,
+                retakeRequired = st != null && st.RetakeRequired,
+                pendingReview = st != null && st.PendingReview,
                 lastResult = ganNhat == null ? null : KetQua(ganNhat),
                 certificate = new { issued = st != null && st.IssuedAt.HasValue, code = st?.Code }
             });
@@ -77,11 +85,16 @@ namespace ECOLearning.Controllers.Api
         {
             var quiz = Quiz;
             if (!quiz.Installed()) return ChuaCoQuiz();
-            QuizAttempt a;
+            var writerRequest=Body<AnswersRequest>();
+            Guid clientId;if(!Guid.TryParse(writerRequest.ClientKey,out clientId))return Forbidden("Cập nhật ứng dụng để sử dụng phiên quiz an toàn.","QUIZ_CLIENT_REQUIRED");
+            QuizAttempt a;string writerToken;
             try
             {
                 a = quiz.Start(id, CurrentUserId);
+                writerToken=new QuizWriterService(Db).Acquire(a.Id,CurrentUserId,writerRequest.ClientKey,writerRequest.Takeover);
+                a=quiz.Attempt(a.Id);
             }
+            catch (QuizSessionException ex) {return Forbidden(ex.Message,"QUIZ_SESSION_ACTIVE");}
             catch (InvalidOperationException ex)
             {
                 return Forbidden(ex.Message);
@@ -90,13 +103,14 @@ namespace ECOLearning.Controllers.Api
             var traLoi = JsonConvert.DeserializeObject<int[]>(a.AnswersJson ?? "[]") ?? new int[0];
             return Ok(new
             {
+                writerToken = writerToken,
                 attemptId = a.Id,
                 title = a.Title,
                 startedAt = ApiFormat.DateFromUtc(a.StartedAt),
                 expiresAt = ApiFormat.DateFromUtc(a.ExpiresAt),
                 remainingSeconds = Math.Max(0, (int)(a.ExpiresAt - DateTime.UtcNow).TotalSeconds),
                 passPercent = a.PassPercent,
-                questions = cauHoi.Select((q, i) => new { index = i, text = q.Text, options = q.Options }).ToList(),
+                questions = cauHoi.Select((q, i) => new { index = i, text = q.Text, options = q.Options, skillId=q.SkillId,skillName=q.SkillName,skillPassPercent=q.SkillPassPercent,skillRequired=q.SkillRequired }).ToList(),
                 answers = Enumerable.Range(0, cauHoi.Count).Select(i => i < traLoi.Length ? traLoi[i] : -1).ToList()
             });
         }
@@ -108,8 +122,9 @@ namespace ECOLearning.Controllers.Api
             var req = Body<AnswersRequest>();
             try
             {
-                return Ok(new { saved = Quiz.SaveDraft(attemptId, CurrentUserId, req.Answers ?? new int[0]) });
+                return Ok(new { saved = Quiz.SaveDraft(attemptId, CurrentUserId, req.Answers ?? new int[0],req.WriterToken,true) });
             }
+            catch (QuizSessionException ex) {return Forbidden(ex.Message,"QUIZ_SESSION_ACTIVE");}
             catch (InvalidOperationException ex)
             {
                 return NotFoundJson(ex.Message, "ATTEMPT_NOT_FOUND");
@@ -124,21 +139,22 @@ namespace ECOLearning.Controllers.Api
             var quiz = Quiz;
             try
             {
-                quiz.Submit(attemptId, CurrentUserId, req.Answers ?? new int[0]);
+                quiz.Submit(attemptId, CurrentUserId, req.Answers ?? new int[0],req.WriterToken,true);
             }
+            catch (QuizSessionException ex) {return Forbidden(ex.Message,"QUIZ_SESSION_ACTIVE");}
             catch (InvalidOperationException ex)
             {
                 return NotFoundJson(ex.Message, "ATTEMPT_NOT_FOUND");
             }
             var a = quiz.Attempt(attemptId);
-            return Ok(KetQua(a, kemDapAn: a.Passed == true), a.Passed == true ? "Chúc mừng bạn đã đạt quiz cuối khóa!" : "Bạn chưa đạt quiz cuối khóa.");
+            return Ok(KetQua(a, kemDapAn: a.Passed == true), a.ReviewPending ? "Kết quả chờ giáo viên xem xét do bạn rời màn hình từ 3 lần." : a.Passed == true ? "Chúc mừng bạn đã đạt quiz cuối khóa!" : "Bạn chưa đạt quiz cuối khóa.");
         }
 
         /// <summary>Kết quả một lượt làm; đạt thì kèm đáp án đúng và giải thích từng câu</summary>
         private static object KetQua(QuizAttempt a, bool kemDapAn = false)
         {
             object dapAn = null;
-            if (kemDapAn)
+            if (kemDapAn && !a.ReviewPending)
             {
                 var cauHoi = JsonConvert.DeserializeObject<List<QuizSnapshotQuestion>>(a.SnapshotJson);
                 var traLoi = JsonConvert.DeserializeObject<int[]>(a.AnswersJson ?? "[]") ?? new int[0];
@@ -155,10 +171,14 @@ namespace ECOLearning.Controllers.Api
             return new
             {
                 attemptId = a.Id,
-                score = a.Score,
-                correct = a.Correct,
+                score = a.ReviewPending ? (decimal?)null : a.Score,
+                skillResults = a.ReviewPending ? new List<QuizSkillResult>() : JsonConvert.DeserializeObject<List<QuizSkillResult>>(a.SkillResultsJson??"[]"),
+                correct = a.ReviewPending ? (int?)null : a.Correct,
                 total = a.Total,
-                passed = a.Passed == true,
+                passed = !a.ReviewPending && !a.IsVoided && a.Passed == true,
+                pendingReview = a.ReviewPending,
+                status = a.ReviewPending ? "Chờ giáo viên xem xét" : a.IsVoided ? "Hết hiệu lực" : a.Passed == true ? "Đạt" : "Chưa đạt",
+                isVoided = a.IsVoided,
                 passPercent = a.PassPercent,
                 timedOut = a.TimedOut,
                 submittedAt = ApiFormat.DateFromUtc(a.SubmittedAt),
@@ -176,6 +196,7 @@ namespace ECOLearning.Controllers.Api
             {
                 quiz.ClaimCertificate(id, CurrentUserId);
             }
+            catch (QuizSessionException ex) {return Forbidden(ex.Message,"QUIZ_SESSION_ACTIVE");}
             catch (InvalidOperationException ex)
             {
                 return Forbidden(ex.Message);
@@ -211,8 +232,8 @@ namespace ECOLearning.Controllers.Api
         {
             var rows = Db.Database.SqlQuery<ChungChiRow>(@"
                 SELECT c.Code, c.CourseId, k.tenKhoaHoc AS CourseTitle, gv.hoTen AS Instructor, hv.hoTen AS StudentName, c.IssuedAt,
-                       (SELECT MAX(a.Score) FROM dbo.QuizAttempt a WHERE a.CourseId = c.CourseId AND a.StudentId = c.StudentId AND a.Passed = 1) AS BestScore
-                FROM dbo.QuizCertificate c
+                       (SELECT MAX(a.Score) FROM dbo.QuizEffectiveAttempt a WHERE a.CourseId = c.CourseId AND a.StudentId = c.StudentId AND a.Passed = 1) AS BestScore
+                FROM dbo.QuizValidCertificate c
                 INNER JOIN dbo.KhoaHoc k ON k.maKhoaHoc = c.CourseId
                 INNER JOIN dbo.NguoiDung hv ON hv.maNguoiDung = c.StudentId
                 LEFT JOIN dbo.NguoiDung gv ON gv.maNguoiDung = k.maGiaoVien

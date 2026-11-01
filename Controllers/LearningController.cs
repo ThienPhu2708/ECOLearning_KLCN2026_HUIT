@@ -16,6 +16,7 @@ namespace ECOLearning.Controllers
 
         // GET: Learning/MyCourses?tab=hoan-thanh&trang=2 (UC8: Khóa học của tôi), 12 khóa mỗi trang trong từng tab
         [StaffReadOnly] // Admin / Marketing chỉ xem (StaffViewMode)
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "*")]
         public ActionResult MyCourses(string tab, int trang = 1)
         {
             int currentUserId = (Session["UserId"] as int?) ?? 0;
@@ -43,7 +44,7 @@ namespace ECOLearning.Controllers
                 .ToList();
             var courseIds = enrollments.Where(d => d.KhoaHoc != null).Select(d => d.maKhoaHoc).Distinct().ToList();
 
-            // Phải biết tiến độ của MỌI khóa mới chia được hai tab và đếm số khóa mỗi tab, nên tiến độ được tính bằng
+            // Phải biết tiến độ của MỌI khóa mới chia được các tab và đếm số khóa mỗi tab, nên tiến độ được tính bằng
             // 3 truy vấn chỉ lấy cột cần dùng cho cả trang, thay vì 3 truy vấn cho từng khóa như trước.
             // Không Include ChuongHoc.BaiHoc: nạp lồng nhiều danh sách con tốn bộ nhớ, máy ít RAM bị SQL Server bắt chờ.
             var baiHoc = db.BaiHoc
@@ -80,6 +81,9 @@ namespace ECOLearning.Controllers
 
             var ongoing = new List<MyCourseItemViewModel>();
             var completed = new List<MyCourseItemViewModel>();
+            var certified = new List<MyCourseItemViewModel>();
+            var quizService = new QuizService(db);
+            var certificateCourses = quizService.Installed() ? quizService.CertificateCourseIds(userId) : new HashSet<string>();
 
             foreach (var dk in enrollments)
             {
@@ -126,7 +130,11 @@ namespace ECOLearning.Controllers
                     MaBaiHocTiepTheo = nextLesson != null ? nextLesson.MaBaiHoc : null
                 };
 
-                if (item.DaHoanThanh)
+                if (certificateCourses.Contains(item.MaKhoaHoc))
+                {
+                    certified.Add(item);
+                }
+                else if (item.DaHoanThanh)
                 {
                     completed.Add(item);
                 }
@@ -139,18 +147,18 @@ namespace ECOLearning.Controllers
             // Mỗi tab phân trang riêng (link tab không mang số trang nên đổi tab luôn về trang 1)
             var viewModel = new MyCoursesViewModel
             {
-                Tab = tab == MyCoursesViewModel.TabHoanThanh ? MyCoursesViewModel.TabHoanThanh : MyCoursesViewModel.TabDangHoc,
+                Tab = tab == MyCoursesViewModel.TabChungChi ? MyCoursesViewModel.TabChungChi : tab == MyCoursesViewModel.TabHoanThanh ? MyCoursesViewModel.TabHoanThanh : MyCoursesViewModel.TabDangHoc,
                 SoDangHoc = ongoing.Count,
-                SoHoanThanh = completed.Count
+                SoHoanThanh = completed.Count,
+                SoChungChi = certified.Count
             };
-            var dangXem = viewModel.LaTabHoanThanh ? completed : ongoing;
+            var dangXem = viewModel.LaTabChungChi ? certified : viewModel.LaTabHoanThanh ? completed : ongoing;
             viewModel.PhanTrang = new PhanTrangViewModel(trang, dangXem.Count) { Neo = "ds-khoa-hoc" };
             viewModel.Items = viewModel.PhanTrang.CatTrang(dangXem);
 
             // Trạng thái quiz / chứng chỉ của các khóa đã học đủ bài: chỉ lấy cho các khóa của trang đang xem
             var quizStates = new Dictionary<string, QuizStudentRow>();
-            var quizService = new QuizService(db);
-            if (viewModel.LaTabHoanThanh && quizService.Installed())
+            if ((viewModel.LaTabHoanThanh || viewModel.LaTabChungChi) && quizService.Installed())
             {
                 foreach (var completedCourse in viewModel.Items)
                 {

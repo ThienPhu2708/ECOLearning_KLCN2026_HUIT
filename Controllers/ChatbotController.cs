@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
@@ -55,6 +55,7 @@ namespace ECOLearning.Controllers
         [ValidateAntiForgeryToken]
         public async Task<JsonResult> Hoi(string cauHoi)
         {
+            if(new QuizWriterService(db).Active(UserId))return Json(new{ok=false,reply="Trợ lý tạm khóa trong khi bạn đang làm quiz. Nộp bài hoặc chờ hết giờ để sử dụng lại."});
             cauHoi = (cauHoi ?? "").Trim();
             if (cauHoi.Length == 0) return Json(new { ok = false, reply = "Bạn hãy nhập câu hỏi nhé." });
             if (cauHoi.Length > ChatbotService.DoDaiCauHoiToiDa)
@@ -66,6 +67,7 @@ namespace ECOLearning.Controllers
             try
             {
                 var kq = await new ChatbotService(db, UserId).HoiAsync(cauHoi, lichSu);
+                if(new QuizWriterService(db).Active(UserId))return Json(new{ok=false,reply="Trợ lý tạm khóa trong khi bạn đang làm quiz."});
 
                 lichSu.Add(new ChatLuot { Vai = "user", NoiDung = cauHoi });
                 lichSu.Add(new ChatLuot { Vai = "model", NoiDung = kq.TraLoi });
@@ -107,6 +109,7 @@ namespace ECOLearning.Controllers
         [HttpGet]
         public JsonResult LichSu()
         {
+            if(new QuizWriterService(db).Active(UserId))return Json(new{messages=new object[0],reply="Trợ lý tạm khóa trong khi làm quiz."},JsonRequestBehavior.AllowGet);
             var lichSu = Session[KhoaLichSu] as List<ChatLuot> ?? new List<ChatLuot>();
             return Json(new { ok = true, tinNhan = lichSu.Select(l => new { vai = l.Vai, noiDung = l.NoiDung }) }, JsonRequestBehavior.AllowGet);
         }

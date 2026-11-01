@@ -4,6 +4,8 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var c = Model.Config;
     var s = Model.Student;
+    var integrityCases = ViewBag.RetakeCases as List<ECOLearning.Services.QuizRetakeRequest> ?? new List<ECOLearning.Services.QuizRetakeRequest>();
+    var integrityActions = integrityCases.Count(r => r.CanRetake);
     var active = Model.Attempts.FirstOrDefault(a => !a.SubmittedAt.HasValue);
 }
 <style>
@@ -23,6 +25,7 @@
 <div class="lq-page">
     <header class="lq-header"><span>KIỂM TRA CUỐI KHÓA</span><h1>Quiz cuối khóa</h1><p>@Model.CourseName</p></header>
     @if (TempData["QuizMessage"] != null) {<div class="lq-notice" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i> @TempData["QuizMessage"]</div>}
+    @if (integrityCases.Any()) {<div class="lq-notice" role="status"><i class="bi bi-chat-left-text" aria-hidden="true"></i><span>@(integrityActions > 0 ? "Giáo viên yêu cầu làm lại. Kết quả cũ hết hiệu lực; cần đạt bài làm lại mới được nhận chứng chỉ." : "Bạn có yêu cầu làm lại bài quiz từ giáo viên.") <a href="@Url.Action("Retakes", new { courseId = Model.CourseId })">Xem yêu cầu làm lại</a></span></div>}
     <div class="lq-content">
     <div class="lq-stats">
         <section class="lq-stat"><div class="lq-stat-top">Tiến độ học tập<span class="lq-icon green"><i class="bi bi-journal-check" aria-hidden="true"></i></span></div><div class="lq-value">@s.Progress<small>%</small></div><p>@s.CompletedLessons/@s.TotalLessons bài học đã hoàn thành</p><div class="lq-progress" role="progressbar" aria-label="Tiến độ học tập" aria-valuenow="@s.Progress" aria-valuemin="0" aria-valuemax="100"><span style="width:@(s.Progress)%"></span></div></section>
@@ -35,14 +38,16 @@
     @if (c == null || !c.Published) {<div class="lq-notice"><i class="bi bi-info-circle" aria-hidden="true"></i> Giáo viên chưa mở quiz cuối khóa. Kết quả đã đạt vẫn được lưu.</div>}
     else
     {
-        <section class="lq-exam"><div class="lq-exam-heading"><h2>@c.Title</h2><span>BÀI KIỂM TRA CUỐI KHÓA</span></div><div class="lq-metrics"><div><i class="bi bi-list-check" aria-hidden="true"></i><span><strong>@c.Total câu</strong><small>Trắc nghiệm một đáp án</small></span></div><div><i class="bi bi-clock" aria-hidden="true"></i><span><strong>@c.Minutes phút</strong><small>Thời gian làm bài</small></span></div><div><i class="bi bi-check-circle" aria-hidden="true"></i><span><strong>Đạt từ @c.PassPercent%</strong><small>Ít nhất @((int)Math.Ceiling(c.Total * c.PassPercent / 100.0))/@c.Total câu đúng</small></span></div><div><i class="bi bi-arrow-repeat" aria-hidden="true"></i><span><strong>@Model.Attempts.Count/@Model.AllowedAttempts lượt</strong><small>Đã sử dụng / tối đa</small></span></div></div>
+        <section class="lq-exam"><div class="lq-exam-heading"><h2>@c.Title</h2><span>BÀI KIỂM TRA CUỐI KHÓA</span></div><div class="lq-metrics"><div><i class="bi bi-list-check" aria-hidden="true"></i><span><strong>@c.Total câu</strong><small>Trắc nghiệm một đáp án</small></span></div><div><i class="bi bi-clock" aria-hidden="true"></i><span><strong>@c.Minutes phút</strong><small>Thời gian làm bài</small></span></div><div><i class="bi bi-check-circle" aria-hidden="true"></i><span><strong>Đạt từ @c.PassPercent%</strong><small>Ít nhất @((int)Math.Ceiling(c.Total * c.PassPercent / 100.0))/@c.Total câu đúng</small></span></div><div><i class="bi bi-arrow-repeat" aria-hidden="true"></i><span><strong>@Model.RegularAttempts/@Model.AllowedAttempts lượt</strong><small>Đã sử dụng / tối đa</small></span></div></div>
         @if (active != null) {<div class="lq-notice">Bạn có một lượt đang làm. Bấm “Tiếp tục lượt đang làm” để trở lại bài thi.</div>}
         else if (!s.LessonsDone) {<div class="lq-notice">Hoàn thành 100% bài học để mở quiz cuối khóa.</div>}
+        else if (s.PendingReview) {<div class="lq-notice"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Bạn đã rời màn hình từ 3 lần. Kết quả chờ giáo viên xem xét, chưa được công nhận và chưa thể nhận chứng chỉ.</div>}
+        else if (s.RetakeRequired) {<div class="lq-notice">Kết quả cũ đã hết hiệu lực. <a href="@Url.Action("Retakes", new { courseId = Model.CourseId })">Mở bài làm lại</a>. Chứng chỉ được xét theo kết quả mới.</div>}
         else if (s.Passed) {<div class="lq-notice success"><i class="bi bi-check-circle" aria-hidden="true"></i> @(s.IssuedAt.HasValue ? "Bạn đã đạt quiz và được cấp chứng chỉ. Chúc mừng bạn hoàn thành khóa học!" : "Bạn đã đạt quiz. Bấm Nhận chứng chỉ để được cấp ngay.")</div>}
-        else if (Model.Attempts.Count >= Model.AllowedAttempts) {<div class="lq-notice">Bạn đã hết lượt làm. Liên hệ giáo viên để được xem xét cấp thêm lượt.</div>}
+        else if (Model.RegularAttempts >= Model.AllowedAttempts) {<div class="lq-notice">Bạn đã hết lượt làm. Liên hệ giáo viên để được xem xét cấp thêm lượt.</div>}
         else
         {
-            <div class="lq-start"><div><strong>Bạn đã đủ điều kiện làm quiz</strong><p>Ghi nhận kết quả cao nhất. Thời gian bắt đầu tính khi vào bài thi.<br />Lượt bắt đầu được tính vào giới hạn, kể cả khi hết giờ.@(s.ExtraAttempts > 0 ? " Bạn được cấp thêm " + s.ExtraAttempts + " lượt." : "")</p></div>@using (Html.BeginForm("Start", "Quiz", FormMethod.Post, new { id = "quiz-start-form" })) {@Html.AntiForgeryToken()<input type="hidden" name="courseId" value="@Model.CourseId" /><button type="submit" class="btn btn-primary">Bắt đầu quiz <i class="bi bi-arrow-right" aria-hidden="true"></i></button>}</div>
+            <div class="lq-start"><div><strong>Bạn đã đủ điều kiện làm quiz</strong><p>Ghi nhận kết quả cao nhất. Thời gian bắt đầu tính khi vào bài thi.<br />Lượt bắt đầu được tính vào giới hạn, kể cả khi hết giờ. Rời màn hình từ 3 lần thì kết quả chờ giáo viên xem xét.@(s.ExtraAttempts > 0 ? " Bạn được cấp thêm " + s.ExtraAttempts + " lượt." : "")</p></div>@using (Html.BeginForm("Start", "Quiz", FormMethod.Post, new { id = "quiz-start-form" })) {@Html.AntiForgeryToken()<input type="hidden" name="courseId" value="@Model.CourseId" /><button type="submit" class="btn btn-primary">Bắt đầu quiz <i class="bi bi-arrow-right" aria-hidden="true"></i></button>}</div>
         }
         </section>
     }
@@ -51,19 +56,19 @@
     @if (!Model.Attempts.Any()) {<div class="lq-empty"><i class="bi bi-clock-history" aria-hidden="true"></i><strong>Bạn chưa có lượt làm bài nào</strong><p>Kết quả sẽ xuất hiện tại đây sau khi bạn bắt đầu quiz.</p></div>}
     else
     {
-        <div class="lq-table-wrap"><table><thead><tr><th>Lượt</th><th>Ngày làm</th><th>Số câu đúng</th><th>Điểm /10</th><th>Kết quả</th><th></th></tr></thead><tbody>@foreach (var a in Model.Attempts) {<tr><td>#@a.Id</td><td>@a.StartedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td><td>@(a.SubmittedAt.HasValue ? a.Correct + "/" + a.Total : "—")</td><td>@(a.Score?.ToString("0.##") ?? "—")</td><td><span class="lq-badge @(a.Passed == true ? "success" : "")">@(!a.SubmittedAt.HasValue ? "Đang làm" : a.Passed == true ? "Đạt" : "Chưa đạt")</span></td><td><a href="@Url.Action("Take", new { id = a.Id })">@(!a.SubmittedAt.HasValue ? "Tiếp tục" : "Xem kết quả") <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></td></tr>}</tbody></table></div>
+        <div class="lq-table-wrap"><table><thead><tr><th>Lượt</th><th>Ngày làm</th><th>Số câu đúng</th><th>Điểm /10</th><th>Kết quả</th><th></th></tr></thead><tbody>@foreach (var a in Model.Attempts) {<tr><td>#@a.Id @if(a.IsVerification){<small style="display:block;color:#8d7cb2">Làm lại</small>}</td><td>@a.StartedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td><td>@(a.SubmittedAt.HasValue && !a.ReviewPending ? a.Correct + "/" + a.Total : "—")</td><td>@(a.ReviewPending ? "—" : a.Score?.ToString("0.##") ?? "—")</td><td><span class="lq-badge @(!a.IsVoided && !a.ReviewPending && a.Passed == true ? "success" : "")">@(!a.SubmittedAt.HasValue ? "Đang làm" : a.IsVoided ? "Hết hiệu lực" : a.ReviewPending ? "Chờ xem xét" : a.Passed == true ? "Đạt" : "Chưa đạt")</span></td><td><a href="@Url.Action("Take", new { id = a.Id })">@(!a.SubmittedAt.HasValue ? "Tiếp tục" : "Xem kết quả") <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></td></tr>}</tbody></table></div>
     }
     </section>
 </div>
 
-@if (c != null && c.Published && active == null && s.LessonsDone && !s.Passed && Model.Attempts.Count < Model.AllowedAttempts)
+@if (c != null && c.Published && active == null && s.LessonsDone && !s.Passed && !s.RetakeRequired && !s.PendingReview && Model.RegularAttempts < Model.AllowedAttempts)
 {
     <dialog id="quiz-start-dialog" class="lq-start-dialog" aria-labelledby="quiz-start-title" aria-describedby="quiz-start-description">
         <form method="dialog"><button class="lq-dialog-close" aria-label="Đóng">×</button></form>
         <span class="lq-dialog-icon"><i class="bi bi-clipboard-check" aria-hidden="true"></i></span>
         <h2 id="quiz-start-title">Bắt đầu làm quiz?</h2>
-        <p id="quiz-start-description">Bạn có <strong>@c.Minutes phút</strong> để hoàn thành <strong>@c.Total câu hỏi</strong>. Đồng hồ sẽ chạy ngay sau khi bắt đầu.</p>
-        <div class="lq-dialog-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Lần bắt đầu này được tính là một lượt thi. Bạn còn <strong>@(Model.AllowedAttempts - Model.Attempts.Count) lượt</strong>.</span></div>
+        <p id="quiz-start-description">Bạn có <strong>@c.Minutes phút</strong> để hoàn thành <strong>@c.Total câu hỏi</strong>. Đồng hồ sẽ chạy ngay sau khi bắt đầu. Rời màn hình từ 3 lần thì kết quả sẽ chờ giáo viên xem xét trước khi công nhận.</p>
+        <div class="lq-dialog-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Lần bắt đầu này được tính là một lượt thi. Bạn còn <strong>@(Model.AllowedAttempts - Model.RegularAttempts) lượt</strong>.</span></div>
         <div class="lq-dialog-actions"><button type="button" id="quiz-start-cancel" class="btn btn-outline">Để sau</button><button type="button" id="quiz-start-confirm" class="btn btn-primary">Bắt đầu làm bài <i class="bi bi-arrow-right" aria-hidden="true"></i></button></div>
     </dialog>
     <script>
@@ -90,3 +95,12 @@
     })();
     </script>
 }
+
+<div style="max-width:1120px;margin:18px auto">
+@if (Model.HasQuestionReports || Model.CanAppeal) {
+    <nav aria-label="Phản hồi bài quiz" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
+        @if (Model.HasQuestionReports) {<a class="btn btn-outline" href="@Url.Action("Reports", "Quiz", new { courseId = Model.CourseId })"><i class="bi bi-flag" aria-hidden="true"></i> Báo lỗi của tôi</a>}
+        @if (Model.CanAppeal) {<a class="btn btn-outline" href="@Url.Action("Appeals", "Quiz", new { courseId = Model.CourseId })">Phúc khảo &amp; thông báo điều chỉnh điểm</a>}
+    </nav>
+}
+@if(Model.Config!=null&&Model.Config.UseMatrix){<section style="padding:22px;margin:18px 0;background:#fff;border:1px solid #e2e8f0;border-radius:14px"><h2 style="font-size:18px">Kỹ năng và điều kiện đạt cho lượt thi mới</h2><p style="margin:12px 0">Cần đạt tổng điểm từ @Model.Config.PassPercent% và các kỹ năng bắt buộc bên dưới. Lượt đã bắt đầu giữ ngưỡng riêng đã công bố.</p><ul style="padding-left:20px;line-height:2">@foreach(var r in Newtonsoft.Json.JsonConvert.DeserializeObject<List<ECOLearning.ViewModels.QuizSkillRule>>(Model.Config.MatrixJson??"[]")){<li>@r.Name · @r.Total câu · Ngưỡng @r.PassPercent% · @(r.Required?"Bắt buộc":"Tham khảo")</li>}</ul></section>}</div>

@@ -1,0 +1,21 @@
+﻿const fs=require('fs'),vm=require('vm'),assert=require('assert');
+let source=fs.readFileSync('Views/Quiz/Take.cshtml','utf8');
+source=[...source.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]).find(s=>s.includes("const key='quiz-visibility-'"));
+source=source.replace(/const id=@Model.Attempt.Id, endpoint='[^']*';/,"const id=42, endpoint='/Quiz/Visibility';").replace(/const end=Date.now\(\)\+[^;]*;/,'const end=Date.now()+600000;');
+const docEvents={},winEvents={},calls=[],storage=new Map();
+const span={textContent:''},button={};const notice={hidden:true,querySelector:s=>s==='span'?span:button};
+const form={addEventListener:()=>{}};const confirm={addEventListener:()=>{}};
+const document={hidden:false,addEventListener:(n,cb)=>docEvents[n]=cb,querySelector:()=>({value:'csrf'}),getElementById:id=>id==='quiz-visibility-notice'?notice:id==='quiz-form'?form:confirm};
+const context={document,window:{addEventListener:(n,cb)=>winEvents[n]=cb},Date,JSON,crypto:require('crypto'),URLSearchParams,setInterval:()=>{},sessionStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},navigator:{sendBeacon:()=>true},fetch:async(url,options)=>{calls.push(Object.fromEntries(options.body));return {ok:true};}};
+vm.runInNewContext(source,context);
+(async()=>{
+assert.equal(calls.length,0,'normal page/report dialog must not count as leaving');
+document.hidden=true;docEvents.visibilitychange();docEvents.visibilitychange();
+await new Promise(setImmediate);
+assert.equal(calls.length,1,'duplicate hidden events must not create extra leave');
+assert.equal(calls[0].returned,'false');
+document.hidden=false;docEvents.visibilitychange();await new Promise(setImmediate);
+assert.equal(calls.length,2);assert.equal(calls[1].returned,'true');assert.equal(calls[0].eventKey,calls[1].eventKey);assert.equal(notice.hidden,false);assert(span.textContent.includes('1 lần'));
+button.onclick();assert.equal(notice.hidden,true);
+console.log('Browser visibility checks passed: no false initial event, deduplication, matching return, reminder and dismiss.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

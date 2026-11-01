@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Web.Mvc;
 using System.Web.Routing;
@@ -80,6 +80,15 @@ namespace ECOLearning.Areas.Instructor.Controllers
             }
 
             base.OnActionExecuting(filterContext);
+        }
+
+        protected override void OnActionExecuted(ActionExecutedContext context)
+        {
+            if(context.Exception==null&&context.Result is ViewResult) {
+                ViewBag.StudentReviewCount=new ECOLearning.Services.QuizVisibilityService(db).UnreadCount(CurrentTeacherId);
+                ViewBag.MenuQuizCounts=new ECOLearning.Services.QuizQuestionReportService(db).TeacherNotifications(CurrentTeacherId);
+            }
+            base.OnActionExecuted(context);
         }
 
         protected override void Dispose(bool disposing)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
@@ -191,7 +191,7 @@ namespace ECOLearning.Controllers.Api
             try
             {
                 chungChi = Db.Database.SqlQuery<int>(
-                    "SELECT COUNT(*) FROM dbo.QuizCertificate WHERE StudentId = @u AND IssuedAt IS NOT NULL",
+                    "SELECT COUNT(*) FROM dbo.QuizValidCertificate WHERE StudentId = @u AND IssuedAt IS NOT NULL",
                     new System.Data.SqlClient.SqlParameter("@u", u.maNguoiDung)).Single();
             }
             catch

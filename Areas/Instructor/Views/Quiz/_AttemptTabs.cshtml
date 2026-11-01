@@ -1,0 +1,13 @@
+﻿@{
+    int count = ViewBag.VisibilityCount is int ? (int)ViewBag.VisibilityCount : 0;
+    bool submitted = ViewBag.AttemptSubmitted == true;
+    bool log = ViewBag.AttemptTab as string == "log";
+}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=26" />
+<div class="qa-attempt-toolbar">
+    <nav class="qa-attempt-tabs" aria-label="Chi tiết lượt thi">
+        @if (submitted) {<a href="@Url.Action("Review", "Quiz", new { area = "Instructor", id = ViewBag.AttemptId })" class="@(!log ? "is-active" : "")" aria-current="@(!log ? "page" : null)"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> Bài làm</a>} else {<span class="qa-paper-unavailable" title="Chỉ xem bài làm sau khi học viên nộp bài">Bài làm · Đang thi</span>}
+        <a href="@Url.Action("Review", "Quiz", new { area = "Instructor", id = ViewBag.AttemptId, tab = "log" })" class="@(log ? "is-active" : "")" aria-current="@(log ? "page" : null)"><i class="bi bi-window-stack" aria-hidden="true"></i> Nhật ký @if (count > 0) {<span class="qa-log-count">@count</span>}</a>
+    </nav>
+    <a class="qa-attempt-back" href="@Url.Action("History", "Quiz", new { area = "Instructor", courseId = ViewBag.CourseId, studentId = ViewBag.StudentId })"><i class="bi bi-arrow-left" aria-hidden="true"></i> Lịch sử quiz</a>
+</div>

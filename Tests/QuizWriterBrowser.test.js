@@ -1,0 +1,14 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+let source=[...fs.readFileSync('Views/Quiz/Take.cshtml','utf8').matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]).find(s=>s.includes("quiz-writer-banner"));
+source=source.replaceAll('@Model.Attempt.Id','42').replaceAll('@Url.Action("AcquireWriter","Quiz",new{area=""})','/acquire').replaceAll('@Url.Action("CheckWriter","Quiz",new{area=""})','/check');
+const radios=[{dataset:{question:'0'},value:'0'},{dataset:{question:'0'},value:'1'}],answers=[{value:-1}],submit={};
+const banner={hidden:false,querySelector:()=>label},label={},transfer={},retry={};let hidden,calls=0;
+const form={querySelector:()=>({value:'csrf'}),querySelectorAll:s=>s.startsWith('input[type')?[...radios,submit]:s.includes('data-question')?radios:answers,appendChild:e=>hidden=e,dispatchEvent:()=>{}};
+const doc={getElementById:id=>({'quiz-form':form,'quiz-writer-banner':banner,'quiz-takeover':transfer,'quiz-writer-retry':retry})[id],createElement:()=>({}),addEventListener:()=>{}};
+const context={document:doc,window:{},crypto:require('crypto'),URLSearchParams,Event:class{},confirm:()=>true,setInterval:()=>{},location:{reload:()=>{}},fetch:async()=>({json:async()=>({success:true,token:++calls===1?'first':'second',answers:[1]})})};
+vm.runInNewContext(source,context);
+(async()=>{await new Promise(setImmediate);assert.equal(hidden.value,'first');assert.equal(radios[1].checked,true);assert.equal(answers[0].value,1);assert.equal(submit.disabled,false);
+context.window.quizWriterLost('outdated');assert.equal(submit.disabled,false);
+context.window.quizWriterLost('first');assert.equal(submit.disabled,true);assert.equal(transfer.hidden,false);
+transfer.onclick();await new Promise(setImmediate);assert.equal(hidden.value,'second');assert.equal(submit.disabled,false);
+console.log('Writer UI checks passed: fresh server answers, edit gating, stale error isolation, explicit transfer.');})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,0 +1,5 @@
+﻿@model List<ECOLearning.ViewModels.QuizSkillResult>
+@if(Model!=null&&Model.Any()){
+<section style="margin:20px 0;padding:22px;background:#fff;border:1px solid #e2e8f0;border-radius:14px"><h2 style="font-size:19px;margin-bottom:14px">Kết quả từng kỹ năng</h2><p style="font-size:13px;color:#64748b">Ngưỡng được giữ theo lúc bắt đầu lượt thi. Kết quả đã được công nhận không bị giảm do sửa lỗi đề.</p>
+@foreach(var skill in Model){<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 0;border-bottom:1px solid #f1f5f9"><div><strong>@skill.Name</strong><p style="font-size:13px;color:#64748b;margin-top:5px">@skill.Correct/@skill.Total câu được công nhận · Ngưỡng @skill.PassPercent% · @(skill.Required?"Bắt buộc":"Tham khảo")</p></div><strong style="color:@(skill.Passed?"#16805e":"#b45309")">@(skill.Passed?"Đạt":"Cần ôn thêm")</strong></div>}
+</section>}

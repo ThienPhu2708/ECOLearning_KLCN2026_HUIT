@@ -1,0 +1,75 @@
+﻿@model List<ECOLearning.ViewModels.QuizSkill>
+@{
+    ViewBag.Title = "Kỹ năng đầu ra";
+    ViewBag.BreadcrumbCurrent = ViewBag.Title;
+    ViewBag.ShowQuestionBankBreadcrumb = true;
+    ViewBag.QuestionBankCourseId = ViewBag.CourseId;
+}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/instructor-quiz.css")?v=20" />
+<div class="question-editor qs-page">
+    <div class="qs-toolbar"><span class="qe-course"><i class="bi bi-journal-bookmark" aria-hidden="true"></i> @ViewBag.CourseName</span><a class="btn btn-outline" href="@Url.Action("Configure", new { courseId = ViewBag.CourseId })"><i class="bi bi-arrow-left" aria-hidden="true"></i> Cấu hình quiz</a></div>
+    @if (TempData["QuizMessage"] != null) {<div class="qb-message" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i> @TempData["QuizMessage"]</div>}
+    <div class="qe-layout">
+        <div class="qe-main">
+            <section class="card qe-card">
+                <div class="qe-section-heading"><i class="bi bi-diagram-3" aria-hidden="true"></i><div><h2>Thêm kỹ năng đầu ra</h2><p>Kỹ năng là nội dung học viên cần nắm được sau khóa học.</p></div></div>
+                <form method="post" action="@Url.Action("AddSkill")" class="qs-form">
+                    @Html.AntiForgeryToken()<input type="hidden" name="courseId" value="@ViewBag.CourseId" />
+                    <label class="form-label" for="skill-name">Tên kỹ năng <span class="required">*</span></label>
+                    <div class="qs-input-row"><input id="skill-name" class="form-control" name="name" maxlength="120" required placeholder="Ví dụ: Xử lý điều kiện và vòng lặp" /><button class="btn btn-primary" type="submit"><i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm kỹ năng</button></div>
+                    <p class="qe-hint">Đặt tên ngắn, rõ nội dung. Mỗi kỹ năng chỉ cần thêm một lần.</p>
+                </form>
+            </section>
+            <section class="card qs-list-card">
+                <div class="qa-inbox-heading"><h2>Kỹ năng của khóa học <span class="qa-count">@Model.Count</span></h2><p>Dùng để gắn câu hỏi và thiết lập mức đạt cho từng kỹ năng.</p></div>
+                @if (!Model.Any()) {
+                    <div class="qa-empty qs-empty"><span class="qa-empty-icon"><i class="bi bi-diagram-3" aria-hidden="true"></i></span><h3>Chưa có kỹ năng nào</h3><p>Nhập kỹ năng đầu tiên ở form phía trên, hoặc dùng Excel để nhập cả câu hỏi và phân bổ đề.</p><a class="btn btn-outline" href="@Url.Action("Import", new { courseId = ViewBag.CourseId })"><i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Nhập từ Excel</a></div>
+                } else {
+                    <ul class="qs-list">
+                    @for (int i = 0; i < Model.Count; i++) {var skill = Model[i];<li><span class="qs-number">@((i + 1).ToString("00"))</span><div><strong>@skill.Name</strong><small>@(skill.Active ? "Đang sử dụng" : "Đã ngừng sử dụng")</small></div><form method="post" action="@Url.Action("DeleteSkill")" class="qs-delete-form">@Html.AntiForgeryToken()<input type="hidden" name="courseId" value="@ViewBag.CourseId" /><input type="hidden" name="id" value="@skill.Id" /><button type="button" data-delete-skill="@skill.Name" class="qs-delete" aria-label="Xóa kỹ năng @skill.Name" title="Xóa kỹ năng"><i class="bi bi-trash3" aria-hidden="true"></i><span>Xóa</span></button></form></li>}
+                    </ul>
+                }
+            </section>
+        </div>
+        <aside class="card qe-card qs-guide">
+            <div class="qe-section-heading"><i class="bi bi-signpost-split" aria-hidden="true"></i><div><h2>Thiết lập trong 3 bước</h2><p>Từ kỹ năng đến đề quiz.</p></div></div>
+            <ol class="qs-steps"><li><span>1</span><div><strong>Thêm kỹ năng</strong><p>Ví dụ: Biến và kiểu dữ liệu, Vòng lặp, Truy vấn SQL.</p></div></li><li><span>2</span><div><strong>Gắn vào câu hỏi</strong><p>Mở câu hỏi trong ngân hàng và chọn kỹ năng tương ứng.</p><a href="@Url.Action("Index", new { courseId = ViewBag.CourseId })">Ngân hàng câu hỏi <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div></li><li><span>3</span><div><strong>Phân bổ đề quiz</strong><p>Chọn số câu từng độ khó và mức đạt cho mỗi kỹ năng.</p><a href="@Url.Action("Configure", new { courseId = ViewBag.CourseId })">Cấu hình quiz <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div></li></ol>
+            <div class="qe-note"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Thêm kỹ năng không làm thay đổi đề của các lượt thi đã bắt đầu.</span></div>
+        </aside>
+    </div>
+</div>
+
+<dialog class="qs-confirm" id="delete-skill-dialog" aria-labelledby="delete-skill-title" aria-describedby="delete-skill-description">
+    <div class="qs-confirm-icon"><i class="bi bi-trash3" aria-hidden="true"></i></div>
+    <h2 id="delete-skill-title">Xóa kỹ năng?</h2>
+    <p id="delete-skill-description">Bạn muốn xóa kỹ năng <strong id="delete-skill-name"></strong> khỏi khóa học?</p>
+    <p class="qs-confirm-note">Kỹ năng đang gắn với câu hỏi hoặc phân bổ đề cần được gỡ trước khi xóa.</p>
+    <div class="qs-confirm-actions"><button type="button" class="btn btn-outline" id="cancel-delete-skill" autofocus>Hủy</button><button type="button" class="btn qs-confirm-delete" id="confirm-delete-skill"><i class="bi bi-trash3" aria-hidden="true"></i> Xóa kỹ năng</button></div>
+</dialog>
+<script>
+(function () {
+    const dialog = document.getElementById('delete-skill-dialog');
+    const confirm = document.getElementById('confirm-delete-skill');
+    let pendingForm = null, trigger = null;
+    document.querySelectorAll('[data-delete-skill]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            trigger = button; pendingForm = button.closest('form');
+            document.getElementById('delete-skill-name').textContent = button.dataset.deleteSkill;
+            confirm.disabled = false;
+            dialog.showModal();
+        });
+    });
+    document.getElementById('cancel-delete-skill').addEventListener('click', function () { dialog.close(); });
+    dialog.addEventListener('click', function (event) {
+        if (event.target !== dialog) return;
+        const bounds = dialog.getBoundingClientRect();
+        if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+    });
+    dialog.addEventListener('close', function () { pendingForm = null; if (trigger) trigger.focus(); });
+    confirm.addEventListener('click', function () {
+        if (!pendingForm || confirm.disabled) return;
+        confirm.disabled = true;
+        pendingForm.requestSubmit();
+    });
+})();
+</script>

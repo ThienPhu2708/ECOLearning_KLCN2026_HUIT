@@ -442,7 +442,7 @@
                 box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
             }
     </style>
-    <link rel="stylesheet" href="~/assets/css/chat.css?v=1.0" />
+    <link rel="stylesheet" href="~/assets/css/chat.css?v=@(System.IO.File.GetLastWriteTime(Server.MapPath("~/assets/css/chat.css")).Ticks)" />
 }
 <!-- Locked Lesson Toast -->
 <div id="locked-lesson-toast" class="locked-lesson-toast">
@@ -694,10 +694,13 @@
 
 
                 @*hỏi giáo viên*@
+                @if (ViewBag.IsPreview != true)
+                {
+                    <button style="background:#434CE8; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow: 0 4px 12px rgba(67, 76, 232, 0.25); transition: background 0.2s;" onclick="openStudyChat()" onmouseover="this.style.background='#363fc2'" onmouseout="this.style.background='#434CE8'">
+                        <i class="bi bi-chat-dots-fill"></i> Hỏi giáo viên
+                    </button>
+                }
 
-                <button style="background:#434CE8; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow: 0 4px 12px rgba(67, 76, 232, 0.25); transition: background 0.2s;" onclick="openStudyChat()" onmouseover="this.style.background='#363fc2'" onmouseout="this.style.background='#434CE8'">
-                    <i class="bi bi-chat-dots-fill"></i> Hỏi giáo viên
-                </button>
             </div>
             @if (activeLessonDocuments.Count == 0)
             {
@@ -873,10 +876,6 @@
     </div>
 </div>
 
-<!-- Nút Chat Nổi Góc Phải -->
-<button onclick="openStudyChat()" title="Hỏi giáo viên" style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: #434CE8; color: #fff; border: none; box-shadow: 0 8px 24px rgba(67, 76, 232, 0.4); display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; z-index: 99; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-    <i class="bi bi-chat-dots-fill"></i>
-</button>
 
 @Html.Partial("_ChatPanel")
 
@@ -1544,7 +1543,7 @@
             });
         }
     </script>
-    <script src="~/Scripts/jquery.signalR-2.4.3.min.js"></script>
+    @*<script src="~/Scripts/jquery.signalR-2.4.3.min.js"></script>
     <script src="~/signalr/hubs"></script>
     <script src="~/assets/js/chat.js?v=1.0"></script>
     <script>
@@ -1622,5 +1621,5 @@
                 $('#study-chat-send-btn').click();
             }
         });
-    </script>
+    </script>*@
 }

@@ -207,7 +207,11 @@
 
                                 <div class="form-group" style="margin-bottom: 20px;">
                                     <label class="form-label" for="teacher-experience">Kinh nghiệm & Giới thiệu năng lực <span class="required" style="color: #EF4444;">*</span></label>
-                                    <textarea id="teacher-experience" class="form-control" rows="4" placeholder="VD: Đã có 5+ năm kinh nghiệm giảng dạy và làm việc tại các công ty công nghệ..." style="resize: vertical;">@Model.BioExperience</textarea>
+                                    <textarea id="teacher-experience" class="form-control" rows="4" placeholder="VD: Đã có 5+ năm kinh nghiệm giảng dạy và làm việc tại các công ty công nghệ..." style="resize: vertical;" @(ViewBag.BioExperienceManagedBySpecialty == true ? "readonly" : "")>@Model.BioExperience</textarea>
+                                    @if (ViewBag.BioExperienceManagedBySpecialty == true)
+                                    {
+                                        <small class="form-text text-muted">Nội dung này lấy từ đề xuất chuyên môn đã được duyệt. Vào <a href="@Url.Action("Index", "Specialty", new { area = "Instructor" })">Chuyên môn giảng dạy</a> để gửi nội dung cập nhật.</small>
+                                    }
                                 </div>
 
                                 <div class="form-group" style="margin-bottom: 24px;">

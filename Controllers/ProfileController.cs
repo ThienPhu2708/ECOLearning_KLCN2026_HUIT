@@ -121,6 +121,12 @@ namespace ECOLearning.Controllers
                     var specialty = new TeacherSpecialtyService(db);
                     var ids = specialty.Approved(user.maNguoiDung);
                     model.Specialization = string.Join(", ", db.DanhMuc.Where(c => ids.Contains(c.maDanhMuc)).Select(c => c.tenDanhMuc).ToList());
+                    var approvedDescription = specialty.ApprovedDescription(user.maNguoiDung);
+                    if (!string.IsNullOrWhiteSpace(approvedDescription))
+                    {
+                        model.BioExperience = approvedDescription.Trim();
+                        ViewBag.BioExperienceManagedBySpecialty = true;
+                    }
                 }
                 return View(model);
             }

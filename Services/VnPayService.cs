@@ -53,7 +53,7 @@ namespace ECOLearning.Services
         /// </summary>
         public static bool HoTroPhuongThuc(string phuongThuc) => phuongThuc == "Napas";
 
-        public const string ThongBaoChuaHoTro = "Phương thức này chưa dùng được ở môi trường thử nghiệm VNPay Sandbox. "
+        public const string ThongBaoChuaHoTro = "Phương thức này hiện chưa được hỗ trợ. "
             + "Vui lòng chọn Thẻ ATM nội địa.";
 
         // ------------------------------------------------------------------ thời gian GMT+7

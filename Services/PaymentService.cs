@@ -27,7 +27,7 @@ namespace ECOLearning.Services
         public const string HetHan = "Hết hạn";
         public const string DaHuy = "Đã hủy";
 
-        public const string CongThuNghiem = "Cổng thử nghiệm";
+        public const string CongThanhToanNoiBo = "Cổng thanh toán";
         public const string KhongQuaCong = "Không qua cổng";
         public const int PhutHetHan = 15;
 
@@ -203,7 +203,7 @@ namespace ECOLearning.Services
             long soTien;
             long.TryParse(Lay(p, "amount"), out soTien);
             return GhiNhanKetQua(maDon, soTien, Lay(p, "transactionNo"), Lay(p, "responseCode") == GdThanhCong,
-                Lay(p, "responseCode"), Lay(p, "method"), CongThuNghiem, duLieu, loai);
+                Lay(p, "responseCode"), Lay(p, "method"), CongThanhToanNoiBo, duLieu, loai);
         }
 
         /// <summary>

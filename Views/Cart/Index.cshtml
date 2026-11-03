@@ -403,8 +403,6 @@
 
                     <div class="caption" style="text-align: center; margin-top: 16px; color: #94A3B8; font-size: 12px; line-height: 1.5;">
                         <i class="bi bi-shield-lock-fill me-1"></i> Dữ liệu thanh toán được ký số HMAC-SHA512 và xác thực ở máy chủ. Bằng việc xác nhận, bạn đồng ý với Điều khoản dịch vụ E-Learning.
-                        <div style="margin-top: 8px; color: #92400E; background: #FEF3C7; border-radius: 8px; padding: 6px 10px;"><i class="bi bi-info-circle me-1"></i>Thanh toán đang ở chế độ <strong>thử nghiệm</strong>:
-                            @(ECOLearning.Services.VnPayService.DangBat ? "bạn sẽ được chuyển sang VNPay Sandbox (môi trường test của VNPay), dùng thẻ test, không trừ tiền thật." : "bạn sẽ được chuyển sang cổng thử nghiệm, không trừ tiền thật.")</div>
                     </div>
                 </aside>
             </div>
@@ -436,7 +434,7 @@
         <div class="mu-icon"><i class="bi bi-qr-code-scan" id="mu-icon"></i></div>
         <h3 id="mu-title">Phương thức chưa hỗ trợ</h3>
         <p id="mu-reason"></p>
-        <p>Vui lòng chọn <strong>Thẻ ATM nội địa</strong> (dùng thẻ test, không trừ tiền thật).</p>
+        <p>Vui lòng chọn <strong>Thẻ ATM nội địa</strong> để tiếp tục thanh toán.</p>
         <div class="mu-actions">
             <button type="button" class="btn btn-primary" style="background: #434CE8; color: #FFFFFF;" onclick="chooseMethod('Napas')">Dùng Thẻ ATM nội địa</button>
             <button type="button" class="btn btn-secondary" style="background: #F1F5F9; color: #475569;" data-modal-close>Đóng</button>
@@ -478,13 +476,13 @@
         const unsupportedMethods = {
             'MoMo/VNPay': {
                 icon: 'bi bi-qr-code-scan',
-                html: '<strong>Ví điện tử MoMo / VNPay</strong> và <strong>quét mã VNPAY-QR</strong> chưa dùng được ở môi trường thử nghiệm VNPay Sandbox: '
-                    + 'app ngân hàng, ví điện tử thật không thanh toán được mã QR thử nghiệm.'
+                html: '<strong>Ví điện tử MoMo / VNPay</strong> và <strong>quét mã VNPAY-QR</strong> hiện chưa được hỗ trợ. '
+                    + 'Vui lòng chọn Thẻ ATM nội địa để tiếp tục.'
             },
             'Visa/Mastercard': {
                 icon: 'bi bi-credit-card-2-front',
-                html: '<strong>Thẻ quốc tế Visa / Mastercard / JCB</strong> chưa dùng được: tài khoản VNPay Sandbox của hệ thống '
-                    + 'chưa được VNPay mở kênh thanh toán thẻ quốc tế.'
+                html: '<strong>Thẻ quốc tế Visa / Mastercard / JCB</strong> hiện chưa được hỗ trợ bởi cổng thanh toán. '
+                    + 'Vui lòng chọn Thẻ ATM nội địa để tiếp tục.'
             }
         };
 

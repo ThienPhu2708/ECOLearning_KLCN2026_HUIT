@@ -13,7 +13,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Cổng thanh toán thử nghiệm · @Model.MaDonHang</title>
+    <title>Thanh toán · @Model.MaDonHang</title>
     <link rel="stylesheet" href="@Url.Content("~/assets/vendor/google-fonts/fonts.local.css")" />
     <link rel="stylesheet" href="@Url.Content("~/assets/vendor/bootstrap-icons/bootstrap-icons.min.css")" />
     <style>
@@ -25,8 +25,6 @@
         .gw-brand i { width: 34px; height: 34px; border-radius: 10px; background: #434CE8; display: inline-flex; align-items: center; justify-content: center; font-size: 17px; }
         .gw-brand small { display: block; font-weight: 500; font-size: 12px; color: #94A3B8; }
         .gw-secure { font-size: 12.5px; color: #CBD5E1; display: inline-flex; align-items: center; gap: 6px; }
-        .gw-sandbox { background: #FEF3C7; color: #92400E; border-bottom: 1px solid #FDE68A; }
-        .gw-sandbox div { max-width: 1000px; margin: 0 auto; padding: 10px 16px; font-size: 13.5px; display: flex; gap: 8px; align-items: flex-start; }
         .gw-wrap { max-width: 1000px; margin: 24px auto 48px; padding: 0 16px; display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 20px; align-items: start; }
         .gw-card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 22px; }
         .gw-label { font-size: 12px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
@@ -72,14 +70,10 @@
 <body>
     <div class="gw-top">
         <div class="gw-top-in">
-            <div class="gw-brand"><i class="bi bi-credit-card-2-front"></i><div>Cổng thanh toán thử nghiệm<small>Sandbox · đối tác E-Learning</small></div></div>
+            <div class="gw-brand"><i class="bi bi-credit-card-2-front"></i><div>Cổng thanh toán<small>Đối tác E-Learning</small></div></div>
             <span class="gw-secure"><i class="bi bi-shield-lock"></i> Chữ ký HMAC-SHA512</span>
         </div>
     </div>
-    <div class="gw-sandbox" role="note">
-        <div><i class="bi bi-exclamation-triangle-fill"></i><span><strong>Môi trường thử nghiệm:</strong> không trừ tiền thật. Chọn kết quả giao dịch bên dưới để mô phỏng phản hồi của cổng thanh toán (VNPay / MoMo).</span></div>
-    </div>
-
     <div class="gw-wrap">
         <section class="gw-card" aria-label="Thông tin đơn hàng">
             <div class="gw-label">Số tiền thanh toán</div>
@@ -104,29 +98,29 @@
             {
                 <div class="gw-method"><i class="bi bi-bank"></i> Thẻ ATM nội địa / Internet Banking (Napas)</div>
                 <div class="gw-fields">
-                    <label class="full">Số thẻ (thẻ thử nghiệm)<input value="9704 1985 2619 1432 198" readonly /></label>
+                    <label class="full">Số thẻ<input value="9704 1985 2619 1432 198" readonly /></label>
                     <label>Tên chủ thẻ<input value="NGUYEN VAN A" readonly /></label>
                     <label>Ngày phát hành<input value="07/15" readonly /></label>
                     <label class="full">Mã OTP<input value="123456" readonly /></label>
                 </div>
-                <p class="gw-note">Thông tin thẻ là dữ liệu thử nghiệm, không gửi đi đâu.</p>
+                <p class="gw-note">Thông tin thanh toán được bảo mật trong quá trình xử lý.</p>
             }
             else if (pt == "Visa/Mastercard")
             {
                 <div class="gw-method"><i class="bi bi-credit-card"></i> Thẻ quốc tế Visa / Mastercard / JCB</div>
                 <div class="gw-fields">
-                    <label class="full">Số thẻ (thẻ thử nghiệm)<input value="4111 1111 1111 1111" readonly /></label>
+                    <label class="full">Số thẻ<input value="4111 1111 1111 1111" readonly /></label>
                     <label>Hết hạn<input value="12/30" readonly /></label>
                     <label>CVV<input value="123" readonly /></label>
                     <label class="full">Tên in trên thẻ<input value="NGUYEN VAN A" readonly /></label>
                 </div>
-                <p class="gw-note">Thông tin thẻ là dữ liệu thử nghiệm, không gửi đi đâu. Cổng thật sẽ yêu cầu xác thực 3D-Secure.</p>
+                <p class="gw-note">Thông tin thanh toán được bảo mật trong quá trình xử lý.</p>
             }
             else
             {
                 <div class="gw-method"><i class="bi bi-qr-code-scan"></i> Quét mã QR (ví MoMo / ứng dụng ngân hàng VNPay-QR)</div>
                 <div class="gw-qr">
-                    <div class="gw-qr-box" aria-label="Mã QR thử nghiệm" role="img">
+                    <div class="gw-qr-box" aria-label="Mã QR thanh toán" role="img">
                         @{
                             // Hình QR minh họa sinh từ mã đơn (không quét được); cổng thật trả về mã QR thật
                             int hat = Model.MaDonHang.GetHashCode();
@@ -149,7 +143,7 @@
                         <li>Xác nhận thanh toán <strong>@Model.TongTien.ToString("#,##0") đ</strong></li>
                     </ol>
                 </div>
-                <p class="gw-note">Mã QR chỉ để minh họa. Ở chế độ thử nghiệm, bấm "Xác nhận thanh toán" thay cho bước quét mã.</p>
+                <p class="gw-note">Vui lòng xác nhận thanh toán để hoàn tất giao dịch.</p>
             }
 
             @using (Html.BeginForm("Pay", "Payment", FormMethod.Post, new { id = "gw-form" }))

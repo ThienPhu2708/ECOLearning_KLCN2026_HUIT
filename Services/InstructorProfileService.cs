@@ -132,6 +132,18 @@ namespace ECOLearning.Services
                 };
             }).ToList();
 
+            // Một mô tả chuyên môn đã duyệt thay thế phần giới thiệu cũ trong hồ sơ đăng ký.
+            // Đây là cùng nguồn dữ liệu mà Profile sử dụng, nhờ đó /User và /Course/Details luôn khớp nhau.
+            string specialtyDescription = null;
+            try
+            {
+                specialtyDescription = new TeacherSpecialtyService(db).ApprovedDescription(targetUserId);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Fetch approved teacher specialty description error: " + ex.Message);
+            }
+
             return new InstructorProfileViewModel
             {
                 MaNguoiDung = user.maNguoiDung,
@@ -147,7 +159,9 @@ namespace ECOLearning.Services
                 MaDon = app != null ? app.ApplicationId : null,
                 // Dữ liệu gốc (null khi giáo viên chưa khai); câu mặc định do trang hồ sơ tự thêm (UserController.BuildProfile)
                 ChuyenMon = !string.IsNullOrWhiteSpace(app?.Specialization) ? app.Specialization.Trim() : null,
-                KinhNghiem = !string.IsNullOrWhiteSpace(app?.BioExperience) ? app.BioExperience.Trim() : null,
+                KinhNghiem = !string.IsNullOrWhiteSpace(specialtyDescription)
+                    ? specialtyDescription.Trim()
+                    : (!string.IsNullOrWhiteSpace(app?.BioExperience) ? app.BioExperience.Trim() : null),
                 TenNganHang = app != null ? app.BankName : null,
                 SoTaiKhoan = app != null ? app.AccountNumber : null,
                 TenChuTaiKhoan = app != null ? app.AccountName : null,

@@ -307,9 +307,14 @@
     <!-- Footer Hệ Thống -->
     <!-- Quảng cáo ứng dụng di động (dải xanh tràn hết chiều ngang, chỉ khi chưa đăng nhập) + footer: bọc chung để cả hai cùng nằm cuối trang,
          quảng cáo luôn sát ngay trên footer kể cả ở trang ngắn (footer giữ nguyên) -->
+    @{
+        var currentController = Convert.ToString(ViewContext.RouteData.Values["controller"]);
+        // Các màn hình Account (đăng nhập, đăng ký, OTP/quên mật khẩu) cần tập trung vào xác thực, không hiển thị dải tải ứng dụng.
+        var isAccountPage = string.Equals(currentController, "Account", StringComparison.OrdinalIgnoreCase);
+    }
     <div style="margin-top: auto;">
-    @* Chỉ mời tải app khi khách chưa đăng nhập (cùng điều kiện đăng nhập với header) *@
-    @if (!(User.Identity.IsAuthenticated || Session["UserId"] != null))
+    @* Chỉ mời tải app khi khách chưa đăng nhập và không ở màn hình xác thực. *@
+    @if (!isAccountPage && !(User.Identity.IsAuthenticated || Session["UserId"] != null))
     {
         @Html.Partial("_AppPromo")
     }

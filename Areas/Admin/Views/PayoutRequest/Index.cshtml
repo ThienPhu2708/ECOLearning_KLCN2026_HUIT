@@ -56,7 +56,7 @@
 }
 else
 {
-    <div class="po-note"><i class="bi bi-info-circle me-1"></i> Chế độ <strong>thử nghiệm</strong>: "Chuyển khoản thử nghiệm" chỉ ghi nhận đã chi và sinh mã giao dịch, không chuyển tiền thật vào tài khoản giáo viên.</div>
+    <div class="po-note"><i class="bi bi-info-circle me-1"></i> Quản trị viên xác nhận chi trả và hệ thống ghi nhận mã giao dịch cho từng phiếu.</div>
 
     <div class="po-stats">
         <div class="card po-stat"><span>Đang chờ duyệt</span><strong style="color: #D97706;">@tongTien("Chờ duyệt").ToString("#,##0 đ")</strong><small>@soLuong("Chờ duyệt") yêu cầu</small></div>
@@ -128,7 +128,7 @@ else
                                 else if (p.TrangThai == "Chờ duyệt")
                                 {
                                     <div class="po-actions">
-                                        <button type="button" class="btn btn-primary btn-sm" onclick="duyetPhieu('@p.MaPhieuChi', '@HttpUtility.JavaScriptStringEncode(p.TenGiaoVien)', '@p.SoTien.ToString("#,##0")')"title="Chuyển khoản thử nghiệm: ghi nhận đã chi, không chuyển tiền thật">Duyệt chi</button>
+                                        <button type="button" class="btn btn-primary btn-sm" onclick="duyetPhieu('@p.MaPhieuChi', '@HttpUtility.JavaScriptStringEncode(p.TenGiaoVien)', '@p.SoTien.ToString("#,##0")')" title="Xác nhận chi trả và ghi nhận mã giao dịch">Duyệt chi</button>
                                         <button type="button" class="btn btn-outline btn-sm" onclick="tuChoiPhieu('@p.MaPhieuChi')">Từ chối</button>
                                     </div>
                                 }
@@ -164,8 +164,8 @@ else
         function duyetPhieu(id, ten, soTien) {
             Swal.fire({
                 icon: 'question',
-                title: 'Chuyển khoản thử nghiệm?',
-                html: 'Ghi nhận đã chi <strong>' + soTien + ' đ</strong> cho giáo viên <strong>' + ten + '</strong> (phiếu ' + id + ').<br><small>Chế độ thử nghiệm: không chuyển tiền thật.</small>',
+                title: 'Xác nhận chi trả?',
+                html: 'Xác nhận đã chi <strong>' + soTien + ' đ</strong> cho giáo viên <strong>' + ten + '</strong> (phiếu ' + id + ').',
                 showCancelButton: true,
                 confirmButtonText: 'Xác nhận chi trả',
                 cancelButtonText: 'Hủy'

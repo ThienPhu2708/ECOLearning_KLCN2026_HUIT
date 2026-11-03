@@ -22,6 +22,16 @@ namespace ECOLearning.Services {
   public bool Installed() {return db.Database.SqlQuery<int>("SELECT CASE WHEN OBJECT_ID('dbo.TeacherSpecialtyPolicy') IS NOT NULL AND OBJECT_ID('dbo.TeacherSpecialty') IS NOT NULL AND OBJECT_ID('dbo.TeacherApplicationSpecialty') IS NOT NULL AND OBJECT_ID('dbo.TeacherSpecialtyRequest') IS NOT NULL AND COL_LENGTH('dbo.TeacherSpecialtyRequest','ApprovedCategories') IS NOT NULL THEN 1 ELSE 0 END").Single()==1;}
   void Ready() {if(!Installed()) throw new InvalidOperationException("Chưa cài đặt quản lý chuyên môn. Cần chạy migration 022_TeacherSpecialties.sql.");}
   public List<string> Approved(int teacher) {return !Installed()?new List<string>():db.Database.SqlQuery<string>("SELECT CategoryId FROM dbo.TeacherSpecialty WHERE TeacherId=@p0",teacher).ToList();}
+  // Mô tả công khai của giáo viên phải đi cùng chuyên môn đã được Admin duyệt.
+  // Không lấy đề xuất Pending/Rejected để Course Details không công khai nội dung chưa được duyệt.
+  // Hồ sơ DangKyGiaoVien chỉ là dữ liệu dự phòng cho giáo viên cũ/chưa cài migration 022.
+  public string ApprovedDescription(int teacher) {
+   if(!Installed()) return null;
+   return db.Database.SqlQuery<string>(@"SELECT TOP 1 Description
+     FROM dbo.TeacherSpecialtyRequest
+     WHERE TeacherId=@p0 AND Status='Approved' AND NULLIF(LTRIM(RTRIM(Description)),'') IS NOT NULL
+     ORDER BY ReviewedAt DESC, Id DESC",teacher).FirstOrDefault();
+  }
   public bool IsLegacy(int teacher) {return Installed() && db.Database.SqlQuery<int>("SELECT COUNT(*) FROM dbo.TeacherSpecialtyPolicy WHERE TeacherId=@p0 AND LegacyAccess=1",teacher).Single()==1;}
   // Mọi giáo viên (kể cả giáo viên cũ) chỉ chọn lĩnh vực đã được duyệt cho khóa mới hoặc khi đổi lĩnh vực.
   public List<string> Allowed(int teacher) {return Approved(teacher);}

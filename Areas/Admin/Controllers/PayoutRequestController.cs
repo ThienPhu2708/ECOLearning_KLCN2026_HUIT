@@ -71,7 +71,7 @@ namespace ECOLearning.Areas.Admin.Controllers
                 WHERE p.maPhieuChi = @id AND ISNULL(p.trangThai, N'Chờ duyệt') = @cho",
                 new SqlParameter("@da", DaChi), new SqlParameter("@gd", maGd), new SqlParameter("@ad", adminId),
                 new SqlParameter("@id", id ?? ""), new SqlParameter("@cho", ChoDuyet));
-            if (n == 1) TempData["SuccessMessage"] = "Đã chuyển khoản thử nghiệm phiếu " + id + ". Mã giao dịch: " + maGd + ".";
+            if (n == 1) TempData["SuccessMessage"] = "Đã xác nhận chi trả phiếu " + id + ". Mã giao dịch: " + maGd + ".";
             else if (GiaoVienCuaPhieuBiKhoa(id)) TempData["ErrorMessage"] = "Giáo viên của phiếu " + id + " đang bị khóa tài khoản nên phiếu được tạm giữ. Mở khóa giáo viên trước khi chi trả.";
             else TempData["ErrorMessage"] = "Phiếu " + id + " không còn ở trạng thái chờ duyệt.";
             return RedirectToAction("Index", new { status });

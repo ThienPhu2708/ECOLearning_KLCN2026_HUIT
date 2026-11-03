@@ -375,6 +375,12 @@ namespace ECOLearning.Services
                        h.tinCuoiTomTat AS TinCuoiTomTat,
                        h.tinCuoiLuc AS TinCuoiLuc,
                        h.hocVienDocDen AS SoTinChuaDoc, -- tạm dùng để chứa mốc đọc
+                       ISNULL((
+                           SELECT TOP 1 t.maNguoiGui
+                           FROM dbo.TinNhan t
+                           WHERE t.maHoiThoai = h.maHoiThoai
+                           ORDER BY t.maTinNhan DESC
+                       ), 0) AS MaNguoiGuiCuoi,
                        h.trangThai AS TrangThai
                 FROM dbo.HoiThoai h
                 JOIN dbo.KhoaHoc k ON h.maKhoaHoc = k.maKhoaHoc
@@ -387,6 +393,7 @@ namespace ECOLearning.Services
             {
                 int docDen = item.SoTinChuaDoc;
                 item.SoTinChuaDoc = DemTinChuaDocHoiThoai(item.MaHoiThoai, docDen, maHocVien);
+                item.DaTraLoi = item.MaNguoiGuiCuoi == item.MaGiaoVien;
             }
 
             return list;

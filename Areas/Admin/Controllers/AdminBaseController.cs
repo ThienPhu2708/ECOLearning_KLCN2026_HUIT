@@ -9,13 +9,19 @@ namespace ECOLearning.Areas.Admin.Controllers
 {
     public class AdminBaseController : Controller
     {
+        protected void GhiHoatDong(QL_HETHONG_CUNGCAP_KHOAHOCEntities1 db, string action, string type, string id, string note)
+        {
+            var audit = new AccountAdminService(db);
+            if (audit.IsInstalled()) audit.GhiNhatKy(Convert.ToInt32(Session["UserId"]), action, type, id, note);
+        }
         protected override void OnActionExecuting(ActionExecutingContext filterContext)
         {
             var sessionRole = Session["Role"]?.ToString();
             var sessionUserId = Session["UserId"];
 
             // Kiem tra trang thai dang nhap va vai tro Quan tri vien (Admin)
-            if (sessionUserId == null || string.IsNullOrEmpty(sessionRole) || !sessionRole.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+            if (sessionUserId == null || string.IsNullOrEmpty(sessionRole) || !sessionRole.Equals("Admin", StringComparison.OrdinalIgnoreCase)
+                || !AdminEmailOtpService.IsVerified(Session))
             {
                 // Kiểm tra nếu là AJAX request
                 if (filterContext.HttpContext.Request.IsAjaxRequest() 

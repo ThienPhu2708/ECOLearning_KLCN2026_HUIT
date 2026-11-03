@@ -53,6 +53,7 @@ namespace ECOLearning.Areas.Admin.Controllers
                 m.PhanGiaoVien.ToString("F0"), m.NenTang.ToString("F0"), ""));
 
             string fileName = "DoanhThu_" + m.TuNgay.ToString("yyyyMMdd") + "_" + m.DenNgay.ToString("yyyyMMdd") + ".csv";
+            GhiHoatDong(db, "XuatBaoCao", "BaoCao", "DoanhThu", "Xuất báo cáo doanh thu từ " + m.TuNgay.ToString("dd/MM/yyyy") + " đến " + m.DenNgay.ToString("dd/MM/yyyy"));
             return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv; charset=utf-8", fileName);
         }
 

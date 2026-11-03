@@ -25,6 +25,7 @@ namespace ECOLearning.Areas.Admin.Controllers
             string ketQua = VideoStorageService.ChuyenVideoCu(db);
             TempData[R2Storage.DaCauHinh ? "SuccessMessage" : "ErrorMessage"] = ketQua;
             AppLog.Ghi("VIDEO", "Admin " + Session["UserId"] + " chuyển video cũ lên R2: " + ketQua);
+            if (R2Storage.DaCauHinh) GhiHoatDong(db, "ChuyenVideo", "LuuTru", "Video", ketQua);
             return VeBaoCao();
         }
 
@@ -33,6 +34,7 @@ namespace ECOLearning.Areas.Admin.Controllers
         public ActionResult ThuLai()
         {
             int n = VideoStorageService.ThuLai();
+            GhiHoatDong(db, "ThuLaiVideo", "LuuTru", "Video", "Đưa " + n + " video lỗi vào hàng đợi xử lý lại.");
             TempData["SuccessMessage"] = n > 0 ? "Đã đưa lại " + n + " video vào hàng đợi." : "Không có video nào bị lỗi.";
             return VeBaoCao();
         }
@@ -42,6 +44,7 @@ namespace ECOLearning.Areas.Admin.Controllers
         {
             string file = VideoStorageService.DuongDanFileSql;
             if (!System.IO.File.Exists(file)) return HttpNotFound();
+            GhiHoatDong(db, "TaiSqlVideo", "LuuTru", "Video", "Tải SQL chuyển đổi đường dẫn video.");
             return File(System.IO.File.ReadAllBytes(file), "application/sql", "r2-migration.sql");
         }
 

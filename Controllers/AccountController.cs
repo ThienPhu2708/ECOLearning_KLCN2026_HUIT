@@ -89,6 +89,8 @@ namespace ECOLearning.Controllers
                     // Xác thực mật khẩu đã được mã hóa Hash
                     if (PasswordHasher.VerifyPassword(user.matKhau, model.Password))
                     {
+                        if (AdminEmailOtpService.Required(user.vaiTro))
+                            return BeginAdminOtp(user, model.RememberMe, model.ReturnUrl);
                         SetUserSessionAndAuthCookie(user.maNguoiDung, user.hoTen, user.email, user.vaiTro, user.anhDaiDien, model.RememberMe);
 
                         if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
@@ -122,6 +124,15 @@ namespace ECOLearning.Controllers
                 var spResult = db.sp_DangNhap(model.Email, model.Password).FirstOrDefault();
                 if (spResult != null && spResult.maNguoiDung > 0)
                 {
+                    var account = db.NguoiDung.Find(spResult.maNguoiDung);
+                    if (account == null || account.trangThai == false)
+                    {
+                        ModelState.AddModelError("", "Tài khoản không khả dụng.");
+                        ViewBag.AuthMode = "login";
+                        return View(model);
+                    }
+                    if (AdminEmailOtpService.Required(account.vaiTro))
+                        return BeginAdminOtp(account, model.RememberMe, model.ReturnUrl);
                     SetUserSessionAndAuthCookie(spResult.maNguoiDung, spResult.hoTen, spResult.email, spResult.vaiTro, spResult.anhDaiDien, model.RememberMe);
 
                     if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
@@ -652,6 +663,11 @@ namespace ECOLearning.Controllers
                     return Json(new { success = false, message = AccountAdminService.CauBaoKhoa(db, user.maNguoiDung) });
                 }
 
+                if (AdminEmailOtpService.Required(user.vaiTro))
+                {
+                    BeginAdminOtp(user, false, null);
+                    return Json(new { success = true, requiresOtp = true, redirectUrl = Url.Action("AdminOtp") });
+                }
                 // Tạo Session và FormsAuthentication Cookie riêng của hệ thống với họ tên đầy đủ
                 SetUserSessionAndAuthCookie(user.maNguoiDung, user.hoTen, user.email, user.vaiTro, user.anhDaiDien, false);
                 return Json(new { success = true, message = "Đăng nhập xác thực bằng tài khoản Google thành công!", redirectUrl = Url.Action("Index", "Home") });
@@ -698,18 +714,125 @@ namespace ECOLearning.Controllers
         }
 
         #region Helper Methods
+        private ActionResult BeginAdminOtp(NguoiDung user, bool rememberMe, string returnUrl)
+        {
+            // No authenticated identity/cookie is created until OTP succeeds.
+            FormsAuthentication.SignOut();
+            PhienDocQuyenService.XoaCookiePhien(Response);
+            AdminEmailOtpService.ClearCookie(Response);
+            Session.Clear();
+            var pending = new AdminOtpChallenge
+            {
+                UserId = user.maNguoiDung, Email = user.email,
+                PasswordStamp = AdminEmailOtpService.Stamp(user.matKhau),
+                RememberMe = rememberMe, ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null,
+                DeadlineUtc = DateTime.UtcNow.AddMinutes(15)
+            };
+            Session[AdminEmailOtpService.PendingKey] = pending;
+            string error = AdminEmailOtpService.Send(pending, DateTime.UtcNow,
+                code => EmailService.SendAdminLoginOtp(user.email, user.hoTen, code));
+            if (error != null) TempData["AdminOtpNotice"] = error;
+            return RedirectToAction("AdminOtp");
+        }
+
+        private AdminOtpChallenge PendingAdminOtp()
+        {
+            var pending = Session[AdminEmailOtpService.PendingKey] as AdminOtpChallenge;
+            if (pending == null || DateTime.UtcNow >= pending.DeadlineUtc)
+            {
+                Session.Remove(AdminEmailOtpService.PendingKey);
+                return null;
+            }
+            return pending;
+        }
+
+        private ActionResult AdminOtpPage(AdminOtpChallenge pending, string notice = null)
+        {
+            return View("AdminOtp", new AdminOtpViewModel
+            {
+                MaskedEmail = AdminEmailOtpService.MaskEmail(pending.Email),
+                ResendSeconds = AdminEmailOtpService.ResendSeconds(pending, DateTime.UtcNow),
+                ExpiresSeconds = pending.CodeHash == null ? 0 : Math.Max(0, (int)(pending.CodeExpiresUtc - DateTime.UtcNow).TotalSeconds),
+                Notice = notice
+            });
+        }
+
+        [HttpGet, OutputCache(NoStore = true, Duration = 0)]
+        public ActionResult AdminOtp()
+        {
+            var pending = PendingAdminOtp();
+            if (pending == null) return RedirectToAction("Login");
+            return AdminOtpPage(pending, TempData["AdminOtpNotice"] as string);
+        }
+
+        [HttpPost, ValidateAntiForgeryToken, ActionName("AdminOtp")]
+        public ActionResult VerifyAdminOtp(string otp)
+        {
+            var pending = PendingAdminOtp();
+            if (pending == null) return RedirectToAction("Login");
+            string error = AdminEmailOtpService.Verify(pending, otp, DateTime.UtcNow);
+            if (error != null)
+            {
+                ModelState.AddModelError("", error);
+                return AdminOtpPage(pending);
+            }
+            // Reload identity after verifying: revoked roles, password changes and locks invalidate pending login.
+            var user = db.NguoiDung.Find(pending.UserId);
+            if (user == null || user.trangThai == false || !AdminEmailOtpService.Required(user.vaiTro)
+                || !string.Equals(user.email, pending.Email, StringComparison.OrdinalIgnoreCase)
+                || AdminEmailOtpService.Stamp(user.matKhau) != pending.PasswordStamp)
+            {
+                Session.Remove(AdminEmailOtpService.PendingKey);
+                return RedirectToAction("Login");
+            }
+            Session.Remove(AdminEmailOtpService.PendingKey);
+            SetUserSessionAndAuthCookie(user.maNguoiDung, user.hoTen, user.email, user.vaiTro, user.anhDaiDien, pending.RememberMe, true);
+            AdminEmailOtpService.MarkVerified(Session, Request, Response);
+            return !string.IsNullOrEmpty(pending.ReturnUrl) && Url.IsLocalUrl(pending.ReturnUrl)
+                ? (ActionResult)Redirect(pending.ReturnUrl)
+                : RedirectToAction("Index", "Dashboard", new { area = "Admin" });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult ResendAdminOtp()
+        {
+            var pending = PendingAdminOtp();
+            if (pending == null) return RedirectToAction("Login");
+            var user = db.NguoiDung.Find(pending.UserId);
+            if (user == null || user.trangThai == false || !AdminEmailOtpService.Required(user.vaiTro)
+                || !string.Equals(user.email, pending.Email, StringComparison.OrdinalIgnoreCase)
+                || AdminEmailOtpService.Stamp(user.matKhau) != pending.PasswordStamp)
+            {
+                Session.Remove(AdminEmailOtpService.PendingKey);
+                return RedirectToAction("Login");
+            }
+            TempData["AdminOtpNotice"] = AdminEmailOtpService.Send(pending, DateTime.UtcNow,
+                code => EmailService.SendAdminLoginOtp(user.email, user.hoTen, code)) ?? "Đã gửi mã mới. Mã trước đó không còn hiệu lực.";
+            return RedirectToAction("AdminOtp");
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult CancelAdminOtp()
+        {
+            Session.Remove(AdminEmailOtpService.PendingKey);
+            return RedirectToAction("Login");
+        }
+
         // Đăng xuất: thu hồi mã phiên Admin / Marketing (cookie ECO_Phien không khôi phục được nữa) rồi hủy Session
         private void DangXuatHet()
         {
             PhienDocQuyenService.ThuHoi((Session["UserId"] as int?) ?? 0, Session[PhienDocQuyenService.KeySession] as string);
             PhienDocQuyenService.XoaCookiePhien(Response);
+            AdminEmailOtpService.ClearCookie(Response);
             FormsAuthentication.SignOut();
             Session.Clear();
             Session.Abandon();
         }
 
-        private void SetUserSessionAndAuthCookie(int userId, string fullName, string email, string role, string avatar, bool rememberMe)
+        private void SetUserSessionAndAuthCookie(int userId, string fullName, string email, string role, string avatar, bool rememberMe, bool adminOtpVerified = false)
         {
+            if (AdminEmailOtpService.Required(role) && !adminOtpVerified)
+                throw new InvalidOperationException("Admin login requires email OTP.");
             FormsAuthentication.SetAuthCookie(email, rememberMe);
 
             // Admin / Marketing: phiên mới thay phiên cũ đang mở ở nơi khác (null với vai trò khác);

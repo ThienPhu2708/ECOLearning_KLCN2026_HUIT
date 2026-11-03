@@ -207,6 +207,13 @@
     <Compile Include="App_Start\AccountStatusFilter.cs" />
     <Compile Include="Services\AccountAdminService.cs" />
     <Compile Include="Services\PhienDocQuyenService.cs" />
+    <Compile Include="Services\AdminEmailOtpService.cs" />
+    <Compile Include="Services\AdminActivityHistory.cs" />
+    <Compile Include="ViewModels\AdminOtpViewModel.cs" />
+    <Compile Include="ViewModels\AdministratorViewModel.cs" />
+    <Compile Include="Areas\Admin\Controllers\AdministratorController.cs" />
+    <Content Include="Areas\Admin\Views\Administrator\Index.cshtml" />
+    <Content Include="Views\Account\AdminOtp.cshtml" />
     <Compile Include="Services\AppLog.cs" />
     <Compile Include="Services\SessionNguoiDung.cs" />
     <Compile Include="App_Start\GhiLogLoiAttribute.cs" />
@@ -627,6 +634,7 @@
     <Content Include="assets\js\admin-charts.js" />
     <Content Include="assets\css\admin-report.css" />
     <Content Include="assets\css\admin-responsive.css" />
+    <Content Include="assets\css\admin-activity.css" />
     <Content Include="assets\js\admin-responsive.js" />
     <Content Include="assets\js\data.js" />
     <Content Include="Views\Home\Index.cshtml" />

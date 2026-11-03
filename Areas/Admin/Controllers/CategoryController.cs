@@ -122,6 +122,7 @@ namespace ECOLearning.Areas.Admin.Controllers
                 anhService.CapNhat(newCat.maDanhMuc, CategoryImageService.GhiFile(anh, newCat.maDanhMuc, Server));
             }
 
+            GhiHoatDong(db, "TaoDanhMuc", "DanhMuc", newCat.maDanhMuc, "Tạo danh mục: " + newCat.tenDanhMuc);
             return Json(new { success = true, message = "Thêm danh mục mới thành công!" });
         }
 
@@ -170,6 +171,7 @@ namespace ECOLearning.Areas.Admin.Controllers
                 CategoryImageService.XoaFile(anhCu, Server);
             }
 
+            GhiHoatDong(db, "SuaDanhMuc", "DanhMuc", id, "Cập nhật danh mục: " + cat.tenDanhMuc + (anh != null ? ". Thay ảnh minh họa." : ""));
             return Json(new { success = true, message = "Cập nhật danh mục thành công!" });
         }
 
@@ -201,6 +203,7 @@ namespace ECOLearning.Areas.Admin.Controllers
             string message = active
                 ? $"Đã kích hoạt lại danh mục \"{cat.tenDanhMuc}\"."
                 : $"Đã tạm ngưng danh mục \"{cat.tenDanhMuc}\". Các khóa học thuộc danh mục vẫn hoạt động bình thường.";
+            GhiHoatDong(db, active ? "BatDanhMuc" : "TatDanhMuc", "DanhMuc", id, message);
             return Json(new { success = true, message = message });
         }
 
@@ -232,6 +235,7 @@ namespace ECOLearning.Areas.Admin.Controllers
             db.SaveChanges();
             CategoryImageService.XoaFile(anhCu, Server);
 
+            GhiHoatDong(db, "XoaDanhMuc", "DanhMuc", id, "Xóa danh mục: " + cat.tenDanhMuc);
             return Json(new { success = true, message = "Đã xóa danh mục thành công!" });
         }
 

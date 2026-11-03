@@ -562,6 +562,7 @@ namespace ECOLearning.Areas.Admin.Controllers
             byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
             byte[] fileBytes = preamble.Concat(bytes).ToArray();
 
+            GhiHoatDong(db, "XuatBaoCao", "BaoCao", "HeThong", "Xuất báo cáo hệ thống CSV. Kỳ: " + model.Period);
             return File(fileBytes, "text/csv", $"BaoCaoHeThong_E-Learning_{DateTime.Now:yyyyMMdd}.csv");
         }
 
@@ -572,6 +573,7 @@ namespace ECOLearning.Areas.Admin.Controllers
             try
             {
                 byte[] pdf = SystemReportPdfService.Build(model);
+                GhiHoatDong(db, "XuatBaoCao", "BaoCao", "HeThong", "Xuất báo cáo hệ thống PDF. Kỳ: " + model.Period);
                 return File(pdf, "application/pdf", $"BaoCaoHeThong_E-Learning_{model.Period}_{DateTime.Now:yyyyMMdd}.pdf");
             }
             catch (Exception ex)

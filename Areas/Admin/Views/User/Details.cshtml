@@ -75,7 +75,7 @@
             <button type="button" class="au-tab" data-tab="don-hang">Đơn hàng <span class="au-count">@Model.DonHang.Count</span></button>
             <button type="button" class="au-tab" data-tab="danh-gia">Đánh giá <span class="au-count">@Model.DanhGia.Count</span></button>
         }
-        <button type="button" class="au-tab @(laNhanVien ? "active" : "")" data-tab="nhat-ky">Nhật ký quản trị <span class="au-count">@Model.NhatKy.Count</span></button>
+        <button type="button" class="au-tab @(laNhanVien ? "active" : "")" data-tab="nhat-ky">@(Model.VaiTro == AccountAdminService.Admin ? "Hoạt động của Admin" : "Nhật ký tài khoản") <span class="au-count">@Model.NhatKy.Count</span></button>
     </div>
 
     @if (!laNhanVien)

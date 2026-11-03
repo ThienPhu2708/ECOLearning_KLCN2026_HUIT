@@ -212,6 +212,12 @@ namespace ECOLearning.Services
 
                     var u = db.NguoiDung.Find(maNguoiDung);
                     if (u == null) return;
+                    if (AdminEmailOtpService.Required(u.vaiTro) && !AdminEmailOtpService.Restore(ctx, maNguoiDung, maPhien))
+                    {
+                        XoaCookiePhien(ctx.Response);
+                        System.Web.Security.FormsAuthentication.SignOut();
+                        return;
+                    }
                     session[KeySession] = maPhien;
                     session["UserId"] = u.maNguoiDung;
                     session["FullName"] = u.hoTen;

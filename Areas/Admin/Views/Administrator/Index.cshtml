@@ -1,0 +1,98 @@
+@model ECOLearning.ViewModels.AdministratorViewModel
+@using ECOLearning.Services
+@{
+    ViewBag.Title = "Quản lý Admin";
+}
+<link rel="stylesheet" href="@Url.Content("~/assets/css/admin-users.css?v=1")" />
+<style>
+.adm-heading{margin-bottom:22px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}.adm-heading h1{margin:0 0 8px;font-size:26px}.adm-heading p{font-size:13px;color:#64748b;line-height:1.7;margin:0}.adm-create{scroll-margin-top:90px}
+.adm-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}.adm-list,.adm-create{min-width:0}.adm-summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.adm-summary span{padding:7px 12px;border:1px solid #e6eaf2;background:#fff;border-radius:9px;font-size:12px;color:#64748b}.adm-summary b{color:#172033;margin-right:5px}
+.adm-filter{display:grid;grid-template-columns:minmax(0,1fr) 180px auto;gap:8px;margin-bottom:16px}.adm-filter .form-control{min-width:0;width:100%;height:40px}.adm-table{min-width:660px}.adm-table th,.adm-table td{padding:14px!important}.adm-identity{display:flex;align-items:center;gap:10px}.adm-avatar{width:36px;height:36px;display:grid;place-items:center;flex-shrink:0;border-radius:50%;background:#eeedff;color:#5145e8;font-weight:700}.adm-email{font-size:12px;color:#64748b;margin-top:4px}.adm-self{font-size:10px;color:#5145e8;background:#eeedff;border-radius:5px;padding:3px 6px;margin-left:6px}
+.adm-status{position:relative;min-width:0}.adm-status summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px;box-sizing:border-box;padding:9px 12px;border:1px solid #e1e6f0;border-radius:10px;background:#fff;font-size:13px;color:#475569;cursor:pointer;list-style:none;user-select:none}.adm-status summary::-webkit-details-marker{display:none}.adm-status summary:focus-visible{outline:3px solid #e9e7ff;border-color:#8b80ee}.adm-status summary i{font-size:11px;color:#8791a3}.adm-status[open] summary{border-color:#b7aff5;box-shadow:0 0 0 3px #f0eeff}.adm-status[open] summary i{transform:rotate(180deg)}.adm-status-options{position:absolute;top:calc(100% + 7px);left:0;right:0;z-index:65;padding:5px;background:#fff;border:1px solid #e6eaf2;border-radius:12px;box-shadow:0 12px 28px rgba(23,32,51,.12)}.adm-status-option{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border-radius:8px;font-size:13px;color:#475569;cursor:pointer}.adm-status-option input{position:absolute;width:1px;height:1px;opacity:0}.adm-status-option i{opacity:0;color:#6254d9}.adm-status-option:hover{background:#f7f8fc}.adm-status-option:has(input:checked){background:#f0eeff;color:#5145b5;font-weight:600}.adm-status-option:has(input:checked) i{opacity:1}.adm-status-option:focus-within{outline:2px solid #aaa1ed;outline-offset:-2px}
+.adm-create{padding:22px}.adm-create h2{font-size:18px;margin:0 0 8px}.adm-create p{font-size:12px;color:#64748b;line-height:1.7;margin:0 0 18px}.adm-create label:not(.adm-confirm){display:block;font-size:13px;font-weight:600;margin-bottom:7px}.adm-create .form-control{width:100%;box-sizing:border-box;min-width:0}.adm-field{margin-bottom:16px}.adm-confirm{display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:1.65;color:#475569;margin:18px 0}.adm-confirm input{margin-top:4px;flex-shrink:0;width:16px;height:16px;accent-color:#5145e8}.adm-create .btn-primary{width:100%;justify-content:center;min-height:42px}.adm-error,.adm-create .validation-summary-errors{color:#b42335;font-size:12px;line-height:1.6}.adm-create .validation-summary-errors{padding:10px 12px;background:#fff1f2;border-radius:8px;margin-bottom:16px}.adm-create .validation-summary-errors ul{margin:0;padding-left:16px}.adm-process{border-top:1px solid #edf0f5;margin-top:18px;padding-top:16px;color:#64748b;font-size:12px;line-height:1.8}.adm-empty{text-align:center;color:#64748b;padding:30px!important}
+@@media(max-width:1180px){.adm-grid{grid-template-columns:minmax(0,1fr)}.adm-create{max-width:none}.adm-create form{max-width:600px}}
+@@media(max-width:640px){.adm-heading h1{font-size:22px}.adm-grid{gap:16px}.adm-filter{grid-template-columns:minmax(0,1fr) auto}.adm-filter .adm-status{grid-column:1/-1;grid-row:2}.adm-filter button{grid-column:2;grid-row:1}.adm-create{padding:18px}.adm-summary{gap:8px}.adm-summary span{padding:7px 9px}}
+</style>
+<div class="adm-heading">
+    <div>
+    <h1>Quản lý Admin</h1>
+    <p>Tạo tài khoản quản trị và theo dõi trạng thái truy cập hệ thống.</p>
+    </div>
+</div>
+@Html.Partial("_AdminFlash")
+@if (!Model.Installed)
+{
+    @Html.Partial("_ChuaKhoiTao016")
+}
+else
+{
+    <div class="adm-summary"><span><b>@Model.Total</b> Admin</span><span><b>@Model.Active</b> Đang hoạt động</span><span><b>@(Model.Total - Model.Active)</b> Đang khóa</span></div>
+    <div class="adm-grid">
+        <section class="adm-list" aria-label="Danh sách Admin">
+            <form method="get" action="@Url.Action("Index")" class="adm-filter">
+                <input class="form-control" type="search" name="q" value="@Model.Query" placeholder="Tìm tên hoặc email Admin..." aria-label="Tìm Admin" maxlength="100" />
+                <details class="adm-status" id="adm-status">
+                    <summary aria-label="Lọc trạng thái Admin"><span id="adm-status-label">@(Model.Status == "active" ? "Hoạt động" : Model.Status == "locked" ? "Đang khóa" : "Mọi trạng thái")</span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+                    <div class="adm-status-options" role="group" aria-label="Trạng thái Admin">
+                        <label class="adm-status-option">@Html.RadioButton("status", "", Model.Status == null, new { id = "adm-status-all" })<span>Mọi trạng thái</span><i class="bi bi-check2" aria-hidden="true"></i></label>
+                        <label class="adm-status-option">@Html.RadioButton("status", "active", Model.Status == "active", new { id = "adm-status-active" })<span>Hoạt động</span><i class="bi bi-check2" aria-hidden="true"></i></label>
+                        <label class="adm-status-option">@Html.RadioButton("status", "locked", Model.Status == "locked", new { id = "adm-status-locked" })<span>Đang khóa</span><i class="bi bi-check2" aria-hidden="true"></i></label>
+                    </div>
+                </details>
+                <button type="submit" class="btn btn-secondary"><i class="bi bi-search" aria-hidden="true"></i> Tìm</button>
+            </form>
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="table-responsive">
+                    <table class="table adm-table">
+                        <thead><tr><th>Admin</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
+                        <tbody>
+                        @if (Model.Administrators.Count == 0) { <tr><td colspan="4" class="adm-empty">Không có Admin phù hợp.</td></tr> }
+                        @foreach (var admin in Model.Administrators)
+                        {
+                            <tr>
+                                <td><div class="adm-identity"><span class="adm-avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(admin.HoTen) ? "A" : admin.HoTen.Trim().Substring(0, 1).ToUpper())</span><div><strong>@admin.HoTen</strong>@if(admin.MaNguoiDung == Model.CurrentUserId){<span class="adm-self">Bạn</span>}<div class="adm-email">@admin.Email</div></div></div></td>
+                                <td><span class="badge @(admin.HoatDong ? "badge-success" : "badge-danger")">@(admin.HoatDong ? "Hoạt động" : "Đang khóa")</span>@if(admin.CanDoiMatKhau){<div class="adm-email">Chưa đổi mật khẩu tạm</div>}</td>
+                                <td>@(admin.NgayTao.HasValue ? admin.NgayTao.Value.ToString("dd/MM/yyyy") : "—")</td>
+                                <td><a class="btn btn-outline btn-sm" href="@Url.Action("Details", "User", new { id = admin.MaNguoiDung })">Chi tiết</a></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @if(Model.Pagination != null){<div style="margin-top:16px;">@Html.Partial("_Pagination", Model.Pagination)</div>}
+        </section>
+        <section class="card adm-create" id="tao-admin" aria-labelledby="adm-create-title">
+            <h2 id="adm-create-title">Tạo Admin mới</h2>
+            <p>Mật khẩu tạm được gửi đến email người nhận. Người nhận phải xác thực OTP và đổi mật khẩu trong lần đăng nhập đầu tiên.</p>
+            @using(Html.BeginForm("Create", "Administrator", new { area = "Admin" }, FormMethod.Post, new { autocomplete = "off" }))
+            {
+                @Html.AntiForgeryToken()
+                @Html.ValidationSummary(false, "", new { role = "alert" })
+                <div class="adm-field"><label for="NewAdmin_FullName">Họ và tên</label>@Html.TextBoxFor(m => m.NewAdmin.FullName, new { @class = "form-control", placeholder = "Nhập họ tên Admin", maxlength = "100", required = "required", autocomplete = "name" })</div>
+                <div class="adm-field"><label for="NewAdmin_Email">Email nhận tài khoản</label>@Html.TextBoxFor(m => m.NewAdmin.Email, new { @class = "form-control", type = "email", placeholder = "admin@example.com", maxlength = "100", required = "required", autocomplete = "email" })</div>
+                <label class="adm-confirm">@Html.CheckBoxFor(m => m.NewAdmin.ConfirmAdmin)<span>Tôi xác nhận cấp toàn quyền quản trị hệ thống cho tài khoản này.</span></label>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-person-plus" aria-hidden="true"></i> Tạo và gửi email</button>
+            }
+            <div class="adm-process">Email phải chưa có tài khoản. Thao tác tạo Admin được lưu trong nhật ký quản trị.</div>
+        </section>
+    </div>
+}
+@section Scripts {
+<script>
+(function () {
+    var picker = document.getElementById('adm-status');
+    if (!picker) return;
+    picker.addEventListener('change', function (event) {
+        if (event.target.name !== 'status') return;
+        document.getElementById('adm-status-label').textContent = event.target.closest('label').querySelector('span').textContent;
+        picker.open = false;
+        picker.querySelector('summary').focus();
+    });
+    document.addEventListener('click', function (event) { if (!picker.contains(event.target)) picker.open = false; });
+    picker.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') { picker.open = false; picker.querySelector('summary').focus(); }
+    });
+})();
+</script>
+}

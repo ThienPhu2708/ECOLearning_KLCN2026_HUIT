@@ -14,6 +14,7 @@
         <link rel="stylesheet" href="~/assets/css/dashboard-tables.css?v=4">
         <link rel="stylesheet" href="~/assets/vendor/bootstrap-icons/bootstrap-icons.min.css" />
         <link rel="stylesheet" href="~/assets/css/staff-ui.css?v=1.4">
+        <link rel="stylesheet" href="@Url.Content("~/assets/css/admin-activity.css")?v=@(System.IO.File.GetLastWriteTimeUtc(Server.MapPath("~/assets/css/admin-activity.css")).Ticks)" />
         <style>
             /* Chấm đỏ: mục có yêu cầu từ người dùng đang chờ Admin xử lý.
                Đặt tuyệt đối trong phần đệm bên phải của mục: không chiếm chỗ của chữ, mục giữ nguyên kích thước */
@@ -112,6 +113,10 @@
                 <a href="@Url.Action("Index", "User", new { area = "Admin" })" class="sidebar-item @(currentController == "User" ? "active" : "")">
                     <i class="bi bi-people-fill" style="font-size: 17px; width: 18px; text-align: center;"></i>
                     Quản lý người dùng
+                </a>
+                <a href="@Url.Action("Index", "Administrator", new { area = "Admin" })" class="sidebar-item @(currentController == "Administrator" ? "active" : "")">
+                    <i class="bi bi-shield-lock" style="font-size:17px;width:18px;text-align:center;" aria-hidden="true"></i>
+                    Quản lý Admin
                 </a>
                 <a href="@Url.Action("Index", "Teacher", new { area = "Admin" })" class="sidebar-item @(currentController == "Teacher" ? "active" : "")">
                     <i class="bi bi-person-video3" style="font-size: 17px; width: 18px; text-align: center;"></i>

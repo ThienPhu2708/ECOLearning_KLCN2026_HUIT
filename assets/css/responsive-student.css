@@ -9,6 +9,7 @@
 html { -webkit-text-size-adjust: 100%; }
 img, video, canvas, svg { max-width: 100%; }
 body { overflow-x: hidden; }
+body > main.main-content { min-width: 0; width: 100%; max-width: 100%; }
 
 /* Nút menu / tìm kiếm của header: chỉ hiện ở màn nhỏ */
 .hdr-icon-btn {
@@ -134,6 +135,13 @@ body { overflow-x: hidden; }
 /* ---------- ≤ 768px: điện thoại ---------- */
 @media (max-width: 768px) {
   .safe-container { padding-left: 16px; padding-right: 16px; }
+  #recommendations { padding: 32px 0 !important; }
+  #recommendations .home-recommend-head { flex-direction: column; align-items: stretch !important; gap: 16px; margin-bottom: 20px !important; }
+  #recommendations .home-recommend-head > div { min-width: 0; width: 100%; }
+  #recommendations .home-recommend-head h2 { font-size: 22px; line-height: 1.4; margin-top: 0 !important; }
+  #recommendations .home-recommend-head .body-2 { font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+  #recommendations .home-recommend-actions { flex-wrap: wrap; justify-content: space-between; gap: 8px !important; }
+  #recommendations .home-recommend-actions .btn { margin-left: auto; font-size: 12px; padding: 8px 12px; }
   .modal-container { max-width: calc(100vw - 32px); }
   .grid-12 { gap: 16px; }
   .grid-12 > [class*="col-"] { grid-column: span 12; }
@@ -202,6 +210,24 @@ body { overflow-x: hidden; }
 }
 
 /* ---------- Không gian học tập (Views/Learning/Study.cshtml): video ở trên, danh sách bài học ở dưới ---------- */
+@media (max-width: 600px) {
+  body .video-sim-overlay { padding: 10px 12px; }
+  .player-now-playing { min-width: 0; }
+  .player-now-playing > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; padding: 5px 8px !important; font-size: 11px !important; }
+  .player-now-playing > span:last-child { display: none; }
+  body .player-controls { display: grid; grid-template-columns: minmax(0,1fr); gap: 3px; }
+  .player-controls-main { display: grid !important; grid-template-columns: 30px 48px minmax(0,1fr); gap: 8px !important; }
+  .player-controls-extra { justify-content: flex-end; gap: 12px !important; }
+  .player-controls #video-time-display { white-space: nowrap; font-size: 12px !important; text-align: right; }
+  .player-controls .player-btn { min-width: 30px; min-height: 30px; justify-content: center; }
+  .player-controls .volume-slider,.player-controls .player-speed-label { display: none; }
+  .player-controls #speed-select { width: 64px !important; height: 30px !important; }
+  .lesson-description { padding: 18px 16px !important; }
+  .lesson-heading-row { flex-direction: column; align-items: stretch !important; gap: 12px !important; margin-bottom: 14px !important; }
+  .lesson-heading-row h2 { font-size: 20px !important; line-height: 1.5; overflow-wrap: anywhere; }
+  .lesson-heading-row > div { flex-wrap: wrap; }
+  .lesson-description #current-lesson-desc { font-size: 13px; line-height: 1.8 !important; }
+}
 @media (max-width: 992px) {
   body .learning-header {
     height: auto;

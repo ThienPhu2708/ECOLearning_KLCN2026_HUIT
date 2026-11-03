@@ -177,11 +177,15 @@
         color: var(--text-secondary, #64748B);
         font-size: 12.5px;
         line-height: 1.5;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        min-width: 0;
     }
+    .my-course-info-row { display:flex;align-items:center;gap:8px;min-width:0; }
+    .my-course-info-row > i { flex-shrink:0;color:#94A3B8;font-size:14px; }
+    .my-course-info-row > span { white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0; }
+    .my-course-info-row strong { color:#334155;font-weight:600; }
 
     .my-course-progress {
         margin-top: auto;
@@ -332,12 +336,11 @@
                                             @item.TenKhoaHoc
                                         </h3>
 
-                                        <div class="caption my-course-info">
-                                            Giảng viên: <strong style="color: #1E293B;">@item.TenGiangVien</strong> • Bài học tiếp theo:
-                                            <strong style="color: #434CE8;" title="@item.TenBaiHocTiepTheo">@item.TenBaiHocTiepTheo</strong>
-                                        </div>
-
                                         <!-- Progress Bar Section -->
+                                        <div class="my-course-info">
+                                            <div class="my-course-info-row"><i class="bi bi-person" aria-hidden="true"></i><span title="Giảng viên: @item.TenGiangVien">Giảng viên: <strong>@item.TenGiangVien</strong></span></div>
+                                            <div class="my-course-info-row"><i class="bi bi-play-circle" aria-hidden="true"></i><span title="Bài tiếp theo: @item.TenBaiHocTiepTheo">Bài tiếp theo: <strong>@item.TenBaiHocTiepTheo</strong></span></div>
+                                        </div>
                                         <div class="my-course-progress">
                                             <div class="my-course-progress-head">
                                                 <span style="color: var(--text-secondary, #64748B);">Đã học @item.SoBaiDaHoanThanh/@item.TongSoBaiHoc bài</span>
@@ -350,7 +353,7 @@
 
                                         <!-- Action Button -->
                                         <a href="@studyUrl" class="btn btn-primary my-course-cta">
-                                            <span>Tiếp tục học</span> <i class="bi bi-arrow-right"></i>
+                                            <span>@(item.PhanTramTienDo > 0 ? "Tiếp tục học" : "Bắt đầu học")</span> <i class="bi bi-arrow-right"></i>
                                         </a>
                                     </div>
                                 </div>

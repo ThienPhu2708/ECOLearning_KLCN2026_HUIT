@@ -38,6 +38,15 @@
 .course-detail-actions > div:first-child { flex:1 1 260px !important;min-width:0; }
 .course-detail-actions > div:last-child { flex:0 1 auto;min-width:0; }
 .course-detail-actions .btn { white-space:nowrap; }
+.course-detail-metrics > div { min-width:0; }
+.course-detail-metrics .detail-stat-val { white-space:nowrap; }
+@@media(max-width:600px) {
+    .course-detail-metrics { gap:12px; }
+    .course-detail-metrics > .col-3 { grid-column:span 6; }
+    .course-detail-metrics .detail-stat-pill { height:100%;padding:14px 10px; }
+    .course-detail-metrics .detail-stat-val { font-size:21px;line-height:1.4; }
+    .course-detail-metrics .caption { font-size:12px;line-height:1.6; }
+}
 @@media(max-width:900px) {
     .course-detail-actions { position:static !important;align-items:stretch !important;padding:20px !important;gap:16px; }
     .course-detail-actions > div:first-child,
@@ -242,7 +251,7 @@
             </div>
 
             <!-- Metric Pills -->
-            <div class="grid-12">
+            <div class="grid-12 course-detail-metrics">
                 <div class="col-3">
                     <div class="detail-stat-pill">
                         <div class="detail-stat-val" id="stat-lessons">@outlineLessons.Count</div>

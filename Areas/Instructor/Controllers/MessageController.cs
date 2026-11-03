@@ -9,9 +9,25 @@ namespace ECOLearning.Areas.Instructor.Controllers
 {
     public class MessageController : InstructorBaseController
     {
-        // GET: /Instructor/Message
-        public ActionResult Index(int? id, string courseId = "", string status = "all")
+        [HttpGet]
+        public JsonResult Conversations()
         {
+            var service = new ChatService(db);
+            var conversations = service.LayDanhSachHoiThoaiGiaoVien(CurrentTeacherId);
+            return Json(new {
+                count = service.DemTongTinChuaDoc(CurrentTeacherId, true),
+                items = conversations.Where(c => c.TinCuoiLuc.HasValue).Take(20).Select(c => new {
+                    name = c.TenHocVien, course = c.TenKhoaHoc,
+                    preview = (c.MaNguoiGuiCuoi == CurrentTeacherId ? "Bạn: " : "") + c.TinCuoiTomTat, unread = c.SoTinChuaDoc,
+                    time = c.TinCuoiLuc.HasValue ? c.TinCuoiLuc.Value.ToString(c.TinCuoiLuc.Value.Date == DateTime.Today ? "HH:mm" : "dd/MM") : "",
+                    url = Url.Action("Index", "Message", new { area = "Instructor", id = c.MaHoiThoai })
+                })
+            }, JsonRequestBehavior.AllowGet);
+        }
+        // GET: /Instructor/Message
+        public ActionResult Index(int? id, string courseId = "", string status = "all", bool list = false)
+        {
+            status = status == "unread" ? "unread" : "all";
             int teacherId = CurrentTeacherId;
             var service = new ChatService(db);
 
@@ -34,14 +50,13 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 DanhSachKhoaHoc = teacherCourses,
                 FilterCourseId = courseId,
                 FilterStatus = status,
-                SelectedHoiThoaiId = id
+                SelectedHoiThoaiId = null
             };
 
-            int selectedId = id ?? (conversations.FirstOrDefault()?.MaHoiThoai ?? 0);
+            int selectedId = list ? 0 : id ?? 0;
             if (selectedId > 0)
             {
-                var currentConv = conversations.FirstOrDefault(c => c.MaHoiThoai == selectedId)
-                               ?? service.LayChiTietHoiThoai(selectedId, teacherId);
+                var currentConv = conversations.FirstOrDefault(c => c.MaHoiThoai == selectedId);
 
                 if (currentConv != null && currentConv.MaGiaoVien == teacherId)
                 {
@@ -59,6 +74,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
                     };
 
                     service.DanhDauDaDoc(selectedId, teacherId);
+                    currentConv.SoTinChuaDoc = 0;
                 }
             }
 
@@ -70,6 +86,8 @@ namespace ECOLearning.Areas.Instructor.Controllers
         [HttpGet]
         public JsonResult StudentProfile(string courseId, int studentId)
         {
+            if (!db.KhoaHoc.Any(k => k.maKhoaHoc == courseId && k.maGiaoVien == CurrentTeacherId))
+                return Json(new { success = false }, JsonRequestBehavior.AllowGet);
             var service = new ChatService(db);
             var info = service.LayThongTinHocVien(courseId, studentId);
             return Json(new { success = info != null, data = info }, JsonRequestBehavior.AllowGet);

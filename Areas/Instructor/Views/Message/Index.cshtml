@@ -5,23 +5,24 @@
     int currentTeacherId = Session["UserId"] != null ? (int)Session["UserId"] : 0;
 }
 
-<link rel="stylesheet" href="~/assets/css/chat.css?v=1.0" />
+<link rel="stylesheet" href="~/assets/css/chat.css?v=@(System.IO.File.GetLastWriteTime(Server.MapPath("~/assets/css/chat.css")).Ticks)" />
 
-<div class="container-fluid py-3">
+<div class="teacher-inbox-page">
     @if (!string.IsNullOrEmpty(ViewBag.Error))
     {
         <div class="alert alert-warning">@ViewBag.Error</div>
     }
 
-    <div class="chat-app-container" style="height: calc(100vh - 130px);">
+    <div class="chat-app-container teacher-inbox @(Model.PhongChatHienTai != null ? "has-conversation" : "")">
         <!-- 1. SIDEBAR HỘI THOẠI & BỘ LỌC KHÓA HỌC -->
-        <div class="chat-sidebar" style="width: 330px;">
+        <div class="chat-sidebar">
             <div class="chat-sidebar-header">
-                <h2><i class="bi bi-chat-left-text-fill text-teal"></i> Hộp thư học viên</h2>
+                <h2>Tin nhắn <span class="inbox-conversation-count">@Model.DanhSachHoiThoai.Count</span></h2>
+                <label class="inbox-search"><i class="bi bi-search" aria-hidden="true"></i><input id="inbox-search" type="search" placeholder="Tìm học viên, khóa học..." aria-label="Tìm cuộc trò chuyện" /></label>
 
                 <!-- Lọc theo khóa học -->
                 <div class="mt-2">
-                    <form method="get" action="@Url.Action("Index", "Message", new { area = "Instructor" })">
+                    <form method="get" action="@Url.Action("Index", "Message", new { area = "Instructor", id = "" })">
                         <select name="courseId" class="form-select form-select-sm" onchange="this.form.submit()" style="font-size: 12.5px; border-radius: 8px;">
                             <option value="">-- Tất cả khóa học --</option>
                             @foreach (var c in Model.DanhSachKhoaHoc)
@@ -35,21 +36,20 @@
 
                 <!-- Tabs lọc trạng thái -->
                 <div class="chat-filter-tabs">
-                    <a href="@Url.Action("Index", "Message", new { area = "Instructor", courseId = Model.FilterCourseId, status = "all" })" 
+                    <a href="@Url.Action("Index", "Message", new { area = "Instructor", id = "", courseId = Model.FilterCourseId, status = "all" })"
                        class="chat-filter-btn @(Model.FilterStatus == "all" || string.IsNullOrEmpty(Model.FilterStatus) ? "active" : "")">Tất cả</a>
-                    <a href="@Url.Action("Index", "Message", new { area = "Instructor", courseId = Model.FilterCourseId, status = "unread" })" 
+                    <a href="@Url.Action("Index", "Message", new { area = "Instructor", id = "", courseId = Model.FilterCourseId, status = "unread" })"
                        class="chat-filter-btn @(Model.FilterStatus == "unread" ? "active" : "")">Chưa đọc</a>
-                    <a href="@Url.Action("Index", "Message", new { area = "Instructor", courseId = Model.FilterCourseId, status = "unanswered" })" 
-                       class="chat-filter-btn @(Model.FilterStatus == "unanswered" ? "active" : "")">Chưa trả lời</a>
                 </div>
             </div>
 
             <div class="chat-conversation-list">
                 @if (Model.DanhSachHoiThoai == null || !Model.DanhSachHoiThoai.Any())
                 {
-                    <div class="p-4 text-center text-muted">
-                        <i class="bi bi-inbox fs-2 mb-2 d-block"></i>
-                        Không có tin nhắn nào phù hợp bộ lọc.
+                    <div class="inbox-list-empty">
+                        <i class="bi bi-chat-square-check" aria-hidden="true"></i>
+                        <strong>@(Model.FilterStatus == "unread" ? "Đã đọc hết tin nhắn" : "Chưa có cuộc trò chuyện")</strong>
+                        <p>@(Model.FilterStatus == "unread" ? "Tin nhắn mới sẽ xuất hiện tại đây." : "Chọn Tất cả để xem các cuộc trò chuyện.")</p>
                     </div>
                 }
                 else
@@ -58,8 +58,8 @@
                     {
                         bool isActive = Model.SelectedHoiThoaiId == c.MaHoiThoai;
                         <a href="@Url.Action("Index", "Message", new { area = "Instructor", id = c.MaHoiThoai, courseId = Model.FilterCourseId, status = Model.FilterStatus })" 
-                           class="chat-conv-item @(isActive ? "active" : "")" 
-                           id="conv-item-@c.MaHoiThoai">
+                           class="chat-conv-item @(isActive ? "active" : "") @(c.SoTinChuaDoc > 0 ? "is-unread" : "")"
+                           id="conv-item-@c.MaHoiThoai" data-course="@c.TenKhoaHoc">
                             <div class="chat-avatar-wrap">
                                 <img src="@(string.IsNullOrEmpty(c.AnhDaiDienHocVien) ? "/assets/images/default-avatar.png" : c.AnhDaiDienHocVien)" 
                                      class="chat-avatar-img" alt="@c.TenHocVien" />
@@ -69,22 +69,15 @@
                                     <span class="chat-conv-name">@c.TenHocVien</span>
                                     <span class="chat-conv-time">@(c.TinCuoiLuc.HasValue ? c.TinCuoiLuc.Value.ToString("dd/MM") : "")</span>
                                 </div>
-                                <div class="chat-conv-course">@c.TenKhoaHoc</div>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <span class="chat-conv-last-msg">@(string.IsNullOrEmpty(c.TinCuoiTomTat) ? "Chưa có tin nhắn" : c.TinCuoiTomTat)</span>
-                                    @if (c.SoTinChuaDoc > 0)
-                                    {
-                                        <span class="chat-unread-badge">@c.SoTinChuaDoc</span>
-                                    }
-                                    else if (!c.DaTraLoi && c.TinCuoiLuc.HasValue)
-                                    {
-                                        <span class="badge bg-warning text-dark" style="font-size: 10px; border-radius: 6px;">Chờ đáp</span>
-                                    }
+                                    <span class="chat-conv-last-msg">@(string.IsNullOrEmpty(c.TinCuoiTomTat) ? "Chưa có tin nhắn" : (c.MaNguoiGuiCuoi == currentTeacherId ? "Bạn: " : "") + c.TinCuoiTomTat)</span>
                                 </div>
                             </div>
+                            <span class="inbox-unread-dot" hidden="@(c.SoTinChuaDoc == 0)" aria-label="Tin nhắn chưa đọc"></span>
                         </a>
                     }
                 }
+                <p id="inbox-search-empty" class="inbox-search-empty" hidden>Không tìm thấy cuộc trò chuyện phù hợp.</p>
             </div>
         </div>
 
@@ -95,18 +88,23 @@
                 var ht = Model.PhongChatHienTai.HoiThoai;
                 <div class="chat-main-header">
                     <div class="chat-header-user">
+                        <a class="inbox-mobile-back" href="@Url.Action("Index", "Message", new { area = "Instructor", list = true })" aria-label="Danh sách hội thoại"><i class="bi bi-arrow-left"></i></a>
                         <img src="@(string.IsNullOrEmpty(ht.AnhDaiDienHocVien) ? "/assets/images/default-avatar.png" : ht.AnhDaiDienHocVien)" 
                              class="chat-avatar-img" style="width: 42px; height: 42px;" alt="@ht.TenHocVien" />
                         <div>
                             <h3 class="chat-header-title">@ht.TenHocVien</h3>
-                            <div class="chat-header-sub"><i class="bi bi-mortarboard"></i> Học viên khóa: <b>@ht.TenKhoaHoc</b></div>
+                            <div class="chat-header-sub">@ht.TenKhoaHoc</div>
                         </div>
                     </div>
+                    @if (Model.PhongChatHienTai.ThongTinHocVien != null)
+                    {
+                        <button class="inbox-profile-toggle" type="button" aria-label="Thông tin học viên" aria-expanded="false" aria-controls="inbox-student-profile"><i class="bi bi-info-circle"></i></button>
+                    }
                 </div>
 
                 <div class="chat-alert-banner">
                     <i class="bi bi-shield-check"></i>
-                    <span>ECOLearning nghiêm cấm trao đổi số tài khoản ngân hàng hoặc thu phí ngoài hệ thống.</span>
+                    <span>Trao đổi về bài học. Thanh toán chỉ thực hiện trên hệ thống.</span>
                 </div>
 
                 <!-- Vùng hiển thị tin nhắn -->
@@ -114,18 +112,16 @@
                     @foreach (var m in Model.PhongChatHienTai.DanhSachTinNhan)
                     {
                         bool isMine = m.LaCuaToi;
-                        <div class="chat-msg-row @(isMine ? "msg-mine" : "msg-other")" id="msg-row-@m.MaTinNhan">
+                        <div class="chat-msg-row @(isMine ? "msg-mine" : "msg-other")" id="msg-row-@m.MaTinNhan" data-sender="@m.MaNguoiGui" tabindex="0">
                             <img src="@(string.IsNullOrEmpty(m.AnhDaiDien) ? "/assets/images/default-avatar.png" : m.AnhDaiDien)" 
                                  class="chat-msg-avatar" alt="@m.TenNguoiGui" />
                             <div>
-                                <div class="chat-msg-bubble @(m.DaThuHoi ? "chat-msg-recalled" : "")">
-                                    @m.NoiDung
-                                </div>
+                                <div class="chat-msg-bubble @(m.DaThuHoi ? "chat-msg-recalled" : "")" title="@m.NgayGui.ToString("HH:mm - dd/MM")">@if (m.ImageUrl != null) { <button type="button" class="chat-image-open" data-image-url="@m.ImageUrl"><img class="chat-image" src="@m.ImageUrl" alt="Ảnh trong cuộc trò chuyện" /></button> } else { @m.NoiDung }</div>
                                 <div class="chat-msg-time">
-                                    @m.NgayGui.ToString("HH:mm - dd/MM")
+                                    @m.NgayGui.ToString("HH:mm")
                                     @if (isMine && m.CoTheThuHoi)
                                     {
-                                        <button type="button" class="chat-recall-btn" onclick="EcoChat.recallMessage(@m.MaTinNhan)" title="Thu hồi tin trong 5 phút">
+                                        <button type="button" class="chat-recall-btn" data-recall-seconds="@m.RecallSeconds" onclick="EcoChat.recallMessage(@m.MaTinNhan)" title="Thu hồi tin trong 5 phút" aria-label="Thu hồi tin nhắn">
                                             <i class="bi bi-arrow-counterclockwise"></i>
                                         </button>
                                     }
@@ -149,7 +145,7 @@
                     }
                     else
                     {
-                        <textarea class="chat-input" id="chat-message-input" rows="1" placeholder="Nhập câu trả lời giải đáp cho học viên... (tối đa 2.000 ký tự)"></textarea>
+                        <textarea class="chat-input" id="chat-message-input" rows="1" maxlength="2000" aria-label="Nội dung trả lời" placeholder="Nhập tin nhắn..."></textarea>
                         <button type="button" class="chat-send-btn" id="chat-send-btn" title="Gửi phản hồi">
                             <i class="bi bi-send-fill"></i>
                         </button>
@@ -158,10 +154,10 @@
             }
             else
             {
-                <div class="h-100 d-flex flex-column align-items-center justify-content-center text-muted">
-                    <i class="bi bi-chat-square-dots fs-1 mb-3 text-secondary"></i>
-                    <h5>Chọn một học viên để trao đổi</h5>
-                    <p class="small">Bấm vào danh sách bên trái để phản hồi câu hỏi và xem tiến độ học tập của học viên.</p>
+                <div class="inbox-empty-conversation">
+                    <span class="inbox-empty-icon"><i class="bi bi-chat-square-text" aria-hidden="true"></i></span>
+                    <h3>Chưa chọn cuộc trò chuyện</h3>
+                    <p>Chọn học viên ở danh sách bên trái<br>để xem tin nhắn và trả lời.</p>
                 </div>
             }
         </div>
@@ -170,7 +166,8 @@
         @if (Model.PhongChatHienTai != null && Model.PhongChatHienTai.ThongTinHocVien != null)
         {
             var st = Model.PhongChatHienTai.ThongTinHocVien;
-            <div class="chat-student-sidebar">
+            <div class="chat-student-sidebar" id="inbox-student-profile" hidden>
+                <div class="inbox-profile-heading"><strong>Hồ sơ học viên</strong><button type="button" class="inbox-profile-toggle" aria-label="Đóng hồ sơ">×</button></div>
                 <div class="chat-student-header">
                     <img src="@st.AnhDaiDien" class="chat-student-avatar" alt="@st.HoTen" />
                     <h4 class="chat-student-name">@st.HoTen</h4>
@@ -231,11 +228,56 @@
 </div>
 
 @section Scripts {
+    @Html.AntiForgeryToken()
     <script src="~/Scripts/jquery.signalR-2.4.3.min.js"></script>
     <script src="~/signalr/hubs"></script>
-    <script src="~/assets/js/chat.js?v=1.0"></script>
+    <script src="~/assets/js/chat.js?v=@(System.IO.File.GetLastWriteTime(Server.MapPath("~/assets/js/chat.js")).Ticks)"></script>
     <script>
         $(document).ready(function () {
+            var inbox = document.querySelector('.teacher-inbox');
+            function fitTeacherChat() {
+                if (window.innerWidth > 992) { inbox.style.removeProperty('--teacher-chat-height'); return; }
+                var viewport = window.visualViewport;
+                var height = viewport ? viewport.height : window.innerHeight;
+                var top = Math.max(0, inbox.getBoundingClientRect().top - (viewport ? viewport.offsetTop : 0));
+                inbox.style.setProperty('--teacher-chat-height', Math.max(180, height - top - 12) + 'px');
+            }
+            window.addEventListener('resize', fitTeacherChat);
+            if (window.visualViewport) window.visualViewport.addEventListener('resize', fitTeacherChat);
+            fitTeacherChat();
+            function normalizeSearch(value) { return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+            $('#inbox-search').on('input', function () {
+                var query = normalizeSearch(this.value.trim()), visible = 0;
+                $('.teacher-inbox .chat-conv-item').each(function () {
+                    this.hidden = normalizeSearch($(this).find('.chat-conv-name').text() + ' ' + (this.dataset.course || '')).indexOf(query) < 0;
+                    if (!this.hidden) visible++;
+                });
+                $('#inbox-search-empty').prop('hidden', !query || visible > 0);
+            });
+            $('.inbox-profile-toggle').on('click', function () {
+                var profile = document.getElementById('inbox-student-profile');
+                if (!profile) return;
+                profile.hidden = !profile.hidden;
+                $('.inbox-profile-toggle[aria-controls]').attr('aria-expanded', String(!profile.hidden));
+                if (!profile.hidden) { profile.scrollTop = 0; profile.querySelector('button').focus(); }
+                else document.querySelector('.inbox-profile-toggle[aria-controls]').focus();
+            });
+            document.addEventListener('keydown', function (event) {
+                var profile = document.getElementById('inbox-student-profile');
+                if (event.key === 'Escape' && profile && !profile.hidden) profile.querySelector('button').click();
+            });
+            $('.teacher-inbox .chat-avatar-img,.teacher-inbox .chat-msg-avatar,.teacher-inbox .chat-student-avatar').each(function () {
+                var image = this;
+                function fallback() {
+                    var avatar = document.createElement('span');
+                    avatar.className = image.className + ' chat-avatar-fallback';
+                    avatar.textContent = (image.alt || '?').trim().charAt(0).toUpperCase();
+                    avatar.setAttribute('aria-hidden', 'true');
+                    image.replaceWith(avatar);
+                }
+                image.addEventListener('error', fallback, { once: true });
+                if (image.complete && !image.naturalWidth) fallback();
+            });
             var convId = @(Model.SelectedHoiThoaiId ?? 0);
             var teacherId = @currentTeacherId;
 

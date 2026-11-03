@@ -31,7 +31,7 @@ string currentFilter = ViewBag.StatusFilter as string ?? "All";
 </div>
 
 <!-- KPI Cards -->
-<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px;">
+<div class="admin-approval-stats" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px;">
     <div style="background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; padding: 20px; display: flex; align-items: center; gap: 16px;">
         <div>
             <div style="font-size: 13px; color: #64748B; font-weight: 600;">Hồ sơ chờ duyệt</div>
@@ -55,7 +55,7 @@ string currentFilter = ViewBag.StatusFilter as string ?? "All";
 </div>
 
 <!-- Filter Tabs -->
-<div style="display: flex; gap: 10px; margin-bottom: 20px;">
+<div class="admin-approval-filter" style="display: flex; gap: 10px; margin-bottom: 20px;">
     <a href="@Url.Action("Index", "TeacherApproval", new { area = "Admin", statusFilter = "All" })"
     class="btn btn-sm" style="@(currentFilter == "All" ? "background: #0F172A; color: #FFFFFF;" : "background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1;") font-weight: 700; border-radius: 10px; text-decoration: none;">
     Tất cả (@(ViewBag.PendingCount + ViewBag.ApprovedCount + ViewBag.RejectedCount))
@@ -197,7 +197,7 @@ else
         <textarea id="reject-reason" rows="4" placeholder="VD: Bằng cấp chưa đáp ứng đủ tiêu chuẩn hoặc hình ảnh tệp quá mờ..."
         style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #CBD5E1; font-size: 14px; box-sizing: border-box; resize: vertical; margin-bottom: 20px;"></textarea>
 
-        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <div class="admin-dialog-actions" style="display: flex; justify-content: flex-end; gap: 12px;">
             <button type="button" class="btn btn-outline" onclick="closeModal('reject-modal');" style="border-radius: 10px; font-weight: 600;">Hủy bỏ</button>
             <button type="button" class="btn" onclick="submitReject();" style="background: #EF4444; color: #FFFFFF; border-radius: 10px; font-weight: 700; border: none;">Xác nhận từ chối</button>
         </div>

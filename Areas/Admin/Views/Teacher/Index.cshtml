@@ -17,15 +17,17 @@
 
 <link rel="stylesheet" href="~/assets/css/admin-users.css?v=1" />
 
-<div class="au-head">
+<div class="au-head admin-teacher-heading">
     <div>
         <h1 class="h2" style="margin-top: 6px;">Quản Lý Giáo Viên</h1>
         <p class="body-2">Theo dõi giáo viên đã được duyệt: khóa học, học viên, đánh giá, doanh thu, chi trả và vi phạm</p>
     </div>
-    <a href="@Url.Action("Index", "TeacherApproval")" class="btn btn-outline"><i class="bi bi-person-check me-1"></i> Hồ sơ đăng ký mới</a>
 </div>
 
-<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><a class="btn btn-outline" href="@Url.Action("Index", "TeacherSpecialty", new { area = "Admin" })">Duyệt bổ sung chuyên môn</a></div>
+<div class="admin-teacher-actions">
+    <a href="@Url.Action("Index", "TeacherApproval")" class="btn btn-outline"><i class="bi bi-person-check" aria-hidden="true"></i> Hồ sơ đăng ký mới</a>
+    <a class="btn btn-outline" href="@Url.Action("Index", "TeacherSpecialty", new { area = "Admin" })"><i class="bi bi-patch-plus" aria-hidden="true"></i> Duyệt bổ sung chuyên môn</a>
+</div>
 @Html.Partial("_AdminFlash")
 
 @if (chuaKhoiTao)
@@ -34,23 +36,25 @@
 }
 else
 {
-    <div class="au-stats au-stats-4">
+    <div class="au-stats au-stats-4 admin-teacher-stats">
         <a href="@Url.Action("Index")" class="card au-stat @(status == null ? "is-active" : "")"><span><i class="bi bi-person-video3"></i> Giáo viên</span><strong>@tk.TongSo</strong></a>
         <a href="@Url.Action("Index", new { status = "violation" })" class="card au-stat @(status == "violation" ? "is-active" : "")"><span><i class="bi bi-flag-fill" style="color: #DC2626;"></i> Có vi phạm chờ xử lý</span><strong style="@(tk.CoViPham > 0 ? "color: #DC2626;" : "")">@tk.CoViPham</strong></a>
         <a href="@Url.Action("Index", new { status = "locked" })" class="card au-stat @(status == "locked" ? "is-active" : "")"><span><i class="bi bi-lock-fill"></i> Đang bị khóa</span><strong>@tk.DangKhoa</strong></a>
         <a href="@Url.Action("Index", "PayoutRequest")" class="card au-stat"><span><i class="bi bi-cash-coin"></i> Chờ chi trả</span><strong>@tk.ChoChiTra.ToString("#,##0 đ")</strong><small>Xem ở Chi trả giáo viên</small></a>
     </div>
 
-    <form method="get" action="@Url.Action("Index")" class="au-filter">
-        <input type="search" name="q" value="@q" class="form-control au-search" placeholder="Tìm theo họ tên hoặc email giáo viên" maxlength="100" />
-        <button type="submit" class="btn btn-secondary"><i class="bi bi-search"></i> Tìm</button>
-        <select name="status" class="form-control" onchange="this.form.submit()">
+    <form method="get" action="@Url.Action("Index")" class="au-filter admin-teacher-filter">
+        <div class="admin-teacher-search">
+        <input type="search" name="q" value="@q" class="form-control au-search" aria-label="Tìm giáo viên theo họ tên hoặc email" placeholder="Tìm tên hoặc email giáo viên..." maxlength="100" />
+        <button type="submit" class="btn btn-secondary"><i class="bi bi-search" aria-hidden="true"></i> Tìm</button>
+        </div>
+        <select name="status" class="form-control" aria-label="Trạng thái giáo viên" onchange="this.form.submit()">
             <option value="">Mọi trạng thái</option>
             <option value="active" @(status == "active" ? "selected" : "")>Đang hoạt động</option>
             <option value="locked" @(status == "locked" ? "selected" : "")>Đang bị khóa</option>
             <option value="violation" @(status == "violation" ? "selected" : "")>Có vi phạm chờ xử lý</option>
         </select>
-        <select name="sort" class="form-control" onchange="this.form.submit()" style="width: 210px;">
+        <select name="sort" class="form-control" aria-label="Sắp xếp giáo viên" onchange="this.form.submit()" style="width: 210px;">
             <option value="priority" @(sort == "priority" ? "selected" : "")>Cần chú ý trước</option>
             <option value="revenue" @(sort == "revenue" ? "selected" : "")>Doanh thu cao nhất</option>
             <option value="rating" @(sort == "rating" ? "selected" : "")>Đánh giá cao nhất</option>

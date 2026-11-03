@@ -23,6 +23,27 @@
 .dashboard-stat-students .kpi-value,.dashboard-stat-students .dashboard-stat-icon { color:#3277ba; }
 .dashboard-stat-rating { background:#fff7e9;border-color:#f3e1bf; }
 .dashboard-stat-rating .kpi-value,.dashboard-stat-rating .dashboard-stat-icon { color:#b7791f; }
+.teacher-dashboard-stats > div { min-width:0; }
+.teacher-dashboard-stats .kpi-value { white-space:nowrap; }
+.teacher-dashboard-section-head { flex-wrap:wrap; gap:14px; }
+.teacher-dashboard-section-head > div { min-width:0; }
+@@media(max-width:1200px) {
+    .teacher-dashboard-stats > .col-3 { grid-column:span 6; }
+}
+@@media(max-width:600px) {
+    .teacher-dashboard-stats { gap:12px; }
+    .teacher-dashboard-stats .dashboard-stat { padding:16px; }
+    .teacher-dashboard-stats .dashboard-stat-icon { top:14px; left:16px; right:auto; width:30px; height:30px; }
+    .teacher-dashboard-stats .kpi-info h4 { padding:38px 0 0; font-size:12px; line-height:1.5; min-height:74px; overflow-wrap:normal; word-break:normal; }
+    .teacher-dashboard-stats .kpi-value { font-size:24px; }
+    .teacher-dashboard-stats .caption { display:block; font-size:11px; line-height:1.6; }
+    .teacher-dashboard-section-head { align-items:flex-start !important; }
+    .teacher-dashboard-section-head h3 { font-size:17px; line-height:1.5; }
+    .teacher-dashboard-section-head .custom-select-wrapper { flex-shrink:0; }
+}
+@@media(max-width:360px) {
+    .teacher-dashboard-stats > .col-3 { grid-column:span 12; }
+}
 </style>
 
 @if (ViewBag.NeedsSpecialty == true)
@@ -144,7 +165,7 @@
 <!-- ============================================================ -->
 <!-- 4 KPI CARDS                                                   -->
 <!-- ============================================================ -->
-<div class="grid-12" style="margin-bottom: 32px; align-items: stretch;">
+<div class="grid-12 teacher-dashboard-stats" style="margin-bottom: 32px; align-items: stretch;">
 
     <!-- KPI 1: Tổng doanh thu -->
     <div class="col-3" style="display: flex; flex-direction: column;">
@@ -237,7 +258,7 @@
     <!-- Biểu đồ doanh thu 12 tháng -->
     <div class="col-8" style="display: flex; flex-direction: column;">
         <div class="card" style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div class="teacher-dashboard-section-head" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <div>
                     <h3 class="h3">Biến động doanh thu giảng dạy (VNĐ)</h3>
                     <span class="caption">Doanh thu đơn đã thanh toán · Đơn vị: VNĐ</span>
@@ -283,7 +304,7 @@
 <!-- BẢNG KHÓA HỌC ĐANG PHỤ TRÁCH                               -->
 <!-- ============================================================ -->
 <div class="card" style="margin-bottom: 32px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div class="teacher-dashboard-section-head" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <div>
             <h3 class="h3" id="dashboard-courses">Khóa học đang phụ trách</h3>
             <span class="caption">Quản lý nội dung, kiểm duyệt và số lượng học viên</span>

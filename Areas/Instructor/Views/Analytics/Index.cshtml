@@ -8,6 +8,10 @@
 .report-metric { padding:22px;border:1px solid var(--border-color);border-radius:14px;background:#eef0ff; }
 .report-metric:nth-child(2) { background:#edf9f3; } .report-metric:nth-child(3) { background:#eef6ff; } .report-metric:nth-child(4) { background:#fff7e9; }
 .report-metric strong { display:block;font-size:26px;margin-top:8px;color:var(--text-heading); }
+.report-metric { min-width:0; }
+.report-period-toolbar { display:flex;align-items:center;gap:12px;flex-wrap:wrap; }
+.report-period-options { display:flex;gap:8px; }
+.report-period-export { margin-left:auto; }
 .course-performance { padding:0;overflow:hidden; }
 .course-performance-header { padding:24px;display:flex;align-items:center;justify-content:space-between;gap:16px; }
 .course-performance-header .caption { margin:6px 0 0; }
@@ -35,13 +39,23 @@
 .course-performance .tp-pager { margin:0;border:0;border-top:1px solid var(--border-color);border-radius:0;padding:16px 24px; }
 @@media(max-width:600px) { .course-performance-header { padding:20px;align-items:flex-start;flex-direction:column;gap:12px; } }
 @@media(max-width:800px) { .report-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@@media(max-width:480px) { .report-summary { grid-template-columns:1fr; } }
+@@media(max-width:600px) {
+    .report-period-toolbar { display:grid;grid-template-columns:minmax(0,1fr);gap:12px; }
+    .report-period-options { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px; }
+    .report-period-options .btn { padding:9px 5px;font-size:12px;white-space:nowrap;text-align:center;justify-content:center; }
+    .report-period-export { margin:0;width:100%;justify-content:center;padding:10px; }
+    .report-summary { gap:12px;margin-bottom:18px; }
+    .report-metric { padding:16px; }
+    .report-metric .caption { display:block;font-size:11px;line-height:1.5;min-height:33px; }
+    .report-metric strong { margin-top:6px;font-size:23px;line-height:1.3;overflow-wrap:anywhere; }
+}
+@@media(max-width:340px) { .report-summary { grid-template-columns:1fr; } }
 </style>
 <!-- PERIOD FILTER TABS -->
 <div class="card" style="margin-bottom: 24px; padding: 14px 20px;">
-    <div style="display: flex; align-items: center; gap: 12px;flex-wrap:wrap;">
+    <div class="report-period-toolbar">
         <span class="caption" style="font-weight: 700; color: var(--text-heading);">Khoảng thời gian:</span>
-        <div style="display: flex; gap: 8px;">
+        <div class="report-period-options">
             <a href="@Url.Action("Index", "Analytics", new { area = "Instructor", period = "week" })"
                class="btn btn-sm @(Model.Period == "week" ? "btn-primary" : "btn-secondary")">7 ngày qua</a>
             <a href="@Url.Action("Index", "Analytics", new { area = "Instructor", period = "month" })"
@@ -49,7 +63,7 @@
             <a href="@Url.Action("Index", "Analytics", new { area = "Instructor", period = "year" })"
                class="btn btn-sm @(Model.Period == "year" ? "btn-primary" : "btn-secondary")">Năm nay</a>
         </div>
-        <button type="button" class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="document.getElementById('report-export-preview').showModal()">Xem &amp; xuất báo cáo</button>
+        <button type="button" class="btn btn-outline btn-sm report-period-export" onclick="document.getElementById('report-export-preview').showModal()"><i class="bi bi-download" aria-hidden="true"></i> Xem &amp; xuất báo cáo</button>
     </div>
 </div>
 <div class="report-summary">

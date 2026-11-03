@@ -25,10 +25,19 @@
 }
 
 <!-- FILTER TABS + SEARCH -->
+<style>
+@@media(max-width:600px) {
+    .course-list-filters { display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px !important;width:100%; }
+    .course-list-filters .filter-btn { width:100%;min-width:0;justify-content:center;padding:10px 8px;font-size:12px; }
+    .course-list-search { width:100%;margin-left:0 !important; }
+    .course-list-search > div { flex:1;min-width:0;width:auto !important; }
+    .course-list-search > a { padding:8px 10px;font-size:12px; }
+}
+</style>
 <div class="card" style="margin-bottom: 24px; padding: 16px 20px;">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
         <!-- Tab filter buttons -->
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <div class="course-list-filters" style="display: flex; gap: 8px; flex-wrap: wrap;">
             <button class="btn btn-primary btn-sm filter-btn" data-filter="all">Tất cả (@totalAll)</button>
             <button class="btn btn-secondary btn-sm filter-btn" data-filter="draft">Bản nháp (@totalDraft)</button>
             <button class="btn btn-secondary btn-sm filter-btn" data-filter="pending">Chờ duyệt (@totalPending)</button>
@@ -47,7 +56,7 @@
             }
         </div>
         <!-- Search -->
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto;">
+        <div class="course-list-search" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto;">
         <div style="width: 200px;">
             <input type="text" id="course-search" class="form-control"
                    style="height: 38px; font-size: 13px;"

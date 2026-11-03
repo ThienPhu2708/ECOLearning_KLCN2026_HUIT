@@ -18,6 +18,7 @@
         .dashboard-topbar { height: var(--header-height); padding: 0 32px; margin-bottom: 0; }
         @@media(max-width:992px) {
             .instructor-dashboard .dashboard-main { width:100%;max-width:100%; }
+            .instructor-dashboard .teacher-page-content { padding:16px !important; }
         }
     </style>
     </head>
@@ -85,6 +86,10 @@
                     <span>Quản lý học viên</span>
                     <span id="teacher-student-review-badge" class="teacher-review-badge" hidden="@(ViewBag.StudentReviewCount == null || (int)ViewBag.StudentReviewCount == 0)" title="Lượt thi mới cần xem xét" aria-label="@ViewBag.StudentReviewCount lượt thi mới cần xem xét">@(ViewBag.StudentReviewCount != null && (int)ViewBag.StudentReviewCount > 99 ? "99+" : Convert.ToString(ViewBag.StudentReviewCount))</span>
                 </a>
+                <a href="@Url.Action("Index", "Message", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Message" ? "active" : "")">
+                    <i class="bi bi-chat-dots" aria-hidden="true"></i><span>Tin nhắn học viên</span>
+                    <span class="teacher-review-badge js-chat-unread-badge" style="display:none" aria-label="Tin nhắn chưa đọc"></span>
+                </a>
                 <a href="@Url.Action("Index", "Analytics", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Analytics" ? "active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -147,14 +152,14 @@
                 }
             </header>
 
-            <div style="padding: 32px;">
+            <div class="teacher-page-content" style="padding: @(currentCtrl == "Message" ? "20px" : "32px");">
                 @RenderBody()
             </div>
         </main>
     </div>
 
     <!-- MODAL XÁC NHẬN ĐĂNG XUẤT GIÁO VIÊN -->
-    <div class="modal-overlay" id="instructor-logout-modal">
+    <div class="modal-overlay" id="instructor-logout-modal" role="dialog" aria-modal="true" aria-labelledby="instructor-logout-title">
         <div class="modal-container" style="max-width: 420px; text-align: center; padding: 32px 24px; border-radius: 20px; background: #FFFFFF;">
             <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); color: #EF4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -163,7 +168,7 @@
                     <line x1="21" y1="12" x2="9" y2="12"></line>
                 </svg>
             </div>
-            <h3 class="h3" style="margin-bottom: 8px;">Xác nhận đăng xuất</h3>
+            <h3 class="h3" id="instructor-logout-title" style="margin-bottom: 8px;">Xác nhận đăng xuất</h3>
             <p class="body-2" style="color: var(--text-secondary); margin-bottom: 24px; font-size: 14px; line-height: 1.5;">
                 Bạn có chắc chắn muốn kết thúc phiên làm việc Giảng viên và quay về Trang chủ không?
             </p>
@@ -182,6 +187,8 @@
     <script src="~/assets/js/table-pagination.js?v=2"></script>
     <script>
         function confirmInstructorLogout() {
+        // Close the mobile navigation before opening the confirmation above the page.
+        toggleTeacherMenu(false);
         const modal = document.getElementById('instructor-logout-modal');
         if (modal) {
         if (window.openModal) {
@@ -192,6 +199,7 @@
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
     }
+    modal.querySelector('button').focus();
 }
 else
 {
@@ -319,12 +327,22 @@ function instructorConfirmAction(button) {
 #teacher-menu-toggle { display:none; }
 #teacher-menu-backdrop { position:fixed;inset:0;border:0;background:rgba(15,23,42,.4);z-index:100; }
 #teacher-menu-backdrop[hidden] { display:none; }
+#instructor-logout-modal { z-index:1200;padding:16px;box-sizing:border-box; }
+#instructor-logout-modal .modal-container { width:100%;max-height:calc(100dvh - 32px);overflow-y:auto;box-sizing:border-box; }
 @@media(max-width:992px) {
     #teacher-menu-toggle { display:inline-flex;flex-shrink:0;width:40px;height:40px;padding:0; }
     .dashboard-topbar { gap:14px;padding:0 20px;justify-content:flex-start; }
     .breadcrumb-nav { min-width:0;flex-wrap:wrap; }
     #teacher-sidebar { z-index:101;max-width:calc(100vw - 56px); }
     #teacher-sidebar .sidebar-menu { overflow-y:auto;min-height:0; }
+}
+@@media(max-width:600px) {
+    .instructor-dashboard .breadcrumb-nav { flex:1;flex-wrap:nowrap;overflow:hidden;gap:8px; }
+    .instructor-dashboard .breadcrumb-nav > a:not(:first-child),
+    .instructor-dashboard .breadcrumb-nav > .separator { display:none; }
+    .instructor-dashboard .breadcrumb-nav > .separator:last-of-type { display:inline;flex-shrink:0; }
+    .instructor-dashboard .breadcrumb-nav > a:first-child { flex-shrink:0; }
+    .instructor-dashboard .breadcrumb-nav > .current { min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 }
 </style>
 <script>
@@ -358,6 +376,7 @@ window.addEventListener('resize', function() { if (window.innerWidth > 992 && do
         });
     </script>
 @RenderSection("Scripts", required: false)
+@Html.Partial("~/Areas/Instructor/Views/Shared/_ChatLauncher.cshtml")
 <style>
 .teacher-menu-label{min-width:0;flex:1;line-height:1.55}.teacher-review-badge{display:inline-flex;align-items:center;justify-content:center;gap:4px;margin-left:auto;min-width:22px;padding:3px 5px;border-radius:7px;background:#fff0f0;color:#c46d6d;font-size:10px;font-weight:700;line-height:1.4;flex-shrink:0}.teacher-review-badge::before{content:"";width:5px;height:5px;border-radius:50%;background:#ce7474}.teacher-review-badge[hidden]{display:none!important}
 </style>

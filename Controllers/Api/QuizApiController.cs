@@ -38,19 +38,20 @@ namespace ECOLearning.Controllers.Api
             if (!quiz.Installed()) return ChuaCoQuiz();
             if (!new LearningService(Db).DaGhiDanh(CurrentUserId, id)) return Forbidden("Bạn chưa đăng ký khóa học này.", "NOT_ENROLLED");
             var cauHinh = quiz.Config(id);
-            if (cauHinh == null || !cauHinh.Published) return NotFoundJson("Giáo viên chưa mở quiz cuối khóa.", "QUIZ_NOT_FOUND");
+            if (cauHinh == null) return NotFoundJson("Giáo viên chưa mở quiz cuối khóa.", "QUIZ_NOT_FOUND");
 
             quiz.CloseExpired(id, CurrentUserId);
             var st = quiz.Student(id, CurrentUserId);
             var luot = quiz.Attempts(id, CurrentUserId);
             var dangLam = luot.FirstOrDefault(a => !a.SubmittedAt.HasValue);
-            var ganNhat = luot.FirstOrDefault(a => a.SubmittedAt.HasValue && !a.IsVoided);
+            var ganNhat = luot.FirstOrDefault(a => a.SubmittedAt.HasValue);
             int duocPhep = cauHinh.MaxAttempts + (st?.ExtraAttempts ?? 0);
 
             string lyDo = null;
             if (dangLam == null)
             {
-                if (st == null || !st.LessonsDone) lyDo = "Học đủ 100% bài học trước khi làm quiz.";
+                if (!cauHinh.Published) lyDo = "Giáo viên chưa mở quiz cuối khóa.";
+                else if (st == null || !st.LessonsDone) lyDo = "Học đủ 100% bài học trước khi làm quiz.";
                 else if (st.PendingReview) lyDo = "Kết quả đang chờ giáo viên xem xét do rời màn hình từ 3 lần.";
                 else if (st.RetakeRequired) lyDo = "Giáo viên yêu cầu làm lại quiz. Thực hiện lượt làm lại được chỉ định trên website.";
                 else if (st.Passed) lyDo = "Bạn đã đạt quiz của khóa học này.";
@@ -75,7 +76,8 @@ namespace ECOLearning.Controllers.Api
                 retakeRequired = st != null && st.RetakeRequired,
                 pendingReview = st != null && st.PendingReview,
                 lastResult = ganNhat == null ? null : KetQua(ganNhat),
-                certificate = new { issued = st != null && st.IssuedAt.HasValue, code = st?.Code }
+                certificate = new { issued = st != null && st.IssuedAt.HasValue, code = st?.Code },
+                supportsQuizReview = true
             });
         }
 
@@ -99,20 +101,12 @@ namespace ECOLearning.Controllers.Api
             {
                 return Forbidden(ex.Message);
             }
-            var cauHoi = JsonConvert.DeserializeObject<List<QuizSnapshotQuestion>>(a.SnapshotJson);
-            var traLoi = JsonConvert.DeserializeObject<int[]>(a.AnswersJson ?? "[]") ?? new int[0];
-            return Ok(new
-            {
-                writerToken = writerToken,
-                attemptId = a.Id,
-                title = a.Title,
-                startedAt = ApiFormat.DateFromUtc(a.StartedAt),
-                expiresAt = ApiFormat.DateFromUtc(a.ExpiresAt),
-                remainingSeconds = Math.Max(0, (int)(a.ExpiresAt - DateTime.UtcNow).TotalSeconds),
-                passPercent = a.PassPercent,
-                questions = cauHoi.Select((q, i) => new { index = i, text = q.Text, options = q.Options, skillId=q.SkillId,skillName=q.SkillName,skillPassPercent=q.SkillPassPercent,skillRequired=q.SkillRequired }).ToList(),
-                answers = Enumerable.Range(0, cauHoi.Count).Select(i => i < traLoi.Length ? traLoi[i] : -1).ToList()
-            });
+            return Ok(AttemptPayload(a,writerToken));
+        }
+        private object AttemptPayload(QuizAttempt a,string writerToken){
+            var questions=JsonConvert.DeserializeObject<List<QuizSnapshotQuestion>>(a.SnapshotJson);
+            var answers=JsonConvert.DeserializeObject<int[]>(a.AnswersJson??"[]")??new int[0];
+            return new{supportsQuizReview=true,writerToken,attemptId=a.Id,title=a.IsVerification?"Quiz làm lại":a.Title,isVerification=a.IsVerification,startedAt=ApiFormat.DateFromUtc(a.StartedAt),expiresAt=ApiFormat.DateFromUtc(a.ExpiresAt),remainingSeconds=Math.Max(0,(int)(a.ExpiresAt-DateTime.UtcNow).TotalSeconds),passPercent=a.PassPercent,departureCount=Db.Database.SqlQuery<int>("SELECT COUNT(*) FROM dbo.QuizVisibility WHERE AttemptId=@p0",a.Id).Single(),openDepartureKey=Db.Database.SqlQuery<string>("SELECT TOP 1 EventKey FROM dbo.QuizVisibility WHERE AttemptId=@p0 AND ReturnedAt IS NULL ORDER BY Id DESC",a.Id).FirstOrDefault(),questions=questions.Select((q,i)=>new{index=i,questionId=q.Id,text=q.Text,options=q.Options,skillId=q.SkillId,skillName=q.SkillName,skillPassPercent=q.SkillPassPercent,skillRequired=q.SkillRequired}),answers=Enumerable.Range(0,questions.Count).Select(i=>i<answers.Length?answers[i]:-1)};
         }
 
         // H3. PUT /api/v1/quiz-attempts/{attemptId}/draft
@@ -154,13 +148,14 @@ namespace ECOLearning.Controllers.Api
         private static object KetQua(QuizAttempt a, bool kemDapAn = false)
         {
             object dapAn = null;
-            if (kemDapAn && !a.ReviewPending)
+            if (kemDapAn && !a.ReviewPending && !a.IsVoided)
             {
                 var cauHoi = JsonConvert.DeserializeObject<List<QuizSnapshotQuestion>>(a.SnapshotJson);
                 var traLoi = JsonConvert.DeserializeObject<int[]>(a.AnswersJson ?? "[]") ?? new int[0];
                 dapAn = cauHoi.Select((q, i) => new
                 {
                     index = i,
+                    questionId = q.Id,
                     text = q.Text,
                     options = q.Options,
                     yourAnswer = i < traLoi.Length ? traLoi[i] : -1,
@@ -171,6 +166,7 @@ namespace ECOLearning.Controllers.Api
             return new
             {
                 attemptId = a.Id,
+                supportsQuizReview = true,
                 score = a.ReviewPending ? (decimal?)null : a.Score,
                 skillResults = a.ReviewPending ? new List<QuizSkillResult>() : JsonConvert.DeserializeObject<List<QuizSkillResult>>(a.SkillResultsJson??"[]"),
                 correct = a.ReviewPending ? (int?)null : a.Correct,
@@ -184,6 +180,56 @@ namespace ECOLearning.Controllers.Api
                 submittedAt = ApiFormat.DateFromUtc(a.SubmittedAt),
                 review = dapAn
             };
+        }
+
+        public class QuizSupportRequest {public int AttemptId{get;set;}public int QuestionId{get;set;}public string Reason{get;set;}public string Content{get;set;}public string EventKey{get;set;}public bool Returned{get;set;}public string WriterToken{get;set;}}
+        [HttpGet,Route("courses/{id}/quiz/history")]
+        public ActionResult History(string id){
+            try{Quiz.RequireEnrollment(id,CurrentUserId);Quiz.CloseExpired(id,CurrentUserId);return Ok(Quiz.Attempts(id,CurrentUserId).Select(a=>new{attemptId=a.Id,startedAt=ApiFormat.DateFromUtc(a.StartedAt),submittedAt=ApiFormat.DateFromUtc(a.SubmittedAt),isVerification=a.IsVerification,isVoided=a.IsVoided,pendingReview=a.ReviewPending,result=a.SubmittedAt.HasValue?KetQua(a):null}));}catch(InvalidOperationException ex){return Forbidden(ex.Message);}
+        }
+        [HttpGet,Route("quiz-attempts/{attemptId:int}/result")]
+        public ActionResult AttemptResult(int attemptId){
+            var a=Quiz.Attempt(attemptId);if(a==null||a.StudentId!=CurrentUserId)return NotFoundJson("Không tìm thấy lượt thi.");
+            try{Quiz.RequireEnrollment(a.CourseId,CurrentUserId);Quiz.CloseExpired(a.CourseId,CurrentUserId);a=Quiz.Attempt(attemptId);if(!a.SubmittedAt.HasValue)return Fail(409,"QUIZ_NOT_SUBMITTED","Lượt thi chưa kết thúc.");return Ok(KetQua(a,a.Passed==true));}catch(InvalidOperationException ex){return Forbidden(ex.Message);}
+        }
+        [HttpPost,Route("quiz-attempts/{attemptId:int}/resume")]
+        public ActionResult Resume(int attemptId){
+            var request=Body<AnswersRequest>();Guid key;if(!Guid.TryParse(request.ClientKey,out key))return Fail(400,"QUIZ_CLIENT_REQUIRED","Thiếu mã phiên quiz hợp lệ.");
+            var a=Quiz.Attempt(attemptId);if(a==null||a.StudentId!=CurrentUserId)return NotFoundJson("Không tìm thấy lượt thi.");
+            try{Quiz.RequireEnrollment(a.CourseId,CurrentUserId);Quiz.CloseExpired(a.CourseId,CurrentUserId);a=Quiz.Attempt(attemptId);if(a.SubmittedAt.HasValue)return Fail(409,"QUIZ_FINISHED","Lượt thi đã kết thúc. Xem kết quả đã lưu.");string token=new QuizWriterService(Db).Acquire(a.Id,CurrentUserId,request.ClientKey,request.Takeover);return Ok(AttemptPayload(Quiz.Attempt(a.Id),token));}catch(QuizSessionException ex){return Fail(409,"QUIZ_SESSION_ACTIVE",ex.Message);}catch(InvalidOperationException ex){return Forbidden(ex.Message);}
+        }
+        [HttpPost,Route("quiz-attempts/{attemptId:int}/visibility")]
+        public ActionResult RecordVisibility(int attemptId){
+            var request=Body<QuizSupportRequest>();var a=Quiz.Attempt(attemptId);if(a==null||a.StudentId!=CurrentUserId)return NotFoundJson("Không tìm thấy lượt thi.");
+            try{if(!a.SubmittedAt.HasValue&&DateTime.UtcNow<a.ExpiresAt)new QuizWriterService(Db).Require(attemptId,request.WriterToken);new QuizVisibilityService(Db).Record(CurrentUserId,attemptId,request.EventKey,request.Returned);return Ok(new{count=Db.Database.SqlQuery<int>("SELECT COUNT(*) FROM dbo.QuizVisibility WHERE AttemptId=@p0",attemptId).Single()});}catch(QuizSessionException ex){return Fail(409,"QUIZ_SESSION_ACTIVE",ex.Message);}catch(InvalidOperationException ex){return Forbidden(ex.Message);}
+        }
+        [HttpPost,Route("quiz-attempts/{attemptId:int}/writer/check")]
+        public ActionResult CheckWriter(int attemptId){
+            var request=Body<AnswersRequest>();var a=Quiz.Attempt(attemptId);if(a==null||a.StudentId!=CurrentUserId)return NotFoundJson("Không tìm thấy lượt thi.");
+            try{Quiz.RequireEnrollment(a.CourseId,CurrentUserId);if(a.SubmittedAt.HasValue||DateTime.UtcNow>=a.ExpiresAt)return Ok(new{active=false,finished=true});new QuizWriterService(Db).Require(attemptId,request.WriterToken);return Ok(new{active=true,finished=false});}catch(InvalidOperationException ex){return Fail(409,"QUIZ_SESSION_ACTIVE",ex.Message);}
+        }
+        [HttpPost,Route("quiz-attempts/{attemptId:int}/reports")]
+        public ActionResult SendQuestionReport(int attemptId){try{var r=Body<QuizSupportRequest>();new QuizQuestionReportService(Db).Send(CurrentUserId,attemptId,r.QuestionId,r.Reason,r.Content);return Ok(new{sent=true},"Đã gửi báo lỗi đến giáo viên.");}catch(InvalidOperationException ex){return Forbidden(ex.Message);}}
+        [HttpPost,Route("courses/{id}/quiz/appeals")]
+        public ActionResult SendAppeal(string id){try{var r=Body<QuizSupportRequest>();Quiz.RequireEnrollment(id,CurrentUserId);var a=Quiz.Attempt(r.AttemptId);if(a==null||a.StudentId!=CurrentUserId||a.CourseId!=id)return NotFoundJson("Không tìm thấy lượt thi.");new QuizRegradeService(Db).Appeal(CurrentUserId,r.AttemptId,r.Content);return Ok(new{sent=true},"Đã gửi yêu cầu phúc khảo.");}catch(InvalidOperationException ex){return Forbidden(ex.Message);}}
+        [HttpGet,Route("courses/{id}/quiz/support")]
+        public ActionResult Support(string id){try{
+            Quiz.RequireEnrollment(id,CurrentUserId);Quiz.CloseExpired(id,CurrentUserId);var regrade=new QuizRegradeService(Db);
+            var appeals=regrade.Appeals(CurrentUserId,false).Where(x=>x.CourseId==id).ToList();
+            var reports=new QuizQuestionReportService(Db).List(CurrentUserId,false,id);
+            var retakes=new QuizRetakeService(Db).ForStudent(CurrentUserId,id);
+            return Ok(new{
+                canAppeal=appeals.Count==0&&Quiz.Attempts(id,CurrentUserId).Any(a=>a.SubmittedAt.HasValue),
+                reports=reports.Select(r=>new{id=r.Id,attemptId=r.AttemptId,questionId=r.QuestionId,question=r.Question.Text,reason=r.Reason,content=r.Content,status=r.Status,statusText=r.StatusText,response=r.Response,createdAt=ApiFormat.DateFromUtc(r.CreatedAt)}),
+                appeals=appeals.Select(r=>new{id=r.Id,attemptId=r.AttemptId,content=r.Content,status=r.Status,createdAt=ApiFormat.DateFromUtc(r.CreatedAt),replies=r.Replies.Select(x=>new{content=x.Content,status=x.Status,teacherName=x.TeacherName,createdAt=ApiFormat.DateFromUtc(x.CreatedAt)})}),
+                retakes=retakes.Select(r=>new{id=r.Id,attemptId=r.AttemptId,canStart=r.CanRetake,statusText=r.StatusText,reason=r.Events.LastOrDefault(e=>e.Kind=="Decision")?.Content,teacherName=r.Events.LastOrDefault(e=>e.Kind=="Decision")?.AuthorName,createdAt=ApiFormat.DateFromUtc(r.CreatedAt),retakeAttemptId=r.RetakeAttemptId,submitted=r.Retake?.SubmittedAt.HasValue??false,result=r.Retake!=null&&r.Retake.SubmittedAt.HasValue?KetQua(r.Retake):null}),
+                notices=regrade.Notices(CurrentUserId).Where(x=>Quiz.Attempt(x.AttemptId)?.CourseId==id).Select(x=>new{attemptId=x.AttemptId,oldScore=x.OldScore,score=x.RecognizedScore,reason=x.Reason,teacherName=x.TeacherName,createdAt=ApiFormat.DateFromUtc(x.CreatedAt)})
+            });
+        }catch(InvalidOperationException ex){return Forbidden(ex.Message);}}
+        [HttpPost,Route("courses/{id}/quiz/retakes/{reviewId:int}/start")]
+        public ActionResult StartRetake(string id,int reviewId){
+            var request=Body<AnswersRequest>();Guid key;if(!Guid.TryParse(request.ClientKey,out key))return Fail(400,"QUIZ_CLIENT_REQUIRED","Thiếu mã phiên quiz hợp lệ.");
+            try{if(!new QuizRetakeService(Db).ForStudent(CurrentUserId,id).Any(r=>r.Id==reviewId))return NotFoundJson("Không tìm thấy yêu cầu làm lại.");var a=new QuizRetakeService(Db).StartRetake(CurrentUserId,reviewId);string token=new QuizWriterService(Db).Acquire(a.Id,CurrentUserId,request.ClientKey,request.Takeover);return Ok(AttemptPayload(Quiz.Attempt(a.Id),token));}catch(QuizSessionException ex){return Fail(409,"QUIZ_SESSION_ACTIVE",ex.Message);}catch(InvalidOperationException ex){return Forbidden(ex.Message);}
         }
 
         // H5. POST /api/v1/courses/{id}/certificate

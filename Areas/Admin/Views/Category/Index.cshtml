@@ -97,7 +97,7 @@
         <a href="@Url.Action("Index", new { search = search, status = "inactive" })"
            class="btn btn-sm @(status == "inactive" ? "btn-primary" : "btn-secondary")">Tạm ngưng (@inactiveCount)</a>
     </div>
-    <form method="get" action="@Url.Action("Index")" style="display: flex; gap: 8px;">
+    <form class="admin-category-search" method="get" action="@Url.Action("Index")" style="display: flex; gap: 8px;">
         <input type="hidden" name="status" value="@status" />
         <input type="text" name="search" value="@search" class="form-control" placeholder="Tìm theo mã hoặc tên danh mục..." style="min-width: 260px;" />
         <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-search"></i></button>

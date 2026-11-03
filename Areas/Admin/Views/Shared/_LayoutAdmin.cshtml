@@ -75,10 +75,10 @@
             }
         </style>
     </head>
-    <body class="staff-ui">
+    <body class="staff-ui admin-ui">
         <div class="dashboard-layout">
             <!-- SIDEBAR -->
-            <aside class="dashboard-sidebar">
+            <aside class="dashboard-sidebar" id="admin-sidebar" aria-label="Điều hướng quản trị">
                 <div class="sidebar-logo">
                     <a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })" class="brand-logo">
                         <div class="logo-icon" style="width: 34px; height: 34px; background: #0F172A;">
@@ -182,11 +182,13 @@
                 <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; cursor: pointer;" onclick="confirmAdminLogout()">Đăng xuất</button>
             </div>
         </aside>
+        <button type="button" class="admin-menu-backdrop" id="admin-menu-backdrop" aria-label="Đóng menu" hidden></button>
 
         <!-- MAIN -->
         <main class="dashboard-main">
             <!-- TOP NAVIGATION BAR -->
             <header class="dashboard-topbar">
+                <button type="button" class="staff-menu-btn" id="admin-menu-toggle" aria-controls="admin-sidebar" aria-expanded="false" aria-label="Mở menu quản trị"><i class="bi bi-list" aria-hidden="true"></i></button>
                 <nav class="breadcrumb-nav">
                     <a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })">Admin</a>
                     @* Trang chi tiết (cấp 3): cấp giữa bấm được, quay về đúng trang danh sách vừa mở (giữ bộ lọc, trang số) *@
@@ -206,7 +208,9 @@
                 </div>
             </header>
 
-            @RenderBody()
+            <div class="admin-page-content">
+                @RenderBody()
+            </div>
         </main>
         <script>
             // Breadcrumb: trang danh sách ghi lại địa chỉ (kèm bộ lọc) và tên; trang chi tiết dùng làm cấp giữa để Admin
@@ -355,5 +359,7 @@
     </script>
     @Html.Partial("~/Views/Shared/_PhienDangNhap.cshtml")
     @RenderSection("Scripts", required: false)
+    <link rel="stylesheet" href="@Url.Content("~/assets/css/admin-responsive.css")?v=@(System.IO.File.GetLastWriteTimeUtc(Server.MapPath("~/assets/css/admin-responsive.css")).Ticks)" />
+    <script src="@Url.Content("~/assets/js/admin-responsive.js?v=1")"></script>
 </body>
 </html>

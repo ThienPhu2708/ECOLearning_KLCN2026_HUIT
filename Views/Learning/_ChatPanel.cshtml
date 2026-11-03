@@ -1,19 +1,22 @@
 <!-- SLIDE-OUT PANEL: HỎI GIÁO VIÊN TRONG KHÔNG GIAN HỌC TẬP -->
 <div class="study-chat-backdrop" id="study-chat-backdrop" onclick="closeStudyChat()"></div>
 
-<div class="study-chat-panel" id="study-chat-panel">
+<div class="study-chat-panel" id="study-chat-panel" role="dialog" aria-modal="true" aria-labelledby="study-chat-title" tabindex="-1">
     <div class="study-chat-header">
-        <h3><i class="bi bi-chat-dots-fill"></i> Trao đổi với Giáo viên</h3>
+        <div class="study-chat-heading">
+            <span class="study-chat-icon"><i class="bi bi-chat-dots"></i></span>
+            <div><h3 id="study-chat-title">Hỏi giáo viên</h3><p>Trao đổi về bài học của bạn</p></div>
+        </div>
         <button type="button" class="study-chat-close-btn" onclick="closeStudyChat()" aria-label="Đóng">&times;</button>
     </div>
 
     <div class="chat-alert-banner">
         <i class="bi bi-info-circle-fill"></i>
-        <span>Giáo viên phụ trách khóa học sẽ nhận được câu hỏi và giải đáp cho bạn.</span>
+        <span>Câu hỏi được gửi riêng đến giáo viên phụ trách khóa học.</span>
     </div>
 
     <!-- Khung tin nhắn -->
-    <div class="chat-messages-body" id="study-chat-messages" style="flex: 1; overflow-y: auto;">
+    <div class="chat-messages-body" id="study-chat-messages" role="log" aria-live="polite" aria-label="Tin nhắn với giáo viên">
         <div class="eco-chat-state" id="study-chat-loading">
             <div class="eco-spinner"></div>
             <div>Đang tải cuộc trò chuyện...</div>
@@ -26,8 +29,8 @@
 
     <!-- Ô gửi tin -->
     <div class="chat-footer">
-        <textarea class="chat-input" id="study-chat-input" rows="1" placeholder="Nhập câu hỏi của bạn cho bài học này..."></textarea>
-        <button type="button" class="chat-send-btn" id="study-chat-send-btn" title="Gửi câu hỏi">
+        <textarea class="chat-input" id="study-chat-input" rows="1" maxlength="2000" aria-label="Nội dung câu hỏi" placeholder="Nhập câu hỏi cho giáo viên..."></textarea>
+        <button type="button" class="chat-send-btn" id="study-chat-send-btn" title="Gửi câu hỏi" aria-label="Gửi câu hỏi">
             <i class="bi bi-send-fill"></i>
         </button>
     </div>

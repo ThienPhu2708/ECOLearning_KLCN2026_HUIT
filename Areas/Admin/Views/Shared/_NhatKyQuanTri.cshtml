@@ -6,17 +6,26 @@
 }
 else
 {
-    <ul class="au-log" data-paginate="10">
+    <ul class="admin-activity" data-paginate="10">
         @foreach (var n in Model)
         {
-            <li>
-                <time>@n.NgayTao.ToString("HH:mm dd/MM/yyyy")</time>
-                <div>
-                    <span class="badge @n.MauBadge">@n.TenHanhDong</span>
-                    <span class="au-sub">bởi @n.TenAdmin</span>
+            var rejected = (n.HanhDong ?? "").StartsWith("TuChoi") || n.MauBadge == "badge-danger";
+            var approved = (n.HanhDong ?? "").StartsWith("Duyet") || n.MauBadge == "badge-success";
+            <li class="admin-activity-item">
+                <span class="admin-activity-icon @(rejected ? "is-rejected" : approved ? "is-approved" : "")" aria-hidden="true"><i class="bi @(rejected ? "bi-x-lg" : approved ? "bi-check2" : "bi-pencil-square")"></i></span>
+                <div class="admin-activity-content">
+                    <div class="admin-activity-heading">
+                        <strong class="admin-activity-title">@n.TenHanhDong</strong>
+                        <time class="admin-activity-time" datetime="@n.NgayTao.ToString("yyyy-MM-ddTHH:mm:ss")"><i class="bi bi-clock" aria-hidden="true"></i> @n.NgayTao.ToString("HH:mm, dd/MM/yyyy")</time>
+                    </div>
+                    @if (!string.IsNullOrEmpty(n.MaDoiTuong))
+                    {
+                        <div class="admin-activity-target"><span>@ECOLearning.Services.AdminActivityHistory.ObjectLabel(n.LoaiDoiTuong)</span><strong>@(n.TenDoiTuong ?? n.MaDoiTuong)</strong>@if (!string.IsNullOrEmpty(n.TenDoiTuong)) { <code>@n.MaDoiTuong</code> }</div>
+                    }
+                    <div class="admin-activity-actor"><i class="bi bi-person" aria-hidden="true"></i><span>@n.TenAdmin</span></div>
                     @if (!string.IsNullOrEmpty(n.LyDo))
                     {
-                        <p>@n.LyDo</p>
+                        <div class="admin-activity-note"><span>Ghi chú</span><p>@n.LyDo</p></div>
                     }
                 </div>
             </li>

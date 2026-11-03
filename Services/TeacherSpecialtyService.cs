@@ -80,6 +80,9 @@ namespace ECOLearning.Services {
     db.Database.ExecuteSqlCommand("IF EXISTS(SELECT 1 FROM dbo.TeacherSpecialtyPolicy WHERE TeacherId=@p0) UPDATE dbo.TeacherSpecialtyPolicy SET LegacyAccess=0 WHERE TeacherId=@p0 ELSE INSERT dbo.TeacherSpecialtyPolicy(TeacherId,LegacyAccess) VALUES(@p0,0)",user);
     db.Database.ExecuteSqlCommand("UPDATE dbo.NguoiDung SET vaiTro=N'GiaoVien' WHERE maNguoiDung=@p0",user);
     db.Database.ExecuteSqlCommand("UPDATE dbo.DangKyGiaoVien SET trangThai='Approved',ngayDuyet=GETDATE(),maAdmin=@p1,lyDoTuChoi=NULL WHERE maDon=@p0",app,admin);
+    var audit=new AccountAdminService(db);
+    if(audit.IsInstalled()) audit.GhiNhatKy(admin,"DuyetGiaoVien","HoSoGiaoVien",app,
+     "Duyệt hồ sơ giáo viên: "+db.NguoiDung.Where(u=>u.maNguoiDung==user).Select(u=>u.hoTen).Single()+". Lĩnh vực: "+string.Join(", ",ids));
     tx.Commit();AccountStatusFilter.DanhDauThayDoi(user);
    }
   }
@@ -112,6 +115,9 @@ namespace ECOLearning.Services {
      db.Database.ExecuteSqlCommand("UPDATE dbo.TeacherSpecialtyPolicy SET LegacyAccess=0 WHERE TeacherId=@p0",teacher);}
     else if(string.IsNullOrWhiteSpace(reason)||reason.Length>2000) throw new InvalidOperationException("Vui lòng nhập lý do từ chối (tối đa 2000 ký tự).");
     db.Database.ExecuteSqlCommand("UPDATE dbo.TeacherSpecialtyRequest SET Status=@p1,Reason=@p2,ReviewedBy=@p3,ReviewedAt=GETDATE(),ApprovedCategories=@p4 WHERE Id=@p0",id,approve?"Approved":"Rejected",(object)reason??DBNull.Value,admin,(object)(granted==null?null:JsonConvert.SerializeObject(granted))??DBNull.Value);
+    var audit=new AccountAdminService(db);
+    if(audit.IsInstalled()) audit.GhiNhatKy(admin,approve?"DuyetChuyenMon":"TuChoiChuyenMon","ChuyenMon",id.ToString(),
+     "Giáo viên: "+db.NguoiDung.Where(u=>u.maNguoiDung==teacher).Select(u=>u.hoTen).Single()+". "+(approve?"Lĩnh vực: "+string.Join(", ",granted):reason));
     tx.Commit();
    }
   }

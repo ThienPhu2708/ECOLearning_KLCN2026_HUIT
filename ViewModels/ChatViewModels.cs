@@ -35,6 +35,8 @@ namespace ECOLearning.ViewModels
         public bool DaThuHoi { get; set; }
         public bool LaCuaToi { get; set; }
         public bool CoTheThuHoi { get; set; }
+        public int RecallSeconds { get { return DaThuHoi ? 0 : Math.Max(0, (int)Math.Ceiling((NgayGui.AddMinutes(5) - DateTime.Now).TotalSeconds)); } }
+        public string ImageUrl { get { return !DaThuHoi && ECOLearning.Services.ChatService.TenAnh(NoiDung) != null ? "/Chat/Image/" + MaTinNhan : null; } }
     }
 
     public class ThongTinHocVienChatViewModel

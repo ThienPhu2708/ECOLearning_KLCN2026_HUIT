@@ -8,6 +8,17 @@ namespace ECOLearning.Services
 {
     public static class EmailService
     {
+        public static bool SendAdminLoginOtp(string email, string name, string code)
+        {
+            string safeName = System.Web.HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(name) ? "Admin" : name);
+            string body = "<div style='font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:28px;color:#172033'>"
+                + "<h2>Xác thực đăng nhập Admin</h2><p>Xin chào " + safeName + ",</p>"
+                + "<p>Sử dụng mã sau để hoàn tất đăng nhập khu quản trị E-Learning:</p>"
+                + "<div style='padding:20px;background:#eef2ff;text-align:center;font-size:32px;font-weight:bold;letter-spacing:8px'>" + code + "</div>"
+                + "<p>Mã có hiệu lực 5 phút và chỉ dùng một lần. Không chia sẻ mã với bất kỳ ai.</p>"
+                + "<p>Nếu bạn không yêu cầu đăng nhập, hãy đổi mật khẩu tài khoản.</p></div>";
+            return SendEmailInternal(email, name, "Mã xác thực đăng nhập Admin - E-Learning", body).Success;
+        }
         private static (bool Success, string Message) SendEmailInternal(string recipientEmail, string recipientName, string subject, string htmlBody)
         {
             try

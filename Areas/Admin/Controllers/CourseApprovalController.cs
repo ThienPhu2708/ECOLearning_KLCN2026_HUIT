@@ -348,6 +348,8 @@ namespace ECOLearning.Areas.Admin.Controllers
                 }
 
                 // Cập nhật trạng thái khóa học thành "Đã xuất bản"
+                using (var transaction = db.Database.BeginTransaction())
+                {
                 k.trangThai = "Đã xuất bản";
 
                 // Lưu nhật ký kiểm duyệt vào CSDL
@@ -372,7 +374,11 @@ namespace ECOLearning.Areas.Admin.Controllers
                 }
 
                 db.SaveChanges();
-
+                var audit = new ECOLearning.Services.AccountAdminService(db);
+                if (audit.IsInstalled()) audit.GhiNhatKy(Convert.ToInt32(Session["UserId"]),
+                    ECOLearning.Services.AccountAdminService.HdDuyetKhoaHoc, "KhoaHoc", k.maKhoaHoc, "Duyệt xuất bản khóa học: " + k.tenKhoaHoc);
+                transaction.Commit();
+                }
                 return Json(new { success = true, message = "Phê duyệt thành công! Khóa học \"" + k.tenKhoaHoc + "\" đã được xuất bản ra trang chủ." });
             }
             catch (Exception ex)
@@ -408,6 +414,8 @@ namespace ECOLearning.Areas.Admin.Controllers
                 // Cập nhật trạng thái khóa học thành "Cần sửa đổi"
                 if (ECOLearning.Services.CourseRevisionService.Published(k.trangThai))
                     return Json(new { success = false, message = "Khóa đang hoạt động. Từ chối bản sửa trong mục Duyệt bản sửa khóa học." });
+                using (var transaction = db.Database.BeginTransaction())
+                {
                 k.trangThai = "Cần sửa đổi";
 
                 // Lưu lý do từ chối vào CSDL
@@ -432,7 +440,11 @@ namespace ECOLearning.Areas.Admin.Controllers
                 }
 
                 db.SaveChanges();
-
+                var audit = new ECOLearning.Services.AccountAdminService(db);
+                if (audit.IsInstalled()) audit.GhiNhatKy(Convert.ToInt32(Session["UserId"]),
+                    ECOLearning.Services.AccountAdminService.HdTuChoiKhoaHoc, "KhoaHoc", k.maKhoaHoc, reason.Trim());
+                transaction.Commit();
+                }
                 return Json(new { success = true, message = "Đã từ chối phê duyệt và chuyển khóa học sang trạng thái \"Cần sửa đổi\"." });
             }
             catch (Exception ex)

@@ -1,0 +1,62 @@
+@model ECOLearning.ViewModels.AdminOtpViewModel
+@{
+    ViewBag.Title = "Xác thực đăng nhập Admin";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section styles {
+<style>
+.admin-otp-page{min-height:65vh;display:grid;place-items:center;background:#f5f7fc;padding:40px 16px}
+.admin-otp-card{width:100%;max-width:460px;padding:32px;background:#fff;border:1px solid #e6eaf2;border-radius:22px;box-shadow:0 12px 36px rgba(25,35,65,.06);color:#172033;box-sizing:border-box}
+.admin-otp-icon{width:54px;height:54px;background:#eeedff;border-radius:16px;display:grid;place-items:center;color:#5145e8;font-size:24px;margin-bottom:22px}
+.admin-otp-card h1{font-size:25px;line-height:1.35;margin:0 0 10px}.admin-otp-card p{font-size:14px;line-height:1.7;color:#64748b;margin:0 0 20px}.admin-otp-card strong{color:#334155;overflow-wrap:anywhere}
+.admin-otp-card label{display:block;font-size:13px;font-weight:600;margin-bottom:8px}.admin-otp-code{width:100%;height:58px;border:1px solid #cbd5e1;border-radius:12px;background:#fafbff;font:600 26px monospace;letter-spacing:9px;text-align:center;box-sizing:border-box;color:#172033}
+.admin-otp-code:focus{outline:3px solid #eceaff;border-color:#6355eb}.admin-otp-card .btn-primary{width:100%;min-height:46px;margin-top:22px;justify-content:center}
+.admin-otp-timer{font-size:12px;color:#64748b;margin-top:8px}.admin-otp-notice,.admin-otp-card .validation-summary-errors{background:#fff8e9;border:1px solid #f1dca8;border-radius:10px;color:#85550d;padding:12px 14px;font-size:13px;line-height:1.6;margin-bottom:18px}
+.admin-otp-card .validation-summary-errors ul{list-style:none;padding:0;margin:0}.admin-otp-card .validation-summary-valid{display:none}
+.admin-otp-actions{margin-top:20px;padding-top:18px;border-top:1px solid #edf0f6;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.admin-otp-actions form{margin:0}.admin-otp-actions button{border:0;background:transparent;font-family:inherit;font-size:13px;font-weight:600;color:#5145e8;cursor:pointer;padding:6px 0}.admin-otp-actions button:disabled{color:#94a3b8;cursor:default}
+@@media(max-width:480px){.admin-otp-page{padding:24px 12px}.admin-otp-card{padding:24px 20px}.admin-otp-card h1{font-size:22px}}
+</style>
+}
+<main class="admin-otp-page">
+    <section class="admin-otp-card" aria-labelledby="admin-otp-title">
+        <div class="admin-otp-icon" aria-hidden="true"><i class="bi bi-shield-lock"></i></div>
+        <h1 id="admin-otp-title">Xác thực đăng nhập Admin</h1>
+        <p>Nhập mã 6 số gửi đến <strong>@Model.MaskedEmail</strong> để vào khu quản trị. Kiểm tra thư rác nếu chưa thấy email.</p>
+        @if (!string.IsNullOrEmpty(Model.Notice)) { <div class="admin-otp-notice" role="status">@Model.Notice</div> }
+        @Html.ValidationSummary(false, "", new { role = "alert" })
+        @using (Html.BeginForm("AdminOtp", "Account", FormMethod.Post))
+        {
+            @Html.AntiForgeryToken()
+            <label for="admin-otp-code">Mã xác thực</label>
+            <input class="admin-otp-code" id="admin-otp-code" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="000000" required autofocus aria-describedby="admin-otp-expiry" />
+            <div class="admin-otp-timer" id="admin-otp-expiry" data-seconds="@Model.ExpiresSeconds">Mã có hiệu lực trong 5 phút.</div>
+            <button type="submit" class="btn btn-primary">Xác nhận đăng nhập</button>
+        }
+        <div class="admin-otp-actions">
+            @using (Html.BeginForm("ResendAdminOtp", "Account", FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+                <button type="submit" id="admin-otp-resend" data-seconds="@Model.ResendSeconds">Gửi lại mã</button>
+            }
+            @using (Html.BeginForm("CancelAdminOtp", "Account", FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+                <button type="submit">Đăng nhập tài khoản khác</button>
+            }
+        </div>
+    </section>
+</main>
+@section Scripts {
+<script>
+(function(){
+    var resend=document.getElementById('admin-otp-resend'),expiry=document.getElementById('admin-otp-expiry');
+    var sentUntil=Date.now()+Number(resend.dataset.seconds)*1000,codeUntil=Date.now()+Number(expiry.dataset.seconds)*1000;
+    function update(){
+        var wait=Math.max(0,Math.ceil((sentUntil-Date.now())/1000)),left=Math.max(0,Math.ceil((codeUntil-Date.now())/1000));
+        resend.disabled=wait>0;resend.textContent=wait>0?'Gửi lại sau '+wait+' giây':'Gửi lại mã';
+        expiry.textContent=left>0?'Mã hết hạn sau '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0'):'Mã không còn hiệu lực. Vui lòng gửi lại mã.';
+    }
+    update();setInterval(update,1000);
+})();
+</script>
+}

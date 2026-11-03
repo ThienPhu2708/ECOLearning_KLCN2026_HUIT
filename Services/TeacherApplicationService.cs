@@ -200,6 +200,8 @@ namespace ECOLearning.Services
                             maAdmin = @maAdmin
                         WHERE maDon = @maDon";
 
+                    using (var transaction = db.Database.BeginTransaction())
+                    {
                     int affected = db.Database.ExecuteSqlCommand(updateSql,
                         new SqlParameter("@trangThai", status),
                         new SqlParameter("@ngayDuyet", DateTime.Now),
@@ -208,7 +210,15 @@ namespace ECOLearning.Services
                         new SqlParameter("@maDon", appId)
                     );
 
+                    if (affected > 0 && adminId.HasValue)
+                    {
+                        var audit = new AccountAdminService(db);
+                        if (audit.IsInstalled()) audit.GhiNhatKy(adminId.Value, status == "Approved" ? "DuyetGiaoVien" : "TuChoiGiaoVien",
+                            "HoSoGiaoVien", appId, rejectionReason);
+                    }
+                    transaction.Commit();
                     sqlUpdated = (affected > 0);
+                    }
                 }
             }
             catch (Exception ex)

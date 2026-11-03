@@ -50,7 +50,6 @@
             }
 
             self.hub = $.connection.chatHub;
-            $.connection.hub.qs = { userId: userId };
 
             // Phải đăng ký handler TRƯỚC khi start()
             self.registerClientHandlers();
@@ -67,6 +66,8 @@
             });
 
             self.bindEvents();
+            self.groupMessages();
+            self.expireRecallButtons($(self.selectors.messages));
             self.updateBadge();
             self.startHub();
 
@@ -85,7 +86,7 @@
 
                     var fromMe = Number(data.maNguoiGui) === Number(self.currentUserId);
                     if (!fromMe) {
-                        if (self.isActive()) {
+                        if (self.isActive() && !document.hidden) {
                             self.markRead();
                         } else if (typeof self.onIncomingWhileHidden === 'function') {
                             // Khung chat đang đóng: KHÔNG đánh dấu đã đọc để người dùng còn thấy tin mới
@@ -95,7 +96,8 @@
                 }
 
                 // Cập nhật danh sách hội thoại bên sidebar (nếu trang có)
-                self.updateConversationItem(data.maHoiThoai, data.noiDung, data.ngayGui);
+                self.updateConversationItem(data.maHoiThoai, data.noiDung, data.ngayGui, data.maNguoiGui);
+                if (Number(data.maNguoiGui) !== Number(self.currentUserId)) self.setConversationUnread(data.maHoiThoai, Number(data.maHoiThoai) !== Number(self.currentConvId) || !self.isActive() || document.hidden);
             };
 
             // 2. Nhận thông báo đang soạn tin
@@ -134,7 +136,8 @@
             // 5. Thông báo có tin mới từ cuộc hội thoại khác
             self.hub.client.thongBaoTinMoi = function (data) {
                 self.updateBadge();
-                self.updateConversationItem(data.maHoiThoai, data.noiDungTomTat, data.thoiGian);
+                self.updateConversationItem(data.maHoiThoai, data.noiDungTomTat, data.thoiGian, data.maNguoiGui);
+                self.setConversationUnread(data.maHoiThoai, Number(data.maHoiThoai) !== Number(self.currentConvId) || !self.isActive() || document.hidden);
             };
         },
 
@@ -167,8 +170,12 @@
         },
 
         markRead: function () {
+            var self = this;
             if (this.currentConvId > 0 && this.isConnected()) {
-                this.hub.server.danhDauDaDoc(this.currentConvId);
+                return this.hub.server.danhDauDaDoc(this.currentConvId).done(function () {
+                    self.setConversationUnread(self.currentConvId, false);
+                    if (typeof self.onRead === 'function') self.onRead();
+                });
             }
         },
 
@@ -271,13 +278,35 @@
 
         recallMessage: function (msgId) {
             var self = this;
-            if (confirm('Bạn có chắc muốn thu hồi tin nhắn này? (Chỉ có thể thu hồi trong vòng 5 phút)')) {
+            if (document.getElementById('chat-recall-dialog')) return;
+            var convId = self.currentConvId;
+            var previousFocus = document.activeElement;
+            var dialog = document.createElement('dialog');
+            dialog.id = 'chat-recall-dialog';
+            dialog.className = 'chat-confirm-dialog';
+            dialog.setAttribute('aria-labelledby', 'chat-recall-title');
+            dialog.setAttribute('aria-describedby', 'chat-recall-description');
+            dialog.innerHTML = '<div class="chat-confirm-icon"><i class="bi bi-arrow-counterclockwise"></i></div>'
+                + '<h3 id="chat-recall-title">Thu hồi tin nhắn?</h3>'
+                + '<p id="chat-recall-description">Tin nhắn sẽ được thu hồi với mọi người trong cuộc trò chuyện. Chỉ áp dụng trong 5 phút sau khi gửi.</p>'
+                + '<div class="chat-confirm-actions"><button type="button" class="chat-confirm-cancel" autofocus>Giữ lại</button><button type="button" class="chat-confirm-accept">Thu hồi</button></div>';
+            document.body.appendChild(dialog);
+            dialog.addEventListener('close', function () {
+                dialog.remove();
+                if (previousFocus && previousFocus.isConnected) previousFocus.focus();
+            });
+            dialog.querySelector('.chat-confirm-cancel').onclick = function () { dialog.close(); };
+            dialog.querySelector('.chat-confirm-accept').onclick = function () {
+                dialog.close();
                 if (self.isConnected()) {
-                    self.hub.server.thuHoiTin(msgId, self.currentConvId);
+                    self.hub.server.thuHoiTin(msgId, convId).fail(function () {
+                        self.notify('Chưa thu hồi được tin nhắn. Vui lòng thử lại.', 'error');
+                    });
                 } else {
                     self.notify('Mất kết nối tới máy chủ chat, chưa thể thu hồi tin nhắn.', 'warning');
                 }
-            }
+            };
+            dialog.showModal();
         },
 
         sendTyping: function (isTyping) {
@@ -313,26 +342,57 @@
 
             var isMine = Number(data.maNguoiGui) === Number(self.currentUserId);
             var recalled = data.daThuHoi === true;
-            var canRecall = isMine && !recalled && data.coTheThuHoi !== false;
+            var recallSeconds = data.recallSeconds == null ? 300 : Math.max(0, Number(data.recallSeconds) || 0);
+            var canRecall = isMine && !recalled && data.coTheThuHoi !== false && recallSeconds > 0;
             var rowClass = 'chat-msg-row ' + (isMine ? 'msg-mine' : 'msg-other');
             var avatar = self.escapeHtml(data.anhDaiDien || '/assets/images/default-avatar.png');
             var name = self.escapeHtml(data.tenNguoiGui || '');
             var bubbleClass = 'chat-msg-bubble' + (recalled ? ' chat-msg-recalled' : '');
             var bubbleText = recalled ? 'Tin nhắn đã được thu hồi' : self.escapeHtml(data.noiDung);
+            var imageUrl = !recalled && /^\/Chat\/Image\/\d+$/.test(data.imageUrl || '') ? data.imageUrl : null;
+            if (imageUrl) bubbleText = '<button type="button" class="chat-image-open" data-image-url="' + imageUrl + '"><img class="chat-image" src="' + imageUrl + '" alt="Ảnh trong cuộc trò chuyện" /></button>';
 
             var recallHtml = canRecall
-                ? '<button type="button" class="chat-recall-btn" onclick="EcoChat.recallMessage(' + id + ')" title="Thu hồi tin"><i class="bi bi-arrow-counterclockwise"></i></button>'
+                ? '<button type="button" class="chat-recall-btn" data-recall-seconds="' + recallSeconds + '" onclick="EcoChat.recallMessage(' + id + ')" title="Thu hồi tin trong 5 phút" aria-label="Thu hồi tin nhắn"><i class="bi bi-arrow-counterclockwise"></i></button>'
                 : '';
 
-            var html = '<div class="' + rowClass + '" id="msg-row-' + id + '">'
+            var sentAt = String(data.ngayGui || '');
+            var shortTime = (sentAt.match(/\d{2}:\d{2}/) || [sentAt])[0];
+            var html = '<div class="' + rowClass + '" id="msg-row-' + id + '" data-sender="' + Number(data.maNguoiGui) + '" tabindex="0">'
                 + '  <img src="' + avatar + '" class="chat-msg-avatar" alt="' + name + '" />'
                 + '  <div>'
-                + '    <div class="' + bubbleClass + '">' + bubbleText + '</div>'
-                + '    <div class="chat-msg-time">' + self.escapeHtml(data.ngayGui || '') + ' ' + recallHtml + '</div>'
+                + '    <div class="' + bubbleClass + '" title="' + self.escapeHtml(sentAt) + '">' + bubbleText + '</div>'
+                + '    <div class="chat-msg-time">' + self.escapeHtml(shortTime) + ' ' + recallHtml + '</div>'
                 + '  </div>'
                 + '</div>';
 
-            $box.append(html);
+            var row = $(html);
+            row.find('.chat-msg-avatar').on('error', function () {
+                $(this).replaceWith($('<span class="chat-msg-avatar chat-avatar-fallback" aria-hidden="true">').text((data.tenNguoiGui || '?').trim().charAt(0).toUpperCase()));
+            });
+            $box.append(row);
+            self.expireRecallButtons(row);
+            row.find('.chat-image').on('load', function () { self.scrollToBottom(); });
+            self.groupMessages();
+        },
+
+        expireRecallButtons: function (scope) {
+            scope.find('.chat-recall-btn[data-recall-seconds]').each(function () {
+                var button = this, seconds = Number(button.getAttribute('data-recall-seconds')) || 0;
+                button.removeAttribute('data-recall-seconds');
+                if (seconds <= 0) button.remove();
+                else setTimeout(function () { button.remove(); }, seconds * 1000);
+            });
+        },
+
+        groupMessages: function () {
+            var rows = $(this.selectors.messages).children('.chat-msg-row');
+            rows.removeClass('chat-group-start chat-group-continues');
+            rows.each(function (index) {
+                var sender = this.getAttribute('data-sender');
+                if (index === 0 || !sender || sender !== rows[index - 1].getAttribute('data-sender')) $(this).addClass('chat-group-start');
+                if (sender && index + 1 < rows.length && sender === rows[index + 1].getAttribute('data-sender')) $(this).addClass('chat-group-continues');
+            });
         },
 
         scrollToBottom: function () {
@@ -342,12 +402,18 @@
             }
         },
 
-        updateConversationItem: function (convId, lastMsg, time) {
+        updateConversationItem: function (convId, lastMsg, time, sender) {
             var item = $('#conv-item-' + convId);
             if (item.length) {
-                item.find('.chat-conv-last-msg').text(lastMsg);
+                item.find('.chat-conv-last-msg').text((Number(sender) === Number(this.currentUserId) ? 'Bạn: ' : '') + (lastMsg || ''));
                 if (time) item.find('.chat-conv-time').text(time);
             }
+        },
+
+        setConversationUnread: function (convId, unread) {
+            var item = $('#conv-item-' + convId);
+            item.toggleClass('is-unread', unread);
+            item.find('.inbox-unread-dot').prop('hidden', !unread);
         },
 
         updateBadge: function () {
@@ -365,6 +431,7 @@
         // Dùng namespace .ecochat để gọi lại nhiều lần không bị gắn trùng sự kiện
         bindEvents: function () {
             var self = this;
+            self.bindMedia();
 
             $(self.selectors.send).off('.ecochat').on('click.ecochat', function () {
                 self.sendMessage();
@@ -386,8 +453,49 @@
                     if (this.tagName === 'TEXTAREA') {
                         this.style.height = 'auto';
                         this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+                        this.style.overflowY = this.scrollHeight > 120 ? 'auto' : 'hidden';
                     }
                 });
+        },
+
+        bindMedia: function () {
+            var self = this, input = $(self.selectors.input), footer = input.closest('.chat-footer');
+            if (!input.length || footer.find('.chat-compose-tools').length) return;
+            var tools = $('<div class="chat-compose-tools"><button type="button" class="chat-tool chat-emoji-toggle" aria-label="Chọn emoji" aria-expanded="false"><i class="bi bi-emoji-smile"></i></button><button type="button" class="chat-tool chat-attach" aria-label="Gửi ảnh" title="Gửi ảnh JPG/PNG, tối đa 5 MB"><i class="bi bi-image"></i></button><input class="chat-file" type="file" accept="image/jpeg,image/png" hidden /><div class="chat-emoji-picker" hidden role="group" aria-label="Chọn emoji"></div></div>');
+            footer.prepend(tools);
+            var picker = tools.find('.chat-emoji-picker'), toggle = tools.find('.chat-emoji-toggle');
+            '😊 😄 😂 🥰 😍 😎 🤔 😢 😮 🙏 👍 👏 ❤️ 💜 🎉 ✅ 💡 📚 🔥 💯'.split(' ').forEach(function (emoji) {
+                $('<button type="button" class="chat-emoji">').text(emoji).attr('aria-label', emoji).on('click', function () {
+                    var el = input[0], start = el.selectionStart || 0, end = el.selectionEnd || 0;
+                    if (el.value.length - (end - start) + emoji.length > (el.maxLength > 0 ? el.maxLength : 2000)) return;
+                    el.setRangeText(emoji, start, end, 'end'); input.trigger('input'); el.focus();
+                    picker.prop('hidden', true); toggle.attr('aria-expanded', 'false');
+                }).appendTo(picker);
+            });
+            toggle.on('click', function () { var open = picker.prop('hidden'); picker.prop('hidden', !open); toggle.attr('aria-expanded', String(open)); });
+            $(document).on('click.ecochatmedia', function (e) { if (!tools[0].contains(e.target)) { picker.prop('hidden', true); toggle.attr('aria-expanded', 'false'); } });
+            footer.on('keydown', function (e) { if (e.key === 'Escape') { picker.prop('hidden', true); toggle.attr('aria-expanded', 'false'); } });
+            tools.find('.chat-attach').on('click', function () { tools.find('.chat-file')[0].click(); });
+            tools.find('.chat-file').on('change', function () {
+                var file = this.files[0]; this.value = ''; if (!file) return;
+                if (file.size > 5 * 1024 * 1024 || !/image\/(jpeg|png)$/.test(file.type)) { self.notify('Chọn ảnh JPG hoặc PNG, tối đa 5 MB.', 'warning'); return; }
+                if (!self.currentConvId) { self.notify('Chọn cuộc trò chuyện trước khi gửi ảnh.', 'warning'); return; }
+                var body = new FormData(); body.append('conversationId', self.currentConvId); body.append('image', file);
+                body.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').first().val() || '');
+                tools.find('.chat-attach').prop('disabled', true).attr('aria-label', 'Đang gửi ảnh');
+                $.ajax({ url:'/Chat/SendImage', type:'POST', data:body, processData:false, contentType:false })
+                    .done(function (res) { if (!res.success) { self.notify(res.message || 'Không gửi được ảnh.', 'warning'); return; } self.appendMessage(res.message); self.scrollToBottom(); self.updateConversationItem(res.message.maHoiThoai, 'Đã gửi một ảnh', res.message.ngayGui, self.currentUserId); })
+                    .fail(function () { self.notify('Gửi ảnh thất bại. Vui lòng chọn ảnh và thử lại.', 'error'); })
+                    .always(function () { tools.find('.chat-attach').prop('disabled', false).attr('aria-label', 'Gửi ảnh'); });
+            });
+            $(document).off('click.ecochatimage', '.chat-image-open').on('click.ecochatimage', '.chat-image-open', function () {
+                var url = this.getAttribute('data-image-url'); if (!/^\/Chat\/Image\/\d+$/.test(url || '') || document.getElementById('chat-image-dialog')) return;
+                var dialog = document.createElement('dialog'); dialog.id = 'chat-image-dialog'; dialog.className = 'chat-image-dialog'; dialog.setAttribute('aria-label', 'Xem ảnh');
+                var close = document.createElement('button'); close.type = 'button'; close.className = 'chat-image-close'; close.setAttribute('aria-label', 'Đóng ảnh'); close.textContent = '×';
+                var photo = document.createElement('img'); photo.src = url; photo.alt = 'Ảnh trong cuộc trò chuyện';
+                dialog.append(close, photo); document.body.appendChild(dialog); close.onclick = function () { dialog.close(); };
+                var previous = this; dialog.addEventListener('close', function () { dialog.remove(); if (previous.isConnected) previous.focus(); }); dialog.showModal();
+            });
         },
 
         escapeHtml: function (string) {

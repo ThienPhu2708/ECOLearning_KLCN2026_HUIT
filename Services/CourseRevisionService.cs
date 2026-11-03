@@ -91,6 +91,9 @@ WHERE q.CourseId=@p0 AND q.IssuedAt IS NOT NULL AND NOT EXISTS(SELECT 1 FROM dbo
      ApplyContent(db,course,p.Model,p.Uploads);db.SaveChanges();
     } else if(string.IsNullOrWhiteSpace(reason)) throw new InvalidOperationException("Vui lòng nhập lý do từ chối.");
     db.Database.ExecuteSqlCommand("UPDATE dbo.CourseRevision SET Status=@p1,Version=@p2,ReviewedAt=GETDATE(),AdminId=@p3,Reason=@p4 WHERE CourseId=@p0",id,approve?"Approved":"Rejected",Guid.NewGuid().ToString("N"),admin,(object)reason??DBNull.Value);
+    var audit=new AccountAdminService(db);
+    if(audit.IsInstalled()) audit.GhiNhatKy(admin,approve?AccountAdminService.HdDuyetBanSua:AccountAdminService.HdTuChoiBanSua,"KhoaHoc",id,
+     approve?"Duyệt bản sửa khóa học: "+course.tenKhoaHoc:reason);
     tx.Commit();
    }
   }

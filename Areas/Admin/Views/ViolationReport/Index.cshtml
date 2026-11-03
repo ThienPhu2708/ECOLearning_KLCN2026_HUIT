@@ -35,7 +35,7 @@ else
             <a href="@Url.Action("Index", new { filter = "banned", sort = sort })" class="btn btn-sm @(filter == "banned" ? "btn-primary" : "btn-secondary")">Khóa vĩnh viễn (@ViewBag.BannedCount)</a>
             <a href="@Url.Action("Index", new { filter = "all", sort = sort })" class="btn btn-sm @(filter == "all" ? "btn-primary" : "btn-secondary")">Tất cả (@ViewBag.AllCount)</a>
         </div>
-        <form method="get" action="@Url.Action("Index")" style="display: flex; align-items: center; gap: 8px;">
+        <form class="admin-sort-filter" method="get" action="@Url.Action("Index")" style="display: flex; align-items: center; gap: 8px;">
             <input type="hidden" name="filter" value="@filter" />
             <label class="caption" style="font-weight: 700; color: var(--text-heading);">Sắp xếp:</label>
             <select name="sort" class="form-control" style="height: 38px; width: 220px;" onchange="this.form.submit()">

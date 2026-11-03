@@ -1,0 +1,28 @@
+/* Audit feed shared by account, teacher and marketing details. */
+.admin-ui .admin-activity{list-style:none;margin:0;padding:0}
+.admin-ui .admin-activity-item{display:flex;align-items:flex-start;gap:14px;padding:20px 4px;border-bottom:1px solid #edf0f5}
+.admin-ui .admin-activity-item:last-child{border-bottom:0;padding-bottom:8px}
+.admin-ui .admin-activity-icon{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border-radius:12px;background:#eeedff;color:#6155cc;font-size:17px}
+.admin-ui .admin-activity-icon.is-approved{background:#eaf7ef;color:#31805b}
+.admin-ui .admin-activity-icon.is-rejected{background:#fff0ee;color:#c15b50}
+.admin-ui .admin-activity-content{min-width:0;flex:1}
+.admin-ui .admin-activity-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.admin-ui .admin-activity-title{font-size:14px;line-height:1.6;color:#1e293b;font-weight:700;overflow-wrap:anywhere}
+.admin-ui .admin-activity-time{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#64748b;white-space:nowrap;line-height:1.6}
+.admin-ui .admin-activity-target{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;margin-top:7px;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.admin-ui .admin-activity-target>span{color:#64748b}
+.admin-ui .admin-activity-target>strong{color:#334155;font-weight:600}
+.admin-ui .admin-activity-target>code{font-size:11px;color:#667085;background:#f3f5f9;border-radius:5px;padding:1px 6px;overflow-wrap:anywhere;word-break:break-word;max-width:100%}
+.admin-ui .admin-activity-actor{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;line-height:1.6;color:#64748b}
+.admin-ui .admin-activity-note{padding:10px 12px;background:#f7f8fb;border:1px solid #edf0f5;border-radius:9px;margin-top:12px}
+.admin-ui .admin-activity-note>span{display:block;font-size:11px;font-weight:600;color:#64748b;margin-bottom:4px}
+.admin-ui .admin-activity-note>p{font-size:13px;line-height:1.7;color:#475569;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:640px){
+    .admin-ui .admin-activity-item{gap:10px;padding:16px 0}
+    .admin-ui .admin-activity-icon{width:32px;height:32px;flex-basis:32px;border-radius:10px;font-size:15px}
+    .admin-ui .admin-activity-heading{align-items:flex-start;flex-direction:column;gap:4px}
+    .admin-ui .admin-activity-title{font-size:13px}
+    .admin-ui .admin-activity-time{font-size:11px;white-space:normal}
+    .admin-ui .admin-activity-target{font-size:12px;gap:5px}
+    .admin-ui .admin-activity-note{padding:9px 10px}
+}

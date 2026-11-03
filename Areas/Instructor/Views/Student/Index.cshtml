@@ -61,6 +61,17 @@ var teacherCourses = ViewBag.TeacherCourses as List<ECOLearning.Models.KhoaHoc>;
 .student-table td:first-child > div { min-width:200px; }
 .student-table td:first-child img { flex-shrink:0; }
 .student-table td:first-child strong { white-space:nowrap; }
+@@media(max-width:600px) {
+    .student-filter-card { padding:12px !important; }
+    #student-filter-form { display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px !important; }
+    .student-filter-fields { display:contents; }
+    .student-filter-fields input[type=search] { grid-column:1/-1;order:0;min-width:0 !important;width:100%; }
+    .student-filter-fields > select,.student-filter-fields .teacher-select { order:1;min-width:0 !important;width:100% !important;max-width:none !important; }
+    .student-filter-fields .teacher-select-button { padding-left:10px;padding-right:26px;font-size:12px; }
+    .student-export { grid-column:1/-1;order:2;margin:0;width:100%; }
+    .student-export > summary { justify-content:center;width:100%;min-height:42px; }
+    .student-export-menu { width:100%;max-width:100%; }
+}
 </style>
 <!-- FILTER & SEARCH BAR -->
 @if (ViewBag.IsCourseStudentPage == true)

@@ -47,7 +47,7 @@
 
 @Html.AntiForgeryToken()
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+<div class="admin-course-approval-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
     <div>
         <h1 class="h2" style="margin-top: 6px;">Hàng Đợi Kiểm Duyệt Khóa Học</h1>
         <p class="body-2" style="color: var(--text-secondary);">Rà soát chất lượng nội dung, xem trực tiếp video bài giảng và đề cương trước khi xuất bản</p>
@@ -55,10 +55,10 @@
 </div>
 
 <!-- FILTER TABS & SEARCH BAR -->
-<div class="card" style="margin-bottom: 24px; padding: 16px 20px;">
+<div class="card admin-course-approval-filters" style="margin-bottom: 24px; padding: 16px 20px;">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
         <!-- Status Filter Tabs -->
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <div class="admin-course-approval-tabs" style="display: flex; gap: 8px; flex-wrap: wrap;">
             <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin", statusFilter = "Pending", search = searchKeyword, category = selectedCategory, fromDate = fromDate, toDate = toDate, sort = sort })"
                class="btn btn-sm @(currentStatus.Equals("Pending", StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-outline")" style="font-weight: 600;">
                 Chờ duyệt <span class="badge badge-warning" style="margin-left: 6px;">@ViewBag.PendingCount</span>
@@ -84,7 +84,7 @@
     </div>
 
     <!-- Tìm kiếm + lọc danh mục / ngày gửi + sắp xếp -->
-    <form method="get" action="@Url.Action("Index", "CourseApproval", new { area = "Admin" })"
+    <form class="admin-approval-filter admin-course-approval-form" method="get" action="@Url.Action("Index", "CourseApproval", new { area = "Admin" })"
           style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-color);">
         <input type="hidden" name="statusFilter" value="@currentStatus" />
         <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 220px;">
@@ -268,7 +268,7 @@
 
             <!-- TAB 3: OVERVIEW -->
             <div id="tab-appr-overview" class="tab-content" style="display: none;">
-                <div style="display: grid; grid-template-columns: 200px 1fr; gap: 20px; margin-bottom: 20px;">
+                <div class="admin-approval-preview" style="display: grid; grid-template-columns: 200px 1fr; gap: 20px; margin-bottom: 20px;">
                     <img id="overview-cover-img" src="" alt="Cover" style="width: 100%; height: 130px; object-fit: cover; border-radius: 12px; border: 1px solid #E2E8F0;" />
                     <div style="font-size: 13px; display: flex; flex-direction: column; gap: 8px;">
                         <div><strong>Học phí chính thức:</strong> <span id="overview-price" style="color: #0D9488; font-weight: 700; font-size: 16px;"></span></div>

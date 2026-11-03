@@ -76,6 +76,15 @@ namespace ECOLearning
                 }
             }
 
+            if (AdminEmailOtpService.Required(session["Role"] as string) && !AdminEmailOtpService.IsVerified(session))
+            {
+                KetThucPhien(filterContext);
+                var loginUrl = new UrlHelper(filterContext.RequestContext).Action("Login", "Account", new { area = "" });
+                filterContext.Result = LaAjax(filterContext)
+                    ? (ActionResult)new JsonResult { Data = new { success = false, requireLogin = true, redirectUrl = loginUrl, message = "Vui lòng đăng nhập và xác thực OTP Admin." }, JsonRequestBehavior = JsonRequestBehavior.AllowGet }
+                    : new RedirectResult(loginUrl);
+                return;
+            }
             if (session[KeyCanDoiMatKhau] as bool? == true && !DuocVaoKhiCanDoiMatKhau(filterContext))
             {
                 const string thongBao = "Bạn đang dùng mật khẩu tạm. Vui lòng đổi mật khẩu mới trước khi tiếp tục.";
@@ -99,6 +108,7 @@ namespace ECOLearning
         {
             // Bị khóa / bị thay phiên: không cho cookie khôi phục lại Session
             PhienDocQuyenService.XoaCookiePhien(c.HttpContext.Response);
+            AdminEmailOtpService.ClearCookie(c.HttpContext.Response);
             FormsAuthentication.SignOut();
             c.HttpContext.Session.Clear();
             c.HttpContext.Session.Abandon();

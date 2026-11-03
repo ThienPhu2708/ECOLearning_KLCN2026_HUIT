@@ -141,6 +141,9 @@ namespace ECOLearning.Services
                 WHERE h.maHoiThoai = @id",
                 new SqlParameter("@id", maHoiThoai)).FirstOrDefault();
 
+            if (item != null && item.MaHocVien != currentUserId && item.MaGiaoVien != currentUserId)
+                return null;
+
             if (item != null)
             {
                 bool isStudent = item.MaHocVien == currentUserId;
@@ -155,8 +158,28 @@ namespace ECOLearning.Services
         // ==========================================
         // 2. GỬI TIN NHẮN (KIỂM TRA NGHIỆP VỤ & RATE LIMIT)
         // ==========================================
+        public static string TenAnh(string content)
+        {
+            var match = Regex.Match(content ?? "", @"^\[eco-image:([a-f0-9]{32}\.jpg)\]$");
+            return match.Success ? match.Groups[1].Value : null;
+        }
+
+        public KetQuaGuiTin GuiAnh(int room, int user, string filename)
+        {
+            if (TenAnh("[eco-image:" + filename + "]") == null)
+                return new KetQuaGuiTin { Success = false, Message = "Ảnh không hợp lệ." };
+            return GuiTin(room, user, "[eco-image:" + filename + "]", true);
+        }
+
         public KetQuaGuiTin GuiTinNhan(int maHoiThoai, int maNguoiGui, string noiDung)
         {
+            return GuiTin(maHoiThoai, maNguoiGui, noiDung, false);
+        }
+
+        private KetQuaGuiTin GuiTin(int maHoiThoai, int maNguoiGui, string noiDung, bool laAnh)
+        {
+            if (!laAnh && (noiDung ?? "").Trim().StartsWith("[eco-image:", StringComparison.Ordinal))
+                return new KetQuaGuiTin { Success = false, Message = "Hãy dùng nút gửi ảnh." };
             if (!DaCaiDat())
                 return new KetQuaGuiTin { Success = false, Message = "Chức năng chat chưa sẵn sàng." };
 
@@ -221,7 +244,7 @@ namespace ECOLearning.Services
             bool canhBao = KiemTraThongTinNhayCam(noiDung);
 
             // Tóm tắt tin cuối (tối đa 90 ký tự)
-            string tomTat = noiDung.Length > 90 ? noiDung.Substring(0, 87) + "..." : noiDung;
+            string tomTat = laAnh ? "Đã gửi một ảnh" : noiDung.Length > 90 ? noiDung.Substring(0, 87) + "..." : noiDung;
 
             // Ghi tin nhắn vào CSDL
             int maTinMoi = db.Database.SqlQuery<int>(@"
@@ -275,7 +298,7 @@ namespace ECOLearning.Services
         // ==========================================
         // 3. THU HỒI TIN NHẮN (TRONG VÒNG 5 PHÚT)
         // ==========================================
-        public bool ThuHoiTinNhan(int maTinNhan, int maNguoiYeuCau)
+        public bool ThuHoiTinNhan(int maTinNhan, int maNguoiYeuCau, int? maHoiThoai = null)
         {
             if (!DaCaiDat()) return false;
 
@@ -285,7 +308,8 @@ namespace ECOLearning.Services
                 FROM dbo.TinNhan WHERE maTinNhan = @id",
                 new SqlParameter("@id", maTinNhan)).FirstOrDefault();
 
-            if (tin == null || tin.DaThuHoi || tin.MaNguoiGui != maNguoiYeuCau)
+            if (tin == null || tin.DaThuHoi || tin.MaNguoiGui != maNguoiYeuCau
+                || (maHoiThoai.HasValue && tin.MaHoiThoai != maHoiThoai.Value))
                 return false;
 
             // Kiểm tra thời gian: <= 5 phút (300 giây)
@@ -431,6 +455,8 @@ namespace ECOLearning.Services
         public List<TinNhanItemViewModel> LayLichSuTinNhan(int maHoiThoai, int currentUserId, int limit = 50, int? truocMaTinNhan = null)
         {
             if (!DaCaiDat()) return new List<TinNhanItemViewModel>();
+            if (LayChiTietHoiThoai(maHoiThoai, currentUserId) == null)
+                return new List<TinNhanItemViewModel>();
 
             string sql = @"
                 SELECT TOP (@limit)
@@ -578,6 +604,7 @@ namespace ECOLearning.Services
         public bool BaoCaoHoiThoai(int maHoiThoai, int maNguoiBaoCao, string lyDo)
         {
             if (!DaCaiDat()) return false;
+            if (LayChiTietHoiThoai(maHoiThoai, maNguoiBaoCao) == null) return false;
 
             db.Database.ExecuteSqlCommand("UPDATE dbo.HoiThoai SET trangThai = 'BiBaoCao' WHERE maHoiThoai = @id",
                 new SqlParameter("@id", maHoiThoai));

@@ -172,6 +172,19 @@ background: var(--primary, #434CE8);
 border-color: var(--primary, #434CE8);
 color: #FFFFFF;
 }
+@@media(max-width:768px) {
+    #categories-section { padding:32px 0 !important; }
+    #categories-section .category-slider-viewport { box-sizing:border-box; padding:6px 0 12px; margin:0; max-width:100%; overflow-x:auto; overscroll-behavior-x:contain; scroll-snap-type:x proximity; scrollbar-width:none; }
+    #categories-section .category-slider-viewport::-webkit-scrollbar { display:none; }
+    #categories-section .category-slider-track { gap:12px; transform:none !important; transition:none; }
+    #categories-section .category-item-col { flex:0 0 136px; min-width:136px; max-width:136px; scroll-snap-align:start; }
+    #categories-section .category-card-name { font-size:13px; padding:12px; min-height:60px; }
+    #categories-section .category-card { border-radius:14px; }
+    #categories-section .cat-nav-btn { display:none; }
+    #categories-section .cat-head-actions { width:100%; }
+    #categories-section .cat-all-link { height:34px; font-size:12px; padding:0 12px; }
+    #categories-section .h2 { font-size:22px; }
+}
 </style>
 
 <div class="safe-container">
@@ -460,7 +473,7 @@ color: #FFFFFF;
 <!-- Section UC7: Khóa Học Dành Riêng Cho Bạn (Gợi Ý Cá Nhân Hóa bằng lọc cộng tác, xem RecommendationService) -->
 <section id="recommendations" style="padding: 60px 0; background: var(--bg-surface); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
     <div class="safe-container">
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px;">
+        <div class="home-recommend-head" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px;">
             <div>
                 @* Tiêu đề và mô tả đổi theo nguồn gợi ý (RecommendationService.GetForHome) *@
                 <h2 class="h2" style="margin-top: 8px;">@(homeRecommendation.CheDo == ECOLearning.ViewModels.CheDoGoiY.PhoBien ? "Khóa học phổ biến" : "Khóa học dành riêng cho bạn")</h2>
@@ -497,7 +510,7 @@ color: #FFFFFF;
                         break;
                 }
             </div>
-            <div style="display: flex; gap: 10px; align-items: center; flex-shrink: 0;">
+            <div class="home-recommend-actions" style="display: flex; gap: 10px; align-items: center; flex-shrink: 0;">
                 @if (recommendations.Count > 1)
                 {
                     <div class="course-slider-nav" data-slider-nav="recommend-slider" style="display: flex; gap: 10px; align-items: center;" hidden>
@@ -560,7 +573,7 @@ if (interestPicker != null)
         .cl-section { padding: 60px 0 0; background: var(--bg-canvas, #F8FAFC); }
         .cl-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
         .cl-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-        .cl-card { display: flex; gap: 14px; padding: 14px; background: #FFFFFF; border: 1px solid var(--border-color, #E2E8F0); border-radius: 16px; transition: box-shadow .15s, border-color .15s; }
+        .cl-card { display: flex; min-width: 0; max-width: 100%; gap: 14px; padding: 14px; background: #FFFFFF; border: 1px solid var(--border-color, #E2E8F0); border-radius: 16px; transition: box-shadow .15s, border-color .15s; }
         .cl-card:hover { border-color: #C7D2FE; box-shadow: 0 8px 24px rgba(67, 76, 232, 0.08); }
         .cl-thumb { flex: 0 0 120px; height: 90px; border-radius: 12px; overflow: hidden; background: #E2E8F0; position: relative; display: block; }
         .cl-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -575,7 +588,22 @@ if (interestPicker != null)
         .cl-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: auto; padding-top: 6px; }
         .cl-foot strong { font-size: 13px; color: var(--text-heading, #0F172A); }
         @@media (max-width: 1024px) { .cl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @@media (max-width: 640px) { .cl-grid { grid-template-columns: 1fr; } .cl-thumb { flex-basis: 96px; height: 72px; } }
+        @@media (max-width: 640px) {
+            .cl-section { padding-top: 32px; }
+            .cl-section > .safe-container { width:100%; min-width:0; }
+            .cl-grid { grid-template-columns: minmax(0, 1fr); gap:12px; min-width:0; }
+            .cl-card { padding:12px; gap:10px; }
+            .cl-thumb { flex:0 0 68px; height:68px; border-radius:10px; }
+            .cl-head { align-items:flex-start; gap:10px; }
+            .cl-head > div { min-width:0; }
+            .cl-head h2 { font-size:22px; }
+            .cl-head .body-2 { font-size:13px; }
+            .cl-title { font-size:14px; line-height:1.5; }
+            .cl-body > .cl-sub { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; font-size:12px; }
+            .cl-foot { flex-wrap:wrap; gap:8px; }
+            .cl-foot .btn { padding:8px 12px; min-height:36px; margin-left:auto; font-size:12px; }
+            .cl-foot .cl-sub { font-size:11px; }
+        }
     </style>
     <section id="continue-section" class="cl-section" aria-labelledby="continue-heading">
         <div class="safe-container">

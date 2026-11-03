@@ -1,0 +1,132 @@
+/* Shared Admin shell and responsive adjustments, isolated from other portals. */
+.admin-ui .admin-page-content, .admin-ui .admin-page-content .grid-12 > * { min-width: 0; }
+.admin-ui .admin-page-content img, .admin-ui .admin-page-content video { max-width: 100%; }
+.admin-ui .admin-table-scroll { width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.admin-ui .admin-table-scroll:focus-visible { outline: 2px solid #6366f1; outline-offset: -2px; }
+.admin-menu-backdrop[hidden] { display: none; }
+.admin-ui .staff-menu-btn { display: none; }
+.admin-ui .admin-teacher-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-bottom: 16px; }
+.admin-ui .admin-teacher-search { display: flex; flex: 1 1 260px; min-width: 0; gap: 8px; }
+.admin-ui .admin-teacher-search .au-search { min-width: 0; }
+/* Payout identities and bank details must not shrink into vertical text. */
+body.admin-ui .po-table { min-width: 1080px; table-layout: auto; }
+body.admin-ui .po-table th:nth-child(1), body.admin-ui .po-table td:nth-child(1) { min-width: 150px; }
+body.admin-ui .po-table th:nth-child(2), body.admin-ui .po-table td:nth-child(2) { min-width: 210px; }
+body.admin-ui .po-table th:nth-child(3), body.admin-ui .po-table td:nth-child(3) { min-width: 160px; }
+body.admin-ui .po-table th:nth-child(4), body.admin-ui .po-table td:nth-child(4) { min-width: 190px; }
+body.admin-ui .po-table th:nth-child(5), body.admin-ui .po-table td:nth-child(5) { min-width: 190px; }
+body.admin-ui .po-table th:nth-child(6), body.admin-ui .po-table td:nth-child(6) { min-width: 130px; }
+body.admin-ui .po-table .po-sub { word-break: normal; overflow-wrap: anywhere; }
+body.admin-ui .po-table td.po-wrap { line-height: 1.6; }
+@media (max-width: 1200px) {
+    .admin-ui .grid-12 > .col-3 { grid-column: span 6; }
+}
+@media (max-width: 992px) {
+    .admin-ui .dashboard-sidebar { z-index: 1201; width: min(284px, 85vw); height: 100dvh; }
+    .admin-ui .staff-menu-btn { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 40px; height: 40px; }
+    .admin-menu-backdrop { position: fixed; inset: 0; border: 0; background: rgba(15,23,42,.45); z-index: 1200; }
+    .admin-menu-open { overflow: hidden; }
+    .admin-ui .dashboard-topbar { display: flex; gap: 12px; align-items: center; min-width: 0; }
+    .admin-ui .breadcrumb-nav { min-width: 0; flex: 1; }
+    .admin-ui .dashboard-main { min-width: 0; }
+    .admin-ui .admin-page-content .table-responsive, .admin-ui .rv-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+}
+@media (max-width: 640px) {
+    .admin-ui .dashboard-main { padding: 16px 12px; }
+    .admin-ui .dashboard-topbar { gap: 8px; padding: 0 10px; }
+    .admin-ui .topbar-actions { flex-shrink: 0; }
+    .admin-ui .topbar-actions .btn { padding: 8px 10px; font-size: 12px; }
+    .admin-ui .breadcrumb-nav { flex-wrap: nowrap; overflow: hidden; font-size: 12px; }
+    .admin-ui .breadcrumb-nav #breadcrumb-parent,
+    .admin-ui .breadcrumb-nav #breadcrumb-parent + .separator { display: none; }
+    .admin-ui .breadcrumb-nav .current { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .admin-ui .content-header, .admin-ui .au-head { flex-wrap: wrap; align-items: flex-start !important; gap: 12px; }
+    .admin-ui .admin-page-content h1 { font-size: 23px; line-height: 1.35; overflow-wrap: anywhere; }
+    .admin-ui .au-stats, .admin-ui .au-stats.au-stats-4, .admin-ui .au-info-grid,
+    .admin-ui .rv-stats, .admin-ui .po-stats, .admin-ui .ss-kpis,
+    .admin-ui .admin-approval-stats { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px; }
+    .admin-ui .au-stat, .admin-ui .au-info, .admin-ui .rv-stat, .admin-ui .po-stat { padding: 14px 12px; min-width: 0; overflow-wrap: anywhere; }
+    .admin-ui .au-stat strong, .admin-ui .rv-stat-value, .admin-ui .po-stat strong { font-size: 21px; }
+    .admin-ui .ss-kpis > *, .admin-ui .admin-approval-stats > * { min-width: 0; padding: 14px !important; overflow-wrap: anywhere; }
+    .admin-ui .admin-approval-stats > * { flex-wrap: wrap; gap: 10px !important; }
+    .admin-ui .kpi-card { padding: 16px 12px; flex-wrap: wrap; gap: 10px; }
+    .admin-ui .kpi-value { font-size: 23px; overflow-wrap: anywhere; }
+    .admin-ui .rv-split { grid-template-columns: minmax(0, 1fr); }
+    .admin-ui .au-profile { padding: 18px 14px; gap: 16px; }
+    .admin-ui .au-profile-main { gap: 12px; width: 100%; }
+    .admin-ui .au-profile-main > div { min-width: 0; overflow-wrap: anywhere; }
+    .admin-ui .au-profile h2 { font-size: 20px; }
+    .admin-ui .au-log li { flex-direction: column; gap: 6px; }
+    .admin-ui .au-filter, .admin-ui .rv-filter, .admin-ui .admin-approval-filter { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .admin-ui .au-filter .au-search { grid-column: 1 / -1; min-width: 0; width: 100%; }
+    .admin-ui .admin-teacher-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .admin-ui .admin-teacher-heading { margin-bottom: 14px; }
+    .admin-ui .admin-teacher-heading h1 { margin-top: 0 !important; margin-bottom: 6px; font-size: 22px; }
+    .admin-ui .admin-teacher-heading p { font-size: 12px; line-height: 1.6; margin: 0; }
+    .admin-ui .admin-teacher-actions .btn { gap: 6px; padding: 10px; font-size: 12px; line-height: 1.5; white-space: normal; text-align: left; justify-content: flex-start; }
+    .admin-ui .admin-teacher-actions .btn i { flex-shrink: 0; }
+    .admin-ui .admin-teacher-stats { align-items: stretch; margin-bottom: 14px; }
+    .admin-ui .admin-teacher-stats .au-stat { padding: 12px; }
+    .admin-ui .admin-teacher-stats .au-stat span { font-size: 12px; line-height: 1.45; }
+    .admin-ui .admin-teacher-stats .au-stat strong { font-size: clamp(18px, 4.6vw, 22px); line-height: 1.3; margin-top: 6px; }
+    .admin-ui .admin-teacher-stats .au-stat small { font-size: 11px; line-height: 1.4; }
+    .admin-ui .admin-teacher-filter { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px; background: #fff; border: 1px solid #e6eaf2; border-radius: 14px; gap: 8px; }
+    .admin-ui .admin-teacher-search { grid-column: 1 / -1; }
+    .admin-ui .admin-teacher-filter .au-search { grid-column: 1; }
+    .admin-ui .admin-teacher-filter button { grid-column: 2; min-height: 40px; padding: 8px 12px; }
+    .admin-ui .admin-teacher-filter select { font-size: 12px; }
+    .admin-ui .au-filter select.form-control, .admin-ui .rv-filter .form-control,
+    .admin-ui .admin-approval-filter .form-control { width: 100% !important; max-width: 100%; min-width: 0; }
+    .admin-ui .admin-approval-filter > div { min-width: 0 !important; }
+    .admin-ui .admin-approval-filter > div:first-of-type { grid-column: 1 / -1; }
+    .admin-ui .admin-course-approval-heading { margin-bottom: 16px !important; }
+    .admin-ui .admin-course-approval-heading h1 { font-size: 22px; margin-top: 0 !important; margin-bottom: 6px; }
+    .admin-ui .admin-course-approval-heading p { font-size: 12px; line-height: 1.6; margin: 0; }
+    .admin-ui .admin-course-approval-filters { padding: 14px !important; margin-bottom: 18px !important; }
+    .admin-ui .admin-course-approval-tabs { width: 100%; display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px !important; }
+    .admin-ui .admin-course-approval-tabs .btn { min-height: 38px; justify-content: space-between; padding: 8px 10px; font-size: 12px; }
+    .admin-ui .admin-course-approval-tabs .btn:last-child { grid-column: 1 / -1; }
+    .admin-ui .admin-course-approval-form { grid-template-areas: 'search search' 'category sort' 'from to' 'submit submit'; align-items: end; }
+    .admin-ui .admin-course-approval-form > div:nth-of-type(1) { grid-area: search; }
+    .admin-ui .admin-course-approval-form > div:nth-of-type(2) { grid-area: category; }
+    .admin-ui .admin-course-approval-form > div:nth-of-type(3) { grid-area: from; }
+    .admin-ui .admin-course-approval-form > div:nth-of-type(4) { grid-area: to; }
+    .admin-ui .admin-course-approval-form > div:nth-of-type(5) { grid-area: sort; }
+    .admin-ui .admin-course-approval-form > button { grid-area: submit; width: 100%; min-height: 40px; }
+    .admin-ui .admin-course-approval-form > a { grid-area: clear; min-height: 40px; justify-content: center; }
+    .admin-ui .admin-course-approval-form:has(> a) { grid-template-areas: 'search search' 'category sort' 'from to' 'submit clear'; }
+    .admin-ui .admin-course-approval-form input[type="date"] { box-sizing: border-box; max-width: 100%; font-size: 12px; padding-inline: 8px; }
+    .admin-ui .admin-sort-filter { flex-wrap: wrap; width: 100%; }
+    .admin-ui .admin-sort-filter select { flex: 1; min-width: 0; width: auto !important; }
+    .admin-ui .admin-category-search { width: 100%; min-width: 0; }
+    .admin-ui .admin-category-search input { flex: 1; min-width: 0 !important; width: 100%; }
+    .admin-ui .ad-toast { left: 12px; right: 12px; width: auto; max-width: calc(100vw - 24px); }
+    .admin-ui .ad-chart-head, .admin-ui .ad-card-head { gap: 14px; }
+    .admin-ui .ad-filter, .admin-ui .ad-card-filter { width: 100%; gap: 8px; }
+    .admin-ui .ad-filter select, .admin-ui .ad-card-filter select,
+    .admin-ui .ad-card-filter input { max-width: 100%; min-width: 0; flex: 1 1 130px; height: 38px; }
+    .admin-ui .ad-seg { max-width: 100%; flex-wrap: wrap; }
+    .admin-ui .ad-chart { min-height: 220px; }
+    .admin-ui .admin-table-scroll > table { min-width: 640px; }
+    .admin-ui .au-tabs { flex-wrap: nowrap; overflow-x: auto; }
+    .admin-ui .au-tab { flex-shrink: 0; }
+    .admin-ui .cat-img-picker { flex-direction: column; }
+    .admin-ui .cat-img-preview { flex-basis: auto; width: min(200px, 100%); }
+    .admin-ui .modal-overlay { padding: 12px; box-sizing: border-box; }
+    .admin-ui .modal-overlay > div { width: 100% !important; max-height: calc(100dvh - 24px) !important; overflow-y: auto; box-sizing: border-box; }
+    .admin-ui .modal-header, .admin-ui .modal-body, .admin-ui .modal-footer { padding: 16px !important; }
+    .admin-ui .modal-footer, .admin-ui #detail-actions, .admin-ui .admin-dialog-actions { flex-wrap: wrap; gap: 10px; }
+    .admin-ui .modal-footer > div { display: flex; flex-wrap: wrap; gap: 8px; }
+    .admin-ui .modal-footer .btn, .admin-ui .admin-dialog-actions .btn { flex: 1 1 auto; white-space: normal; }
+    .admin-ui .admin-approval-preview { grid-template-columns: minmax(0, 1fr) !important; }
+    .admin-ui .modal-container .tab-nav { overflow-x: auto; }
+    .admin-ui .modal-container .tab-nav > * { flex-shrink: 0; }
+    .admin-ui .swal2-popup { width: min(100%, 480px); padding: 20px 14px; }
+    .admin-ui .swal2-title { font-size: 22px; }
+    .admin-ui .swal2-textarea { margin: 12px 0; width: 100%; box-sizing: border-box; }
+}
+@media (max-width: 360px) {
+    .admin-ui .grid-12 > .col-3 { grid-column: span 12; }
+    .admin-ui .au-info-grid, .admin-ui .rv-stats, .admin-ui .po-stats { grid-template-columns: minmax(0, 1fr) !important; }
+    .admin-ui .topbar-actions .btn { padding: 7px; font-size: 11px; }
+}

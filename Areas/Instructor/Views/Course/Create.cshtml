@@ -23,6 +23,20 @@
 .stepper-step.active .step-title { color: var(--text-heading); font-weight: 700; }
 .stepper-divider { flex: 1; height: 2px; background: var(--border-color); margin: 0 20px; }
 .stepper-divider.completed { background: #10B981; }
+.step-title-short { display:none; }
+.stepper-step { min-width:0; }
+.step-number { flex-shrink:0; }
+@@media(max-width:768px) {
+    .stepper-card { padding:16px 12px;margin-bottom:20px; }
+    .stepper-wrapper { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:start; }
+    .stepper-step { flex-direction:column;gap:8px;text-align:center; }
+    .stepper-divider { display:none; }
+    .step-number { width:34px;height:34px;font-size:14px; }
+    .step-label { display:none; }
+    .step-title { font-size:12px;line-height:1.5; }
+    .step-title-full { display:none; }
+    .step-title-short { display:inline; }
+}
 
 .curriculum-toolbar { display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
 .chapter-toggle { display:inline-flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; font-weight:600; color:var(--text-secondary); position:relative; }
@@ -53,17 +67,17 @@
     <div class="stepper-wrapper">
         <div class="stepper-step active" id="si-1" onclick="jumpToStep(1)">
             <div class="step-number" id="sn-1">1</div>
-            <div><div class="step-label">Bước 1</div><div class="step-title">Thông tin cơ bản</div></div>
+            <div><div class="step-label">Bước 1</div><div class="step-title"><span class="step-title-full">Thông tin cơ bản</span><span class="step-title-short">Thông tin</span></div></div>
         </div>
         <div class="stepper-divider" id="sd-1"></div>
         <div class="stepper-step" id="si-2" onclick="jumpToStep(2)">
             <div class="step-number" id="sn-2">2</div>
-            <div><div class="step-label">Bước 2</div><div class="step-title">Đề cương & Bài giảng</div></div>
+            <div><div class="step-label">Bước 2</div><div class="step-title"><span class="step-title-full">Đề cương & Bài giảng</span><span class="step-title-short">Bài giảng</span></div></div>
         </div>
         <div class="stepper-divider" id="sd-2"></div>
         <div class="stepper-step" id="si-3" onclick="jumpToStep(3)">
             <div class="step-number" id="sn-3">3</div>
-            <div><div class="step-label">Bước 3</div><div class="step-title">Xem lại & Gửi duyệt</div></div>
+            <div><div class="step-label">Bước 3</div><div class="step-title"><span class="step-title-full">Xem lại & Gửi duyệt</span><span class="step-title-short">Gửi duyệt</span></div></div>
         </div>
     </div>
 </div>

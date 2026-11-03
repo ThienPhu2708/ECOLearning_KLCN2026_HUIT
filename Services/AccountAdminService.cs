@@ -76,6 +76,55 @@ namespace ECOLearning.Services
                 WHERE nd.maNguoiDung = @id", new SqlParameter("@id", maNguoiDung)).FirstOrDefault();
         }
 
+        public const string HdDuyetKhoaHoc = "DuyetKhoaHoc";
+        public const string HdTuChoiKhoaHoc = "TuChoiKhoaHoc";
+        public const string HdDuyetBanSua = "DuyetBanSua";
+        public const string HdTuChoiBanSua = "TuChoiBanSua";
+
+        public List<NhatKyQuanTriItem> LayHoatDongAdmin(int maAdmin, int top = int.MaxValue)
+        {
+            var entries = db.Database.SqlQuery<NhatKyQuanTriItem>(@"
+                SELECT TOP (@top) n.maNhatKy AS MaNhatKy, n.hanhDong AS HanhDong, n.lyDo AS LyDo,
+                       n.ngayTao AS NgayTao, ISNULL(a.hoTen, N'Hệ thống') AS TenAdmin,
+                       n.loaiDoiTuong AS LoaiDoiTuong, n.maDoiTuong AS MaDoiTuong,
+                       CASE WHEN n.loaiDoiTuong = 'NguoiDung' THEN u.hoTen
+                            WHEN n.loaiDoiTuong = 'KhoaHoc' THEN k.tenKhoaHoc END AS TenDoiTuong
+                FROM dbo.NhatKyQuanTri n
+                LEFT JOIN dbo.NguoiDung a ON a.maNguoiDung = n.maAdmin
+                LEFT JOIN dbo.NguoiDung u ON n.loaiDoiTuong = 'NguoiDung' AND CAST(u.maNguoiDung AS VARCHAR(30)) = n.maDoiTuong
+                LEFT JOIN dbo.KhoaHoc k ON n.loaiDoiTuong = 'KhoaHoc' AND k.maKhoaHoc = n.maDoiTuong
+                WHERE n.maAdmin = @admin ORDER BY n.ngayTao DESC, n.maNhatKy DESC",
+                new SqlParameter("@admin", maAdmin), new SqlParameter("@top", top)).ToList();
+
+            // Older course decisions were stored only in KiemDuyetKhoaHoc. Show those already recorded,
+            // without inventing timestamps or adding duplicate audit rows on page reads.
+            entries.AddRange(db.Database.SqlQuery<NhatKyQuanTriItem>(@"
+                SELECT 0 AS MaNhatKy, CASE WHEN kd.trangThai = N'Đã duyệt' THEN 'DuyetKhoaHoc' ELSE 'TuChoiKhoaHoc' END AS HanhDong,
+                       kd.lyDoTuChoi AS LyDo, kd.ngayKiemDuyet AS NgayTao, a.hoTen AS TenAdmin,
+                       'KhoaHoc' AS LoaiDoiTuong, kd.maKhoaHoc AS MaDoiTuong, k.tenKhoaHoc AS TenDoiTuong
+                FROM dbo.KiemDuyetKhoaHoc kd JOIN dbo.NguoiDung a ON a.maNguoiDung = kd.maAdmin
+                LEFT JOIN dbo.KhoaHoc k ON k.maKhoaHoc = kd.maKhoaHoc
+                WHERE kd.maAdmin = @admin AND kd.ngayKiemDuyet IS NOT NULL AND kd.trangThai IN (N'Đã duyệt', N'Từ chối')
+                AND NOT EXISTS (SELECT 1 FROM dbo.NhatKyQuanTri n WHERE n.maAdmin = kd.maAdmin
+                    AND n.loaiDoiTuong = 'KhoaHoc' AND n.maDoiTuong = kd.maKhoaHoc
+                    AND n.hanhDong = CASE WHEN kd.trangThai = N'Đã duyệt' THEN 'DuyetKhoaHoc' ELSE 'TuChoiKhoaHoc' END)",
+                new SqlParameter("@admin", maAdmin)).ToList());
+            if (db.Database.SqlQuery<int>("SELECT CASE WHEN OBJECT_ID('dbo.CourseRevision') IS NULL THEN 0 ELSE 1 END").Single() == 1)
+                entries.AddRange(db.Database.SqlQuery<NhatKyQuanTriItem>(@"
+                    SELECT 0 AS MaNhatKy, CASE WHEN r.Status = 'Approved' THEN 'DuyetBanSua' ELSE 'TuChoiBanSua' END AS HanhDong,
+                           r.Reason AS LyDo, r.ReviewedAt AS NgayTao, a.hoTen AS TenAdmin,
+                           'KhoaHoc' AS LoaiDoiTuong, r.CourseId AS MaDoiTuong, k.tenKhoaHoc AS TenDoiTuong
+                    FROM dbo.CourseRevision r JOIN dbo.NguoiDung a ON a.maNguoiDung = r.AdminId
+                    LEFT JOIN dbo.KhoaHoc k ON k.maKhoaHoc = r.CourseId
+                    WHERE r.AdminId = @admin AND r.ReviewedAt IS NOT NULL AND r.Status IN ('Approved', 'Rejected')
+                    AND NOT EXISTS (SELECT 1 FROM dbo.NhatKyQuanTri n WHERE n.maAdmin = r.AdminId
+                        AND n.loaiDoiTuong = 'KhoaHoc' AND n.maDoiTuong = r.CourseId
+                        AND n.hanhDong = CASE WHEN r.Status = 'Approved' THEN 'DuyetBanSua' ELSE 'TuChoiBanSua' END)",
+                    new SqlParameter("@admin", maAdmin)).ToList());
+            AdminActivityHistory.Append(db, maAdmin, entries);
+            return entries.OrderByDescending(n => n.NgayTao).ThenByDescending(n => n.MaNhatKy).Take(top).ToList();
+        }
+
         public List<NhatKyQuanTriItem> LayNhatKy(string loaiDoiTuong, string maDoiTuong, int top = 50)
         {
             return db.Database.SqlQuery<NhatKyQuanTriItem>(@"
@@ -478,6 +527,9 @@ namespace ECOLearning.Services
         public string LyDo { get; set; }
         public DateTime NgayTao { get; set; }
         public string TenAdmin { get; set; }
+        public string LoaiDoiTuong { get; set; }
+        public string MaDoiTuong { get; set; }
+        public string TenDoiTuong { get; set; }
 
         public string TenHanhDong
         {
@@ -493,7 +545,11 @@ namespace ECOLearning.Services
                     case AccountAdminService.HdTamDungKhuyenMai: return "Admin tạm dừng";
                     case AccountAdminService.HdChoChayKhuyenMai: return "Admin cho chạy lại";
                     case AccountAdminService.HdThayPhien: return "Đăng nhập nơi khác";
-                    default: return HanhDong;
+                    case AccountAdminService.HdDuyetKhoaHoc: return "Duyệt khóa học";
+                    case AccountAdminService.HdTuChoiKhoaHoc: return "Từ chối khóa học";
+                    case AccountAdminService.HdDuyetBanSua: return "Duyệt bản sửa khóa học";
+                    case AccountAdminService.HdTuChoiBanSua: return "Từ chối bản sửa khóa học";
+                    default: return AdminActivityHistory.Label(HanhDong);
                 }
             }
         }
@@ -505,8 +561,12 @@ namespace ECOLearning.Services
                 switch (HanhDong)
                 {
                     case AccountAdminService.HdKhoa:
+                    case AccountAdminService.HdTuChoiKhoaHoc:
+                    case AccountAdminService.HdTuChoiBanSua:
                     case AccountAdminService.HdTamDungKhuyenMai: return "badge-danger";
                     case AccountAdminService.HdMoKhoa:
+                    case AccountAdminService.HdDuyetKhoaHoc:
+                    case AccountAdminService.HdDuyetBanSua:
                     case AccountAdminService.HdChoChayKhuyenMai: return "badge-success";
                     case AccountAdminService.HdCanhCao:
                     case AccountAdminService.HdThayPhien: return "badge-warning";

@@ -23,7 +23,7 @@ namespace ECOLearning.Controllers.Api
 
         // G1. GET /api/v1/my-courses?status=in-progress|completed&page=
         [HttpGet, Route("my-courses")]
-        public ActionResult MyCourses(string status = "in-progress", int page = 1, int pageSize = 12)
+        public ActionResult MyCourses(string status = "in-progress", int page = 1, int pageSize = 12, bool separateCertificates = false)
         {
             page = ChuanHoaTrang(page);
             pageSize = ChuanHoaKichThuoc(pageSize);
@@ -36,13 +36,13 @@ namespace ECOLearning.Controllers.Api
                 .GroupBy(d => d.maKhoaHoc).Select(g => g.First()).ToList();
             var tienDo = new LearningService(Db).TienDoCacKhoa(userId, dangKy.Select(d => d.maKhoaHoc).ToList());
 
-            bool xemHoanThanh = status == "completed";
-            var loc = dangKy.Where(d => tienDo[d.maKhoaHoc].DaHoanThanh == xemHoanThanh).ToList();
+            var quiz = new QuizService(Db);
+            bool coQuiz = quiz.Installed();
+            var certificates=coQuiz?quiz.CertificateCourseIds(userId):new HashSet<string>();
+            var loc=dangKy.Where(d=>status=="certified"?certificates.Contains(d.maKhoaHoc):status=="completed"?tienDo[d.maKhoaHoc].DaHoanThanh&&(!separateCertificates||!certificates.Contains(d.maKhoaHoc)):!tienDo[d.maKhoaHoc].DaHoanThanh&&!certificates.Contains(d.maKhoaHoc)).ToList();
             var trang = loc.Skip((page - 1) * pageSize).Take(pageSize).ToList();
             var the = new ApiCourseMapper(Db, AbsoluteUrl).Map(trang.Select(d => d.maKhoaHoc)).ToDictionary(c => c.Id);
 
-            var quiz = new QuizService(Db);
-            bool coQuiz = quiz.Installed();
             var items = trang.Where(d => the.ContainsKey(d.maKhoaHoc)).Select(d =>
             {
                 var c = the[d.maKhoaHoc];
@@ -64,11 +64,12 @@ namespace ECOLearning.Controllers.Api
                     isLocked = d.trangThai == CourseStatus.KhoaVinhVien,
                     hasQuiz = cauHinh != null && cauHinh.Published,
                     quizPassed = trangThaiQuiz != null && trangThaiQuiz.Passed,
-                    hasCertificate = trangThaiQuiz != null && trangThaiQuiz.IssuedAt.HasValue
+                    hasCertificate = certificates.Contains(d.maKhoaHoc),
+                    pendingQuizReview = trangThaiQuiz != null && trangThaiQuiz.PendingReview,
+                    quizRetakeRequired = trangThaiQuiz != null && trangThaiQuiz.RetakeRequired
                 };
             }).ToList();
 
-            int soHoanThanh = dangKy.Count(d => tienDo[d.maKhoaHoc].DaHoanThanh);
             return Ok(new
             {
                 items,
@@ -76,7 +77,7 @@ namespace ECOLearning.Controllers.Api
                 pageSize,
                 total = loc.Count,
                 totalPages = (int)Math.Ceiling(loc.Count / (double)pageSize),
-                counts = new { inProgress = dangKy.Count - soHoanThanh, completed = soHoanThanh }
+                counts = new { inProgress = dangKy.Count(d=>!tienDo[d.maKhoaHoc].DaHoanThanh&&!certificates.Contains(d.maKhoaHoc)), completed = dangKy.Count(d=>tienDo[d.maKhoaHoc].DaHoanThanh&&(!separateCertificates||!certificates.Contains(d.maKhoaHoc))), certified=dangKy.Count(d=>certificates.Contains(d.maKhoaHoc)) }
             });
         }
 

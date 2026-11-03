@@ -116,7 +116,9 @@ namespace ECOLearning.Services
                             ELSE (SELECT COUNT(*) FROM dbo.QuizValidCertificate WHERE StudentId = @id AND IssuedAt IS NOT NULL) END",
                 new SqlParameter("@id", maNguoiDung)).Single();
 
-            nd.NhatKy = new AccountAdminService(db).LayNhatKy(AccountAdminService.DoiTuongNguoiDung, maNguoiDung.ToString());
+            var audit = new AccountAdminService(db);
+            nd.NhatKy = nd.VaiTro == AccountAdminService.Admin ? audit.LayHoatDongAdmin(maNguoiDung)
+                : audit.LayNhatKy(AccountAdminService.DoiTuongNguoiDung, maNguoiDung.ToString());
             return nd;
         }
 

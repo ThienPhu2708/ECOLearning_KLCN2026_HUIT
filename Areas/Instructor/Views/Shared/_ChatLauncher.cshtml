@@ -1,0 +1,96 @@
+<div id="teacher-chat-widget" data-source="@Url.Action("Conversations", "Message", new { area = "Instructor" })">
+    <section id="teacher-chat-popover" class="teacher-chat-popover" aria-labelledby="teacher-chat-heading" hidden>
+        <header><div><h3 id="teacher-chat-heading">Đoạn chat</h3><p>Tin nhắn từ học viên của bạn</p></div><button type="button" id="teacher-chat-close" aria-label="Đóng hộp tin nhắn"><i class="bi bi-x-lg" aria-hidden="true"></i></button></header>
+        <div id="teacher-chat-list" class="teacher-chat-list" aria-live="polite">Đang tải tin nhắn...</div>
+        <a class="teacher-chat-all" href="@Url.Action("Index", "Message", new { area = "Instructor" })"><i class="bi bi-arrows-angle-expand" aria-hidden="true"></i> Xem tất cả tin nhắn</a>
+    </section>
+    <button type="button" id="teacher-chat-launcher" class="teacher-chat-launcher" aria-label="Tin nhắn học viên" aria-expanded="false" aria-controls="teacher-chat-popover"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i><span id="teacher-chat-count" hidden></span></button>
+</div>
+<style>
+    .teacher-chat-launcher { position:fixed; right:24px; bottom:24px; z-index:1000; width:60px; height:60px; border:0; border-radius:50%; background:#4F46E5; color:white; box-shadow:0 6px 24px #4F46E54D; font-size:26px; cursor:pointer; display:grid; place-items:center; }
+    .teacher-chat-launcher:hover { background:#4338CA; }
+    #teacher-chat-count { position:absolute; top:-3px; right:-3px; border:3px solid white; border-radius:99px; padding:2px 6px; min-width:24px; background:#EF4444; color:white; font-size:11px; font-weight:700; }
+    #teacher-chat-widget [hidden] { display:none !important; }
+    .teacher-chat-popover { position:fixed; right:24px; bottom:96px; z-index:1000; width:360px; max-width:calc(100vw - 32px); max-height:calc(100dvh - 120px); display:flex; flex-direction:column; background:white; border:1px solid #E2E8F0; border-radius:20px; box-shadow:0 12px 50px #0F172A26; overflow:hidden; color:#1E293B; }
+    .teacher-chat-popover header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:22px 22px 16px; }
+    .teacher-chat-popover h3 { font-size:22px; font-weight:750; letter-spacing:-.5px; margin:0; color:#172033; }
+    .teacher-chat-popover p { font-size:12px; color:#718096; margin:4px 0 0; }
+    #teacher-chat-close { width:32px; height:32px; border:0; border-radius:50%; color:#64748B; background:#F1F5F9; font-size:13px; cursor:pointer; }
+    .teacher-chat-list { overflow:auto; min-height:0; padding:0 10px 12px; }
+    #teacher-chat-widget .teacher-chat-item { display:flex; gap:12px; align-items:center; padding:13px 12px; color:#243047; text-decoration:none; border-radius:12px; background:transparent; }
+    #teacher-chat-widget .teacher-chat-item:hover { background:#F4F5F8; }
+    .teacher-chat-avatar { display:grid; place-items:center; width:50px; height:50px; flex-shrink:0; border-radius:50%; background:#EAE8FF; color:#6054D6; font-size:18px; font-weight:600; }
+    .teacher-chat-summary { min-width:0; flex:1; }
+    .teacher-chat-summary strong { display:block; font-size:14px; font-weight:600; color:#243047; }
+    .teacher-chat-summary small,.teacher-chat-preview { display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:12px; color:#718096; line-height:1.7; }
+    .teacher-chat-summary small { color:#8792A5; font-size:11px; }
+    .teacher-chat-name-row { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+    .teacher-chat-name-row time { flex-shrink:0; font-size:10px; color:#98A2B3; }
+    .teacher-chat-preview { color:#718096; font-size:13px; }
+    .teacher-chat-item.is-unread .teacher-chat-preview { color:#243047; font-weight:600; }
+    .teacher-chat-unread { width:9px; height:9px; flex-shrink:0; border-radius:50%; background:#4F46E5; }
+    .teacher-chat-all { display:flex; align-items:center; justify-content:center; gap:9px; padding:15px; border-top:1px solid #F1F3F7; background:#FAFBFD; text-align:center; color:#5B5DC6; font-size:12px; font-weight:600; text-decoration:none; }
+    .teacher-chat-empty { padding:32px 16px; text-align:center; color:#718096; font-size:13px; line-height:1.8; }
+    #teacher-chat-widget button:focus-visible,.teacher-chat-item:focus-visible { outline:3px solid #A5B4FC; outline-offset:2px; }
+    #teacher-chat-widget .teacher-chat-launcher { bottom:var(--teacher-chat-bottom,24px); }
+    #teacher-chat-widget .teacher-chat-popover { bottom:calc(var(--teacher-chat-bottom,24px) + 72px); max-height:calc(100dvh - var(--teacher-chat-bottom,24px) - 96px); }
+    @@media(max-width:540px) { #teacher-chat-widget { --teacher-chat-bottom:16px; } .teacher-chat-launcher { right:16px; } .teacher-chat-popover { right:16px; } }
+</style>
+<script>
+(function () {
+    var root = document.getElementById('teacher-chat-widget'), button = document.getElementById('teacher-chat-launcher');
+    var panel = document.getElementById('teacher-chat-popover'), list = document.getElementById('teacher-chat-list'), badge = document.getElementById('teacher-chat-count');
+    var busy = false;
+    function avoidActionBar() {
+        var bottom = window.innerWidth <= 540 ? 16 : 24;
+        document.querySelectorAll('.step-footer').forEach(function (bar) {
+            if (!bar.getClientRects().length) return;
+            var rect = bar.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom > 0) bottom = Math.max(bottom, window.innerHeight - rect.top + 12);
+        });
+        root.style.setProperty('--teacher-chat-bottom', bottom + 'px');
+    }
+    window.addEventListener('resize', avoidActionBar);
+    if (window.ResizeObserver) {
+        var barObserver = new ResizeObserver(avoidActionBar);
+        document.querySelectorAll('.step-footer').forEach(function (bar) { barObserver.observe(bar); });
+    }
+    avoidActionBar();
+    function toggle(open) { panel.hidden = !open; button.setAttribute('aria-expanded', String(open)); if (open) refresh(); else button.focus(); }
+    button.addEventListener('click', function () { toggle(panel.hidden); });
+    document.getElementById('teacher-chat-close').addEventListener('click', function () { toggle(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !panel.hidden) toggle(false); });
+    document.addEventListener('click', function (e) { if (!panel.hidden && !root.contains(e.target)) { panel.hidden = true; button.setAttribute('aria-expanded','false'); } });
+    function empty(text) { list.replaceChildren(); var p = document.createElement('p'); p.className = 'teacher-chat-empty'; p.textContent = text; list.appendChild(p); }
+    async function refresh() {
+        if (busy || document.hidden) return;
+        busy = true;
+        try {
+            var response = await fetch(root.dataset.source, { credentials:'same-origin', cache:'no-store', headers:{Accept:'application/json'} });
+            if (!response.ok) throw new Error();
+            var data = await response.json();
+            if (!Array.isArray(data.items)) throw new Error();
+            badge.hidden = data.count <= 0; badge.textContent = data.count > 99 ? '99+' : data.count;
+            button.setAttribute('aria-label', 'Tin nhắn học viên' + (data.count > 0 ? ', ' + data.count + ' tin chưa đọc' : ''));
+            if (!data.items.length) { empty('Chưa có tin nhắn. Câu hỏi của học viên trong khóa học bạn phụ trách sẽ hiện tại đây.'); return; }
+            list.replaceChildren();
+            data.items.forEach(function (item) {
+                var link = document.createElement('a'); link.className = 'teacher-chat-item'; link.href = item.url;
+                var avatar = document.createElement('span'); avatar.className = 'teacher-chat-avatar'; avatar.textContent = (item.name || '?').trim().charAt(0).toUpperCase();
+                var summary = document.createElement('span'); summary.className = 'teacher-chat-summary';
+                var name = document.createElement('strong'); name.textContent = item.name;
+                var nameRow = document.createElement('span'); nameRow.className = 'teacher-chat-name-row';
+                var time = document.createElement('time'); time.textContent = item.time || '';
+                nameRow.append(name,time);
+                var preview = document.createElement('span'); preview.className = 'teacher-chat-preview'; preview.textContent = item.preview;
+                summary.append(nameRow,preview); link.append(avatar,summary);
+                if (item.unread > 0) { link.classList.add('is-unread'); var unread = document.createElement('span'); unread.className = 'teacher-chat-unread'; unread.setAttribute('aria-label', item.unread + ' tin chưa đọc'); link.appendChild(unread); }
+                list.appendChild(link);
+            });
+        } catch (_) { if (!panel.hidden && !list.querySelector('.teacher-chat-item')) empty('Chưa tải được tin nhắn. Đóng và mở lại để thử lại.'); }
+        finally { busy = false; }
+    }
+    refresh(); setInterval(refresh, 10000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+})();
+</script>

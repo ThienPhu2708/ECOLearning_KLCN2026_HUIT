@@ -19,12 +19,46 @@
 
 @section styles {
     <style>
+        .course-discovery {
+            margin-bottom: 24px;
+            padding: clamp(16px, 2.5vw, 24px);
+            border: 1px solid #E0E5FA;
+            border-radius: 16px;
+            background: linear-gradient(120deg, #EEF2FF, #FFFFFF 85%);
+        }
+
+        .course-discovery h1 {
+            margin: 0 0 4px;
+            color: var(--text-heading, #0F172A);
+            font-size: clamp(23px, 3vw, 30px);
+            line-height: 1.25;
+            font-weight: 800;
+        }
+
+        .course-discovery p {
+            margin: 0;
+            color: #475569;
+            font-size: 14px;
+            overflow-wrap: anywhere;
+        }
+
         .trending-skills-bar {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
-            margin-bottom: 24px;
+            margin-top: 14px;
+        }
+
+        .trending-skills-label {
+            margin-right: 4px;
+            color: #334155;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        @@media (max-width: 600px) {
+            .trending-skills-label { flex-basis: 100%; }
         }
 
         .skill-tag {
@@ -108,30 +142,28 @@
 <main style="padding: 36px 0 80px; background-color: #F8FAFC; min-height: calc(100vh - 76px - 200px);">
     <div class="safe-container">
 
-        <!-- Header Title & Active Keyword Banner -->
-        <div style="margin-bottom: 24px;">
-            <p style="font-size: 14px; color: #64748B; margin: 0;">
+        <header class="course-discovery">
+            <h1>Khám phá khóa học</h1>
+            <p>
                 @if (!string.IsNullOrEmpty(searchTerm))
                 {
                     <span>Kết quả tìm kiếm cho từ khóa: <strong style="color: #434CE8;">"@searchTerm"</strong></span>
                 }
                 else
                 {
-                    <span>Tìm kiếm theo tên khóa học, giảng viên thực chiến hoặc kỹ năng chuyên môn</span>
+                    <span>Tìm theo tên khóa học, giảng viên hoặc kỹ năng.</span>
                 }
             </p>
-        </div>
-
-        <!-- Trending Skills Pills Bar -->
-        <div class="trending-skills-bar">
-            <span class="caption" style="font-weight: 700; color: #0F172A; text-transform: uppercase;">Kỹ năng thịnh hành:</span>
+            <nav class="trending-skills-bar" aria-label="Kỹ năng thịnh hành">
+                <span class="trending-skills-label">Kỹ năng thịnh hành</span>
             <a href="@Url.Action("Index", "Course")" class="skill-tag @(string.IsNullOrEmpty(searchTerm) ? "active" : "")">Tất cả</a>
             <a href="@Url.Action("Index", "Course", new { search = "HTML5" })" class="skill-tag @(searchTerm == "HTML5" ? "active" : "")">HTML5 / CSS3</a>
             <a href="@Url.Action("Index", "Course", new { search = "Figma" })" class="skill-tag @(searchTerm == "Figma" ? "active" : "")">Figma UI/UX</a>
             <a href="@Url.Action("Index", "Course", new { search = "Python" })" class="skill-tag @(searchTerm == "Python" ? "active" : "")">Python AI</a>
             <a href="@Url.Action("Index", "Course", new { search = "Web" })" class="skill-tag @(searchTerm == "Web" ? "active" : "")">Lập trình Web</a>
             <a href="@Url.Action("Index", "Course", new { search = "React" })" class="skill-tag @(searchTerm == "React" ? "active" : "")">React & Next.js</a>
-        </div>
+            </nav>
+        </header>
 
         <form id="filter-form" method="get" action="@Url.Action("Index", "Course")">
             <input type="hidden" name="search" value="@searchTerm" />

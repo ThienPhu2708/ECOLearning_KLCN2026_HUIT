@@ -1,12 +1,50 @@
 @{
     ViewBag.Title = "Mã giảm giá";
 }
+@section styles {
+    <style>
+        .coupon-unavailable {
+            max-width: 440px;
+            margin: 12px auto 0;
+            padding: 28px 20px;
+            border: 1px solid #E2E8F0;
+            border-radius: 16px;
+            background: #FFFFFF;
+            text-align: center;
+        }
+
+        .coupon-unavailable > i {
+            display: inline-grid;
+            place-items: center;
+            width: 48px;
+            height: 48px;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            background: #EEF2FF;
+            color: #4338CA;
+            font-size: 22px;
+        }
+
+        .coupon-unavailable h1 {
+            margin: 0 0 8px;
+            font-size: 21px;
+            line-height: 1.3;
+        }
+
+        .coupon-unavailable p {
+            margin: 0 0 16px;
+            color: #475569;
+            font-size: 14px;
+        }
+    </style>
+}
 <main class="cpn-page">
     <div class="safe-container">
-        <div class="cpn-empty">
-            <i class="bi bi-database-exclamation"></i>
-            Chức năng mã giảm giá chưa sẵn sàng. Quản trị viên cần chạy <strong>Database/Migrations/008_Marketing_KhuyenMai.sql</strong>
-            , <strong>009_ViMaGiamGia.sql</strong> và <strong>018_Marketing_DacTa.sql</strong> (xem Database/HUONG_DAN_CHAY_SQL.md).
+        <div class="coupon-unavailable">
+            <i class="bi bi-ticket-perforated" aria-hidden="true"></i>
+            <h1>Mã giảm giá chưa sẵn sàng</h1>
+            <p>Vui lòng quay lại sau.</p>
+            <a class="btn btn-secondary btn-sm" href="@Url.Action("Index", "Course")">Khám phá khóa học</a>
         </div>
     </div>
 </main>

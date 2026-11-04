@@ -15,17 +15,38 @@
 @section styles {
     <style>
         .recommend-hero {
-            padding: 48px 0 32px;
-            background: #FFFFFF;
+            padding: 24px 0;
+            background: linear-gradient(120deg, #EEF2FF, #FFFFFF 85%);
             border-bottom: 1px solid var(--border-color, #E2E8F0);
         }
 
         .recommend-hero-top {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
-            gap: 24px;
+            align-items: center;
+            gap: 12px 24px;
             flex-wrap: wrap;
+        }
+
+        .recommend-hero h1 {
+            margin: 0 0 5px;
+            font-size: clamp(23px, 3vw, 30px);
+            line-height: 1.25;
+        }
+
+        .recommend-hero p {
+            margin: 0;
+            color: var(--text-secondary, #475569);
+            font-size: 14px;
+        }
+
+        .recommend-hero .recommend-summary {
+            margin-top: 10px;
+        }
+
+        .recommend-results {
+            padding: 24px 0 64px;
+            background: var(--bg-canvas, #F8FAFC);
         }
 
         .recommend-eyebrow {
@@ -45,9 +66,9 @@
 
         .recommend-stats {
             display: flex;
-            gap: 12px;
+            gap: 8px;
             flex-wrap: wrap;
-            margin-top: 24px;
+            margin-top: 14px;
         }
 
         .recommend-stat {
@@ -55,7 +76,7 @@
             align-items: center;
             gap: 8px;
             padding: 8px 14px;
-            background: var(--bg-canvas, #F8FAFC);
+            background: #FFFFFF;
             border: 1px solid var(--border-color, #E2E8F0);
             border-radius: var(--radius-xl, 10px);
             font-size: 13px;
@@ -129,12 +150,10 @@
     <div class="safe-container">
         <div class="recommend-hero-top">
             <div style="max-width: 720px;">
-                <h1 class="h2" style="margin-bottom: 10px;">Khóa học gợi ý cho bạn</h1>
-                <p class="body-2" style="color: var(--text-secondary); margin: 0;">
-                    Hệ thống tìm những khóa học dựa sự tương tác của bạn
-                </p>
+                <h1>Khóa học gợi ý cho bạn</h1>
+                <p>Khám phá các khóa học phù hợp với bạn.</p>
             </div>
-            <a id="btnRefreshRecommend" href="@Url.Action("Index", "Recommendation")" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <a id="btnRefreshRecommend" href="@Url.Action("Index", "Recommendation")" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
                 <i class="bi bi-arrow-repeat"></i> <span>Làm mới gợi ý</span>
             </a>
         </div>
@@ -143,7 +162,7 @@
         {
             <div class="recommend-stats">
                 <span class="recommend-stat"><i class="bi bi-journal-check"></i> Dựa trên <strong>@Model.SoKhoaDaTuongTac</strong> khóa học bạn đã tương tác</span>
-                <span class="recommend-stat"><i class="bi bi-diagram-3"></i> <strong>@Model.SoGoiYLocCongTac</strong> khóa học được gợi ý</span>
+                <span class="recommend-stat"><i class="bi bi-diagram-3"></i> <strong>@Model.SoGoiYLocCongTac</strong> gợi ý theo lịch sử học</span>
                 <!-- <span class="recommend-stat"><i class="bi bi-clock-history"></i> Tính lúc <strong>@Model.TinhLuc.ToString("HH:mm dd/MM/yyyy")</strong></span>
                 @if (Model.MaTranCapNhatLuc.HasValue)
                 {
@@ -151,10 +170,14 @@
                 } -->
             </div>
         }
+        @if (hopLe && !theoSoThich && !chiPhoBien && Model.SoGoiYLocCongTac < Model.Items.Count)
+        {
+            <p class="recommend-summary"><i class="bi bi-info-circle me-1" aria-hidden="true"></i> Danh sách có thêm các khóa học phổ biến để bạn tham khảo.</p>
+        }
     </div>
 </section>
 
-<section style="padding: 40px 0 64px; background: var(--bg-canvas, #F8FAFC);">
+<section class="recommend-results">
     <div class="safe-container">
         @if (!Model.DaKhoiTao)
         {
@@ -197,14 +220,6 @@
                         <a href="#" data-open-interest style="font-weight: 600; margin-left: 4px;">Chọn lĩnh vực quan tâm</a>
                     }
                 </div>
-            </div>
-        }
-        else if (Model.Items.Count > 0 && Model.SoGoiYLocCongTac < Model.Items.Count)
-        {
-            <div class="recommend-notice info">
-                <i class="bi bi-info-circle"></i>
-                <div>Hiện có <strong>@Model.SoGoiYLocCongTac</strong> khóa học phù hợp với lịch sử học của bạn; các khóa còn lại
-                    là khóa <strong>phổ biến</strong> được bổ sung thêm.</div>
             </div>
         }
 

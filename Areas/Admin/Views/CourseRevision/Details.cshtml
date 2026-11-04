@@ -25,6 +25,7 @@
 .dashboard-main .rv-page table.rv-table{table-layout:fixed;width:100%;min-width:620px}
 .dashboard-main .rv-page table.rv-table th,.dashboard-main .rv-page table.rv-table td{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;overflow:hidden;text-overflow:clip}
 .rv-cell-text{display:block;max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+.rv-rich-description{white-space:pre-wrap;color:#172033}.rv-rich-description p{margin:0 0 10px}.rv-rich-description p:last-child{margin-bottom:0}.rv-rich-description ul,.rv-rich-description ol{margin:8px 0 10px;padding-left:24px}.rv-rich-description li{margin:4px 0}.rv-rich-description blockquote{margin:10px 0;padding:8px 12px;border-left:3px solid #A5B4FC;background:#F8FAFC}.rv-rich-description table{width:100%;border-collapse:collapse;margin:10px 0}.rv-rich-description th,.rv-rich-description td{padding:7px 9px;border:1px solid #CBD5E1}.rv-rich-description a{color:#4338CA;text-decoration:underline}
 </style>
 <div class="rv-page">
 <header class="rv-head"><div><h1>Kiểm duyệt bản sửa khóa học</h1><p>@live.tenKhoaHoc · Mã @Model.CourseId</p></div><span class="rv-tag">@(Model.Status == "Pending" ? "Chờ duyệt bản sửa" : Model.Status)</span></header>
@@ -33,7 +34,18 @@
  <div class="rv-card-head"><h2>Thông tin khóa học</h2><span class="rv-note">@(changes) mục thay đổi · Ô màu vàng là nội dung đã sửa</span></div>
  <div class="rv-scroll"><table class="rv-table"><thead><tr><th>Nội dung</th><th>Đang hoạt động</th><th>Bản sửa gửi duyệt</th></tr></thead><tbody>
  @foreach(var field in fields){
-  <tr><td>@field.Item1</td><td><div class="rv-cell-text">@(string.IsNullOrWhiteSpace(field.Item2) ? "—" : field.Item2)</div></td><td class="@(field.Item2 != field.Item3 ? "rv-change" : "")"><div class="rv-cell-text">@(string.IsNullOrWhiteSpace(field.Item3) ? "—" : field.Item3)</div></td></tr>
+  var isRichDescription = field.Item1 == "Mô tả khóa học";
+  <tr>
+   <td>@field.Item1</td>
+   <td><div class="rv-cell-text @(isRichDescription ? "rv-rich-description" : "")">
+    @if (isRichDescription) { if (string.IsNullOrWhiteSpace(field.Item2)) { <text>—</text> } else { @Html.Raw(ECOLearning.Services.CourseDescriptionHtml.Sanitize(field.Item2)) } }
+    else { @(string.IsNullOrWhiteSpace(field.Item2) ? "—" : field.Item2) }
+   </div></td>
+   <td class="@(field.Item2 != field.Item3 ? "rv-change" : "")"><div class="rv-cell-text @(isRichDescription ? "rv-rich-description" : "")">
+    @if (isRichDescription) { if (string.IsNullOrWhiteSpace(field.Item3)) { <text>—</text> } else { @Html.Raw(ECOLearning.Services.CourseDescriptionHtml.Sanitize(field.Item3)) } }
+    else { @(string.IsNullOrWhiteSpace(field.Item3) ? "—" : field.Item3) }
+   </div></td>
+  </tr>
  }
  <tr><td>Ảnh bìa</td><td>@if(!string.IsNullOrWhiteSpace(live.anhBia)){<img class="rv-cover" src="@Url.Content(live.anhBia)" alt="Ảnh bìa đang hoạt động"/>}</td><td class="@(live.anhBia != input.AnhBia ? "rv-change" : "")">@if(!string.IsNullOrWhiteSpace(input.AnhBia)){<img class="rv-cover" src="@Url.Content(input.AnhBia)" alt="Ảnh bìa bản sửa"/>}</td></tr>
  </tbody></table></div>
@@ -49,7 +61,7 @@
   </div>
   <div class="rv-column"><div class="rv-column-title is-new">Bản sửa gửi duyệt <span class="rv-count">@input.Lessons.Count bài</span></div>
   @foreach(var lesson in input.Lessons){<article class="rv-lesson is-new"><strong>@lesson.Title</strong><p>@(lesson.ChapterIndex.HasValue ? input.Chapters[lesson.ChapterIndex.Value].Title : "Không chia chương")</p><p>@duration(lesson.Duration) · @(lesson.Preview ? "Cho xem thử" : "Không xem thử")</p>
-   @if(!string.IsNullOrEmpty(lesson.VideoToken) && draft.Uploads.ContainsKey(lesson.VideoToken)){var video=draft.Uploads[lesson.VideoToken];<details><summary>Xem video bản sửa</summary><video controls preload="none" src="@Url.Content(ECOLearning.Services.VideoStorageService.LinkPhat(video[1]))"></video></details>}
+   @if(!string.IsNullOrEmpty(lesson.VideoToken) && draft.Uploads.ContainsKey(lesson.VideoToken)){var video=draft.Uploads[lesson.VideoToken];<details><summary>Xem video bản sửa@(string.IsNullOrWhiteSpace(lesson.SubtitleDraftKey) ? "" : " và phụ đề chờ duyệt")</summary><video controls preload="none" src="@Url.Content(ECOLearning.Services.VideoStorageService.LinkPhat(video[1]))">@if(!string.IsNullOrWhiteSpace(lesson.SubtitleDraftKey)){<track kind="subtitles" srclang="vi" label="Tiếng Việt" default src="@Url.Action("Subtitle", "CourseRevision", new { area="Admin", id=Model.CourseId, lessonId=lesson.Id })" />}</video></details>}
    @foreach(var token in lesson.AttachmentTokens){var file=draft.Uploads[token];<a class="rv-file" href="@Url.Content(file[1])" target="_blank" rel="noopener"><i class="bi bi-file-earmark-text"></i> @file[2]</a>}
   </article>}
   </div>

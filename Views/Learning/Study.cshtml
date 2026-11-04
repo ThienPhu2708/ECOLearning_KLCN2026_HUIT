@@ -47,6 +47,9 @@
     // Video tải lên (máy chủ hoặc Cloudflare R2): phát qua VideoStream/Play (không dùng Session) để hỗ trợ HTTP Range Request
     // đúng chuẩn; video R2 được chuyển hướng sang link ký có hạn dùng
     string activeVideoSrc = activeLesson != null ? ECOLearning.Services.VideoStorageService.LinkPhat(activeLesson.duongDanVideo) : "";
+    // File WebVTT nằm trong App_Data và đi qua Learning/Subtitle để chỉ người có quyền học mới lấy được.
+    string activeSubtitleSrc = activeLesson != null && ECOLearning.Services.VideoSubtitleService.CoPhuDe(activeLesson.maBaiHoc)
+        ? Url.Action("Subtitle", "Learning", new { courseId = course != null ? course.maKhoaHoc : "", lessonId = activeLesson.maBaiHoc }) : "";
 }
 
 @section styles {
@@ -586,6 +589,10 @@
                     không bị cắt mép khi khung nhỏ hơn video và phóng theo khi bấm Toàn màn hình *@
                 <video id="studyPlayer" preload="none" style="display:block; width:100%; height:100%; object-fit:contain; background:#000;" poster="@(course != null ? course.anhBia : "")">
                     <source data-src="@activeVideoSrc" type="video/mp4" />
+                    @if (!string.IsNullOrWhiteSpace(activeSubtitleSrc))
+                    {
+                        <track id="lesson-subtitle-track" kind="subtitles" srclang="vi" label="Tiếng Việt" src="@activeSubtitleSrc" />
+                    }
                     Trình duyệt không hỗ trợ xem video.
                 </video>
             }
@@ -641,6 +648,10 @@
                                         <option value="2">2.0x</option>
                                     </select>
                                 </div>
+                                @if (!string.IsNullOrWhiteSpace(activeSubtitleSrc))
+                                {
+                                    <button class="player-btn" id="btn-subtitle-toggle" onclick="toggleSubtitle()" title="Bật phụ đề tiếng Việt" aria-label="Bật hoặc tắt phụ đề tiếng Việt" aria-pressed="false"><i class="bi bi-badge-cc" style="font-size:18px;"></i></button>
+                                }
                                 <button class="player-btn" onclick="toggleFullscreen()" title="Toàn màn hình">
                                     <i class="bi bi-arrows-fullscreen" style="font-size:16px;"></i>
                                 </button>
@@ -997,6 +1008,7 @@
 
             if (player) {
                 initVolumeControl(player);
+                initSubtitleControl(player);
 
                 // Start media after the document load has finished so buffering a
                 // long lesson does not keep the browser tab loading indicator active.
@@ -1390,6 +1402,37 @@
             var player = document.getElementById('studyPlayer');
             if (player) player.playbackRate = parseFloat(val);
             showToast('Đã đổi tốc độ phát sang ' + val + 'x', 'info');
+        }
+
+        // ==================== PHỤ ĐỀ ====================
+        function getSubtitleTrack() {
+            var element = document.getElementById('lesson-subtitle-track');
+            return element ? element.track : null;
+        }
+
+        function initSubtitleControl() {
+            var track = getSubtitleTrack();
+            if (!track) return;
+            var enabled = localStorage.getItem('eco_subtitle_vi') === '1';
+            track.mode = enabled ? 'showing' : 'hidden';
+            updateSubtitleButton(enabled);
+        }
+
+        function toggleSubtitle() {
+            var track = getSubtitleTrack();
+            if (!track) return;
+            var enabled = track.mode !== 'showing';
+            track.mode = enabled ? 'showing' : 'hidden';
+            localStorage.setItem('eco_subtitle_vi', enabled ? '1' : '0');
+            updateSubtitleButton(enabled);
+            showToast(enabled ? 'Đã bật phụ đề tiếng Việt' : 'Đã tắt phụ đề', 'info');
+        }
+
+        function updateSubtitleButton(enabled) {
+            var button = document.getElementById('btn-subtitle-toggle');
+            if (!button) return;
+            button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+            button.style.color = enabled ? '#A5B4FC' : '';
         }
 
         // ==================== ÂM LƯỢNG ====================

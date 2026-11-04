@@ -143,6 +143,28 @@
         background: var(--bg-surface);
     }
 
+    /* Thanh điều khiển tùy biến: CC luôn hiện cả khi fullscreen, không phụ thuộc native controls. */
+    .preview-player-shell { position:relative; line-height:0; background:#000; overflow:hidden; }
+    .preview-player-shell video { display:block; width:100%; max-height:60vh; background:#000; cursor:pointer; }
+    .preview-control-bar { position:absolute; z-index:3; left:0; right:0; bottom:0; min-height:48px; display:flex; align-items:center; gap:8px; padding:14px 16px 8px; background:linear-gradient(transparent,rgba(0,0,0,.9) 46%); line-height:1; transition:opacity .2s ease, transform .2s ease; }
+    .preview-control-btn { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; padding:0; border:0; border-radius:5px; background:transparent; color:#fff; font:700 14px/1 Arial,sans-serif; cursor:pointer; }
+    .preview-control-btn:hover, .preview-control-btn:focus-visible { background:rgba(255,255,255,.22); outline:2px solid #fff; outline-offset:1px; }
+    .preview-time { flex:0 0 auto; min-width:88px; color:#fff; font:600 12px/1 Arial,sans-serif; white-space:nowrap; }
+    .preview-seek { flex:1 1 auto; min-width:40px; accent-color:#818CF8; cursor:pointer; }
+    .preview-subtitle-control {
+        flex:0 0 auto; width:31px; height:25px; padding:0; border:1px solid rgba(255,255,255,.72); border-radius:5px;
+        background:rgba(15,23,42,.72); color:#fff; font:700 11px/1 Arial,sans-serif; letter-spacing:.2px; cursor:pointer; line-height:1;
+    }
+    .preview-subtitle-control:hover, .preview-subtitle-control:focus-visible { background:rgba(79,70,229,.96); border-color:#fff; outline:2px solid #fff; outline-offset:2px; }
+    .preview-subtitle-control.is-active { background:#4F46E5; border-color:#C7D2FE; }
+    .preview-subtitle-control:disabled { opacity:.55; cursor:wait; }
+    .preview-player-shell:fullscreen, .preview-player-shell:-webkit-full-screen { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+    .preview-player-shell:fullscreen video, .preview-player-shell:-webkit-full-screen video { width:100%; height:100%; max-height:none; object-fit:contain; }
+    .preview-player-shell:fullscreen .preview-control-bar, .preview-player-shell:-webkit-full-screen .preview-control-bar { padding:18px 28px 12px; }
+    .preview-player-shell:fullscreen .preview-control-bar.controls-hidden, .preview-player-shell:-webkit-full-screen .preview-control-bar.controls-hidden { opacity:0; transform:translateY(12px); pointer-events:none; }
+    .preview-player-shell:fullscreen.controls-hidden, .preview-player-shell:-webkit-full-screen.controls-hidden { cursor:none; }
+    @@media(max-width:600px) { .preview-control-bar { gap:5px; padding:12px 10px 6px; } .preview-time { min-width:73px; font-size:11px; } }
+
     
 </style>
 
@@ -322,7 +344,7 @@
                                 <div class="course-outline-name">
                                     @if (!string.IsNullOrWhiteSpace(bai.duongDanVideo))
                                     {
-                                        <a class="course-outline-play" href="@ECOLearning.Services.VideoStorageService.LinkPhat(bai.duongDanVideo)" data-title="@bai.tenBaiHoc" onclick="previewVideo(this.getAttribute('href'), this.dataset.title); return false;" title="Xem video" aria-label="Xem video">
+                                        <a class="course-outline-play" href="@ECOLearning.Services.VideoStorageService.LinkPhat(bai.duongDanVideo)" data-title="@bai.tenBaiHoc" data-subtitle="@(ECOLearning.Services.VideoSubtitleService.CoPhuDe(bai.maBaiHoc) ? Url.Action("Subtitle", "Learning", new { area = "", courseId = Model.maKhoaHoc, lessonId = bai.maBaiHoc }) : "")" onclick="previewVideo(this.getAttribute('href'), this.dataset.title, this.dataset.subtitle); return false;" title="Xem video" aria-label="Xem video">
                                             <svg width="18" height="18" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="currentColor"/><path d="M6.3 4.6L11 8L6.3 11.4Z" fill="white"/></svg>
                                         </a>
                                     }
@@ -514,7 +536,7 @@
     <div class="modal-container" style="max-width: 720px; overflow: hidden;">
         <div class="modal-header">
             <h3 class="h3" id="video-preview-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%;">Xem trước video</h3>
-            <button class="btn btn-secondary btn-sm" onclick="closeVideoPreview()">×</button>
+            <div style="display:flex;gap:8px;align-items:center;"><button class="btn btn-secondary btn-sm" onclick="closeVideoPreview()">×</button></div>
         </div>
         <div class="modal-body" style="padding: 0; background: #000;" id="preview-video-container"></div>
     </div>
@@ -544,7 +566,116 @@
                 link.innerHTML = link.innerHTML.replace('▴', '▾');
             }
         }
-        function previewVideo(videoUrl, title) {
+        function getPreviewSubtitleButton() { return document.getElementById('preview-subtitle-toggle'); }
+        function setPreviewSubtitle(subtitleUrl) {
+            const button = document.getElementById('preview-subtitle-toggle');
+            if (!button) return;
+            button.hidden = !subtitleUrl;
+            if (!subtitleUrl) return;
+            const track = getPreviewSubtitleTrack();
+            const enabled = localStorage.getItem('eco_subtitle_vi') === '1';
+            if (track) track.mode = enabled ? 'showing' : 'hidden';
+            button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+            button.classList.toggle('is-active', enabled);
+            button.title = enabled ? 'Tắt phụ đề tiếng Việt' : 'Bật phụ đề tiếng Việt';
+        }
+        function getPreviewSubtitleTrack() {
+            const player = document.querySelector('#preview-video-container video');
+            if (!player || !player.textTracks) return null;
+            for (let i = 0; i < player.textTracks.length; i++) {
+                const track = player.textTracks[i];
+                if (track.language === 'vi' || track.label === 'Tiếng Việt') return track;
+            }
+            return null;
+        }
+        function togglePreviewSubtitle() {
+            const button = getPreviewSubtitleButton();
+            if (!button) return;
+            const track = getPreviewSubtitleTrack();
+            if (!track) {
+                button.disabled = true; button.title = 'Đang tải phụ đề…';
+                window.setTimeout(function() { button.disabled = false; button.title = 'Bật phụ đề tiếng Việt'; }, 800);
+                return;
+            }
+            const enabled = track.mode !== 'showing';
+            track.mode = enabled ? 'showing' : 'hidden';
+            localStorage.setItem('eco_subtitle_vi', enabled ? '1' : '0');
+            button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+            button.classList.toggle('is-active', enabled);
+            button.title = enabled ? 'Tắt phụ đề tiếng Việt' : 'Bật phụ đề tiếng Việt';
+        }
+        function previewTimeLabel(seconds) {
+            if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+            const minutes = Math.floor(seconds / 60), remain = Math.floor(seconds % 60);
+            return minutes + ':' + String(remain).padStart(2, '0');
+        }
+        function addPreviewControls(shell, player, hasSubtitle) {
+            const bar = document.createElement('div'); bar.className = 'preview-control-bar';
+            const play = document.createElement('button'); play.type = 'button'; play.className = 'preview-control-btn'; play.title = 'Phát'; play.setAttribute('aria-label', 'Phát hoặc tạm dừng video');
+            const time = document.createElement('span'); time.className = 'preview-time'; time.textContent = '0:00 / 0:00';
+            const seek = document.createElement('input'); seek.type = 'range'; seek.className = 'preview-seek'; seek.min = '0'; seek.max = '0'; seek.step = '0.05'; seek.value = '0'; seek.setAttribute('aria-label', 'Tiến trình video');
+            const volume = document.createElement('button'); volume.type = 'button'; volume.className = 'preview-control-btn'; volume.title = 'Tắt tiếng'; volume.setAttribute('aria-label', 'Bật hoặc tắt âm thanh');
+            const cc = document.createElement('button'); cc.id = 'preview-subtitle-toggle'; cc.type = 'button'; cc.className = 'preview-subtitle-control'; cc.hidden = !hasSubtitle;
+            cc.textContent = 'CC'; cc.setAttribute('aria-pressed', 'false'); cc.title = 'Bật phụ đề tiếng Việt'; cc.setAttribute('aria-label', 'Bật hoặc tắt phụ đề tiếng Việt');
+            const fullscreen = document.createElement('button'); fullscreen.type = 'button'; fullscreen.className = 'preview-control-btn'; fullscreen.title = 'Toàn màn hình'; fullscreen.setAttribute('aria-label', 'Bật hoặc tắt toàn màn hình');
+            bar.append(play, time, seek, volume, cc, fullscreen); shell.appendChild(bar);
+
+            let controlsTimer, interactingWithControls = false;
+            function isFullscreen() { return document.fullscreenElement === shell || document.webkitFullscreenElement === shell; }
+            function hideControls() {
+                if (!isFullscreen() || player.paused || player.ended || interactingWithControls || bar.querySelector(':focus-visible')) return;
+                bar.classList.add('controls-hidden'); shell.classList.add('controls-hidden');
+            }
+            function showControls() {
+                clearTimeout(controlsTimer);
+                bar.classList.remove('controls-hidden'); shell.classList.remove('controls-hidden');
+                if (isFullscreen() && !player.paused && !player.ended) controlsTimer = setTimeout(hideControls, 2500);
+            }
+            function handleFullscreenChange() { refresh(); showControls(); }
+            function handlePointerDown(event) {
+                interactingWithControls = !!event.target.closest('.preview-control-bar');
+                showControls();
+            }
+            function finishControlInteraction() {
+                if (interactingWithControls) { interactingWithControls = false; showControls(); }
+            }
+            function handleKeyDown() { if (isFullscreen()) showControls(); }
+
+            function refresh() {
+                const duration = Number.isFinite(player.duration) ? player.duration : 0;
+                seek.max = duration; seek.value = Math.min(player.currentTime || 0, duration);
+                time.textContent = previewTimeLabel(player.currentTime) + ' / ' + previewTimeLabel(duration);
+                play.textContent = player.paused ? '▶' : '❚❚'; play.title = player.paused ? 'Phát' : 'Tạm dừng';
+                volume.textContent = player.muted || player.volume === 0 ? '🔇' : '🔊'; volume.title = player.muted || player.volume === 0 ? 'Bật tiếng' : 'Tắt tiếng';
+                const full = document.fullscreenElement === shell || document.webkitFullscreenElement === shell;
+                fullscreen.textContent = full ? '⤢' : '⛶'; fullscreen.title = full ? 'Thoát toàn màn hình' : 'Toàn màn hình';
+            }
+            function togglePlay() { if (player.paused) player.play(); else player.pause(); }
+            function toggleFullscreen() {
+                const full = document.fullscreenElement === shell || document.webkitFullscreenElement === shell;
+                if (full) {
+                    if (document.exitFullscreen) document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                } else if (shell.requestFullscreen) shell.requestFullscreen(); else if (shell.webkitRequestFullscreen) shell.webkitRequestFullscreen();
+            }
+            play.addEventListener('click', togglePlay); player.addEventListener('click', togglePlay);
+            seek.addEventListener('input', function() { player.currentTime = Number(seek.value); showControls(); });
+            volume.addEventListener('click', function() { player.muted = !player.muted; });
+            cc.addEventListener('click', togglePreviewSubtitle); fullscreen.addEventListener('click', toggleFullscreen);
+            ['loadedmetadata', 'durationchange', 'timeupdate', 'play', 'pause', 'volumechange', 'ended'].forEach(function(name) { player.addEventListener(name, refresh); });
+            player.addEventListener('play', showControls); player.addEventListener('pause', showControls); player.addEventListener('ended', showControls);
+            shell.addEventListener('pointermove', showControls); shell.addEventListener('pointerdown', handlePointerDown); shell.addEventListener('focusin', showControls);
+            document.addEventListener('pointerup', finishControlInteraction); document.addEventListener('pointercancel', finishControlInteraction);
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('fullscreenchange', handleFullscreenChange); document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+            shell.previewCleanup = function() {
+                clearTimeout(controlsTimer);
+                document.removeEventListener('fullscreenchange', handleFullscreenChange); document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+                document.removeEventListener('pointerup', finishControlInteraction); document.removeEventListener('pointercancel', finishControlInteraction);
+                document.removeEventListener('keydown', handleKeyDown);
+            };
+            refresh();
+        }
+        function previewVideo(videoUrl, title, subtitleUrl) {
             document.getElementById('video-preview-title').innerText = title;
             const container = document.getElementById('preview-video-container');
             
@@ -558,6 +689,7 @@
             }
 
             if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+                setPreviewSubtitle('');
                 let videoId = '';
                 if (videoUrl.includes('youtube.com/watch?v=')) {
                     videoId = videoUrl.split('v=')[1];
@@ -571,12 +703,20 @@
                 
                 container.innerHTML = '<iframe width="100%" height="400" src="https://www.youtube.com/embed/' + videoId + '?autoplay=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
             } else {
+                const shell = document.createElement('div');
+                shell.className = 'preview-player-shell';
                 const player = document.createElement('video');
-                player.controls = true;
-                player.style.width = '100%';
-                player.style.maxHeight = '60vh';
+                player.controls = false; player.playsInline = true;
                 player.src = videoUrl;
-                container.appendChild(player);
+                if (subtitleUrl) {
+                    const track = document.createElement('track');
+                    track.dataset.subtitlePreview = 'true'; track.kind = 'subtitles'; track.srclang = 'vi'; track.label = 'Tiếng Việt'; track.src = subtitleUrl;
+                    track.addEventListener('load', function() { setPreviewSubtitle(subtitleUrl); });
+                    track.addEventListener('error', function() { const button = getPreviewSubtitleButton(); if (button) { button.disabled = true; button.title = 'Không tải được phụ đề'; } });
+                    player.appendChild(track);
+                }
+                shell.appendChild(player); addPreviewControls(shell, player, !!subtitleUrl); container.appendChild(shell);
+                setPreviewSubtitle(subtitleUrl || '');
                 player.play().catch(e => console.log('Auto-play blocked or error', e));
             }
 
@@ -586,6 +726,11 @@
 
         function closeVideoPreview() {
             const container = document.getElementById('preview-video-container');
+            const shell = container.querySelector('.preview-player-shell');
+            if (shell && shell.previewCleanup) shell.previewCleanup();
+            if (document.fullscreenElement === shell || document.webkitFullscreenElement === shell) {
+                if (document.exitFullscreen) document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            }
             container.innerHTML = ''; // Stops playback
             
             if (typeof closeModal === 'function') closeModal('video-preview-modal');

@@ -250,6 +250,7 @@
     <Compile Include="Areas\Instructor\Controllers\AnalyticsController.cs" />
     <Compile Include="Areas\Instructor\Controllers\PayoutController.cs" />
     <Compile Include="Areas\Instructor\Models\InstructorViewModels.cs" />
+    <Compile Include="Services\CourseDescriptionHtml.cs" />
     <Compile Include="Areas\Marketing\Controllers\MarketingBaseController.cs" />
     <Compile Include="Areas\Marketing\Controllers\DashboardController.cs" />
     <Compile Include="Areas\Marketing\Controllers\PromotionController.cs" />
@@ -313,6 +314,7 @@
     <Compile Include="Services\VideoDuration.cs" />
     <Compile Include="Services\R2Storage.cs" />
     <Compile Include="Services\VideoStorageService.cs" />
+    <Compile Include="Services\VideoSubtitleService.cs" />
     <Compile Include="Services\PaymentService.cs" />
     <Compile Include="Services\AdminPendingService.cs" />
     <Compile Include="Services\VnPayService.cs" />

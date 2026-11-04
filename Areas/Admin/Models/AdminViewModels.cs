@@ -91,6 +91,8 @@ namespace ECOLearning.Areas.Admin.Models
         public string MaBaiHoc { get; set; }
         public string TenBaiHoc { get; set; }
         public string VideoUrl { get; set; }
+        /// <summary>Đường dẫn VTT chỉ trả về khi bài học đã tạo phụ đề.</summary>
+        public string SubtitleUrl { get; set; }
         public int? ThoiLuong { get; set; }
         public bool? CoXemThu { get; set; }
         public List<TaiNguyenDetail> TaiNguyens { get; set; }

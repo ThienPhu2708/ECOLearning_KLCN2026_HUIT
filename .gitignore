@@ -54,3 +54,8 @@ App_Data/logs/
 # Video chờ nén / đẩy lên R2 và câu lệnh SQL chuyển video cũ (Admin > Lưu trữ video)
 App_Data/video-tmp/
 App_Data/r2-migration.sql
+
+
+App_Data/subtitles/
+App_Data/ResourceLibrary_*.json
+Uploads/CourseResources/

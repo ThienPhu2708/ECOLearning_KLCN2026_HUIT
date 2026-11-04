@@ -608,6 +608,31 @@ namespace ECOLearning.Services
             }
         }
 
+        // Một tài khoản giáo viên vẫn có thể ghi danh học khóa học của giáo viên khác.
+        // Vì vậy badge tổng phải xét vai trò của người dùng trong từng hội thoại, không xét vai trò tài khoản.
+        public int DemTongTinChuaDoc(int maNguoiDung)
+        {
+            if (!DaCaiDat()) return 0;
+
+            try
+            {
+                return db.Database.SqlQuery<int>(@"
+                    SELECT COUNT(*)
+                    FROM dbo.TinNhan t
+                    JOIN dbo.HoiThoai h ON t.maHoiThoai = h.maHoiThoai
+                    WHERE t.maNguoiGui <> @userId
+                      AND (
+                            (h.maGiaoVien = @userId AND t.maTinNhan > h.giaoVienDocDen)
+                         OR (h.maHocVien = @userId AND t.maTinNhan > h.hocVienDocDen)
+                      )",
+                    new SqlParameter("@userId", maNguoiDung)).Single();
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
         public bool BaoCaoHoiThoai(int maHoiThoai, int maNguoiBaoCao, string lyDo)
         {
             if (!DaCaiDat()) return false;

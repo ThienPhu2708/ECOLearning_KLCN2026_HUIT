@@ -35,13 +35,15 @@ namespace ECOLearning.Areas.Instructor.Controllers
             if (course == null) {
                 context.Result = Json(new { success = false, message = "Không tìm thấy khóa học hoặc bạn không có quyền chỉnh sửa." }); return;
             }
+            // Tạo phụ đề là tác vụ dẫn xuất từ video có sẵn, không sửa đề cương đã xuất bản.
+            bool laTaoPhuDe = string.Equals(context.ActionDescriptor.ActionName, "GenerateSubtitle", StringComparison.OrdinalIgnoreCase);
             if (course.trangThai == ECOLearning.Services.CourseStatus.TamNgung || course.trangThai == ECOLearning.Services.CourseStatus.DaXoa) {
                 context.Result = Json(new { success = false, message = "Khóa học đang tạm ngưng bán hoặc đã xóa nên không thể chỉnh sửa. Hãy mở bán lại trước." }); return;
             }
-            if (ECOLearning.Services.CourseRevisionService.Published(course.trangThai) || course.DangKyKhoaHoc.Any()) {
+            if (!laTaoPhuDe && (ECOLearning.Services.CourseRevisionService.Published(course.trangThai) || course.DangKyKhoaHoc.Any())) {
                 context.Result = Json(new { success = false, message = "Khóa đã xuất bản cần duyệt bản sửa. Vào Quản lý khóa học → Chỉnh sửa thông tin để lưu bản nháp và gửi Admin duyệt." }); return;
             }
-            if (course.trangThai == "Chờ duyệt" || course.trangThai == "ChoDuyet")
+            if (!laTaoPhuDe && (course.trangThai == "Chờ duyệt" || course.trangThai == "ChoDuyet"))
                 context.Result = Json(new { success = false, message = "Khóa học đang chờ duyệt. Vui lòng hủy yêu cầu duyệt trước khi chỉnh sửa." });
         }
 
@@ -407,7 +409,8 @@ namespace ECOLearning.Areas.Instructor.Controllers
             // Update lesson
             lesson.duongDanVideo = relativeUrl;
             lesson.thoiLuong = duration > 0 ? duration : 0;
-            
+            // Video mới thì phụ đề cũ không còn khớp timestamp, phải tạo lại.
+            ECOLearning.Services.VideoSubtitleService.Xoa(lesson.maBaiHoc);
             db.SaveChanges();
 
             return Json(new { success = true, message = "Đã tải lên video thành công!", videoUrl = ECOLearning.Services.VideoStorageService.LinkPhat(relativeUrl) });
@@ -422,9 +425,33 @@ namespace ECOLearning.Areas.Instructor.Controllers
             
             lesson.duongDanVideo = null;
             lesson.thoiLuong = 0;
+            ECOLearning.Services.VideoSubtitleService.Xoa(lesson.maBaiHoc);
             db.SaveChanges();
             
             return Json(new { success = true, message = "Đã xóa video khỏi bài học!" });
+        }
+
+        // POST: Instructor/Curriculum/GenerateSubtitle
+        // Hàng đợi chạy nền: request trả ngay để không bị timeout với video dài.
+        [HttpPost, ValidateAntiForgeryToken]
+        public JsonResult GenerateSubtitle(string lessonId)
+        {
+            if (string.IsNullOrWhiteSpace(lessonId))
+                return Json(new { success = false, message = "Thiếu mã bài học." });
+
+            var lesson = db.BaiHoc.FirstOrDefault(b => b.maBaiHoc == lessonId);
+            if (lesson == null) return Json(new { success = false, message = "Không tìm thấy bài học." });
+            if (string.IsNullOrWhiteSpace(lesson.duongDanVideo))
+                return Json(new { success = false, message = "Bài học chưa có video để tạo phụ đề." });
+
+            var ketQua = ECOLearning.Services.VideoSubtitleService.XepHang(lesson.maBaiHoc, lesson.duongDanVideo);
+            return Json(new
+            {
+                success = ketQua.ThanhCong,
+                message = ketQua.ThongBao,
+                status = ketQua.TrangThai == null ? null : ketQua.TrangThai.TrangThai,
+                hasSubtitle = ketQua.TrangThai != null && ketQua.TrangThai.CoPhuDe
+            });
         }
 
                 // POST: Instructor/Curriculum/EditChapter

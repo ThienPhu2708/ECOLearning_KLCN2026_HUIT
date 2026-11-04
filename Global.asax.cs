@@ -19,6 +19,8 @@ namespace ECOLearning
             ECOLearning.Services.AppLog.KhoiDong();
             // Chạy tiếp các video đang chờ nén / đẩy lên R2 trước khi ứng dụng khởi động lại
             ECOLearning.Services.VideoStorageService.KhoiDong();
+            // Khôi phục các video đang chờ tạo phụ đề tự động bằng Groq Whisper.
+            ECOLearning.Services.VideoSubtitleService.KhoiDong();
         }
 
         // CORS cho API ứng dụng (/api/...): app Flutter chạy trên Chrome gọi khác nguồn. Xác thực bằng header Authorization

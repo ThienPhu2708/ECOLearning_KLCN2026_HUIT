@@ -37,12 +37,20 @@ namespace ECOLearning.Services {
   public void Save(KhoaHoc course, CourseCreateOrEditViewModel model, Dictionary<string,string[]> uploads, bool submit) {
    new TeacherSpecialtyService(db).Require(course.maGiaoVien,model.MaDanhMuc,course.maDanhMuc);
    if(!Installed()) throw new InvalidOperationException("Cần chạy migration 019 trước khi lưu bản sửa. Khóa đang hoạt động không bị thay đổi.");
+   var obsoleteSubtitleDrafts = new List<string>();
    using(var tx=db.Database.BeginTransaction(IsolationLevel.Serializable)) {
     var old=db.Database.SqlQuery<CourseRevisionRow>("SELECT * FROM dbo.CourseRevision WITH (UPDLOCK,HOLDLOCK) WHERE CourseId=@p0",course.maKhoaHoc).SingleOrDefault();
     if(old!=null && old.Status=="Pending") throw new InvalidOperationException("Bản sửa đang chờ duyệt. Hủy gửi duyệt trước khi sửa tiếp.");
     if((old?.Version ?? "") != (model.RevisionVersion ?? "")) throw new InvalidOperationException("Bản nháp đã thay đổi ở nơi khác. Mở lại trang trước khi lưu.");
     model.CoverImageFile=null; model.Categories=null;
     foreach(var l in model.Lessons) {l.VideoFile=null;l.AttachmentFile=null;}
+    // Một bản nháp mới thay thế bản nháp cũ: đánh dấu VTT không còn được tham chiếu.
+    // Việc xóa được thực hiện sau khi giao dịch CSDL commit thành công.
+    var currentSubtitleDrafts = new HashSet<string>(model.Lessons.Where(l => !string.IsNullOrWhiteSpace(l.SubtitleDraftKey)).Select(l => l.SubtitleDraftKey));
+    if(old != null) {
+     var oldPayload=old.Read();
+     obsoleteSubtitleDrafts.AddRange(oldPayload.Model.Lessons.Where(l => !string.IsNullOrWhiteSpace(l.SubtitleDraftKey)).Select(l => l.SubtitleDraftKey).Where(k => !currentSubtitleDrafts.Contains(k)));
+    }
     var used=new HashSet<string>(model.Lessons.SelectMany(l=>(l.AttachmentTokens??new List<string>()).Concat(new[]{l.VideoToken})).Where(t=>!string.IsNullOrEmpty(t)));
     var payload=new CourseRevisionPayload {Model=model,Uploads=uploads.Where(p=>used.Contains(p.Key)).ToDictionary(p=>p.Key,p=>p.Value)};
     if(submit) Validate(payload);
@@ -51,6 +59,7 @@ namespace ECOLearning.Services {
     else db.Database.ExecuteSqlCommand("UPDATE dbo.CourseRevision SET Payload=@p1,Status=@p2,Version=@p3,UpdatedAt=GETDATE(),SubmittedAt=CASE WHEN @p2='Pending' THEN GETDATE() END,Reason=NULL WHERE CourseId=@p0",course.maKhoaHoc,json,status,version);
     tx.Commit();
    }
+   foreach(var obsolete in obsoleteSubtitleDrafts.Distinct()) VideoSubtitleService.Xoa(obsolete);
   }
   public void Validate(CourseRevisionPayload p) {
    if(p.Model.Lessons.Count==0) throw new InvalidOperationException("Bản sửa cần ít nhất một bài học.");
@@ -60,6 +69,7 @@ namespace ECOLearning.Services {
     string[] video;
     if(string.IsNullOrWhiteSpace(l.Title) || l.ChapterIndex.HasValue && (l.ChapterIndex<0 || l.ChapterIndex>=p.Model.Chapters.Count)) throw new InvalidOperationException("Bài học không hợp lệ.");
     if(string.IsNullOrEmpty(l.VideoToken) || !p.Uploads.TryGetValue(l.VideoToken,out video) || video[0]!="video" || !content.VideoHopLe(video[1])) throw new InvalidOperationException("Video của bài "+l.Title+" không còn hợp lệ.");
+    if(!string.IsNullOrWhiteSpace(l.SubtitleDraftKey) && !VideoSubtitleService.LayTrangThai(l.SubtitleDraftKey).CoPhuDe) throw new InvalidOperationException("Phụ đề của bài "+l.Title+" chưa tạo xong đầy đủ. Hãy chờ hoàn tất rồi gửi duyệt.");
     foreach(var token in l.AttachmentTokens??new List<string>()) {string[] file;if(!p.Uploads.TryGetValue(token,out file)||file[0]!="document"||!content.VideoHopLe(file[1])) throw new InvalidOperationException("Tài liệu không còn tồn tại.");}
    }
   }
@@ -127,9 +137,26 @@ WHERE q.CourseId=@p0 AND q.IssuedAt IS NOT NULL AND NOT EXISTS(SELECT 1 FROM dbo
                     while (existingLessons.Any(l => l.maBaiHoc == course.maKhoaHoc + "_" + nextSequence)) nextSequence++;
                     lesson = new BaiHoc { maBaiHoc = course.maKhoaHoc + "_" + nextSequence++ }; db.BaiHoc.Add(lesson);
                 }
+                string videoCu = lesson.duongDanVideo;
                 lesson.maChuong = input.ChapterIndex.HasValue ? chapterIds[input.ChapterIndex.Value] : null;
                 lesson.tenBaiHoc = input.Title.Trim(); lesson.thuTu = i + 1; lesson.choXemThu = input.Preview; lesson.thoiLuong = Math.Max(0,input.Duration);
                 lesson.duongDanVideo = string.IsNullOrEmpty(input.VideoToken) ? null : uploads[input.VideoToken][1];
+
+                if (!string.IsNullOrWhiteSpace(input.SubtitleDraftKey)) {
+                    // Đây là VTT giáo viên đã review. Chỉ phương thức Review(approve) mới gọi
+                    // ApplyContent cho khóa đang xuất bản, vì vậy học viên không thấy bản nháp.
+                    if (!VideoSubtitleService.ChuyenKetQua(input.SubtitleDraftKey, lesson.maBaiHoc))
+                        throw new InvalidOperationException("Phụ đề của bài " + lesson.tenBaiHoc + " chưa hoàn chỉnh. Vui lòng tạo lại trước khi duyệt.");
+                } else if (!string.IsNullOrWhiteSpace(lesson.duongDanVideo) && input.CreateSubtitle) {
+                    // Với bài mới/draft, phụ đề có thể đang mang mã token tạm. Chỉ nhận kết quả
+                    // có đủ tất cả đoạn audio; nếu chưa có hoặc chưa hoàn chỉnh thì tạo job chính thức.
+                    bool daChuyen = !string.IsNullOrWhiteSpace(input.VideoToken)
+                        && VideoSubtitleService.ChuyenKetQua(input.VideoToken, lesson.maBaiHoc);
+                    if (!daChuyen) VideoSubtitleService.XepHang(lesson.maBaiHoc, lesson.duongDanVideo);
+                } else if (!string.Equals(videoCu ?? "", lesson.duongDanVideo ?? "", StringComparison.OrdinalIgnoreCase)) {
+                    // Không để phụ đề của video cũ hiển thị cho video mới khi giáo viên không yêu cầu tạo lại.
+                    VideoSubtitleService.Xoa(lesson.maBaiHoc);
+                }
                 var wantedResources = (input.AttachmentTokens ?? new List<string>()).Select(token => uploads[token]).ToList();
                 foreach (var resource in lesson.TaiNguyen.ToList())
                     if (!wantedResources.Any(r => r[1] == resource.duongDan && r[2] == resource.tenTaiNguyen)) db.TaiNguyen.Remove(resource);

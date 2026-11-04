@@ -233,6 +233,8 @@ namespace ECOLearning.Areas.Admin.Controllers
                                 MaBaiHoc = bh.maBaiHoc,
                                 TenBaiHoc = bh.tenBaiHoc,
                                 VideoUrl = ECOLearning.Services.VideoStorageService.LinkPhat(bh.duongDanVideo),
+                                SubtitleUrl = ECOLearning.Services.VideoSubtitleService.CoPhuDe(bh.maBaiHoc)
+                                    ? Url.Action("Subtitle", "Learning", new { area = "", courseId = k.maKhoaHoc, lessonId = bh.maBaiHoc }) : null,
                                 ThoiLuong = bh.thoiLuong,
                                 CoXemThu = bh.choXemThu
                             };
@@ -280,6 +282,8 @@ namespace ECOLearning.Areas.Admin.Controllers
                         MaBaiHoc = bh.maBaiHoc,
                         TenBaiHoc = bh.tenBaiHoc,
                         VideoUrl = ECOLearning.Services.VideoStorageService.LinkPhat(bh.duongDanVideo),
+                        SubtitleUrl = ECOLearning.Services.VideoSubtitleService.CoPhuDe(bh.maBaiHoc)
+                            ? Url.Action("Subtitle", "Learning", new { area = "", courseId = k.maKhoaHoc, lessonId = bh.maBaiHoc }) : null,
                         ThoiLuong = bh.thoiLuong,
                         CoXemThu = bh.choXemThu
                     };

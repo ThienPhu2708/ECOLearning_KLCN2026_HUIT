@@ -18,6 +18,19 @@ namespace ECOLearning.Areas.Admin.Controllers {
    ViewBag.LiveLessons=db.BaiHoc.Where(l=>(l.ChuongHoc!=null&&l.ChuongHoc.maKhoaHoc==id)||(l.maChuong==null&&l.maBaiHoc.StartsWith(id+"_"))).OrderBy(l=>l.thuTu).ToList();
    return View(row);
   }
+  // VTT nằm trong App_Data. Chỉ Admin kiểm duyệt bản sửa mới có thể tải file để review.
+  [HttpGet]
+  [OutputCache(NoStore=true,Duration=0,VaryByParam="*")]
+  public ActionResult Subtitle(string id,string lessonId) {
+   var row=new CourseRevisionService(db,Server.MapPath).Get(id);
+   if(row==null || (row.Status!="Pending" && row.Status!="Draft" && row.Status!="Rejected")) return HttpNotFound();
+   var lesson=row.Read().Model.Lessons.FirstOrDefault(l=>l.Id==lessonId);
+   if(lesson==null || string.IsNullOrWhiteSpace(lesson.SubtitleDraftKey)) return HttpNotFound();
+   string file=VideoSubtitleService.LayFileVtt(lesson.SubtitleDraftKey);
+   if(file==null) return HttpNotFound("Phụ đề chưa hoàn chỉnh.");
+   Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+   return File(file,"text/vtt; charset=utf-8");
+  }
   [HttpPost,ValidateAntiForgeryToken]
   public ActionResult Review(string id,string version,string decision,string reason) {
    if(decision!="approve"&&decision!="reject") return new HttpStatusCodeResult(400);

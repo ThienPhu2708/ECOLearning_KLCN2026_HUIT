@@ -27,6 +27,25 @@ namespace ECOLearning.Services
         public const string GiaoVien = "GiaoVien";
         public const string Marketing = "Marketing";
         public const string Admin = "Admin";
+        // Giá trị này được lưu trực tiếp ở cột NguoiDung.vaiTro (NVARCHAR(30)).
+        // Không dùng "Admin" cho vai trò này để mọi kiểm tra quyền vẫn phân biệt được
+        // quản trị viên gốc với nhân sự chỉ phụ trách kiểm duyệt nội dung.
+        public const string AdminKiemDuyetNoiDung = "Admin Kiểm duyệt nội dung";
+
+        public static bool LaAdminGoc(string vaiTro)
+        {
+            return string.Equals(vaiTro, Admin, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool LaAdminKiemDuyetNoiDung(string vaiTro)
+        {
+            return string.Equals(vaiTro, AdminKiemDuyetNoiDung, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool LaNhanVienQuanTri(string vaiTro)
+        {
+            return LaAdminGoc(vaiTro) || LaAdminKiemDuyetNoiDung(vaiTro);
+        }
 
         public const string HdKhoa = "KhoaTaiKhoan";
         public const string HdMoKhoa = "MoKhoa";
@@ -375,11 +394,38 @@ namespace ECOLearning.Services
             hoTen = hoTen?.Normalize(System.Text.NormalizationForm.FormC);
             string loi = ApiRules.KiemTraHoTen(hoTen) ?? ApiRules.KiemTraEmail(email);
             if (loi != null) return KetQuaQuanTri.Loi(loi);
-            if (vaiTro != Marketing && vaiTro != Admin) return KetQuaQuanTri.Loi("Chỉ tạo được tài khoản nhân viên Marketing hoặc Quản trị viên.");
+            if (vaiTro != Marketing && vaiTro != Admin && vaiTro != AdminKiemDuyetNoiDung)
+                return KetQuaQuanTri.Loi("Vai trò nhân viên không hợp lệ.");
 
             hoTen = hoTen.Trim();
             email = ApiRules.ChuanHoaEmail(email);
-            if (db.NguoiDung.Any(u => u.email.ToLower() == email)) return KetQuaQuanTri.Loi("Email này đã có tài khoản trong hệ thống.");
+            var taiKhoanCu = db.NguoiDung.FirstOrDefault(u => u.email.ToLower() == email);
+            if (taiKhoanCu != null)
+            {
+                // Không tạo bản ghi thứ hai cho cùng một email. Riêng nhân sự kiểm duyệt,
+                // Admin gốc có thể nâng quyền trực tiếp từ tài khoản học viên / giáo viên.
+                bool laHocVien = string.Equals(taiKhoanCu.vaiTro, HocVien, StringComparison.OrdinalIgnoreCase);
+                bool laGiaoVien = string.Equals(taiKhoanCu.vaiTro, GiaoVien, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(taiKhoanCu.vaiTro, "Giáo viên", StringComparison.OrdinalIgnoreCase);
+                if (vaiTro != AdminKiemDuyetNoiDung || (!laHocVien && !laGiaoVien))
+                    return KetQuaQuanTri.Loi("Email này đã có tài khoản trong hệ thống.");
+
+                string vaiTroCu = taiKhoanCu.vaiTro;
+                taiKhoanCu.vaiTro = AdminKiemDuyetNoiDung;
+                db.SaveChanges();
+                ThuHoiTokenApp(taiKhoanCu.maNguoiDung);
+                AccountStatusFilter.DanhDauThayDoi(taiKhoanCu.maNguoiDung);
+                GhiNhatKy(maAdmin, HdTaoNhanVien, DoiTuongNguoiDung, taiKhoanCu.maNguoiDung.ToString(),
+                    "Chuyển vai trò từ " + vaiTroCu + " sang Quản trị viên kiểm duyệt nội dung.");
+
+                var mailNangQuyen = EmailService.SendAdminNoticeEmail(taiKhoanCu.email, taiKhoanCu.hoTen,
+                    "[E-Learning] Cập nhật quyền tài khoản",
+                    "<p>Tài khoản của bạn đã được cấp vai trò <strong>Quản trị viên kiểm duyệt nội dung</strong>.</p>"
+                    + "<p>Hãy đăng nhập lại và xác thực OTP để vào khu vực kiểm duyệt nội dung.</p>", null, null, "info");
+                string thongBao = "Đã chuyển tài khoản " + taiKhoanCu.email + " từ " + vaiTroCu + " sang Quản trị viên kiểm duyệt nội dung.";
+                if (!mailNangQuyen.Success) thongBao += " (Chưa gửi được email thông báo.)";
+                return KetQuaQuanTri.Ok(thongBao, taiKhoanCu.maNguoiDung);
+            }
 
             string matKhauTam = TaoMatKhauTam();
             var user = new NguoiDung
@@ -394,7 +440,9 @@ namespace ECOLearning.Services
             db.SaveChanges();
             db.Database.ExecuteSqlCommand("UPDATE dbo.NguoiDung SET canDoiMatKhau = 1 WHERE maNguoiDung = @id", new SqlParameter("@id", user.maNguoiDung));
 
-            string tenVaiTro = vaiTro == Admin ? "Quản trị viên" : "Nhân viên Marketing";
+            string tenVaiTro = vaiTro == Admin
+                ? "Quản trị viên"
+                : (vaiTro == AdminKiemDuyetNoiDung ? "Quản trị viên kiểm duyệt nội dung" : "Nhân viên Marketing");
             var mail = GuiMatKhauTam(email, hoTen, matKhauTam,
                 "<p>Ban quản trị E-Learning đã tạo cho bạn tài khoản <strong>" + tenVaiTro + "</strong> với email đăng nhập <strong>" + WebUtility.HtmlEncode(email) + "</strong>.</p>");
             if (!mail.Success)

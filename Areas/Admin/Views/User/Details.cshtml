@@ -7,7 +7,7 @@
 @{
     ViewBag.Title = Model.HoTen + " | Quản lý người dùng";
     bool laChinhMinh = ViewBag.LaChinhMinh as bool? ?? false;
-    bool laNhanVien = Model.VaiTro == AccountAdminService.Marketing || Model.VaiTro == AccountAdminService.Admin;
+    bool laNhanVien = Model.VaiTro == AccountAdminService.Marketing || AccountAdminService.LaNhanVienQuanTri(Model.VaiTro);
     string anh = string.IsNullOrWhiteSpace(Model.AnhDaiDien) ? null : (Model.AnhDaiDien.StartsWith("http") ? Model.AnhDaiDien : Url.Content("~/" + Model.AnhDaiDien.TrimStart('~', '/')));
     decimal tongChi = Model.DonHang.Where(d => RevenueService.TrangThaiThanhCong.Contains(d.TrangThai)).Sum(d => d.TongTien);
 }
@@ -59,7 +59,7 @@
     <div class="card au-info"><span>Ngày tạo tài khoản</span><b>@(Model.NgayTao.HasValue ? Model.NgayTao.Value.ToString("dd/MM/yyyy HH:mm") : "Trước khi có thống kê")</b></div>
     @if (laNhanVien)
     {
-        <div class="card au-info"><span>Khu vực làm việc</span><b>@(Model.VaiTro == AccountAdminService.Admin ? "Trang Quản trị" : "Trang Marketing")</b></div>
+        <div class="card au-info"><span>Khu vực làm việc</span><b>@(Model.VaiTro == AccountAdminService.Admin ? "Trang Quản trị" : (Model.VaiTro == AccountAdminService.AdminKiemDuyetNoiDung ? "Khu vực kiểm duyệt nội dung" : "Trang Marketing"))</b></div>
     }
     else
     {
@@ -75,7 +75,7 @@
             <button type="button" class="au-tab" data-tab="don-hang">Đơn hàng <span class="au-count">@Model.DonHang.Count</span></button>
             <button type="button" class="au-tab" data-tab="danh-gia">Đánh giá <span class="au-count">@Model.DanhGia.Count</span></button>
         }
-        <button type="button" class="au-tab @(laNhanVien ? "active" : "")" data-tab="nhat-ky">@(Model.VaiTro == AccountAdminService.Admin ? "Hoạt động của Admin" : "Nhật ký tài khoản") <span class="au-count">@Model.NhatKy.Count</span></button>
+        <button type="button" class="au-tab @(laNhanVien ? "active" : "")" data-tab="nhat-ky">@(AccountAdminService.LaNhanVienQuanTri(Model.VaiTro) ? "Hoạt động kiểm duyệt" : "Nhật ký tài khoản") <span class="au-count">@Model.NhatKy.Count</span></button>
     </div>
 
     @if (!laNhanVien)

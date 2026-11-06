@@ -28,8 +28,14 @@ namespace ECOLearning.Services
         private const string UntilKey = "AdminOtpVerifiedUntil";
         private const string CookieName = "ECO_AdminOtp";
         private static readonly object Gate = new object();
-        private sealed class Limit { public int Sends; public int Failures; public DateTime LastSend; }
-        public static bool Required(string role) => string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase);
+        private sealed class Limit
+        {
+            public int Sends;
+            public int Failures;
+            public DateTime LastSend;
+            public DateTime StartedUtc;
+        }
+        public static bool Required(string role) => AccountAdminService.LaNhanVienQuanTri(role);
         public static string Stamp(string value)
         {
             using (var sha = SHA256.Create()) return Convert.ToBase64String(sha.ComputeHash(Encoding.UTF8.GetBytes(value ?? "")));
@@ -38,13 +44,29 @@ namespace ECOLearning.Services
         {
             string key = "AdminOtpLimit:" + userId;
             var value = HttpRuntime.Cache[key] as Limit;
-            if (value != null) return value;
-            value = new Limit();
+            if (value != null && value.StartedUtc != DateTime.MinValue && now < value.StartedUtc.AddMinutes(15)) return value;
+            if (value != null) HttpRuntime.Cache.Remove(key);
+            value = new Limit { StartedUtc = now };
             HttpRuntime.Cache.Insert(key, value, null, now.AddMinutes(15), Cache.NoSlidingExpiration);
             return value;
         }
+        /// <summary>Thời gian khóa còn lại sau khi nhập sai hoặc gửi mã quá nhiều lần.</summary>
+        public static int CooldownSeconds(AdminOtpChallenge pending, DateTime now)
+        {
+            if (pending == null) return 0;
+            lock (Gate)
+            {
+                var limit = Limits(pending.UserId, now);
+                if (limit.Failures < 5 && limit.Sends < 5) return 0;
+                return Math.Max(0, (int)Math.Ceiling((limit.StartedUtc.AddMinutes(15) - now).TotalSeconds));
+            }
+        }
+
         public static int ResendSeconds(AdminOtpChallenge pending, DateTime now)
-            => pending == null ? 0 : Math.Max(0, (int)Math.Ceiling((pending.SentUtc.AddSeconds(60) - now).TotalSeconds));
+        {
+            int cooldown = CooldownSeconds(pending, now);
+            return cooldown > 0 ? cooldown : (pending == null ? 0 : Math.Max(0, (int)Math.Ceiling((pending.SentUtc.AddSeconds(60) - now).TotalSeconds)));
+        }
 
         // Limits are shared across browser sessions for the same account. Sending never resets failures.
         public static string Send(AdminOtpChallenge pending, DateTime now, Func<string, bool> deliver)
@@ -53,7 +75,8 @@ namespace ECOLearning.Services
             lock (Gate)
             {
                 var limit = Limits(pending.UserId, now);
-                if (limit.Failures >= 5 || limit.Sends >= 5) return "Bạn đã thử quá nhiều lần. Vui lòng chờ 15 phút rồi đăng nhập lại.";
+                if (limit.Failures >= 5 || limit.Sends >= 5)
+                    return "Bạn đã thao tác quá nhiều lần. Vui lòng chờ hết thời gian khóa để gửi lại mã OTP.";
                 if (ResendSeconds(pending, now) > 0 || (now - limit.LastSend).TotalSeconds < 60)
                     return "Vui lòng chờ 60 giây giữa hai lần gửi mã.";
                 uint number;
@@ -86,7 +109,7 @@ namespace ECOLearning.Services
             {
                 if (pending == null || now >= pending.DeadlineUtc) return "Phiên xác thực đã hết hạn. Vui lòng đăng nhập lại.";
                 var limit = Limits(pending.UserId, now);
-                if (limit.Failures >= 5) return "Bạn đã nhập sai 5 lần. Vui lòng chờ 15 phút rồi đăng nhập lại.";
+                if (limit.Failures >= 5) return "Bạn đã nhập sai mã OTP quá nhiều lần. Vui lòng chờ hết thời gian khóa để gửi lại mã.";
                 if (pending.CodeHash == null || now >= pending.CodeExpiresUtc) return "Mã không còn hiệu lực. Vui lòng gửi lại mã.";
                 var candidate = Stamp(pending.Salt + (code ?? "").Trim());
                 int different = 0;
@@ -94,7 +117,7 @@ namespace ECOLearning.Services
                 if (different != 0)
                 {
                     limit.Failures++;
-                    return limit.Failures >= 5 ? "Bạn đã nhập sai 5 lần. Vui lòng chờ 15 phút rồi đăng nhập lại."
+                    return limit.Failures >= 5 ? "Bạn đã nhập sai mã OTP quá nhiều lần. Vui lòng chờ hết thời gian khóa để gửi lại mã."
                         : "Mã xác thực không đúng. Còn " + (5 - limit.Failures) + " lần thử.";
                 }
                 pending.CodeHash = null; // consume before creating any authenticated session

@@ -20,6 +20,27 @@ namespace ECOLearning.Controllers.Api
             public List<string> CategoryIds { get; set; }
         }
 
+        // Trang gợi ý giống web: chỉ gợi ý phù hợp, không bù khóa phổ biến.
+        [HttpGet, Route("recommendations/personal"), ApiAuthorize]
+        public ActionResult PersonalRecommendations(int limit = 12)
+        {
+            limit = Math.Max(1, Math.Min(limit, 30));
+            var model = new RecommendationService(Db).GetPersonalizedPage(CurrentUserId, limit, true);
+            if (!model.DaKhoiTao) return Fail(503, "RECOMMENDATIONS_NOT_INSTALLED", "Chức năng gợi ý chưa sẵn sàng.");
+            return Ok(new { interactedCourses = model.SoKhoaDaTuongTac, total = model.Items.Count,
+                items = new ApiCourseMapper(Db, AbsoluteUrl).Map(model.Items.Select(i => i.Course.maKhoaHoc)), badge = "Phù hợp với bạn" });
+        }
+
+        [HttpPost, Route("recommendations/personal/refresh"), ApiAuthorize]
+        public ActionResult RefreshPersonalRecommendations(int limit = 12)
+        {
+            limit = Math.Max(1, Math.Min(limit, 30));
+            var service = new RecommendationService(Db);
+            var computed = service.Compute(CurrentUserId, limit, false);
+            if (!computed.DaKhoiTao) return Fail(503, "RECOMMENDATIONS_NOT_INSTALLED", "Chức năng gợi ý chưa sẵn sàng.");
+            return PersonalRecommendations(limit);
+        }
+
         // C1. GET /api/v1/recommendations?limit=
         [HttpGet, Route("recommendations")]
         public ActionResult Recommendations(int limit = 10)

@@ -35,7 +35,7 @@ namespace ECOLearning.Services
 
         public static bool ApDung(string vaiTro)
         {
-            return string.Equals(vaiTro, AccountAdminService.Admin, StringComparison.OrdinalIgnoreCase)
+            return AccountAdminService.LaNhanVienQuanTri(vaiTro)
                 || string.Equals(vaiTro, AccountAdminService.Marketing, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -194,7 +194,8 @@ namespace ECOLearning.Services
                         SELECT maPhien AS MaPhien,
                                CAST(CASE WHEN phienLuc > DATEADD(HOUR, -@gio, GETDATE()) THEN 1 ELSE 0 END AS BIT) AS ConHan
                         FROM dbo.NguoiDung
-                        WHERE maNguoiDung = @id AND ISNULL(trangThai, 1) = 1 AND vaiTro IN (N'Admin', N'Marketing')",
+                        WHERE maNguoiDung = @id AND ISNULL(trangThai, 1) = 1
+                          AND vaiTro IN (N'Admin', N'Admin Kiểm duyệt nội dung', N'Marketing')",
                         new SqlParameter("@gio", KhoiPhucToiDaGio), new SqlParameter("@id", maNguoiDung)).FirstOrDefault();
 
                     if (p == null || !p.ConHan)

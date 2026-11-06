@@ -36,7 +36,7 @@ namespace ECOLearning.Controllers
             RecommendationPageViewModel model;
             try
             {
-                model = new RecommendationService(db).Compute(currentUserId, SoGoiYTrenTrang, picker != null);
+                model = new RecommendationService(db).GetPersonalizedPage(currentUserId, SoGoiYTrenTrang, picker != null);
             }
             catch (Exception ex)
             {
@@ -48,6 +48,33 @@ namespace ECOLearning.Controllers
                 };
             }
             return View(model);
+        }
+
+        /// <summary>
+        /// Làm mới gợi ý cho đúng một học viên từ ma trận tương đồng đã có.
+        /// Stored procedure chỉ thay kết quả cũ của người này, không tính lại
+        /// cosine hay ma trận của toàn hệ thống.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Refresh()
+        {
+            if (!User.Identity.IsAuthenticated && Session["UserId"] == null)
+            {
+                return RedirectToAction("Login", "Account", new { returnUrl = Url.Action("Index", "Recommendation") });
+            }
+
+            int currentUserId = (Session["UserId"] as int?) ?? 0;
+            try
+            {
+                new RecommendationService(db).Compute(currentUserId, SoGoiYTrenTrang, false);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Refresh recommendation error: " + ex.Message);
+            }
+
+            return RedirectToAction("Index");
         }
 
         protected override void Dispose(bool disposing)

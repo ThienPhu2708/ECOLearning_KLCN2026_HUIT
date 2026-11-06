@@ -57,15 +57,20 @@ namespace ECOLearning.Controllers.Api
         // onSale=true: chỉ khóa đang được giảm trực tiếp; sort=discount: % giảm nhiều nhất trước (khóa không giảm xếp cuối)
         [HttpGet, Route("courses")]
         public ActionResult Courses(string q = null, string categoryId = null, string level = null, string price = null,
-            double? minRating = null, string sort = null, int page = 1, int pageSize = 12, int? instructorId = null, bool onSale = false)
+            double? minRating = null, string sort = null, int page = 1, int pageSize = 12, int? instructorId = null, bool onSale = false, bool webCatalog = false)
         {
             page = ChuanHoaTrang(page);
             pageSize = ChuanHoaKichThuoc(pageSize);
             int userId = CurrentUserId;
 
             var query = Db.KhoaHoc.Where(k => TrangThaiDangBan.Contains(k.trangThai));
+            if (webCatalog)
+                query = query.Where(k => k.trangThai == CourseStatus.DaXuatBan || k.trangThai == "Đã duyệt" || k.trangThai == "Active");
             if (userId > 0)
-                query = query.Where(k => k.maGiaoVien != userId && !Db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == k.maKhoaHoc && d.maHocVien == userId));
+            {
+                query = query.Where(k => !Db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == k.maKhoaHoc && d.maHocVien == userId));
+                if (!webCatalog) query = query.Where(k => k.maGiaoVien != userId);
+            }
             // Khóa của một giáo viên (bấm thẻ "Giáo viên nổi bật" / kết quả tìm giáo viên)
             if (instructorId.HasValue)
                 query = query.Where(k => k.maGiaoVien == instructorId.Value);
@@ -74,12 +79,24 @@ namespace ECOLearning.Controllers.Api
             List<string> thuTuLienQuan = null;
             if (!string.IsNullOrWhiteSpace(q))
             {
-                var search = new SearchService(Db);
-                bool motPhan;
-                thuTuLienQuan = search.XepHang(search.LayChiMuc(), q.Trim(), search.BoQuaKhoaDaSoHuu(userId), out motPhan)
-                    .Select(x => x.Key.MaKhoaHoc).ToList();
-                var tapMa = thuTuLienQuan;
-                query = query.Where(k => tapMa.Contains(k.maKhoaHoc));
+                if (webCatalog)
+                {
+                    string term = q.Trim().ToLower();
+                    query = query.Where(k => k.tenKhoaHoc.ToLower().Contains(term)
+                        || (k.NguoiDung != null && k.NguoiDung.hoTen.ToLower().Contains(term))
+                        || (k.moTa != null && k.moTa.ToLower().Contains(term))
+                        || (k.moTaNgan != null && k.moTaNgan.ToLower().Contains(term))
+                        || (k.DanhMuc != null && k.DanhMuc.tenDanhMuc.ToLower().Contains(term)));
+                }
+                else
+                {
+                    var search = new SearchService(Db);
+                    bool motPhan;
+                    thuTuLienQuan = search.XepHang(search.LayChiMuc(), q.Trim(), search.BoQuaKhoaDaSoHuu(userId), out motPhan)
+                        .Select(x => x.Key.MaKhoaHoc).ToList();
+                    var tapMa = thuTuLienQuan;
+                    query = query.Where(k => tapMa.Contains(k.maKhoaHoc));
+                }
             }
             if (!string.IsNullOrWhiteSpace(categoryId)) query = query.Where(k => k.maDanhMuc == categoryId);
             if (!string.IsNullOrWhiteSpace(level)) query = query.Where(k => k.capDo == level);
@@ -127,7 +144,11 @@ namespace ECOLearning.Controllers.Api
                 switch (sort)
                 {
                     case "newest":
-                        sapXep = query.OrderByDescending(k => k.maKhoaHoc);
+                        // Same release date and tie-breaker as HomeSectionService.MoiRaMat.
+                        sapXep = query.OrderByDescending(k => Db.KiemDuyetKhoaHoc
+                            .Where(d => d.maKhoaHoc == k.maKhoaHoc && d.trangThai == "Đã duyệt" && d.ngayKiemDuyet != null)
+                            .Select(d => d.ngayKiemDuyet).Min())
+                            .ThenBy(k => k.maKhoaHoc);
                         break;
                     case "rating":
                         sapXep = query.OrderByDescending(k => k.DanhGiaKhoaHoc.Average(d => (double?)d.soSao) ?? 0)

@@ -168,6 +168,40 @@ namespace ECOLearning.Services
             return model;
         }
 
+        /// <summary>
+        /// Nạp danh sách dành riêng cho trang gợi ý. Khác với trang chủ, trang này
+        /// không tự bổ sung khóa phổ biến: mỗi thẻ đều là một gợi ý phù hợp với học viên.
+        /// </summary>
+        public RecommendationPageViewModel GetPersonalizedPage(int userId, int topK, bool dungSoThich)
+        {
+            var model = new RecommendationPageViewModel { DaKhoiTao = IsInstalled() };
+            if (!model.DaKhoiTao)
+            {
+                return model;
+            }
+
+            // Kết quả cá nhân đã tính trước; chỉ nút Làm mới mới thay thế kết quả này.
+            var rows = LayGoiYDaLuu(userId, topK);
+
+            // Cold-start theo lĩnh vực quan tâm cũng là gợi ý cá nhân. Không bù bằng
+            // các khóa phổ biến nếu chưa đủ số lượng.
+            if (rows.Count == 0 && dungSoThich)
+            {
+                var linhVuc = new InterestService(db).GetSelected(userId);
+                if (linhVuc.Count > 0)
+                {
+                    rows = LayTheoSoThich(userId, linhVuc.Select(l => l.MaDanhMuc).ToList(), topK);
+                    model.LinhVucQuanTam = linhVuc;
+                }
+            }
+
+            model.Items = AttachCourses(rows)
+                .Where(i => i.LaLocCongTac)
+                .ToList();
+            model.SoKhoaDaTuongTac = CountInteractedCourses(userId);
+            return model;
+        }
+
         /// <summary>Số khóa học người dùng đã tương tác (đăng ký, học, đánh giá, xem...).</summary>
         public int CountInteractedCourses(int userId)
         {

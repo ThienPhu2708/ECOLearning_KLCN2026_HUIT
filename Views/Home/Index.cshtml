@@ -141,8 +141,8 @@ border-color: var(--primary, #434CE8);
 opacity: 0.4;
 cursor: not-allowed;
 }
-
 .cat-head-actions {
+    
 display: flex;
 gap: 10px;
 align-items: center;
@@ -756,24 +756,15 @@ if (yeuThich.Count > 0)
                     int enrollCount;
                     enrollCounts.TryGetValue(course.maKhoaHoc, out enrollCount);
                     double avgStars = hasRatings ? course.DanhGiaKhoaHoc.Average(d => d.soSao) : 0;
-                    bool isTopTrending = banChay.TopBanChay.Contains(course.maKhoaHoc);
                     int luotTrongKy;
                     banChay.LuotTrongKy.TryGetValue(course.maKhoaHoc, out luotTrongKy);
-                    bool isHighRated = hasRatings && avgStars >= 4.5;
 
                     <div class="course-slide">
                         <div class="course-card" onclick="window.open('@Url.Action("Details", "Course", new { id = course.maKhoaHoc })', '_blank', 'noopener')" style="cursor: pointer;">
                             <div class="course-thumb">
                                 <img src="@thumbUrl" alt="@course.tenKhoaHoc" loading="lazy" decoding="async" />
                                 @Html.Partial("_FavoriteButton", new ECOLearning.ViewModels.FavoriteButtonModel { CourseId = course.maKhoaHoc, TeacherId = course.maGiaoVien })
-                                @if (isTopTrending)
-                                {
-                                    <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;"><i class="bi bi-fire me-1"></i> Bán chạy</span>
-                                }
-                                else if (isHighRated)
-                                {
-                                    <span class="badge badge-success" style="position: absolute; top: 12px; left: 12px; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;"><i class="bi bi-star-fill me-1"></i> Đánh giá cao</span>
-                                }
+                                <span class="badge badge-primary" style="position: absolute; top: 12px; left: 12px; background: #434CE8; color: #FFFFFF;"><i class="bi bi-fire me-1"></i> Bán chạy</span>
                             </div>
                             <div class="course-body">
                                 <div class="course-category">
@@ -869,7 +860,7 @@ if (yeuThich.Count > 0)
     @@media (max-width: 560px) { .hs-teacher-grid { grid-template-columns: 1fr; } }
 </style>
 
-@* Vì bạn đã học "X": khóa liên quan tới khóa vừa học gần nhất *@
+@* Vì bạn đã học "X": khóa cùng danh mục với khóa vừa học gần nhất *@
 if (viBanDaHoc != null)
 {
 <section id="related-section" class="hs-section hs-surface" aria-labelledby="related-heading">
@@ -877,7 +868,7 @@ if (viBanDaHoc != null)
         <div class="hs-head">
             <div>
                 <h2 class="h2" id="related-heading">Vì bạn đã học “<a href="@Url.Action("Details", "Course", new { id = viBanDaHoc.MaKhoaHocMoc })" target="_blank" rel="noopener">@viBanDaHoc.TenKhoaHocMoc</a>”</h2>
-                <p class="body-2">Khóa học thường được học cùng hoặc cùng lĩnh vực</p>
+                <p class="body-2">Các khóa học cùng lĩnh vực với khóa bạn vừa học</p>
             </div>
             @if (viBanDaHoc.KhoaHoc.Count > 1)
             {

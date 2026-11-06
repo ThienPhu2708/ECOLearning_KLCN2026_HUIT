@@ -167,6 +167,12 @@
                             Admin
                         </a>
                     }
+                    else if (ECOLearning.Services.AccountAdminService.LaAdminKiemDuyetNoiDung(userRole))
+                    {
+                        <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin" })" class="btn-nav-portal" title="Khu vực kiểm duyệt nội dung">
+                            Kiểm duyệt
+                        </a>
+                    }
                     else if (string.Equals(userRole, "GiaoVien", StringComparison.OrdinalIgnoreCase) || string.Equals(userRole, "Giáo viên", StringComparison.OrdinalIgnoreCase))
                     {
                         <a href="@Url.Action("Index", "Dashboard", new { area = "Instructor" })" class="btn-nav-portal" title="Kênh giảng viên">
@@ -263,6 +269,10 @@
                 {
                     <a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })"><i class="bi bi-shield-check"></i> Quản trị hệ thống</a>
                 }
+                else if (ECOLearning.Services.AccountAdminService.LaAdminKiemDuyetNoiDung(dnVaiTro))
+                {
+                    <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin" })"><i class="bi bi-shield-check"></i> Kiểm duyệt nội dung</a>
+                }
                 else if (string.Equals(dnVaiTro, "Marketing", StringComparison.OrdinalIgnoreCase))
                 {
                     <a href="@Url.Action("Index", "Dashboard", new { area = "Marketing" })"><i class="bi bi-megaphone"></i> Kênh Marketing</a>
@@ -294,7 +304,7 @@
         <div class="staff-banner" role="note">
             <div class="safe-container staff-banner-inner">
                 <span><i class="bi bi-eye-fill"></i> Bạn đang xem với vai trò <strong>@tenVaiTroChiXem</strong>, <strong>chế độ chỉ xem</strong>: các nút mua, thả tim, lưu mã, đánh giá được làm mờ để không ảnh hưởng số liệu.</span>
-                <a href="@(Session["Role"] as string == "Admin" ? Url.Action("Index", "Dashboard", new { area = "Admin" }) : Url.Action("Index", "Dashboard", new { area = "Marketing" }))"><i class="bi bi-arrow-left"></i> Về trang @tenVaiTroChiXem</a>
+                <a href="@(ECOLearning.Services.AccountAdminService.LaAdminKiemDuyetNoiDung(Session["Role"] as string) ? Url.Action("Index", "CourseApproval", new { area = "Admin" }) : (Session["Role"] as string == "Admin" ? Url.Action("Index", "Dashboard", new { area = "Admin" }) : Url.Action("Index", "Dashboard", new { area = "Marketing" })))"><i class="bi bi-arrow-left"></i> Về trang @tenVaiTroChiXem</a>
             </div>
         </div>
     }
@@ -305,16 +315,20 @@
     </main>
 
     <!-- Footer Hệ Thống -->
-    <!-- Quảng cáo ứng dụng di động (dải xanh tràn hết chiều ngang, chỉ khi chưa đăng nhập) + footer: bọc chung để cả hai cùng nằm cuối trang,
+    <!-- Quảng cáo ứng dụng di động (dải xanh tràn hết chiều ngang, chỉ ở trang chủ của khách) + footer: bọc chung để cả hai cùng nằm cuối trang,
          quảng cáo luôn sát ngay trên footer kể cả ở trang ngắn (footer giữ nguyên) -->
     @{
         var currentController = Convert.ToString(ViewContext.RouteData.Values["controller"]);
-        // Các màn hình Account (đăng nhập, đăng ký, OTP/quên mật khẩu) cần tập trung vào xác thực, không hiển thị dải tải ứng dụng.
-        var isAccountPage = string.Equals(currentController, "Account", StringComparison.OrdinalIgnoreCase);
+        var currentAction = Convert.ToString(ViewContext.RouteData.Values["action"]);
+        var currentArea = Convert.ToString(ViewContext.RouteData.DataTokens["area"]);
+        // Chỉ màn hình Home/Index không thuộc Area mới là trang chủ công khai.
+        var isPublicHome = string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase)
+            && string.IsNullOrEmpty(currentArea);
     }
     <div style="margin-top: auto;">
-    @* Chỉ mời tải app khi khách chưa đăng nhập và không ở màn hình xác thực. *@
-    @if (!isAccountPage && !(User.Identity.IsAuthenticated || Session["UserId"] != null))
+    @* Chỉ mời tải app ở trang chủ khi khách chưa đăng nhập. *@
+    @if (isPublicHome && !(User.Identity.IsAuthenticated || Session["UserId"] != null))
     {
         @Html.Partial("_AppPromo")
     }

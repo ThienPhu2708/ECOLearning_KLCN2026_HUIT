@@ -16,7 +16,7 @@ namespace ECOLearning.Services
 
         public static bool LaChiXem(string role)
         {
-            return string.Equals(role, AccountAdminService.Admin, StringComparison.OrdinalIgnoreCase)
+            return AccountAdminService.LaNhanVienQuanTri(role)
                 || string.Equals(role, AccountAdminService.Marketing, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -27,7 +27,9 @@ namespace ECOLearning.Services
 
         public static string TenVaiTro(string role)
         {
-            return string.Equals(role, AccountAdminService.Admin, StringComparison.OrdinalIgnoreCase) ? "Quản trị viên" : "Marketing";
+            if (AccountAdminService.LaAdminGoc(role)) return "Quản trị viên";
+            if (AccountAdminService.LaAdminKiemDuyetNoiDung(role)) return "Quản trị viên kiểm duyệt nội dung";
+            return "Marketing";
         }
     }
 }

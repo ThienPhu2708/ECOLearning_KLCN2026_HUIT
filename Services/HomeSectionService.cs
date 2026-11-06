@@ -130,6 +130,7 @@ namespace ECOLearning.Services
 
             Func<KhoaHoc, int> luotKy = k => luot.ContainsKey(k.maKhoaHoc) ? luot[k.maKhoaHoc] : 0;
             ketQua.KhoaHoc = khoa
+                .Where(k => luotKy(k) > 0)
                 .OrderByDescending(luotKy)
                 .ThenByDescending(k => k.DanhGiaKhoaHoc.Any() ? k.DanhGiaKhoaHoc.Average(x => (double)x.soSao) : 0)
                 .ThenByDescending(k => tongHocVien.ContainsKey(k.maKhoaHoc) ? tongHocVien[k.maKhoaHoc] : 0)
@@ -138,7 +139,7 @@ namespace ECOLearning.Services
             ketQua.LuotTrongKy = ketQua.KhoaHoc.ToDictionary(k => k.maKhoaHoc, luotKy);
             ketQua.TongHocVien = tongHocVien;
             // Nhãn "Bán chạy": 3 khóa đứng đầu có lượt đăng ký trong kỳ
-            ketQua.TopBanChay = new HashSet<string>(ketQua.KhoaHoc.Where(k => luotKy(k) > 0).Take(3).Select(k => k.maKhoaHoc));
+            ketQua.TopBanChay = new HashSet<string>(ketQua.KhoaHoc.Select(k => k.maKhoaHoc));
             return ketQua;
         }
 
@@ -188,26 +189,23 @@ namespace ECOLearning.Services
             string moc = baiGanNhat.khoa;
             if (moc == null && baiGanNhat.maBaiHoc.Contains("_")) moc = baiGanNhat.maBaiHoc.Substring(0, baiGanNhat.maBaiHoc.IndexOf('_'));
             var khoaMoc = db.KhoaHoc.Where(k => k.maKhoaHoc == moc).Select(k => new { k.maKhoaHoc, k.tenKhoaHoc, k.maDanhMuc }).FirstOrDefault();
-            if (khoaMoc == null) return null;
+            if (khoaMoc == null || string.IsNullOrEmpty(khoaMoc.maDanhMuc)) return null;
 
-            var ma = new List<string>();
-            try
-            {
-                var lq = new RelatedCourseService(db).LayChoKhoaHoc(moc, userId);
-                ma.AddRange(lq.MuaCungNhau.Concat(lq.CungMua).Select(x => x.The.Course.maKhoaHoc));
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine("Home related: " + ex.Message);
-            }
+            // Mục này chỉ gợi ý khóa trong đúng lĩnh vực của khóa vừa học.
+            // Không dùng dữ liệu mua chung khác danh mục vì dữ liệu demo ít có thể
+            // tạo các liên hệ không đúng về mặt nội dung.
             var cungLinhVuc = db.KhoaHoc
-                .Where(k => k.maKhoaHoc != moc && k.maDanhMuc == khoaMoc.maDanhMuc && TrangThaiDangBan.Contains(k.trangThai))
+                .Where(k => k.maKhoaHoc != moc
+                         && k.maDanhMuc == khoaMoc.maDanhMuc
+                         && k.maGiaoVien != userId
+                         && TrangThaiDangBan.Contains(k.trangThai)
+                         && !db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == k.maKhoaHoc && d.maHocVien == userId))
                 .OrderByDescending(k => db.DangKyKhoaHoc.Count(d => d.maKhoaHoc == k.maKhoaHoc))
+                .ThenByDescending(k => k.DanhGiaKhoaHoc.Any() ? k.DanhGiaKhoaHoc.Average(d => (double)d.soSao) : 0)
                 .ThenBy(k => k.maKhoaHoc)
-                .Select(k => k.maKhoaHoc).Take(soLuong * 3).ToList();
-            ma.AddRange(cungLinhVuc);
+                .Select(k => k.maKhoaHoc).Take(soLuong).ToList();
 
-            var the = TheKhoaHoc(ma.Where(x => x != moc), userId, soLuong);
+            var the = TheKhoaHoc(cungLinhVuc, userId, soLuong);
             return the.Count == 0 ? null : new GoiYTheoKhoaHoc { MaKhoaHocMoc = moc, TenKhoaHocMoc = khoaMoc.tenKhoaHoc, KhoaHoc = the };
         }
 

@@ -78,7 +78,7 @@ namespace ECOLearning.Services
         {
             if (maBai == null || maBai.Count == 0) return new Dictionary<string, int>();
             var ds = maBai.ToList();
-            return db.TaiNguyen.Where(t => ds.Contains(t.maBaiHoc))
+            return db.TaiNguyen.Where(t => ds.Contains(t.maBaiHoc) && t.duongDan != null && t.duongDan.Trim() != "")
                 .GroupBy(t => t.maBaiHoc)
                 .Select(g => new { g.Key, SoLuong = g.Count() })
                 .ToDictionary(x => x.Key, x => x.SoLuong);

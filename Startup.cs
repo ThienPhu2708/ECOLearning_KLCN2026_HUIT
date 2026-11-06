@@ -3,6 +3,9 @@ using Owin;
 using System;
 using System.Security.Principal;
 using System.Web.Security;
+using System.Linq;
+using ECOLearning.Models;
+using ECOLearning.Services.Api;
 
 [assembly: OwinStartup(typeof(ECOLearning.Startup))]
 
@@ -19,6 +22,19 @@ namespace ECOLearning
                 if (context.Request.Path.StartsWithSegments(new PathString("/signalr")))
                 {
                     var identity = ChatIdentity(context.Request.Cookies[FormsAuthentication.FormsCookieName]);
+                    if (identity == null)
+                    {
+                        var header = context.Request.Headers.Get("Authorization");
+                        if (!string.IsNullOrWhiteSpace(header) && header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                        {
+                            using (var db = new QL_HETHONG_CUNGCAP_KHOAHOCEntities1())
+                            {
+                                int userId = new ApiTokenService(db).XacThuc(header.Substring(7).Trim());
+                                var user = db.NguoiDung.FirstOrDefault(u => u.maNguoiDung == userId && u.trangThai != false);
+                                if (user != null) identity = new GenericPrincipal(new GenericIdentity(user.email, "Bearer"), new string[0]);
+                            }
+                        }
+                    }
                     if (identity != null) context.Request.User = identity;
                 }
                 await next();

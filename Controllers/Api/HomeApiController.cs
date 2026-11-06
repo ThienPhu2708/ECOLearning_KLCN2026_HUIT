@@ -157,7 +157,9 @@ namespace ECOLearning.Controllers.Api
                 {
                     int luot;
                     bc.LuotTrongKy.TryGetValue(d.Id, out luot);
-                    return The(d, bc.TopBanChay.Contains(d.Id) ? "Bán chạy" : null,
+                    // HomeSectionService chỉ trả khóa có đăng ký trong kỳ cho mục này.
+                    // App luôn nhận nhãn Bán chạy, không có thẻ đánh giá cao/khóa bù.
+                    return The(d, "Bán chạy",
                         luot > 0 && ky != "all" ? luot + " lượt đăng ký " + bc.TenKy : null,
                         ky == "all" ? (int?)null : luot);
                 }).ToList()
@@ -168,7 +170,7 @@ namespace ECOLearning.Controllers.Api
         {
             var r = service.ViBanDaHoc(userId, SoKhoaMoiMuc);
             if (r == null) return null;
-            var s = MucKhoaHoc("because-you-learned", "Vì bạn đã học “" + r.TenKhoaHocMoc + "”", "Khóa học thường được học cùng hoặc cùng lĩnh vực", r.KhoaHoc, mapper);
+            var s = MucKhoaHoc("because-you-learned", "Vì bạn đã học “" + r.TenKhoaHocMoc + "”", "Các khóa học cùng lĩnh vực với khóa bạn vừa học", r.KhoaHoc, mapper);
             if (s == null) return null;
             s.AnchorCourseId = r.MaKhoaHocMoc;
             s.AnchorCourseTitle = r.TenKhoaHocMoc;

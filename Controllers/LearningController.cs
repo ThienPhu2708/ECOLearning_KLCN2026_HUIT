@@ -246,6 +246,9 @@ namespace ECOLearning.Controllers
             if (!isPreview && !db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == courseId && d.maHocVien == viewer.maNguoiDung))
                 return new HttpStatusCodeResult(403, "Bạn chưa đăng ký khóa học này.");
             ViewBag.IsPreview = isPreview;
+            // Giáo viên sở hữu khóa cũng được tham gia thảo luận; Admin chỉ xem thử không được ghi vào cộng đồng học viên.
+            ViewBag.CanLessonDiscussion = viewer.maNguoiDung == course.maGiaoVien
+                || db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == courseId && d.maHocVien == viewer.maNguoiDung);
 
             // Khóa học tạm khóa thì học viên đã mua vẫn học bình thường.
             if (course.trangThai == ECOLearning.Services.CourseStatus.KhoaVinhVien)

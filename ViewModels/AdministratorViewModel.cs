@@ -13,6 +13,8 @@ namespace ECOLearning.ViewModels
         [EmailAddress(ErrorMessage = "Email không đúng định dạng.")]
         [StringLength(100, ErrorMessage = "Email tối đa 100 ký tự.")]
         public string Email { get; set; }
+        [Required]
+        public string Role { get; set; } = AccountAdminService.AdminKiemDuyetNoiDung;
         public bool ConfirmAdmin { get; set; }
     }
     public sealed class AdministratorViewModel

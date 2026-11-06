@@ -1,7 +1,7 @@
 @using ECOLearning.Services
 @*
     Admin / Quản lý người dùng: thống kê, tìm kiếm + lọc vai trò / trạng thái, phân trang 20 dòng,
-    tạo tài khoản nhân viên (Marketing / Admin) bằng mật khẩu tạm gửi qua email.
+    tạo tài khoản nhân viên (Marketing / Admin / Kiểm duyệt nội dung) bằng mật khẩu tạm gửi qua email.
 *@
 @{
     ViewBag.Title = "Quản lý người dùng";
@@ -43,7 +43,7 @@ else
         <a href="@Url.Action("Index")" class="card au-stat @(role == null && status == null ? "is-active" : "")"><span><i class="bi bi-people-fill"></i> Tổng tài khoản</span><strong>@tk.TongSo</strong></a>
         <a href="@Url.Action("Index", new { role = "HocVien" })" class="card au-stat @(role == "HocVien" ? "is-active" : "")"><span><i class="bi bi-mortarboard"></i> Học viên</span><strong>@tk.HocVien</strong></a>
         <a href="@Url.Action("Index", new { role = "GiaoVien" })" class="card au-stat @(role == "GiaoVien" ? "is-active" : "")"><span><i class="bi bi-person-video3"></i> Giáo viên</span><strong>@tk.GiaoVien</strong></a>
-        <a href="@Url.Action("Index", new { role = "Marketing" })" class="card au-stat @(role == "Marketing" || role == "Admin" ? "is-active" : "")"><span><i class="bi bi-briefcase-fill"></i> Nhân viên</span><strong>@tk.NhanVien</strong><small>Marketing và Quản trị viên</small></a>
+        <a href="@Url.Action("Index", new { role = "Marketing" })" class="card au-stat @(role == "Marketing" || role == "Admin" || role == AccountAdminService.AdminKiemDuyetNoiDung ? "is-active" : "")"><span><i class="bi bi-briefcase-fill"></i> Nhân viên</span><strong>@tk.NhanVien</strong><small>Marketing, Quản trị viên và Kiểm duyệt nội dung</small></a>
         <a href="@Url.Action("Index", new { status = "locked" })" class="card au-stat @(status == "locked" ? "is-active" : "")"><span><i class="bi bi-lock-fill" style="color: #DC2626;"></i> Đang bị khóa</span><strong style="@(tk.DangKhoa > 0 ? "color: #DC2626;" : "")">@tk.DangKhoa</strong></a>
     </div>
 
@@ -61,6 +61,7 @@ else
             <option value="GiaoVien" @(role == "GiaoVien" ? "selected" : "")>Giáo viên</option>
             <option value="Marketing" @(role == "Marketing" ? "selected" : "")>Marketing</option>
             <option value="Admin" @(role == "Admin" ? "selected" : "")>Quản trị viên</option>
+            <option value="@AccountAdminService.AdminKiemDuyetNoiDung" @(role == AccountAdminService.AdminKiemDuyetNoiDung ? "selected" : "")>Quản trị viên kiểm duyệt nội dung</option>
         </select>
         @if (!string.IsNullOrEmpty(q) || role != null || status != null)
         {
@@ -175,7 +176,7 @@ else
                 html: '<div class="acc-swal-note">Hệ thống tạo <strong>mật khẩu tạm</strong> và gửi tới email nhân viên. Nhân viên phải đổi mật khẩu ở lần đăng nhập đầu tiên.</div>'
                     + '<div class="acc-swal-field"><label for="nv-ho-ten">Họ và tên</label><input id="nv-ho-ten" maxlength="100" placeholder="Nguyễn Văn A" /></div>'
                     + '<div class="acc-swal-field"><label for="nv-email">Email đăng nhập</label><input id="nv-email" type="email" maxlength="100" placeholder="nhanvien@gmail.com" /></div>'
-                    + '<div class="acc-swal-field"><label for="nv-vai-tro">Vai trò</label><select id="nv-vai-tro"><option value="Marketing">Nhân viên Marketing</option><option value="Admin">Quản trị viên</option></select></div>',
+                    + '<div class="acc-swal-field"><label for="nv-vai-tro">Vai trò</label><select id="nv-vai-tro"><option value="Marketing">Nhân viên Marketing</option><option value="Admin">Quản trị viên</option><option value="Admin Kiểm duyệt nội dung">Quản trị viên kiểm duyệt nội dung</option></select></div>',
                 showCancelButton: true,
                 confirmButtonText: 'Tạo và gửi email',
                 cancelButtonText: 'Hủy',

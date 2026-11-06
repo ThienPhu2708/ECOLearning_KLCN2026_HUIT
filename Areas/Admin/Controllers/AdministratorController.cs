@@ -15,17 +15,20 @@ namespace ECOLearning.Areas.Admin.Controllers
             => View(Page(q, status, trang));
 
         [HttpPost, ValidateAntiForgeryToken, ValidateInput(false)]
-        public ActionResult Create([Bind(Prefix = "NewAdmin", Include = "FullName,Email,ConfirmAdmin")] NewAdministratorViewModel input)
+        public ActionResult Create([Bind(Prefix = "NewAdmin", Include = "FullName,Email,Role,ConfirmAdmin")] NewAdministratorViewModel input)
         {
             input = input ?? new NewAdministratorViewModel();
-            if (!input.ConfirmAdmin) ModelState.AddModelError("NewAdmin.ConfirmAdmin", "Vui lòng xác nhận cấp quyền quản trị cho tài khoản mới.");
+            // Trang này chỉ tạo nhân sự phụ trách kiểm duyệt; không dùng để nhân bản Admin gốc.
+            bool roleHopLe = input.Role == AccountAdminService.AdminKiemDuyetNoiDung;
+            if (!roleHopLe) ModelState.AddModelError("NewAdmin.Role", "Vai trò không hợp lệ.");
+            if (!input.ConfirmAdmin) ModelState.AddModelError("NewAdmin.ConfirmAdmin", "Vui lòng xác nhận cấp vai trò cho tài khoản mới.");
             if (!new AccountAdminService(db).IsInstalled())
                 ModelState.AddModelError("", "Chưa khởi tạo dữ liệu quản lý tài khoản.");
             if (ModelState.IsValid)
             {
-                // Role is chosen on the server, never accepted from submitted form data.
+                // Chỉ Admin gốc dùng trang này; vai trò gửi lên luôn được whitelist ở server.
                 var result = new AccountAdminService(db).TaoNhanVien(Convert.ToInt32(Session["UserId"]),
-                    input.FullName, input.Email, AccountAdminService.Admin);
+                    input.FullName, input.Email, input.Role);
                 if (result.ThanhCong)
                 {
                     TempData["SuccessMessage"] = result.ThongBao;
@@ -48,12 +51,13 @@ namespace ECOLearning.Areas.Admin.Controllers
                 Status = status == "active" || status == "locked" ? status : null };
             if (!page.Installed) return page;
             management.MoKhoaHetHan();
-            var admins = db.NguoiDung.Where(u => u.vaiTro == AccountAdminService.Admin);
+            var admins = db.NguoiDung.Where(u => u.vaiTro == AccountAdminService.Admin || u.vaiTro == AccountAdminService.AdminKiemDuyetNoiDung);
             page.Total = admins.Count();
             page.Active = admins.Count(u => u.trangThai != false);
             PhanTrangViewModel pagination;
-            page.Administrators = new AdminUserQueryService(db).DanhSach(q, AccountAdminService.Admin, page.Status, trang, out pagination);
-            pagination.DonVi = "Admin";
+            page.Administrators = new AdminUserQueryService(db).DanhSach(q, null, page.Status, trang, out pagination,
+                new[] { AccountAdminService.Admin, AccountAdminService.AdminKiemDuyetNoiDung });
+            pagination.DonVi = "tài khoản quản trị";
             page.Pagination = pagination;
             return page;
         }

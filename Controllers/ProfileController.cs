@@ -463,6 +463,7 @@ namespace ECOLearning.Controllers
         private string TrangChuTheoVaiTro()
         {
             string role = Session["Role"]?.ToString();
+            if (AccountAdminService.LaAdminKiemDuyetNoiDung(role)) return Url.Action("Index", "CourseApproval", new { area = "Admin" });
             if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase)) return Url.Action("Index", "Dashboard", new { area = "Admin" });
             if (string.Equals(role, "Marketing", StringComparison.OrdinalIgnoreCase)) return Url.Action("Index", "Dashboard", new { area = "Marketing" });
             return Url.Action("Index", "Home", new { area = "" });

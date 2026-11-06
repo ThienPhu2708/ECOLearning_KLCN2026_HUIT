@@ -7,7 +7,7 @@ namespace ECOLearning.Areas.Admin.Controllers
 {
     /// <summary>
     /// Admin / Quản lý người dùng: danh sách, chi tiết, khóa / mở khóa có thời hạn, cảnh cáo,
-    /// đặt lại mật khẩu (mật khẩu tạm gửi qua email), tạo tài khoản nhân viên Marketing / Admin.
+    /// đặt lại mật khẩu (mật khẩu tạm gửi qua email), tạo tài khoản nhân viên Marketing / Admin / Kiểm duyệt nội dung.
     /// Quy tắc nghiệp vụ nằm ở AccountAdminService.
     /// </summary>
     public class UserController : AdminBaseController
@@ -29,7 +29,8 @@ namespace ECOLearning.Areas.Admin.Controllers
 
             quanTri.MoKhoaHetHan();
             var service = new AdminUserQueryService(db);
-            if (role != AccountAdminService.HocVien && role != AccountAdminService.GiaoVien && role != AccountAdminService.Marketing && role != AccountAdminService.Admin) role = null;
+            if (role != AccountAdminService.HocVien && role != AccountAdminService.GiaoVien && role != AccountAdminService.Marketing
+                && role != AccountAdminService.Admin && role != AccountAdminService.AdminKiemDuyetNoiDung) role = null;
             if (status != "active" && status != "locked") status = null;
 
             ECOLearning.ViewModels.PhanTrangViewModel phanTrang;

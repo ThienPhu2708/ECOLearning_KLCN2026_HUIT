@@ -99,9 +99,11 @@ namespace ECOLearning.Controllers
                         }
 
                         // Phân quyền điều hướng theo vai trò
-                        if (string.Equals(user.vaiTro, "Admin", StringComparison.OrdinalIgnoreCase))
+                        if (AccountAdminService.LaNhanVienQuanTri(user.vaiTro))
                         {
-                            return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
+                            return AccountAdminService.LaAdminKiemDuyetNoiDung(user.vaiTro)
+                                ? (ActionResult)RedirectToAction("Index", "CourseApproval", new { area = "Admin" })
+                                : RedirectToAction("Index", "Dashboard", new { area = "Admin" });
                         }
                         else if (string.Equals(user.vaiTro, "Marketing", StringComparison.OrdinalIgnoreCase))
                         {
@@ -140,9 +142,11 @@ namespace ECOLearning.Controllers
                         return Redirect(model.ReturnUrl);
                     }
 
-                    if (string.Equals(spResult.vaiTro, "Admin", StringComparison.OrdinalIgnoreCase))
+                    if (AccountAdminService.LaNhanVienQuanTri(spResult.vaiTro))
                     {
-                        return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
+                        return AccountAdminService.LaAdminKiemDuyetNoiDung(spResult.vaiTro)
+                            ? (ActionResult)RedirectToAction("Index", "CourseApproval", new { area = "Admin" })
+                            : RedirectToAction("Index", "Dashboard", new { area = "Admin" });
                     }
                     else if (string.Equals(spResult.vaiTro, "Marketing", StringComparison.OrdinalIgnoreCase))
                     {
@@ -726,7 +730,8 @@ namespace ECOLearning.Controllers
                 UserId = user.maNguoiDung, Email = user.email,
                 PasswordStamp = AdminEmailOtpService.Stamp(user.matKhau),
                 RememberMe = rememberMe, ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null,
-                DeadlineUtc = DateTime.UtcNow.AddMinutes(15)
+                // Giữ challenge đủ lâu để người dùng chờ hết một chu kỳ khóa OTP 15 phút rồi gửi lại mã.
+                DeadlineUtc = DateTime.UtcNow.AddMinutes(35)
             };
             Session[AdminEmailOtpService.PendingKey] = pending;
             string error = AdminEmailOtpService.Send(pending, DateTime.UtcNow,
@@ -748,10 +753,12 @@ namespace ECOLearning.Controllers
 
         private ActionResult AdminOtpPage(AdminOtpChallenge pending, string notice = null)
         {
+            int cooldownSeconds = AdminEmailOtpService.CooldownSeconds(pending, DateTime.UtcNow);
             return View("AdminOtp", new AdminOtpViewModel
             {
                 MaskedEmail = AdminEmailOtpService.MaskEmail(pending.Email),
                 ResendSeconds = AdminEmailOtpService.ResendSeconds(pending, DateTime.UtcNow),
+                CooldownSeconds = cooldownSeconds,
                 ExpiresSeconds = pending.CodeHash == null ? 0 : Math.Max(0, (int)(pending.CodeExpiresUtc - DateTime.UtcNow).TotalSeconds),
                 Notice = notice
             });
@@ -788,8 +795,9 @@ namespace ECOLearning.Controllers
             Session.Remove(AdminEmailOtpService.PendingKey);
             SetUserSessionAndAuthCookie(user.maNguoiDung, user.hoTen, user.email, user.vaiTro, user.anhDaiDien, pending.RememberMe, true);
             AdminEmailOtpService.MarkVerified(Session, Request, Response);
-            return !string.IsNullOrEmpty(pending.ReturnUrl) && Url.IsLocalUrl(pending.ReturnUrl)
-                ? (ActionResult)Redirect(pending.ReturnUrl)
+            if (!string.IsNullOrEmpty(pending.ReturnUrl) && Url.IsLocalUrl(pending.ReturnUrl)) return Redirect(pending.ReturnUrl);
+            return AccountAdminService.LaAdminKiemDuyetNoiDung(user.vaiTro)
+                ? (ActionResult)RedirectToAction("Index", "CourseApproval", new { area = "Admin" })
                 : RedirectToAction("Index", "Dashboard", new { area = "Admin" });
         }
 

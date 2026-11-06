@@ -44,13 +44,14 @@ else
             <div class="card" style="padding:0;overflow:hidden;">
                 <div class="table-responsive">
                     <table class="table adm-table">
-                        <thead><tr><th>Admin</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
+                        <thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
                         <tbody>
-                        @if (Model.Administrators.Count == 0) { <tr><td colspan="4" class="adm-empty">Không có Admin phù hợp.</td></tr> }
+                        @if (Model.Administrators.Count == 0) { <tr><td colspan="5" class="adm-empty">Không có tài khoản quản trị phù hợp.</td></tr> }
                         @foreach (var admin in Model.Administrators)
                         {
                             <tr>
                                 <td><div class="adm-identity"><span class="adm-avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(admin.HoTen) ? "A" : admin.HoTen.Trim().Substring(0, 1).ToUpper())</span><div><strong>@admin.HoTen</strong>@if(admin.MaNguoiDung == Model.CurrentUserId){<span class="adm-self">Bạn</span>}<div class="adm-email">@admin.Email</div></div></div></td>
+                                <td><span class="badge @AdminUserQueryService.MauVaiTro(admin.VaiTro)">@AdminUserQueryService.TenVaiTro(admin.VaiTro)</span></td>
                                 <td><span class="badge @(admin.HoatDong ? "badge-success" : "badge-danger")">@(admin.HoatDong ? "Hoạt động" : "Đang khóa")</span>@if(admin.CanDoiMatKhau){<div class="adm-email">Chưa đổi mật khẩu tạm</div>}</td>
                                 <td>@(admin.NgayTao.HasValue ? admin.NgayTao.Value.ToString("dd/MM/yyyy") : "—")</td>
                                 <td><a class="btn btn-outline btn-sm" href="@Url.Action("Details", "User", new { id = admin.MaNguoiDung })">Chi tiết</a></td>
@@ -64,14 +65,20 @@ else
         </section>
         <section class="card adm-create" id="tao-admin" aria-labelledby="adm-create-title">
             <h2 id="adm-create-title">Tạo Admin mới</h2>
-            <p>Mật khẩu tạm được gửi đến email người nhận. Người nhận phải xác thực OTP và đổi mật khẩu trong lần đăng nhập đầu tiên.</p>
+            <p>Email mới sẽ nhận mật khẩu tạm. Nếu email đã là Học viên hoặc Giáo viên, hệ thống sẽ chuyển quyền tài khoản đó sang kiểm duyệt nội dung và giữ nguyên mật khẩu hiện tại.</p>
             @using(Html.BeginForm("Create", "Administrator", new { area = "Admin" }, FormMethod.Post, new { autocomplete = "off" }))
             {
                 @Html.AntiForgeryToken()
+                <div class="adm-field">
+                    <label>Vai trò</label>
+                    @Html.HiddenFor(m => m.NewAdmin.Role, new { Value = AccountAdminService.AdminKiemDuyetNoiDung })
+                    <div class="form-control" style="display:flex;align-items:center;background:#f8fafc;color:#334155;">Quản trị viên kiểm duyệt nội dung</div>
+                    @Html.ValidationMessageFor(m => m.NewAdmin.Role, "", new { @class = "adm-error" })
+                </div>
                 @Html.ValidationSummary(false, "", new { role = "alert" })
                 <div class="adm-field"><label for="NewAdmin_FullName">Họ và tên</label>@Html.TextBoxFor(m => m.NewAdmin.FullName, new { @class = "form-control", placeholder = "Nhập họ tên Admin", maxlength = "100", required = "required", autocomplete = "name" })</div>
                 <div class="adm-field"><label for="NewAdmin_Email">Email nhận tài khoản</label>@Html.TextBoxFor(m => m.NewAdmin.Email, new { @class = "form-control", type = "email", placeholder = "admin@example.com", maxlength = "100", required = "required", autocomplete = "email" })</div>
-                <label class="adm-confirm">@Html.CheckBoxFor(m => m.NewAdmin.ConfirmAdmin)<span>Tôi xác nhận cấp toàn quyền quản trị hệ thống cho tài khoản này.</span></label>
+                <label class="adm-confirm">@Html.CheckBoxFor(m => m.NewAdmin.ConfirmAdmin)<span>Tôi xác nhận cấp đúng vai trò đã chọn cho tài khoản này.</span></label>
                 <button type="submit" class="btn btn-primary"><i class="bi bi-person-plus" aria-hidden="true"></i> Tạo và gửi email</button>
             }
             <div class="adm-process">Email phải chưa có tài khoản. Thao tác tạo Admin được lưu trong nhật ký quản trị.</div>

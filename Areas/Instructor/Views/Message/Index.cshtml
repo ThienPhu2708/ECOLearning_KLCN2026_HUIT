@@ -1,293 +1,108 @@
-@model ECOLearning.ViewModels.InstructorChatIndexViewModel
 @{
-    ViewBag.Title = "Tin nhắn học viên";
+    ViewBag.Title = "Thảo luận bài học";
     Layout = "~/Areas/Instructor/Views/Shared/_LayoutInstructor.cshtml";
-    int currentTeacherId = Session["UserId"] != null ? (int)Session["UserId"] : 0;
+    var courses = (System.Collections.Generic.List<ECOLearning.Models.KhoaHoc>)ViewBag.Courses;
+    var course = ViewBag.SelectedCourse as ECOLearning.Models.KhoaHoc;
+    var lessons = (System.Collections.Generic.List<ECOLearning.Models.BaiHoc>)ViewBag.Lessons;
+    var lesson = ViewBag.SelectedLesson as ECOLearning.Models.BaiHoc;
+    var counts = (System.Collections.Generic.Dictionary<string, int>)ViewBag.DiscussionCounts;
 }
-
-<link rel="stylesheet" href="~/assets/css/chat.css?v=@(System.IO.File.GetLastWriteTime(Server.MapPath("~/assets/css/chat.css")).Ticks)" />
-
-<div class="teacher-inbox-page">
-    @if (!string.IsNullOrEmpty(ViewBag.Error))
+<link rel="stylesheet" href="@Url.Content("~/assets/css/lesson-discussion.css")?v=@(System.IO.File.GetLastWriteTime(Server.MapPath("~/assets/css/lesson-discussion.css")).Ticks)" />
+<style>
+    .teacher-discussions { display:flex; min-height:620px; height:calc(100vh - 125px); background:#fff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; }
+    .teacher-discussions-sidebar { width:300px; flex-shrink:0; border-right:1px solid #e2e8f0; display:flex; flex-direction:column; }
+    .teacher-discussions-sidebar h2 { margin:0; padding:22px 20px 12px; font-size:19px; color:#172033; }
+    .teacher-discussions-search { margin:0 16px 14px; border:1px solid #dbe3ef; border-radius:10px; padding:10px 12px; font:inherit; font-size:13px; }
+    .teacher-discussions-courses { overflow:auto; padding:0 10px 12px; }
+    .teacher-discussions-course { display:block; text-decoration:none; padding:13px 12px; border-radius:10px; color:#334155; font-weight:650; font-size:14px; }
+    .teacher-discussions-course[hidden] { display:none; }
+    .teacher-discussions-course:hover,.teacher-discussions-course.active { color:#4338ca; background:#eeedff; }
+    .teacher-discussions-course small { display:block; color:#94a3b8; font-size:11px; font-weight:500; margin-top:3px; }
+    .teacher-lessons { width:280px; flex-shrink:0; border-right:1px solid #e2e8f0; display:flex; flex-direction:column; min-height:0; }
+    .teacher-lessons-head { padding:20px 16px 10px; color:#172033; font-weight:700; }
+    .teacher-lessons-list { flex:1; overflow:auto; padding:0 10px 12px; }
+    .teacher-lesson { display:flex; align-items:center; gap:9px; text-decoration:none; padding:11px 10px; border-radius:9px; color:#475569; font-size:13px; }
+    .teacher-lesson:hover,.teacher-lesson.active { background:#eeedff; color:#4338ca; }
+    .teacher-lesson[hidden] { display:none; }
+    .teacher-lesson-title { min-width:0; flex:1; overflow-wrap:anywhere; }
+    .teacher-lesson-count { flex-shrink:0; background:#eef2ff; color:#4f46e5; border-radius:12px; padding:3px 7px; font-size:11px; }
+    .teacher-discussions-main { flex:1; min-width:0; display:flex; flex-direction:column; }
+    .teacher-discussions-heading { padding:18px 24px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .teacher-discussions-heading h3 { margin:0; font-size:17px; color:#172033; }
+    .teacher-discussions-heading select { max-width:55%; padding:9px; border:1px solid #dbe3ef; border-radius:9px; color:#334155; background:#fff; }
+    .teacher-discussions .lesson-discussion-panel { position:relative; z-index:auto; top:auto; right:auto; width:100%; height:auto; min-height:0; flex:1; transform:none; box-shadow:none; }
+    .teacher-discussions .lesson-discussion-backdrop,.teacher-discussions .lesson-discussion-close { display:none; }
+    .teacher-discussions-empty { margin:auto; padding:24px; text-align:center; color:#64748b; }
+    @@media(max-width:1100px) { .teacher-discussions-sidebar { width:230px; } .teacher-lessons { width:230px; } }
+    @@media(max-width:700px) { .teacher-discussions { height:auto; min-height:70vh; flex-direction:column; } .teacher-discussions-sidebar,.teacher-lessons { width:100%; max-height:210px; border-right:0; border-bottom:1px solid #e2e8f0; } .teacher-discussions-main { min-height:550px; } .teacher-discussions-heading { flex-wrap:wrap; } }
+</style>
+<div class="teacher-discussions">
+    <aside class="teacher-discussions-sidebar">
+        <h2>Khóa học của bạn</h2>
+        <input class="teacher-discussions-search" id="teacher-discussion-search" type="search" placeholder="Tìm khóa học..." aria-label="Tìm khóa học" />
+        <div class="teacher-discussions-courses">
+            @foreach (var item in courses)
+            {
+                <a class="teacher-discussions-course @(course != null && course.maKhoaHoc == item.maKhoaHoc ? "active" : "")" href="@Url.Action("Index", "Message", new { area = "Instructor", courseId = item.maKhoaHoc })">@item.tenKhoaHoc<small>@item.maKhoaHoc</small></a>
+            }
+            @if (courses.Count == 0) { <div class="teacher-discussions-empty">Bạn chưa có khóa học nào.</div> }
+        </div>
+    </aside>
+    @if (course != null)
     {
-        <div class="alert alert-warning">@ViewBag.Error</div>
+        <aside class="teacher-lessons">
+            <div class="teacher-lessons-head">Bài học · @lessons.Count</div>
+            <input class="teacher-discussions-search" id="teacher-lesson-search" type="search" placeholder="Tìm bài học..." aria-label="Tìm bài học" />
+            <div class="teacher-lessons-list">
+                @foreach (var item in lessons)
+                {
+                    int count = counts.ContainsKey(item.maBaiHoc) ? counts[item.maBaiHoc] : 0;
+                    <a class="teacher-lesson @(lesson != null && lesson.maBaiHoc == item.maBaiHoc ? "active" : "")" href="@Url.Action("Index", "Message", new { area = "Instructor", courseId = course.maKhoaHoc, lessonId = item.maBaiHoc })">
+                        <i class="bi bi-play-circle"></i><span class="teacher-lesson-title">@item.tenBaiHoc</span><span class="teacher-lesson-count" title="Tổng bình luận">@count</span>
+                    </a>
+                }
+                @if (lessons.Count == 0) { <div class="teacher-discussions-empty">Khóa học chưa có bài học.</div> }
+            </div>
+        </aside>
     }
-
-    <div class="chat-app-container teacher-inbox @(Model.PhongChatHienTai != null ? "has-conversation" : "")">
-        <!-- 1. SIDEBAR HỘI THOẠI & BỘ LỌC KHÓA HỌC -->
-        <div class="chat-sidebar">
-            <div class="chat-sidebar-header">
-                <h2>Tin nhắn <span class="inbox-conversation-count">@Model.DanhSachHoiThoai.Count</span></h2>
-                <label class="inbox-search"><i class="bi bi-search" aria-hidden="true"></i><input id="inbox-search" type="search" placeholder="Tìm học viên, khóa học..." aria-label="Tìm cuộc trò chuyện" /></label>
-
-                <!-- Lọc theo khóa học -->
-                <div class="mt-2">
-                    <form method="get" action="@Url.Action("Index", "Message", new { area = "Instructor", id = "" })">
-                        <select name="courseId" class="form-select form-select-sm" onchange="this.form.submit()" style="font-size: 12.5px; border-radius: 8px;">
-                            <option value="">-- Tất cả khóa học --</option>
-                            @foreach (var c in Model.DanhSachKhoaHoc)
-                            {
-                                <option value="@c.MaKhoaHoc" @(Model.FilterCourseId == c.MaKhoaHoc ? "selected" : "")>@c.TenKhoaHoc</option>
-                            }
-                        </select>
-                        <input type="hidden" name="status" value="@Model.FilterStatus" />
-                    </form>
-                </div>
-
-                <!-- Tabs lọc trạng thái -->
-                <div class="chat-filter-tabs">
-                    <a href="@Url.Action("Index", "Message", new { area = "Instructor", id = "", courseId = Model.FilterCourseId, status = "all" })"
-                       class="chat-filter-btn @(Model.FilterStatus == "all" || string.IsNullOrEmpty(Model.FilterStatus) ? "active" : "")">Tất cả</a>
-                    <a href="@Url.Action("Index", "Message", new { area = "Instructor", id = "", courseId = Model.FilterCourseId, status = "unread" })"
-                       class="chat-filter-btn @(Model.FilterStatus == "unread" ? "active" : "")">Chưa đọc</a>
-                </div>
-            </div>
-
-            <div class="chat-conversation-list">
-                @if (Model.DanhSachHoiThoai == null || !Model.DanhSachHoiThoai.Any())
-                {
-                    <div class="inbox-list-empty">
-                        <i class="bi bi-chat-square-check" aria-hidden="true"></i>
-                        <strong>@(Model.FilterStatus == "unread" ? "Đã đọc hết tin nhắn" : "Chưa có cuộc trò chuyện")</strong>
-                        <p>@(Model.FilterStatus == "unread" ? "Tin nhắn mới sẽ xuất hiện tại đây." : "Chọn Tất cả để xem các cuộc trò chuyện.")</p>
-                    </div>
-                }
-                else
-                {
-                    foreach (var c in Model.DanhSachHoiThoai)
-                    {
-                        bool isActive = Model.SelectedHoiThoaiId == c.MaHoiThoai;
-                        <a href="@Url.Action("Index", "Message", new { area = "Instructor", id = c.MaHoiThoai, courseId = Model.FilterCourseId, status = Model.FilterStatus })" 
-                           class="chat-conv-item @(isActive ? "active" : "") @(c.SoTinChuaDoc > 0 ? "is-unread" : "")"
-                           id="conv-item-@c.MaHoiThoai" data-course="@c.TenKhoaHoc">
-                            <div class="chat-avatar-wrap">
-                                <img src="@(string.IsNullOrEmpty(c.AnhDaiDienHocVien) ? "/assets/images/default-avatar.png" : c.AnhDaiDienHocVien)" 
-                                     class="chat-avatar-img" alt="@c.TenHocVien" />
-                            </div>
-                            <div class="chat-conv-info">
-                                <div class="chat-conv-top">
-                                    <span class="chat-conv-name">@c.TenHocVien</span>
-                                    <span class="chat-conv-time">@(c.TinCuoiLuc.HasValue ? c.TinCuoiLuc.Value.ToString("dd/MM") : "")</span>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="chat-conv-last-msg">@(string.IsNullOrEmpty(c.TinCuoiTomTat) ? "Chưa có tin nhắn" : (c.MaNguoiGuiCuoi == currentTeacherId ? "Bạn: " : "") + c.TinCuoiTomTat)</span>
-                                </div>
-                            </div>
-                            <span class="inbox-unread-dot" hidden="@(c.SoTinChuaDoc == 0)" aria-label="Tin nhắn chưa đọc"></span>
-                        </a>
-                    }
-                }
-                <p id="inbox-search-empty" class="inbox-search-empty" hidden>Không tìm thấy cuộc trò chuyện phù hợp.</p>
-            </div>
-        </div>
-
-        <!-- 2. KHUNG CHAT CHÍNH (GIỮA) -->
-        <div class="chat-main">
-            @if (Model.PhongChatHienTai != null)
-            {
-                var ht = Model.PhongChatHienTai.HoiThoai;
-                <div class="chat-main-header">
-                    <div class="chat-header-user">
-                        <a class="inbox-mobile-back" href="@Url.Action("Index", "Message", new { area = "Instructor", list = true })" aria-label="Danh sách hội thoại"><i class="bi bi-arrow-left"></i></a>
-                        <img src="@(string.IsNullOrEmpty(ht.AnhDaiDienHocVien) ? "/assets/images/default-avatar.png" : ht.AnhDaiDienHocVien)" 
-                             class="chat-avatar-img" style="width: 42px; height: 42px;" alt="@ht.TenHocVien" />
-                        <div>
-                            <h3 class="chat-header-title">@ht.TenHocVien</h3>
-                            <div class="chat-header-sub">@ht.TenKhoaHoc</div>
-                        </div>
-                    </div>
-                    @if (Model.PhongChatHienTai.ThongTinHocVien != null)
-                    {
-                        <button class="inbox-profile-toggle" type="button" aria-label="Thông tin học viên" aria-expanded="false" aria-controls="inbox-student-profile"><i class="bi bi-info-circle"></i></button>
-                    }
-                </div>
-
-                <div class="chat-alert-banner">
-                    <i class="bi bi-shield-check"></i>
-                    <span>Trao đổi về bài học. Thanh toán chỉ thực hiện trên hệ thống.</span>
-                </div>
-
-                <!-- Vùng hiển thị tin nhắn -->
-                <div class="chat-messages-body" id="chat-messages-container">
-                    @foreach (var m in Model.PhongChatHienTai.DanhSachTinNhan)
-                    {
-                        bool isMine = m.LaCuaToi;
-                        <div class="chat-msg-row @(isMine ? "msg-mine" : "msg-other")" id="msg-row-@m.MaTinNhan" data-sender="@m.MaNguoiGui" tabindex="0">
-                            <img src="@(string.IsNullOrEmpty(m.AnhDaiDien) ? "/assets/images/default-avatar.png" : m.AnhDaiDien)" 
-                                 class="chat-msg-avatar" alt="@m.TenNguoiGui" />
-                            <div>
-                                <div class="chat-msg-bubble @(m.DaThuHoi ? "chat-msg-recalled" : "")" title="@m.NgayGui.ToString("HH:mm - dd/MM")">@if (m.ImageUrl != null) { <button type="button" class="chat-image-open" data-image-url="@m.ImageUrl"><img class="chat-image" src="@m.ImageUrl" alt="Ảnh trong cuộc trò chuyện" /></button> } else { @m.NoiDung }</div>
-                                <div class="chat-msg-time">
-                                    @m.NgayGui.ToString("HH:mm")
-                                    @if (isMine && m.CoTheThuHoi)
-                                    {
-                                        <button type="button" class="chat-recall-btn" data-recall-seconds="@m.RecallSeconds" onclick="EcoChat.recallMessage(@m.MaTinNhan)" title="Thu hồi tin trong 5 phút" aria-label="Thu hồi tin nhắn">
-                                            <i class="bi bi-arrow-counterclockwise"></i>
-                                        </button>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-
-                <div class="chat-typing-indicator" id="chat-typing-indicator">
-                    <i class="bi bi-pencil-fill"></i> Học viên đang soạn tin...
-                </div>
-
-                <!-- Khung gửi tin nhắn -->
-                <div class="chat-footer">
-                    @if (ht.TrangThai == "ChiDoc")
-                    {
-                        <div class="w-100 text-center text-muted py-2">
-                            <i class="bi bi-lock-fill"></i> Khóa học hoặc hội thoại này đang ở chế độ chỉ đọc.
-                        </div>
-                    }
-                    else
-                    {
-                        <textarea class="chat-input" id="chat-message-input" rows="1" maxlength="2000" aria-label="Nội dung trả lời" placeholder="Nhập tin nhắn..."></textarea>
-                        <button type="button" class="chat-send-btn" id="chat-send-btn" title="Gửi phản hồi">
-                            <i class="bi bi-send-fill"></i>
-                        </button>
-                    }
-                </div>
-            }
-            else
-            {
-                <div class="inbox-empty-conversation">
-                    <span class="inbox-empty-icon"><i class="bi bi-chat-square-text" aria-hidden="true"></i></span>
-                    <h3>Chưa chọn cuộc trò chuyện</h3>
-                    <p>Chọn học viên ở danh sách bên trái<br>để xem tin nhắn và trả lời.</p>
-                </div>
-            }
-        </div>
-
-        <!-- 3. BẢNG THÔNG TIN HỌC VIÊN (BÊN PHẢI) -->
-        @if (Model.PhongChatHienTai != null && Model.PhongChatHienTai.ThongTinHocVien != null)
+    <main class="teacher-discussions-main">
+        @if (course != null && lesson != null)
         {
-            var st = Model.PhongChatHienTai.ThongTinHocVien;
-            <div class="chat-student-sidebar" id="inbox-student-profile" hidden>
-                <div class="inbox-profile-heading"><strong>Hồ sơ học viên</strong><button type="button" class="inbox-profile-toggle" aria-label="Đóng hồ sơ">×</button></div>
-                <div class="chat-student-header">
-                    <img src="@st.AnhDaiDien" class="chat-student-avatar" alt="@st.HoTen" />
-                    <h4 class="chat-student-name">@st.HoTen</h4>
-                    <div class="chat-student-email">@st.Email</div>
-                    <div class="small text-muted mt-1"><i class="bi bi-telephone"></i> @st.SoDienThoai</div>
-                </div>
-
-                <h6 class="fw-bold mb-3" style="font-size: 13.5px; color: #334155;">
-                    <i class="bi bi-graph-up text-teal me-1"></i> Hồ sơ học tập
-                </h6>
-
-                <!-- Tiến độ khóa học -->
-                <div class="chat-metric-box">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="chat-metric-label">Tiến độ khóa học</span>
-                        <span class="fw-bold text-teal" style="font-size: 13px;">@st.TienDoPhanTram%</span>
-                    </div>
-                    <div class="chat-progress-bar-bg">
-                        <div class="chat-progress-bar-fill" style="width: @st.TienDoPhanTram%;"></div>
-                    </div>
-                </div>
-
-                <!-- Bài đang học -->
-                <div class="chat-metric-box">
-                    <div class="chat-metric-label">Bài học gần nhất</div>
-                    <div class="chat-metric-value" style="font-size: 13px; line-height: 1.4;">
-                        <i class="bi bi-play-circle text-primary me-1"></i> @st.BaiDangHoc
-                    </div>
-                </div>
-
-                <!-- Kết quả Quiz -->
-                <div class="chat-metric-box">
-                    <div class="chat-metric-label">Điểm Quiz tốt nhất</div>
-                    <div class="chat-metric-value">
-                        @(st.DiemQuiz.HasValue ? st.DiemQuiz.Value.ToString("0.0") + " điểm" : "Chưa làm Quiz")
-                    </div>
-                    <div class="small text-muted mt-1">Trạng thái: <b>@st.TrangThaiQuiz</b></div>
-                </div>
-
-                <!-- Chứng chỉ -->
-                <div class="chat-metric-box">
-                    <div class="chat-metric-label">Chứng chỉ khóa học</div>
-                    <div class="chat-metric-value" style="font-size: 13px;">
-                        <i class="bi bi-award-fill text-warning me-1"></i> @st.TrangThaiChungChi
-                    </div>
-                </div>
-
-                <!-- Ngày mua khóa -->
-                <div class="chat-metric-box">
-                    <div class="chat-metric-label">Ngày ghi danh</div>
-                    <div class="chat-metric-value" style="font-size: 13px;">
-                        <i class="bi bi-calendar3 me-1"></i> @(st.NgayMua.HasValue ? st.NgayMua.Value.ToString("dd/MM/yyyy") : "N/A")
-                    </div>
-                </div>
+            <div class="teacher-discussions-heading">
+                <div><h3>@course.tenKhoaHoc</h3><span style="font-size:13px;color:#64748b">@lesson.tenBaiHoc</span></div>
             </div>
+            <div id="learning-antiforgery" hidden>@Html.AntiForgeryToken()</div>
+            @Html.Partial("~/Views/Learning/_LessonDiscussionPanel.cshtml")
         }
-    </div>
+        else
+        {
+            <div class="teacher-discussions-empty">@(course == null ? "Chọn một khóa học để xem thảo luận." : "Khóa học này chưa có bài học.")</div>
+        }
+    </main>
 </div>
-
 @section Scripts {
-    @Html.AntiForgeryToken()
-    <script src="~/Scripts/jquery.signalR-2.4.3.min.js"></script>
-    <script src="~/signalr/hubs"></script>
-    <script src="~/assets/js/chat.js?v=@(System.IO.File.GetLastWriteTime(Server.MapPath("~/assets/js/chat.js")).Ticks)"></script>
+    <script src="@Url.Content("~/Scripts/jquery.signalR-2.4.3.min.js")"></script>
+    <script src="@Url.Content("~/signalr/hubs")"></script>
+    <script src="@Url.Content("~/assets/js/lesson-discussion.js")?v=@(System.IO.File.GetLastWriteTime(Server.MapPath("~/assets/js/lesson-discussion.js")).Ticks)"></script>
     <script>
-        $(document).ready(function () {
-            var inbox = document.querySelector('.teacher-inbox');
-            function fitTeacherChat() {
-                if (window.innerWidth > 992) { inbox.style.removeProperty('--teacher-chat-height'); return; }
-                var viewport = window.visualViewport;
-                var height = viewport ? viewport.height : window.innerHeight;
-                var top = Math.max(0, inbox.getBoundingClientRect().top - (viewport ? viewport.offsetTop : 0));
-                inbox.style.setProperty('--teacher-chat-height', Math.max(180, height - top - 12) + 'px');
-            }
-            window.addEventListener('resize', fitTeacherChat);
-            if (window.visualViewport) window.visualViewport.addEventListener('resize', fitTeacherChat);
-            fitTeacherChat();
-            function normalizeSearch(value) { return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
-            $('#inbox-search').on('input', function () {
-                var query = normalizeSearch(this.value.trim()), visible = 0;
-                $('.teacher-inbox .chat-conv-item').each(function () {
-                    this.hidden = normalizeSearch($(this).find('.chat-conv-name').text() + ' ' + (this.dataset.course || '')).indexOf(query) < 0;
-                    if (!this.hidden) visible++;
+        $(function () {
+            function normalize(value) { return value.toLocaleLowerCase('vi').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd'); }
+            $('#teacher-discussion-search').on('input', function () { var q = normalize(this.value); $('.teacher-discussions-course').each(function () { this.hidden = normalize(this.textContent).indexOf(q) < 0; }); });
+            $('#teacher-lesson-search').on('input', function () { var q = normalize(this.value); $('.teacher-lesson').each(function () { this.hidden = normalize(this.textContent).indexOf(q) < 0; }); });
+            @if (course != null && lesson != null)
+            {
+                <text>
+                EcoLessonDiscussion.init({
+                    courseId: '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(course.maKhoaHoc))',
+                    lessonId: '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(lesson.maBaiHoc))',
+                    getUrl: '@Url.Action("Get", "LessonDiscussion", new { area = "" })',
+                    createUrl: '@Url.Action("Create", "LessonDiscussion", new { area = "" })',
+                    imageUrl: '@Url.Action("Image", "LessonDiscussion", new { area = "" })',
+                    likeUrl: '@Url.Action("ToggleLike", "LessonDiscussion", new { area = "" })'
                 });
-                $('#inbox-search-empty').prop('hidden', !query || visible > 0);
-            });
-            $('.inbox-profile-toggle').on('click', function () {
-                var profile = document.getElementById('inbox-student-profile');
-                if (!profile) return;
-                profile.hidden = !profile.hidden;
-                $('.inbox-profile-toggle[aria-controls]').attr('aria-expanded', String(!profile.hidden));
-                if (!profile.hidden) { profile.scrollTop = 0; profile.querySelector('button').focus(); }
-                else document.querySelector('.inbox-profile-toggle[aria-controls]').focus();
-            });
-            document.addEventListener('keydown', function (event) {
-                var profile = document.getElementById('inbox-student-profile');
-                if (event.key === 'Escape' && profile && !profile.hidden) profile.querySelector('button').click();
-            });
-            $('.teacher-inbox .chat-avatar-img,.teacher-inbox .chat-msg-avatar,.teacher-inbox .chat-student-avatar').each(function () {
-                var image = this;
-                function fallback() {
-                    var avatar = document.createElement('span');
-                    avatar.className = image.className + ' chat-avatar-fallback';
-                    avatar.textContent = (image.alt || '?').trim().charAt(0).toUpperCase();
-                    avatar.setAttribute('aria-hidden', 'true');
-                    image.replaceWith(avatar);
-                }
-                image.addEventListener('error', fallback, { once: true });
-                if (image.complete && !image.naturalWidth) fallback();
-            });
-            var convId = @(Model.SelectedHoiThoaiId ?? 0);
-            var teacherId = @currentTeacherId;
-
-            if (teacherId > 0) {
-                EcoChat.init(teacherId, true);
-                if (convId > 0) {
-                    EcoChat.joinConversation(convId);
-                }
+                openLessonDiscussion();
+                </text>
             }
         });
     </script>
 }
-

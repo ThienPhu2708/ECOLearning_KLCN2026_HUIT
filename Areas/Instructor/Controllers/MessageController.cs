@@ -25,61 +25,49 @@ namespace ECOLearning.Areas.Instructor.Controllers
             }, JsonRequestBehavior.AllowGet);
         }
         // GET: /Instructor/Message
-        public ActionResult Index(int? id, string courseId = "", string status = "all", bool list = false)
+        public ActionResult Index(int? id, string courseId = "", string status = "all", bool list = false, string lessonId = null)
         {
-            status = status == "unread" ? "unread" : "all";
             int teacherId = CurrentTeacherId;
-            var service = new ChatService(db);
-
-            if (!service.DaCaiDat())
+            var courses = db.KhoaHoc.Where(k => k.maGiaoVien == teacherId)
+                .OrderBy(k => k.tenKhoaHoc).ToList();
+            // Các liên kết cũ có mã hội thoại 1–1: chuyển đến khóa tương ứng, không xóa dữ liệu.
+            if (string.IsNullOrWhiteSpace(courseId) && id.HasValue && id.Value > 0)
             {
-                ViewBag.Error = "Chức năng nhắn tin chưa sẵn sàng trong CSDL.";
-                return View(new InstructorChatIndexViewModel());
+                var oldChat = new ChatService(db).LayChiTietHoiThoai(id.Value, teacherId);
+                if (oldChat != null && oldChat.MaGiaoVien == teacherId) courseId = oldChat.MaKhoaHoc;
             }
-
-            var teacherCourses = db.KhoaHoc
-                .Where(k => k.maGiaoVien == teacherId)
-                .Select(k => new CourseFilterItem { MaKhoaHoc = k.maKhoaHoc, TenKhoaHoc = k.tenKhoaHoc })
-                .ToList();
-
-            var conversations = service.LayDanhSachHoiThoaiGiaoVien(teacherId, courseId, status);
-
-            var model = new InstructorChatIndexViewModel
+            var selected = courses.FirstOrDefault(c => c.maKhoaHoc == courseId);
+            if (selected == null && !list) selected = courses.FirstOrDefault();
+            var lessons = selected == null ? new System.Collections.Generic.List<ECOLearning.Models.BaiHoc>()
+                : new LearningService(db).LayBaiHoc(selected.maKhoaHoc);
+            var lesson = lessons.FirstOrDefault(b => b.maBaiHoc == lessonId) ?? lessons.FirstOrDefault();
+            var counts = new System.Collections.Generic.Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            if (lesson != null && new LessonDiscussionService(db).Installed())
             {
-                DanhSachHoiThoai = conversations,
-                DanhSachKhoaHoc = teacherCourses,
-                FilterCourseId = courseId,
-                FilterStatus = status,
-                SelectedHoiThoaiId = null
-            };
-
-            int selectedId = list ? 0 : id ?? 0;
-            if (selectedId > 0)
-            {
-                var currentConv = conversations.FirstOrDefault(c => c.MaHoiThoai == selectedId);
-
-                if (currentConv != null && currentConv.MaGiaoVien == teacherId)
-                {
-                    model.SelectedHoiThoaiId = selectedId;
-                    var studentInfo = service.LayThongTinHocVien(currentConv.MaKhoaHoc, currentConv.MaHocVien);
-                    var messages = service.LayLichSuTinNhan(selectedId, teacherId);
-
-                    model.PhongChatHienTai = new ChatRoomViewModel
-                    {
-                        HoiThoai = currentConv,
-                        DanhSachTinNhan = messages,
-                        ThongTinHocVien = studentInfo,
-                        LaGiaoVien = true,
-                        CurrentUserId = teacherId
-                    };
-
-                    service.DanhDauDaDoc(selectedId, teacherId);
-                    currentConv.SoTinChuaDoc = 0;
-                }
+                var lessonIds = lessons.Select(b => b.maBaiHoc).ToList();
+                // Chỉ lấy bài của khóa do giáo viên đang quản lý.
+                var rows = db.Database.SqlQuery<DiscussionCount>(@"SELECT t.maBaiHoc AS LessonId, COUNT(*) AS Total
+                    FROM dbo.ThaoLuanBaiHoc t
+                    JOIN dbo.BaiHoc b ON b.maBaiHoc=t.maBaiHoc
+                    LEFT JOIN dbo.ChuongHoc c ON c.maChuong=b.maChuong
+                    WHERE t.trangThai=N'HienThi' AND (c.maKhoaHoc=@courseId
+                        OR (b.maChuong IS NULL AND LEFT(b.maBaiHoc, LEN(@courseId)+1)=@courseId+'_'))
+                    GROUP BY t.maBaiHoc", new System.Data.SqlClient.SqlParameter("@courseId", selected.maKhoaHoc)).ToList();
+                counts = rows.Where(r => lessonIds.Contains(r.LessonId)).ToDictionary(r => r.LessonId, r => r.Total, StringComparer.OrdinalIgnoreCase);
             }
+            ViewBag.Courses = courses;
+            ViewBag.SelectedCourse = selected;
+            ViewBag.Lessons = lessons;
+            ViewBag.SelectedLesson = lesson;
+            ViewBag.DiscussionCounts = counts;
+            ViewBag.BreadcrumbCurrent = "Thảo luận bài học";
+            return View();
+        }
 
-            ViewBag.BreadcrumbCurrent = "Tin nhắn học viên";
-            return View(model);
+        private class DiscussionCount
+        {
+            public string LessonId { get; set; }
+            public int Total { get; set; }
         }
 
         // GET: /Instructor/Message/StudentProfile?courseId=...&studentId=...

@@ -1,0 +1,32 @@
+@* Thảo luận cộng đồng theo bài học. Chỉ hiển thị tên và ảnh đại diện của người tham gia. *@
+<div class="lesson-discussion-backdrop" id="lesson-discussion-backdrop" onclick="closeLessonDiscussion()"></div>
+<aside class="lesson-discussion-panel" id="lesson-discussion-panel" role="dialog" aria-modal="true" aria-labelledby="lesson-discussion-title" tabindex="-1">
+    <header class="lesson-discussion-header">
+        <div class="lesson-discussion-title-row">
+            <h3 id="lesson-discussion-title"><span id="lesson-discussion-total">0</span> bình luận</h3>
+        </div>
+        <button type="button" class="lesson-discussion-close" onclick="closeLessonDiscussion()" aria-label="Đóng">&times;</button>
+    </header>
+
+    <div class="lesson-discussion-list" id="lesson-discussion-list" role="log" aria-live="polite">
+        <div class="lesson-discussion-state"><span class="spinner-border spinner-border-sm"></span> Đang tải thảo luận...</div>
+    </div>
+
+    <form class="lesson-discussion-compose" id="lesson-discussion-form">
+        <div id="lesson-discussion-reply-target" class="lesson-discussion-reply-target" hidden>
+            <span>Phản hồi <strong id="lesson-discussion-reply-name"></strong></span>
+            <button type="button" id="lesson-discussion-reply-clear" aria-label="Chuyển sang bình luận chung" title="Chuyển sang bình luận chung">&times;</button>
+        </div>
+        <textarea id="lesson-discussion-input" maxlength="2000" rows="3" placeholder="Viết bình luận hoặc câu hỏi về bài học..." aria-label="Nội dung thảo luận"></textarea>
+        <div id="lesson-discussion-image-preview" hidden><img alt="Ảnh đã chọn" /><button type="button" id="lesson-discussion-image-remove" aria-label="Bỏ ảnh">&times;</button></div>
+        <div class="lesson-discussion-compose-bottom">
+            <div class="lesson-discussion-tools">
+                <button type="button" id="lesson-discussion-emoji-toggle" aria-label="Chọn biểu tượng cảm xúc" aria-expanded="false"><i class="bi bi-emoji-smile"></i></button>
+                <button type="button" id="lesson-discussion-image-button" aria-label="Chọn hình ảnh"><i class="bi bi-image"></i></button>
+                <input type="file" id="lesson-discussion-image" accept="image/jpeg,image/png" hidden />
+                <div id="lesson-discussion-emoji-picker" hidden></div>
+            </div>
+            <button type="button" id="lesson-discussion-send"><i class="bi bi-send-fill"></i> Gửi</button>
+        </div>
+    </form>
+</aside>

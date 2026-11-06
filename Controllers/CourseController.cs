@@ -83,7 +83,11 @@ namespace ECOLearning.Controllers
             }
             else
             {
-                sorted = query.OrderByDescending(k => k.maKhoaHoc);
+                // Match the home page's first approval date, before paging.
+                sorted = query.OrderByDescending(k => db.KiemDuyetKhoaHoc
+                    .Where(d => d.maKhoaHoc == k.maKhoaHoc && d.trangThai == "Đã duyệt" && d.ngayKiemDuyet != null)
+                    .Select(d => d.ngayKiemDuyet).Min())
+                    .ThenBy(k => k.maKhoaHoc);
             }
 
             // 7. Phân trang 12 khóa / trang: đếm rồi chỉ lấy khóa của trang đang xem (OFFSET/FETCH trong SQL)

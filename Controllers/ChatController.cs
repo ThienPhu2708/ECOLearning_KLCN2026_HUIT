@@ -246,13 +246,8 @@ namespace ECOLearning.Controllers
                 return Json(new { count = 0 }, JsonRequestBehavior.AllowGet);
             }
 
-            string role = Session["Role"]?.ToString() ?? "";
-            bool isTeacher = role.IndexOf("GiaoVien", StringComparison.OrdinalIgnoreCase) >= 0 
-                          || role.IndexOf("Giáo viên", StringComparison.OrdinalIgnoreCase) >= 0
-                          || role.IndexOf("Instructor", StringComparison.OrdinalIgnoreCase) >= 0;
-
             var service = new ChatService(db);
-            int count = service.DemTongTinChuaDoc(userId, isTeacher);
+            int count = service.DemTongTinChuaDoc(userId);
 
             return Json(new { count = count }, JsonRequestBehavior.AllowGet);
         }

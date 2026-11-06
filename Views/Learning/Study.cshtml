@@ -8,7 +8,8 @@
     var unchapteredLessons = ViewBag.UnchapteredLessons as List<ECOLearning.Models.BaiHoc> ?? new List<ECOLearning.Models.BaiHoc>();
     var activeLesson = ViewBag.ActiveLesson as ECOLearning.Models.BaiHoc;
     var completedLessonIds = ViewBag.CompletedLessonIds as List<string> ?? new List<string>();
-    var activeLessonDocuments = ViewBag.ActiveLessonDocuments as List<ECOLearning.Models.TaiNguyen> ?? new List<ECOLearning.Models.TaiNguyen>();
+    var activeLessonDocuments = (ViewBag.ActiveLessonDocuments as List<ECOLearning.Models.TaiNguyen> ?? new List<ECOLearning.Models.TaiNguyen>())
+        .Where(doc => !string.IsNullOrWhiteSpace(doc.duongDan)).ToList();
     bool canReview = ViewBag.CanReview == true;
     bool hasSubmittedReview = canReview && ViewBag.HasSubmittedReview == true;
     bool canReportViolation = ViewBag.CanReportViolation == true;
@@ -47,6 +48,9 @@
     // Video tải lên (máy chủ hoặc Cloudflare R2): phát qua VideoStream/Play (không dùng Session) để hỗ trợ HTTP Range Request
     // đúng chuẩn; video R2 được chuyển hướng sang link ký có hạn dùng
     string activeVideoSrc = activeLesson != null ? ECOLearning.Services.VideoStorageService.LinkPhat(activeLesson.duongDanVideo) : "";
+    // File WebVTT nằm trong App_Data và đi qua Learning/Subtitle để chỉ người có quyền học mới lấy được.
+    string activeSubtitleSrc = activeLesson != null && ECOLearning.Services.VideoSubtitleService.CoPhuDe(activeLesson.maBaiHoc)
+        ? Url.Action("Subtitle", "Learning", new { courseId = course != null ? course.maKhoaHoc : "", lessonId = activeLesson.maBaiHoc }) : "";
 }
 
 @section styles {
@@ -71,8 +75,6 @@
         }
 
         .learning-header { flex-shrink: 0; }
-        #study-chat-unread[hidden] { display: none !important; }
-
         .learning-header {
             height: 64px;
             background: #111827;
@@ -132,6 +134,14 @@
         .video-sim-overlay.controls-hidden { opacity:0; }
         .video-sim-overlay.controls-hidden * { pointer-events:none !important; }
         .player-container.controls-hidden { cursor:none; }
+        .player-subtitle-notice { position:absolute; z-index:5; left:50%; bottom:100px; transform:translateX(-50%); max-width:90%; padding:10px 15px; border-radius:8px; background:rgba(15,23,42,.92); color:#fff; font-size:13px; text-align:center; pointer-events:none; }
+        .player-subtitle-notice[hidden] { display:none; }
+        .lesson-documents { position:relative; }
+        .lesson-documents summary { list-style:none; cursor:pointer; }
+        .lesson-documents summary::-webkit-details-marker { display:none; }
+        .lesson-documents-menu { position:absolute; z-index:20; top:calc(100% + 6px); left:0; width:min(320px,80vw); max-height:220px; overflow-y:auto; padding:6px; border:1px solid #334155; border-radius:9px; background:#1e293b; box-shadow:0 8px 22px rgba(0,0,0,.3); }
+        .lesson-documents-menu a { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:9px 10px; border-radius:6px; color:#e2e8f0; font-size:13px; text-decoration:none; }
+        .lesson-documents-menu a:hover, .lesson-documents-menu a:focus { background:#334155; }
 
         .player-btn {
             background: none;
@@ -456,7 +466,7 @@
                 box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
             }
     </style>
-    <link rel="stylesheet" href="~/assets/css/chat.css?v=@(System.IO.File.GetLastWriteTime(Server.MapPath("~/assets/css/chat.css")).Ticks)" />
+    <link rel="stylesheet" href="~/assets/css/lesson-discussion.css?v=@(System.IO.File.GetLastWriteTime(Server.MapPath("~/assets/css/lesson-discussion.css")).Ticks)" />
 }
 <!-- Locked Lesson Toast -->
 <div id="locked-lesson-toast" class="locked-lesson-toast">
@@ -555,6 +565,7 @@
     <!-- Video Player Main Stage -->
     <div class="video-main-area">
         <div class="player-container" id="player-container">
+            <div id="player-subtitle-notice" class="player-subtitle-notice" role="status" aria-live="polite" hidden></div>
             @if (!isLessonUnlocked)
             {
                 <div class="locked-overlay">
@@ -586,6 +597,10 @@
                     không bị cắt mép khi khung nhỏ hơn video và phóng theo khi bấm Toàn màn hình *@
                 <video id="studyPlayer" preload="none" style="display:block; width:100%; height:100%; object-fit:contain; background:#000;" poster="@(course != null ? course.anhBia : "")">
                     <source data-src="@activeVideoSrc" type="video/mp4" />
+                    @if (!string.IsNullOrWhiteSpace(activeSubtitleSrc))
+                    {
+                        <track id="lesson-subtitle-track" kind="subtitles" srclang="vi" label="Tiếng Việt" src="@activeSubtitleSrc" />
+                    }
                     Trình duyệt không hỗ trợ xem video.
                 </video>
             }
@@ -641,6 +656,10 @@
                                         <option value="2">2.0x</option>
                                     </select>
                                 </div>
+                                @if (activeLesson != null && !string.IsNullOrWhiteSpace(activeLesson.duongDanVideo))
+                                {
+                                    <button type="button" class="player-btn" id="btn-subtitle-toggle" onclick="toggleSubtitle()" title="Bật hoặc tắt phụ đề" aria-label="Bật hoặc tắt phụ đề tiếng Việt" aria-pressed="false"><i class="bi bi-badge-cc" style="font-size:18px;"></i></button>
+                                }
                                 <button class="player-btn" onclick="toggleFullscreen()" title="Toàn màn hình">
                                     <i class="bi bi-arrows-fullscreen" style="font-size:16px;"></i>
                                 </button>
@@ -684,15 +703,29 @@
             </p>
 
             <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-                @if (activeLessonDocuments.Count > 0)
+                @if (activeLessonDocuments.Count == 1)
                 {
-                    foreach (var doc in activeLessonDocuments)
-                    {
-                        <a href="@doc.duongDan" target="_blank" download
-                           style="background:#1E293B; color:#fff; border:1px solid #334155; border-radius:8px; padding:8px 16px; font-size:13.5px; font-weight:500; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
-                            <i class="bi bi-file-earmark-arrow-down"></i> @(string.IsNullOrEmpty(doc.tenTaiNguyen) ? "Tải tài liệu" : doc.tenTaiNguyen)
-                        </a>
-                    }
+                    var doc = activeLessonDocuments[0];
+                    <a href="@doc.duongDan" target="_blank" rel="noopener noreferrer" download
+                       style="background:#1E293B; color:#fff; border:1px solid #334155; border-radius:8px; padding:8px 16px; font-size:13.5px; font-weight:500; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                        <i class="bi bi-file-earmark-arrow-down"></i> Tải tài liệu
+                    </a>
+                }
+                else if (activeLessonDocuments.Count > 1)
+                {
+                    <details class="lesson-documents">
+                        <summary style="background:#1E293B; color:#fff; border:1px solid #334155; border-radius:8px; padding:8px 16px; font-size:13.5px; font-weight:500; display:inline-flex; align-items:center; gap:6px;">
+                            <i class="bi bi-file-earmark-arrow-down"></i> Tải tài liệu <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                        </summary>
+                        <div class="lesson-documents-menu" aria-label="Danh sách tài liệu">
+                            @foreach (var doc in activeLessonDocuments)
+                            {
+                                <a href="@doc.duongDan" target="_blank" rel="noopener noreferrer" download title="@(string.IsNullOrWhiteSpace(doc.tenTaiNguyen) ? "Tải tài liệu" : doc.tenTaiNguyen)">
+                                    @(string.IsNullOrWhiteSpace(doc.tenTaiNguyen) ? "Tải tài liệu" : doc.tenTaiNguyen)
+                                </a>
+                            }
+                        </div>
+                    </details>
                 }
                 else
                 {
@@ -708,11 +741,10 @@
 
 
                 @*hỏi giáo viên*@
-                @if (ViewBag.IsPreview != true)
+                @if (ViewBag.CanLessonDiscussion == true)
                 {
-                    <button style="background:#434CE8; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow: 0 4px 12px rgba(67, 76, 232, 0.25); transition: background 0.2s;" onclick="openStudyChat()" onmouseover="this.style.background='#363fc2'" onmouseout="this.style.background='#434CE8'">
-                        <i class="bi bi-chat-dots-fill"></i> Hỏi giáo viên
-                        <span id="study-chat-unread" hidden aria-live="polite" style="min-width:20px;height:20px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;background:#EF4444;color:#fff;border-radius:99px;font-size:11px;font-weight:700;"></span>
+                    <button style="background:#434CE8; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow: 0 4px 12px rgba(67, 76, 232, 0.25); transition: background 0.2s;" onclick="openLessonDiscussion()" onmouseover="this.style.background='#363fc2'" onmouseout="this.style.background='#434CE8'">
+                        <i class="bi bi-people-fill"></i> Thảo luận bài học
                     </button>
                 }
 
@@ -892,7 +924,7 @@
 </div>
 
 
-@Html.Partial("_ChatPanel")
+@Html.Partial("_LessonDiscussionPanel")
 
 @section scripts {
     <script>
@@ -997,6 +1029,7 @@
 
             if (player) {
                 initVolumeControl(player);
+                initSubtitleControl(player);
 
                 // Start media after the document load has finished so buffering a
                 // long lesson does not keep the browser tab loading indicator active.
@@ -1392,6 +1425,46 @@
             showToast('Đã đổi tốc độ phát sang ' + val + 'x', 'info');
         }
 
+        // ==================== PHỤ ĐỀ ====================
+        function getSubtitleTrack() {
+            var element = document.getElementById('lesson-subtitle-track');
+            return element ? element.track : null;
+        }
+
+        function initSubtitleControl() {
+            var track = getSubtitleTrack();
+            if (!track) return;
+            var enabled = localStorage.getItem('eco_subtitle_vi') === '1';
+            track.mode = enabled ? 'showing' : 'hidden';
+            updateSubtitleButton(enabled);
+        }
+
+        function toggleSubtitle() {
+            var track = getSubtitleTrack();
+            if (!track) {
+                var notice = document.getElementById('player-subtitle-notice');
+                if (notice) {
+                    notice.textContent = 'Video hiện chưa hỗ trợ phụ đề';
+                    notice.hidden = false;
+                    clearTimeout(notice.hideTimer);
+                    notice.hideTimer = setTimeout(function () { notice.hidden = true; }, 3000);
+                }
+                return;
+            }
+            var enabled = track.mode !== 'showing';
+            track.mode = enabled ? 'showing' : 'hidden';
+            localStorage.setItem('eco_subtitle_vi', enabled ? '1' : '0');
+            updateSubtitleButton(enabled);
+            showToast(enabled ? 'Đã bật phụ đề tiếng Việt' : 'Đã tắt phụ đề', 'info');
+        }
+
+        function updateSubtitleButton(enabled) {
+            var button = document.getElementById('btn-subtitle-toggle');
+            if (!button) return;
+            button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+            button.style.color = enabled ? '#A5B4FC' : '';
+        }
+
         // ==================== ÂM LƯỢNG ====================
         function initVolumeControl(player) {
             var saved = parseInt(localStorage.getItem('eco_player_volume'), 10);
@@ -1588,95 +1661,21 @@
     </script>
     <script src="~/Scripts/jquery.signalR-2.4.3.min.js"></script>
     <script src="~/signalr/hubs"></script>
-    <script src="~/assets/js/chat.js?v=@(System.IO.File.GetLastWriteTime(Server.MapPath("~/assets/js/chat.js")).Ticks)"></script>
-    <script>
-        var currentChatConvId = 0;
-        var chatInitialized = false;
-
-        function refreshStudyUnread() {
-            $.get('@Url.Action("CourseUnreadCount", "Chat")', { courseId: '@(course != null ? course.maKhoaHoc : "")' }, function (res) {
-                var count = Number(res.count) || 0;
-                $('#study-chat-unread').text(count > 99 ? '99+' : count).prop('hidden', count === 0).attr('aria-label', count + ' tin nhắn chưa đọc');
+    <script src="~/assets/js/lesson-discussion.js?v=@(System.IO.File.GetLastWriteTime(Server.MapPath("~/assets/js/lesson-discussion.js")).Ticks)"></script>
+    @if (ViewBag.CanLessonDiscussion == true && activeLesson != null)
+    {
+        <script>
+            $(function () {
+                EcoLessonDiscussion.init({
+                    courseId: '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(course != null ? course.maKhoaHoc : ""))',
+                    lessonId: '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(activeLesson.maBaiHoc))',
+                    getUrl: '@Url.Action("Get", "LessonDiscussion")',
+                    statsUrl: '@Url.Action("Stats", "LessonDiscussion")',
+                    createUrl: '@Url.Action("Create", "LessonDiscussion")',
+                    imageUrl: '@Url.Action("Image", "LessonDiscussion")',
+                    likeUrl: '@Url.Action("ToggleLike", "LessonDiscussion")'
+                });
             });
-        }
-
-        function initStudyChat() {
-            if (chatInitialized) return;
-            var userId = @(Session["UserId"] ?? 0);
-            if (userId <= 0) return;
-            EcoChat.isActive = function () { return document.getElementById('study-chat-panel').classList.contains('active') && !document.hidden; };
-            EcoChat.onRead = refreshStudyUnread;
-            EcoChat.onIncomingWhileHidden = refreshStudyUnread;
-            chatInitialized = EcoChat.init(userId, false, { messages: '#study-chat-messages', input: '#study-chat-input', send: '#study-chat-send-btn', typing: '#study-chat-typing' });
-            if (chatInitialized) {
-                var notify = EcoChat.hub.client.thongBaoTinMoi;
-                EcoChat.hub.client.thongBaoTinMoi = function (data) { notify(data); refreshStudyUnread(); };
-            }
-        }
-        $(function () {
-            if (!document.getElementById('study-chat-unread')) return;
-            initStudyChat();
-            refreshStudyUnread();
-            setInterval(function () { if (!document.hidden) refreshStudyUnread(); }, 15000);
-            document.addEventListener('visibilitychange', function () {
-                if (!document.hidden) {
-                    if (EcoChat.isActive()) EcoChat.markRead();
-                    refreshStudyUnread();
-                }
-            });
-        });
-
-        function openStudyChat() {
-            var backdrop = document.getElementById('study-chat-backdrop');
-            var panel = document.getElementById('study-chat-panel');
-            if (backdrop) backdrop.classList.add('active');
-            if (panel) panel.classList.add('active');
-
-            initStudyChat();
-
-            if (currentChatConvId === 0) {
-                loadStudyConversation();
-            } else {
-                EcoChat.markRead();
-            }
-        }
-
-        function closeStudyChat() {
-            var backdrop = document.getElementById('study-chat-backdrop');
-            var panel = document.getElementById('study-chat-panel');
-            if (backdrop) backdrop.classList.remove('active');
-            if (panel) panel.classList.remove('active');
-        }
-
-        function loadStudyConversation() {
-            var courseId = '@(course != null ? course.maKhoaHoc : "")';
-            var container = $('#study-chat-messages');
-            var loading = $('#study-chat-loading');
-
-            $.get('@Url.Action("GetOrCreateForCourse", "Chat")', { courseId: courseId }, function (res) {
-                loading.hide();
-                if (res.success) {
-                    refreshStudyUnread();
-                    currentChatConvId = res.conversation.MaHoiThoai;
-                    EcoChat.joinConversation(currentChatConvId);
-
-                    container.empty();
-                    if (res.messages && res.messages.length > 0) {
-                        res.messages.forEach(function (m) {
-                            EcoChat.appendMessage(m);
-                        });
-                        EcoChat.scrollToBottom();
-                    } else {
-                        container.html('<div class="eco-chat-state study-chat-empty"><span class="study-chat-empty-icon"><i class="bi bi-chat-square-text"></i></span><h4>Bạn cần giải đáp điều gì?</h4><p>Gửi câu hỏi về nội dung bài học.<br>Giáo viên sẽ phản hồi tại đây.</p></div>');
-                    }
-                } else {
-                    container.empty().append($('<div class="alert alert-warning m-3">').text(res.message));
-                }
-            }).fail(function () {
-                container.empty().append($('<div class="alert alert-warning m-3">').text('Không tải được tin nhắn. Đóng khung và thử lại.'));
-            });
-        }
-
-        // Bắt sự kiện gửi tin từ panel study
-    </script>
+        </script>
+    }
 }

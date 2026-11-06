@@ -385,6 +385,7 @@
 .lesson-video-link:hover .lesson-play-icon { filter:brightness(.85); }
 .lesson-video-link:focus-visible { outline:2px solid var(--primary); outline-offset:3px; border-radius:4px; }
 .lesson-video-badge { display:inline-block; margin-left:12px; padding:2px 10px; border-radius:20px; color:#16A34A; background:#F0FDF4; white-space:nowrap; }
+.lesson-subtitle-badge { color:#5B4CD6; background:#F1F0FF; }
 .lesson-documents { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:12px; font-size:12px; }
 .lesson-document-chip { display:inline-flex; align-items:center; gap:10px; padding:7px 10px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-surface); }
 .lesson-document-chip a { color:var(--text-heading); text-decoration:none; }
@@ -416,16 +417,42 @@
 <dialog id="video-preview-dialog" aria-labelledby="video-preview-title">
     <div class="video-preview-header">
         <strong id="video-preview-title"></strong>
-        <button type="button" class="btn btn-secondary btn-sm" aria-label="Đóng video" onclick="document.getElementById('video-preview-dialog').close()">✕</button>
+        <div style="display:flex;align-items:center;gap:8px;"><button type="button" class="btn btn-secondary btn-sm" aria-label="Đóng video" onclick="document.getElementById('video-preview-dialog').close()">✕</button></div>
     </div>
-    <video id="video-preview-player" controls playsinline preload="metadata"></video>
+    <div id="wizard-preview-shell" class="wizard-preview-shell">
+        <video id="video-preview-player" playsinline preload="metadata"></video>
+        <div class="wizard-preview-controls">
+            <button id="wizard-preview-play" type="button" class="wizard-preview-control" aria-label="Phát hoặc tạm dừng video" title="Phát">▶</button>
+            <span id="wizard-preview-time" class="wizard-preview-time">0:00 / 0:00</span>
+            <input id="wizard-preview-seek" type="range" class="wizard-preview-seek" min="0" max="0" step="0.05" value="0" aria-label="Tiến trình video" />
+            <button id="wizard-preview-volume" type="button" class="wizard-preview-control" aria-label="Bật hoặc tắt âm thanh" title="Tắt tiếng">🔊</button>
+            <button id="wizard-subtitle-toggle" type="button" class="wizard-preview-cc" hidden aria-pressed="false" title="Bật phụ đề tiếng Việt" aria-label="Bật hoặc tắt phụ đề tiếng Việt">CC</button>
+            <button id="wizard-preview-fullscreen" type="button" class="wizard-preview-control" aria-label="Bật hoặc tắt toàn màn hình" title="Toàn màn hình">⛶</button>
+        </div>
+    </div>
 </dialog>
 <style>
 #video-preview-dialog { position:fixed; inset:0; margin:auto; padding:0; border:1px solid var(--border-color); border-radius:16px; width:900px; max-width:calc(100vw - 32px); max-height:calc(100vh - 32px); overflow:auto; background:var(--bg-surface); box-shadow:0 24px 64px rgba(15,23,42,.25); }
 #video-preview-dialog::backdrop { background:rgba(15,23,42,.65); }
 .video-preview-header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 20px; }
 #video-preview-title { overflow-wrap:anywhere; }
-#video-preview-player { display:block; width:100%; max-height:calc(100vh - 120px); background:#000; }
+.wizard-preview-shell { position:relative; background:#000; line-height:0; overflow:hidden; }
+#video-preview-player { display:block; width:100%; max-height:calc(100vh - 120px); background:#000; cursor:pointer; }
+.wizard-preview-controls { position:absolute; z-index:3; left:0; right:0; bottom:0; min-height:48px; display:flex; align-items:center; gap:8px; padding:14px 16px 8px; background:linear-gradient(transparent,rgba(0,0,0,.9) 46%); line-height:1; transition:opacity .2s ease, transform .2s ease; }
+.wizard-preview-control { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; padding:0; border:0; border-radius:5px; background:transparent; color:#fff; font:700 14px/1 Arial,sans-serif; cursor:pointer; }
+.wizard-preview-control:hover, .wizard-preview-control:focus-visible { background:rgba(255,255,255,.22); outline:2px solid #fff; outline-offset:1px; }
+.wizard-preview-time { flex:0 0 auto; min-width:88px; color:#fff; font:600 12px/1 Arial,sans-serif; white-space:nowrap; }
+.wizard-preview-seek { flex:1 1 auto; min-width:40px; accent-color:#818CF8; cursor:pointer; }
+.wizard-preview-cc { flex:0 0 auto; width:31px; height:25px; padding:0; border:1px solid rgba(255,255,255,.72); border-radius:5px; background:rgba(15,23,42,.72); color:#fff; font:700 11px/1 Arial,sans-serif; letter-spacing:.2px; cursor:pointer; line-height:1; }
+.wizard-preview-cc:hover, .wizard-preview-cc:focus-visible { background:rgba(79,70,229,.96); border-color:#fff; outline:2px solid #fff; outline-offset:2px; }
+.wizard-preview-cc.is-active { background:#4F46E5; border-color:#C7D2FE; }
+.wizard-preview-cc:disabled { opacity:.55; cursor:wait; }
+.wizard-preview-shell:fullscreen, .wizard-preview-shell:-webkit-full-screen { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+.wizard-preview-shell:fullscreen #video-preview-player, .wizard-preview-shell:-webkit-full-screen #video-preview-player { width:100%; height:100%; max-height:none; object-fit:contain; }
+.wizard-preview-shell:fullscreen .wizard-preview-controls, .wizard-preview-shell:-webkit-full-screen .wizard-preview-controls { padding:18px 28px 12px; }
+.wizard-preview-shell:fullscreen .wizard-preview-controls.controls-hidden, .wizard-preview-shell:-webkit-full-screen .wizard-preview-controls.controls-hidden { opacity:0; transform:translateY(12px); pointer-events:none; }
+.wizard-preview-shell:fullscreen.controls-hidden, .wizard-preview-shell:-webkit-full-screen.controls-hidden { cursor:none; }
+@@media(max-width:600px) { .wizard-preview-controls { gap:5px; padding:12px 10px 6px; } .wizard-preview-time { min-width:73px; font-size:11px; } }
 </style>
 
 <dialog id="wizard-library" aria-labelledby="wizard-library-title" style="position:fixed;inset:0;margin:auto;padding:24px;border:1px solid var(--border-color);border-radius:18px;width:700px;max-width:calc(100vw - 32px);max-height:80vh;overflow:auto;">
@@ -476,9 +503,48 @@
     <div id="lesson-content-documents-selection" class="lesson-upload-selection" aria-live="polite"></div>
 </div>
 <p id="lesson-content-status" role="status" class="caption"></p>
-<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;"><button id="content-cancel" type="button" class="btn btn-outline" onclick="document.getElementById('lesson-content-dialog').close()">Hủy</button><button id="content-confirm" type="button" class="btn btn-primary" onclick="confirmLessonContent()">Xác nhận</button></div>
+<div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:20px;">
+    <label style="display:inline-flex;align-items:center;gap:7px;margin-right:auto;font-size:13px;color:var(--text-heading);cursor:pointer;"><input id="lesson-content-create-subtitle" type="checkbox" style="width:16px;height:16px;accent-color:var(--primary);"> Tạo phụ đề tự động</label>
+    <button id="content-cancel" type="button" class="btn btn-outline" onclick="document.getElementById('lesson-content-dialog').close()">Hủy</button><button id="content-confirm" type="button" class="btn btn-primary" onclick="confirmLessonContent()">Xác nhận</button>
+</div>
 </dialog>
 @section Scripts {
+<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
+<style>
+    .course-description-editor .ck-editor__editable { height:220px; min-height:220px; max-height:220px; overflow-y:auto; color:var(--text-heading); line-height:1.7; }
+    .course-description-editor .ck.ck-editor__main > .ck-editor__editable { border-color:var(--border-color); }
+    .course-description-editor .ck.ck-editor__main > .ck-editor__editable.ck-focused { border-color:var(--primary); box-shadow:0 0 0 3px rgba(67,76,232,.12); }
+    .course-description-editor .ck.ck-toolbar { border-color:var(--border-color); border-radius:10px 10px 0 0; background:var(--bg-canvas); }
+    .course-description-editor .ck.ck-editor__main > .ck-editor__editable { border-radius:0 0 10px 10px; }
+    .course-description-editor .ck-content ul, .course-description-editor .ck-content ol { margin:.65em 0; padding-left:2.1em; list-style-position:outside; }
+    .course-description-editor .ck-content ul { list-style-type:disc; }
+    .course-description-editor .ck-content ol { list-style-type:decimal; }
+    .course-description-editor .ck-content ul ul { list-style-type:circle; }
+    .course-description-editor .ck-content ol ol { list-style-type:lower-alpha; }
+    .course-description-editor .ck-content li { display:list-item; margin:.25em 0; }
+</style>
+<script>
+    var courseDescriptionEditor;
+    (function () {
+        var source = document.getElementById('inp-desc');
+        if (!source || !window.ClassicEditor) return;
+        source.closest('.form-group').classList.add('course-description-editor');
+        ClassicEditor.create(source, {
+            toolbar: [
+                'heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', '|',
+                'blockQuote', 'insertTable', '|', 'undo', 'redo'
+            ],
+            table: { contentToolbar: [ 'tableColumn', 'tableRow', 'mergeTableCells' ] },
+            placeholder: 'Mô tả lộ trình học, kiến thức thu được và dự án thực hành...'
+        }).then(function (editor) {
+            courseDescriptionEditor = editor;
+            editor.model.document.on('change:data', function () { editor.updateSourceElement(); });
+        }).catch(function (error) {
+            console.error('Không thể khởi tạo CKEditor cho mô tả khóa học.', error);
+            if (window.showToast) showToast('Không thể tải trình soạn thảo. Bạn vẫn có thể nhập mô tả dạng văn bản.', 'warning');
+        });
+    })();
+</script>
 <script src="~/assets/js/outcome-field.js?v=1"></script>
 <script>
 var curriculumDialogCallback = null;
@@ -664,6 +730,7 @@ var submitConfirmed = false;
 function confirmSubmit() {
     if (!validateStep1()) { currentStep = 1; updateStepper(); showToast('Vui lòng kiểm tra tên khóa học, danh mục và giá bán.', 'error'); return false; }
     if (pendingUploads > 0) { showToast('Vui lòng đợi tải tệp hoàn tất.', 'info'); return false; }
+    if (document.querySelector('.lesson-item[data-subtitle-processing="true"]')) { showToast('Phụ đề đang được tạo. Vui lòng chờ xử lý xong đầy đủ trước khi gửi duyệt.', 'info'); return false; }
     if (!countVideos()) { currentStep = 2; updateStepper(); showToast('Vui lòng tải ít nhất một video trước khi gửi duyệt.', 'error'); return false; }
     if (submitConfirmed) { submitConfirmed = false; return true; }
     openCurriculumDialog('@Html.Raw(HttpUtility.JavaScriptStringEncode(isViolationLocked ? "Lưu thay đổi và chuyển sang gửi phản hồi vi phạm?" : "Gửi khóa học lên kiểm duyệt?"))', '', '', function() {
@@ -771,6 +838,7 @@ function addLesson(containerId, initialTitle) {
                 '<button type="button" class="btn btn-outline btn-sm" onclick="editLessonTitle(\'' + lid + '\')">Sửa tên</button>' +
                 '<label class="lesson-preview"><input type="checkbox"> Xem thử</label>' +
                 '<button type="button" class="btn btn-primary btn-sm" onclick="openLessonContent(\'' + lid + '\')">Tạo nội dung</button>' +
+                '<button type="button" class="btn btn-outline btn-sm" data-subtitle-action onclick="addSubtitleToLesson(\'' + lid + '\')" disabled title="Thêm video trước khi tạo phụ đề">Thêm phụ đề</button>' +
                 '<button type="button" class="lesson-delete" aria-label="Xóa bài học" title="Xóa bài học" onclick="document.getElementById(\'' + lid + '\').remove()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg></button>' +
             '</div>' +
         '</div>' +
@@ -874,6 +942,44 @@ function uploadLessonFile(file, kind, progress) {
         xhr.send(data);
     });
 }
+function wait(milliseconds) { return new Promise(function(resolve) { window.setTimeout(resolve, milliseconds); }); }
+function subtitleSetupErrorMessage() { return 'Chưa thể thiết lập phụ đề lúc này. Vui lòng thử lại sau vài phút.'; }
+async function createSubtitleBeforeConfirm(lesson, videoResult, status) {
+    lesson.dataset.subtitleProcessing = 'true';
+    status.textContent = 'Đang thiết lập phụ đề. Vui lòng chờ…';
+    var token = document.querySelector('#course-wizard-form input[name="__RequestVerificationToken"]').value;
+    var form = new URLSearchParams();
+    form.append('__RequestVerificationToken', token);
+    form.append('lessonId', lesson.dataset.existingId || '');
+    form.append('videoToken', videoResult.token);
+    form.append('subtitleKey', lesson.dataset.subtitleDraftKey || '');
+    var startResponse = await fetch('@Url.Action("GenerateLessonSubtitle", "Course", new { area = "Instructor" })', {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: form.toString()
+    });
+    var start = await startResponse.json();
+    if (!start.success && !start.subtitleKey) { lesson.dataset.subtitleProcessing = 'false'; throw new Error(subtitleSetupErrorMessage()); }
+    if (start.subtitleKey && lesson.dataset.existingId) lesson.dataset.subtitleDraftKey = start.subtitleKey;
+
+    var startedAt = Date.now();
+    while (Date.now() - startedAt < 20 * 60 * 1000) {
+        await wait(1200);
+        var query = lesson.dataset.existingId
+            ? '?lessonId=' + encodeURIComponent(lesson.dataset.existingId) + '&subtitleKey=' + encodeURIComponent(lesson.dataset.subtitleDraftKey || '')
+            : '?videoToken=' + encodeURIComponent(videoResult.token);
+        var response = await fetch('@Url.Action("SubtitleStatus", "Course", new { area = "Instructor" })' + query, { cache: 'no-store' });
+        var result = await response.json();
+        if (!result.success) throw new Error(subtitleSetupErrorMessage());
+        if (result.ready && result.status === 'Sẵn sàng') {
+            status.textContent = 'Đã tạo xong phụ đề tiếng Việt.';
+            lesson.dataset.subtitleProcessing = 'false';
+            return;
+        }
+        if (result.status === 'Lỗi') { lesson.dataset.subtitleProcessing = 'false'; throw new Error(subtitleSetupErrorMessage()); }
+        status.textContent = 'Đang thiết lập phụ đề. Vui lòng chờ…';
+    }
+    lesson.dataset.subtitleProcessing = 'false';
+    throw new Error('Tạo phụ đề quá thời gian chờ. Vui lòng thử lại video ngắn hơn hoặc thử lại sau.');
+}
 function videoDuration(file) {
     return new Promise(function(resolve) {
         var video = document.createElement('video'), url = URL.createObjectURL(file), done = false;
@@ -884,30 +990,132 @@ function videoDuration(file) {
     });
 }
 function durationLabel(seconds) { return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0'); }
-function previewLessonVideo(url, name) {
+var wizardPreviewSubtitleEndpoint = '@Url.Action("PreviewSubtitle", "Course", new { area = "Instructor" })';
+function wizardSubtitleUrl(lesson) {
+    if (lesson.dataset.subtitleReady !== 'true') return '';
+    if (lesson.dataset.existingId && lesson.dataset.subtitleDraftKey)
+        return wizardPreviewSubtitleEndpoint + '?lessonId=' + encodeURIComponent(lesson.dataset.existingId) + '&subtitleKey=' + encodeURIComponent(lesson.dataset.subtitleDraftKey);
+    // Khóa học mới chưa có mã bài học: đọc VTT theo token upload trong session giáo viên.
+    if (lesson.dataset.existingId)
+        return wizardPreviewSubtitleEndpoint + '?lessonId=' + encodeURIComponent(lesson.dataset.existingId);
+    if (lesson.dataset.videoToken)
+        return wizardPreviewSubtitleEndpoint + '?videoToken=' + encodeURIComponent(lesson.dataset.videoToken);
+    return '';
+}
+function getWizardSubtitleTrack() {
+    var player = document.getElementById('video-preview-player');
+    if (!player || !player.textTracks) return null;
+    for (var i = 0; i < player.textTracks.length; i++) if (player.textTracks[i].language === 'vi' || player.textTracks[i].label === 'Tiếng Việt') return player.textTracks[i];
+    return null;
+}
+function updateWizardSubtitleButton(available) {
+    var button = document.getElementById('wizard-subtitle-toggle'); button.hidden = !available;
+    if (!available) return;
+    var enabled = localStorage.getItem('eco_subtitle_vi') === '1', track = getWizardSubtitleTrack();
+    if (track) track.mode = enabled ? 'showing' : 'hidden';
+    button.setAttribute('aria-pressed', enabled ? 'true' : 'false'); button.classList.toggle('is-active', enabled);
+    button.title = enabled ? 'Tắt phụ đề tiếng Việt' : 'Bật phụ đề tiếng Việt';
+}
+function toggleWizardSubtitle() {
+    var button = document.getElementById('wizard-subtitle-toggle'), track = getWizardSubtitleTrack();
+    if (!track) { button.disabled = true; button.title = 'Đang tải phụ đề…'; window.setTimeout(function() { button.disabled = false; updateWizardSubtitleButton(true); }, 600); return; }
+    var enabled = track.mode !== 'showing'; track.mode = enabled ? 'showing' : 'hidden';
+    localStorage.setItem('eco_subtitle_vi', enabled ? '1' : '0'); updateWizardSubtitleButton(true);
+}
+function wizardPreviewTimeLabel(seconds) {
+    if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+    var minutes = Math.floor(seconds / 60), remain = Math.floor(seconds % 60);
+    return minutes + ':' + String(remain).padStart(2, '0');
+}
+function initWizardPreviewControls() {
+    var shell = document.getElementById('wizard-preview-shell'), player = document.getElementById('video-preview-player');
+    var play = document.getElementById('wizard-preview-play'), time = document.getElementById('wizard-preview-time');
+    var seek = document.getElementById('wizard-preview-seek'), volume = document.getElementById('wizard-preview-volume');
+    var fullscreen = document.getElementById('wizard-preview-fullscreen');
+    var controls = shell.querySelector('.wizard-preview-controls'), controlsTimer, interactingWithControls = false;
+    function isFullscreen() { return document.fullscreenElement === shell || document.webkitFullscreenElement === shell; }
+    function hideControls() {
+        if (!isFullscreen() || player.paused || player.ended || interactingWithControls || controls.querySelector(':focus-visible')) return;
+        controls.classList.add('controls-hidden'); shell.classList.add('controls-hidden');
+    }
+    function showControls() {
+        clearTimeout(controlsTimer);
+        controls.classList.remove('controls-hidden'); shell.classList.remove('controls-hidden');
+        if (isFullscreen() && !player.paused && !player.ended) controlsTimer = setTimeout(hideControls, 2500);
+    }
+    function handleFullscreenChange() { refresh(); showControls(); }
+    function handlePointerDown(event) { interactingWithControls = !!event.target.closest('.wizard-preview-controls'); showControls(); }
+    function finishControlInteraction() { if (interactingWithControls) { interactingWithControls = false; showControls(); } }
+    function refresh() {
+        var duration = Number.isFinite(player.duration) ? player.duration : 0;
+        seek.max = duration; seek.value = Math.min(player.currentTime || 0, duration);
+        time.textContent = wizardPreviewTimeLabel(player.currentTime) + ' / ' + wizardPreviewTimeLabel(duration);
+        play.textContent = player.paused ? '▶' : '❚❚'; play.title = player.paused ? 'Phát' : 'Tạm dừng';
+        volume.textContent = player.muted || player.volume === 0 ? '🔇' : '🔊'; volume.title = player.muted || player.volume === 0 ? 'Bật tiếng' : 'Tắt tiếng';
+        var full = document.fullscreenElement === shell || document.webkitFullscreenElement === shell;
+        fullscreen.textContent = full ? '⤢' : '⛶'; fullscreen.title = full ? 'Thoát toàn màn hình' : 'Toàn màn hình';
+    }
+    function togglePlay() { if (player.paused) player.play(); else player.pause(); }
+    function toggleFullscreen() {
+        var full = document.fullscreenElement === shell || document.webkitFullscreenElement === shell;
+        if (full) { if (document.exitFullscreen) document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); }
+        else if (shell.requestFullscreen) shell.requestFullscreen(); else if (shell.webkitRequestFullscreen) shell.webkitRequestFullscreen();
+    }
+    play.addEventListener('click', togglePlay); player.addEventListener('click', togglePlay);
+    seek.addEventListener('input', function() { player.currentTime = Number(seek.value); showControls(); });
+    volume.addEventListener('click', function() { player.muted = !player.muted; });
+    document.getElementById('wizard-subtitle-toggle').addEventListener('click', toggleWizardSubtitle);
+    fullscreen.addEventListener('click', toggleFullscreen);
+    ['loadedmetadata', 'durationchange', 'timeupdate', 'play', 'pause', 'volumechange', 'ended'].forEach(function(name) { player.addEventListener(name, refresh); });
+    player.addEventListener('play', showControls); player.addEventListener('pause', showControls); player.addEventListener('ended', showControls);
+    shell.addEventListener('pointermove', showControls); shell.addEventListener('pointerdown', handlePointerDown); shell.addEventListener('focusin', showControls);
+    window.addEventListener('pointerup', finishControlInteraction); window.addEventListener('pointercancel', finishControlInteraction);
+    document.addEventListener('keydown', function() { if (isFullscreen()) showControls(); });
+    document.addEventListener('fullscreenchange', handleFullscreenChange); document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    refresh();
+}
+function previewLessonVideo(url, name, subtitleUrl) {
     var dialog = document.getElementById('video-preview-dialog');
     var player = document.getElementById('video-preview-player');
     document.getElementById('video-preview-title').textContent = name;
+    while (player.firstChild) player.removeChild(player.firstChild);
     player.src = videoPlayUrl(url);
+    if (subtitleUrl) {
+        var track = document.createElement('track'); track.kind = 'subtitles'; track.srclang = 'vi'; track.label = 'Tiếng Việt'; track.src = subtitleUrl;
+        track.addEventListener('load', function() { updateWizardSubtitleButton(true); });
+        track.addEventListener('error', function() { var button = document.getElementById('wizard-subtitle-toggle'); button.disabled = true; button.title = 'Không tải được phụ đề'; });
+        player.appendChild(track);
+    }
+    updateWizardSubtitleButton(!!subtitleUrl);
     dialog.showModal();
     player.play().catch(function() {});
 }
 document.getElementById('video-preview-dialog').addEventListener('close', function() {
     var player = document.getElementById('video-preview-player');
     player.pause(); player.removeAttribute('src'); player.load();
+    var shell = document.getElementById('wizard-preview-shell');
+    if (document.fullscreenElement === shell || document.webkitFullscreenElement === shell) {
+        if (document.exitFullscreen) document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+    document.getElementById('wizard-subtitle-toggle').hidden = true;
 });
 document.getElementById('video-preview-dialog').addEventListener('click', function(event) {
     if (event.target !== this) return;
     var bounds = this.getBoundingClientRect();
     if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) this.close();
 });
+initWizardPreviewControls();
 
-function renderVideo(lesson, uploaded, duration) {
+function renderVideo(lesson, uploaded, duration, createSubtitle, hasSubtitle) {
+    if (createSubtitle === undefined) createSubtitle = lesson.dataset.createSubtitle === 'true';
+    if (hasSubtitle === undefined) hasSubtitle = lesson.dataset.subtitleReady === 'true';
     lesson.dataset.videoToken = uploaded.token; lesson.dataset.videoDuration = duration;
     lesson.dataset.videoName = uploaded.name; lesson.dataset.videoUrl = uploaded.url;
+    lesson.dataset.createSubtitle = createSubtitle ? 'true' : 'false';
+    lesson.dataset.subtitleReady = hasSubtitle ? 'true' : 'false';
     var status = document.getElementById(lesson.id + '-status'); status.textContent = '';
     var link = document.createElement('a'); link.href = videoPlayUrl(uploaded.url); link.setAttribute('aria-label', 'Xem nhanh video ' + uploaded.name);
-    link.onclick = function(event) { event.preventDefault(); previewLessonVideo(uploaded.url, uploaded.name); };
+    link.onclick = function(event) { event.preventDefault(); previewLessonVideo(uploaded.url, uploaded.name, wizardSubtitleUrl(lesson)); };
     link.className = 'lesson-video-link';
     var play = document.createElement('span'); play.className = 'lesson-play-icon'; play.setAttribute('aria-hidden', 'true');
     play.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="currentColor"/><path d="M6.3 4.6L11 8L6.3 11.4V4.6Z" fill="white"/></svg>';
@@ -915,8 +1123,30 @@ function renderVideo(lesson, uploaded, duration) {
     filename.textContent = uploaded.name + (duration ? ' (' + durationLabel(duration) + ')' : '');
     link.append(play, filename); status.appendChild(link);
     var badge = document.createElement('span'); badge.textContent = '✓ Có video'; badge.className = 'lesson-video-badge'; status.appendChild(badge);
+    if (hasSubtitle) {
+        var subtitleBadge = document.createElement('span'); subtitleBadge.textContent = lesson.dataset.subtitleDraftKey ? '✓ Phụ đề chờ duyệt' : '✓ Đã có phụ đề'; subtitleBadge.className = 'lesson-video-badge lesson-subtitle-badge'; status.appendChild(subtitleBadge);
+    }
+    var subtitleAction = lesson.querySelector('[data-subtitle-action]');
+    if (subtitleAction) { subtitleAction.disabled = false; subtitleAction.title = hasSubtitle ? 'Tạo lại và gửi phụ đề mới để Admin duyệt' : 'Tạo phụ đề tự động để gửi Admin duyệt'; subtitleAction.textContent = hasSubtitle ? 'Tạo lại phụ đề' : 'Thêm phụ đề'; }
     lesson.querySelectorAll('button').forEach(function(btn) { if (btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf('simulateUpload') >= 0) btn.textContent = 'Thay video'; });
     countVideos();
+}
+async function addSubtitleToLesson(lessonId) {
+    var lesson = document.getElementById(lessonId), status = document.getElementById(lessonId + '-status');
+    if (!lesson || !lesson.dataset.videoToken) { showToast('Vui lòng thêm video bài giảng trước khi tạo phụ đề.', 'error'); return; }
+    if (lesson.dataset.subtitleProcessing === 'true') { showToast('Phụ đề đang được tạo. Vui lòng chờ hoàn tất.', 'info'); return; }
+    var button = lesson.querySelector('[data-subtitle-action]');
+    if (button) { button.disabled = true; button.textContent = 'Đang thiết lập phụ đề…'; }
+    try {
+        await createSubtitleBeforeConfirm(lesson, { token: lesson.dataset.videoToken, url: lesson.dataset.videoUrl, name: lesson.dataset.videoName }, status);
+        lesson.dataset.createSubtitle = 'true'; lesson.dataset.subtitleReady = 'true';
+        renderVideo(lesson, { token: lesson.dataset.videoToken, url: lesson.dataset.videoUrl, name: lesson.dataset.videoName }, Number(lesson.dataset.videoDuration || 0), true, true);
+        showToast('Đã tạo xong phụ đề. Hãy xem lại bằng nút phát video, rồi lưu và gửi Admin duyệt.', 'success');
+    } catch (error) {
+        lesson.dataset.subtitleProcessing = 'false'; status.textContent = subtitleSetupErrorMessage(); showToast(status.textContent, 'error');
+    } finally {
+        if (button && lesson.isConnected && lesson.dataset.subtitleReady !== 'true') { button.disabled = false; button.textContent = 'Thêm phụ đề'; }
+    }
 }
 var contentLessonId = null;
 function renderLessonFileSelection(input) {
@@ -937,6 +1167,7 @@ contentLessonId = id;
 contentLibraryVideo = null; contentLibraryDocuments = [];
 document.getElementById('lesson-content-video').value = '';
 document.getElementById('lesson-content-documents').value = '';
+document.getElementById('lesson-content-create-subtitle').checked = document.getElementById(id).dataset.createSubtitle === 'true';
 renderLessonFileSelection(document.getElementById('lesson-content-video'));
 renderLessonFileSelection(document.getElementById('lesson-content-documents'));
 document.getElementById('lesson-content-status').textContent = '';
@@ -945,26 +1176,33 @@ document.getElementById('lesson-content-dialog').showModal();
 async function confirmLessonContent() {
 var lesson = document.getElementById(contentLessonId), video = document.getElementById('lesson-content-video').files[0];
 var documents = Array.from(document.getElementById('lesson-content-documents').files), status = document.getElementById('lesson-content-status');
-if (!lesson || (!video && !documents.length && !contentLibraryVideo && !contentLibraryDocuments.length)) { status.textContent = 'Vui lòng chọn video hoặc tài liệu.'; return; }
+var createSubtitle = document.getElementById('lesson-content-create-subtitle').checked;
+ var canRegenerateSubtitle = lesson && createSubtitle && !!lesson.dataset.videoToken;
+ if (!lesson || (!video && !documents.length && !contentLibraryVideo && !contentLibraryDocuments.length && !canRegenerateSubtitle)) { status.textContent = 'Vui lòng chọn video, tài liệu hoặc bật tạo lại phụ đề cho video hiện có.'; return; }
 var confirm = document.getElementById('content-confirm'), cancel = document.getElementById('content-cancel'), dialog = document.getElementById('lesson-content-dialog');
 confirm.disabled = cancel.disabled = true;
 function preventClose(event) { event.preventDefault(); }
 dialog.addEventListener('cancel', preventClose);
 try {
 var videoResult = contentLibraryVideo, duration = contentLibraryVideo ? contentLibraryVideo.duration : 0, attachments = contentLibraryDocuments.slice();
+if (!videoResult && canRegenerateSubtitle) {
+    videoResult = { token: lesson.dataset.videoToken, url: lesson.dataset.videoUrl, name: lesson.dataset.videoName };
+    duration = Number(lesson.dataset.videoDuration || 0);
+}
 if (video) {
 videoResult = await uploadLessonFile(video, 'video', function(percent) { status.textContent = 'Đang tải video: ' + percent + '%'; });
 duration = await videoDuration(video);
 }
 for (var file of documents) { status.textContent = 'Đang tải tài liệu: ' + file.name; attachments.push(await uploadLessonFile(file, 'document')); }
 if (!lesson.isConnected) return;
-if (videoResult) { renderVideo(lesson, videoResult, duration); document.getElementById('warn-no-video').style.display = 'none'; }
+if (videoResult && createSubtitle) await createSubtitleBeforeConfirm(lesson, videoResult, status);
+if (videoResult) { renderVideo(lesson, videoResult, duration, createSubtitle, createSubtitle); document.getElementById('warn-no-video').style.display = 'none'; }
 lesson.attachments = lesson.attachments || [];
 attachments.forEach(function(item) {
     if (!lesson.attachments.some(function(existing) { return existing.url === item.url; })) lesson.attachments.push(item);
 });
 renderAttachments(lesson); dialog.close(); showToast('Đã thêm nội dung bài học.', 'success');
-} catch (error) { status.textContent = error.message; }
+} catch (error) { lesson.dataset.subtitleProcessing = 'false'; status.textContent = createSubtitle ? subtitleSetupErrorMessage() : error.message; }
 finally { confirm.disabled = cancel.disabled = false; dialog.removeEventListener('cancel', preventClose); }
 }
 function simulateUpload(lesId) {
@@ -1020,20 +1258,23 @@ function serializeCurriculum() {
         hidden(prefix + '.Preview', lesson.querySelector('input[type=checkbox]').checked ? 'true' : 'false');
         hidden(prefix + '.VideoToken', lesson.dataset.videoToken || '');
         hidden(prefix + '.Duration', lesson.dataset.videoDuration || '0');
+        hidden(prefix + '.CreateSubtitle', lesson.dataset.createSubtitle === 'true' ? 'true' : 'false');
+        hidden(prefix + '.HasSubtitle', lesson.dataset.subtitleReady === 'true' ? 'true' : 'false');
+        hidden(prefix + '.SubtitleDraftKey', lesson.dataset.subtitleDraftKey || '');
         (lesson.attachments || []).forEach(function(item, index) { hidden(prefix + '.AttachmentTokens[' + index + ']', item.token); });
     });
 }
 var savedChapters = @Html.Raw(System.Web.Helpers.Json.Encode((Model.Chapters ?? new List<ECOLearning.Areas.Instructor.Models.CourseChapterInput>()).Select(c => new { c.Id, c.Title })));
-var savedLessons = @Html.Raw(System.Web.Helpers.Json.Encode((Model.Lessons ?? new List<ECOLearning.Areas.Instructor.Models.CourseLessonInput>()).Select(l => new { l.Id, l.Title, l.ChapterIndex, l.Preview, l.VideoToken, l.Duration, l.AttachmentTokens })));
+var savedLessons = @Html.Raw(System.Web.Helpers.Json.Encode((Model.Lessons ?? new List<ECOLearning.Areas.Instructor.Models.CourseLessonInput>()).Select(l => new { l.Id, l.Title, l.ChapterIndex, l.Preview, l.VideoToken, l.Duration, l.CreateSubtitle, l.HasSubtitle, l.SubtitleDraftKey, l.AttachmentTokens })));
 var savedUploads = @Html.Raw(System.Web.Helpers.Json.Encode(Session["CourseWizardUploads"] ?? new Dictionary<string, string[]>()));
 restoringCurriculum = true;
 var restoredContainers = savedChapters.map(function(chapter) { var container = addSection(chapter.Title); document.getElementById(container).closest(".curriculum-section-card").dataset.existingId = chapter.Id || ""; return container; });
 savedLessons.forEach(function(lesson) {
     var container = lesson.ChapterIndex == null ? 'standalone-lessons' : restoredContainers[lesson.ChapterIndex];
     if (!container) return;
-    var row = addLesson(container, lesson.Title); row.dataset.existingId = lesson.Id || ''; row.querySelector('input[type=checkbox]').checked = lesson.Preview;
+    var row = addLesson(container, lesson.Title); row.dataset.existingId = lesson.Id || ''; row.dataset.subtitleDraftKey = lesson.SubtitleDraftKey || ''; row.querySelector('input[type=checkbox]').checked = lesson.Preview;
     var video = savedUploads[lesson.VideoToken];
-    if (video) renderVideo(row, {token:lesson.VideoToken, url:video[1], name:video[2]}, lesson.Duration);
+    if (video) renderVideo(row, {token:lesson.VideoToken, url:video[1], name:video[2]}, lesson.Duration, lesson.CreateSubtitle, lesson.HasSubtitle);
     row.attachments = (lesson.AttachmentTokens || []).filter(function(token) { return !!savedUploads[token]; }).map(function(token) { return {token:token,url:savedUploads[token][1],name:savedUploads[token][2]}; });
     renderAttachments(row);
 });
@@ -1084,6 +1325,7 @@ document.getElementById('course-wizard-form').addEventListener('submit', functio
         e.preventDefault(); currentStep = 2; updateStepper(); showToast('Vui lòng tải ít nhất một video trước khi gửi duyệt.', 'error'); return;
     }
     if (pendingUploads > 0) { e.preventDefault(); showToast('Vui lòng đợi tải tệp hoàn tất.', 'info'); return; }
+    if (document.querySelector('.lesson-item[data-subtitle-processing="true"]')) { e.preventDefault(); showToast('Phụ đề đang được tạo. Vui lòng chờ xử lý xong đầy đủ trước khi lưu.', 'info'); return; }
     serializeCurriculum();
     var objectives = [];
     document.querySelectorAll('.objective-input').forEach(function(input) {

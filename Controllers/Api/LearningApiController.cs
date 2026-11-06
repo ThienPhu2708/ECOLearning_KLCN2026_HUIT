@@ -120,6 +120,13 @@ namespace ECOLearning.Controllers.Api
                 });
         }
 
+        /// <summary>URL phụ đề dành cho app. App gửi Bearer token khi tải VTT.</summary>
+        private string UrlPhuDe(string courseId, string lessonId)
+        {
+            return AbsoluteUrl("/api/v1/learning/" + Uri.EscapeDataString(courseId)
+                + "/lessons/" + Uri.EscapeDataString(lessonId) + "/subtitle");
+        }
+
         // G2. GET /api/v1/learning/{courseId}
         [HttpGet, Route("learning/{courseId}")]
         public ActionResult Overview(string courseId)
@@ -136,6 +143,7 @@ namespace ECOLearning.Controllers.Api
             learning.DongBoThoiLuong(tatCa);
             var tienDo = TienDoCacBai(tatCa.Select(b => b.maBaiHoc));
             var soTaiLieu = new LessonDocumentService(Db).DemTheoBai(tatCa.Select(b => b.maBaiHoc).ToList());
+            var lessonPositions = tatCa.Select((b, i) => new { b.maBaiHoc, index = i }).ToDictionary(x => x.maBaiHoc, x => x.index);
 
             Func<BaiHoc, object> bai = b =>
             {
@@ -143,6 +151,10 @@ namespace ECOLearning.Controllers.Api
                 tienDo.TryGetValue(b.maBaiHoc, out td);
                 int soTl;
                 soTaiLieu.TryGetValue(b.maBaiHoc, out soTl);
+                int index = lessonPositions[b.maBaiHoc];
+                TienDoBai previous;
+                bool unlocked = index == 0 || (td != null && td.Xong)
+                    || (tienDo.TryGetValue(tatCa[index - 1].maBaiHoc, out previous) && previous.Xong);
                 return new
                 {
                     id = b.maBaiHoc,
@@ -151,7 +163,10 @@ namespace ECOLearning.Controllers.Api
                     isPreview = b.choXemThu == true,
                     isCompleted = td != null && td.Xong,
                     lastPositionSeconds = td?.ViTri ?? 0,
-                    documentsCount = soTl
+                    documentsCount = soTl,
+                    hasDocuments = soTl > 0,
+                    isUnlocked = unlocked,
+                    hasSubtitle = VideoSubtitleService.CoPhuDe(b.maBaiHoc)
                 };
             };
             var dsChuong = chuong.Select(c => new
@@ -208,8 +223,12 @@ namespace ECOLearning.Controllers.Api
 
             TienDoBai td;
             TienDoCacBai(new[] { bai.maBaiHoc }).TryGetValue(bai.maBaiHoc, out td);
+            TienDoBai previousProgress = null;
+            if (viTri > 0) TienDoCacBai(new[] { tatCa[viTri - 1].maBaiHoc }).TryGetValue(tatCa[viTri - 1].maBaiHoc, out previousProgress);
+            bool isUnlocked = viTri == 0 || (td != null && td.Xong) || (previousProgress != null && previousProgress.Xong);
             string url, loai;
             VideoCuaBai(bai.duongDanVideo, out url, out loai);
+            bool coPhuDe = VideoSubtitleService.CoPhuDe(bai.maBaiHoc);
             var taiLieu = new LessonDocumentService(Db).LayTheoCacBai(new[] { bai.maBaiHoc });
             return Ok(new
             {
@@ -217,13 +236,46 @@ namespace ECOLearning.Controllers.Api
                 title = bai.tenBaiHoc,
                 videoUrl = url,
                 videoType = loai,
+                hasSubtitle = coPhuDe,
+                subtitle = coPhuDe ? new
+                {
+                    language = "vi",
+                    label = "Tiếng Việt",
+                    format = "webvtt",
+                    url = UrlPhuDe(courseId, bai.maBaiHoc)
+                } : null,
                 durationSeconds = bai.thoiLuong ?? 0,
                 lastPositionSeconds = td?.ViTri ?? 0,
                 isCompleted = td != null && td.Xong,
+                isUnlocked,
+                hasDocuments = taiLieu.Any(t => !string.IsNullOrWhiteSpace(t.DuongDan)),
                 previousLessonId = viTri > 0 ? tatCa[viTri - 1].maBaiHoc : null,
                 nextLessonId = viTri < tatCa.Count - 1 ? tatCa[viTri + 1].maBaiHoc : null,
                 documents = taiLieu.Select(t => DocumentJson(t, courseId, bai.tenBaiHoc)).ToList()
             });
+        }
+
+        // G3a. GET /api/v1/learning/{courseId}/lessons/{lessonId}/subtitle
+        // Trả WebVTT cho app. Phụ đề nằm trong App_Data nên không thể truy cập trực tiếp.
+        [HttpGet, Route("learning/{courseId}/lessons/{lessonId}/subtitle")]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "*")]
+        public ActionResult Subtitle(string courseId, string lessonId)
+        {
+            KhoaHoc khoa;
+            var loi = KiemTraQuyenHoc(courseId, out khoa);
+            if (loi != null) return loi;
+
+            var bai = new LearningService(Db).LayBaiHoc(courseId)
+                .FirstOrDefault(b => b.maBaiHoc == lessonId);
+            if (bai == null)
+                return NotFoundJson("Không tìm thấy bài học.", "LESSON_NOT_FOUND");
+
+            string file = VideoSubtitleService.LayFileVtt(bai.maBaiHoc);
+            if (file == null)
+                return NotFoundJson("Bài học chưa có phụ đề hoàn chỉnh.", "SUBTITLE_NOT_FOUND");
+
+            Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+            return File(file, "text/vtt; charset=utf-8");
         }
 
         // G4. POST /api/v1/learning/{courseId}/lessons/{lessonId}/progress

@@ -20,9 +20,11 @@ class ChatIntegration {
   foreach(var batch in Regex.Split(sql,@"^GO\s*$",RegexOptions.Multiline|RegexOptions.IgnoreCase))if(!string.IsNullOrWhiteSpace(batch))db.Database.ExecuteSqlCommand(batch);
   var key="CT"+Guid.NewGuid().ToString("N").Substring(0,10);
   var teacher=new NguoiDung{hoTen="Chat test teacher",email=key+"t@test.invalid",matKhau="fixture",vaiTro="GiaoVien",trangThai=true};
+  var enrolledTeacher=new NguoiDung{hoTen="Chat enrolled teacher",email=key+"et@test.invalid",matKhau="fixture",vaiTro="GiaoVien",trangThai=true};
+  var otherTeacher=new NguoiDung{hoTen="Chat other teacher",email=key+"ot@test.invalid",matKhau="fixture",vaiTro="GiaoVien",trangThai=true};
   var learner=new NguoiDung{hoTen="Chat test learner",email=key+"s@test.invalid",matKhau="fixture",vaiTro="HocVien",trangThai=true};
   var other=new NguoiDung{hoTen="Chat outsider",email=key+"o@test.invalid",matKhau="fixture",vaiTro="HocVien",trangThai=true};
-  db.NguoiDung.Add(teacher);db.NguoiDung.Add(learner);db.NguoiDung.Add(other);db.SaveChanges();
+  db.NguoiDung.Add(teacher);db.NguoiDung.Add(enrolledTeacher);db.NguoiDung.Add(otherTeacher);db.NguoiDung.Add(learner);db.NguoiDung.Add(other);db.SaveChanges();
   db.KhoaHoc.Add(new KhoaHoc{maKhoaHoc=key,tenKhoaHoc="Chat fixture",maGiaoVien=teacher.maNguoiDung,maDanhMuc=db.DanhMuc.First().maDanhMuc,giaBan=0,trangThai="Đã xuất bản"});db.SaveChanges();
   db.DangKyKhoaHoc.Add(new DangKyKhoaHoc{maDangKy=key,maKhoaHoc=key,maHocVien=learner.maNguoiDung,ngayDangKy=DateTime.Now});db.SaveChanges();
   var svc=new ChatService(db);
@@ -30,6 +32,14 @@ class ChatIntegration {
   var room=svc.TimHoacMoHoiThoai(key,learner.maNguoiDung);Check(room!=null,"enrolled learner opens chat");
   Check(svc.TimHoacMoHoiThoai(key,learner.maNguoiDung).MaHoiThoai==room.MaHoiThoai,"reopen uses existing conversation");
   Check(!svc.GuiTinNhan(room.MaHoiThoai,teacher.maNguoiDung,"hello").Success,"teacher cannot message first");
+  var otherCourse=key+"B";
+  db.KhoaHoc.Add(new KhoaHoc{maKhoaHoc=otherCourse,tenKhoaHoc="Chat course for enrolled teacher",maGiaoVien=otherTeacher.maNguoiDung,maDanhMuc=db.DanhMuc.First().maDanhMuc,giaBan=0,trangThai="Đã xuất bản"});db.SaveChanges();
+  db.DangKyKhoaHoc.Add(new DangKyKhoaHoc{maDangKy=otherCourse,maKhoaHoc=otherCourse,maHocVien=enrolledTeacher.maNguoiDung,ngayDangKy=DateTime.Now});db.SaveChanges();
+  var enrolledTeacherRoom=svc.TimHoacMoHoiThoai(otherCourse,enrolledTeacher.maNguoiDung);
+  Check(enrolledTeacherRoom!=null&&enrolledTeacherRoom.MaHocVien==enrolledTeacher.maNguoiDung,"teacher account can open chat as enrolled learner in another teacher's course");
+  Check(svc.GuiTinNhan(enrolledTeacherRoom.MaHoiThoai,enrolledTeacher.maNguoiDung,"Question from enrolled teacher").Success,"teacher account can message first when it is the learner in that course");
+  Check(svc.GuiTinNhan(enrolledTeacherRoom.MaHoiThoai,otherTeacher.maNguoiDung,"Answer for enrolled teacher").Success,"course owner can reply to enrolled teacher");
+  Check(svc.DemTongTinChuaDoc(enrolledTeacher.maNguoiDung)==1,"unread count uses conversation role for teacher account enrolled elsewhere");
   var sent=svc.GuiTinNhan(room.MaHoiThoai,learner.maNguoiDung,"Question");Check(sent.Success,"learner sends first message");
   Check(svc.GuiTinNhan(room.MaHoiThoai,teacher.maNguoiDung,"Answer").Success,"teacher replies");
   Check(svc.LayDanhSachHoiThoaiHocVien(learner.maNguoiDung).Single(c=>c.MaHoiThoai==room.MaHoiThoai).SoTinChuaDoc==1,"teacher reply produces one unread course message");

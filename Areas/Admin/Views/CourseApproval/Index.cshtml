@@ -43,6 +43,21 @@
         transform: scale(0.96);
         transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
+    .admin-preview-controls { position:absolute; z-index:4; left:0; right:0; bottom:0; min-height:48px; display:flex; align-items:center; gap:8px; padding:14px 16px 8px; background:linear-gradient(transparent,rgba(0,0,0,.9) 46%); line-height:1; transition:opacity .2s ease, transform .2s ease; }
+    .admin-preview-control { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; padding:0; border:0; border-radius:5px; background:transparent; color:#fff; font:700 14px/1 Arial,sans-serif; cursor:pointer; }
+    .admin-preview-control:hover, .admin-preview-control:focus-visible { background:rgba(255,255,255,.22); outline:2px solid #fff; outline-offset:1px; }
+    .admin-preview-time { flex:0 0 auto; min-width:88px; color:#fff; font:600 12px/1 Arial,sans-serif; white-space:nowrap; }
+    .admin-preview-seek { flex:1 1 auto; min-width:40px; accent-color:#818CF8; cursor:pointer; }
+    .admin-preview-cc { flex:0 0 auto; width:31px; height:25px; padding:0; border:1px solid rgba(255,255,255,.72); border-radius:5px; background:rgba(15,23,42,.72); color:#fff; font:700 11px/1 Arial,sans-serif; letter-spacing:.2px; cursor:pointer; line-height:1; }
+    .admin-preview-cc:hover, .admin-preview-cc:focus-visible { background:rgba(79,70,229,.96); border-color:#fff; outline:2px solid #fff; outline-offset:2px; }
+    .admin-preview-cc.is-active { background:#4F46E5; border-color:#C7D2FE; }
+    .admin-preview-cc:disabled { opacity:.55; cursor:wait; }
+    #video-preview-player-box:fullscreen, #video-preview-player-box:-webkit-full-screen { width:100%; height:100%; aspect-ratio:auto !important; border-radius:0; }
+    #video-preview-player-box:fullscreen #video-preview-element, #video-preview-player-box:-webkit-full-screen #video-preview-element { width:100%; height:100%; object-fit:contain; }
+    #video-preview-player-box:fullscreen .admin-preview-controls, #video-preview-player-box:-webkit-full-screen .admin-preview-controls { padding:18px 28px 12px; }
+    #video-preview-player-box:fullscreen .admin-preview-controls.controls-hidden, #video-preview-player-box:-webkit-full-screen .admin-preview-controls.controls-hidden { opacity:0; transform:translateY(12px); pointer-events:none; }
+    #video-preview-player-box:fullscreen.controls-hidden, #video-preview-player-box:-webkit-full-screen.controls-hidden { cursor:none; }
+    @@media(max-width:600px) { .admin-preview-controls { gap:5px; padding:12px 10px 6px; } .admin-preview-time { min-width:73px; font-size:11px; } }
 </style>
 
 @Html.AntiForgeryToken()
@@ -229,13 +244,13 @@
                 <!-- Video selector list -->
                 <div id="video-select-box" style="margin-bottom: 14px; display: none;">
                     <label style="font-size: 12px; font-weight: 700; color: #475569; display: block; margin-bottom: 6px;">Chọn bài học để phát video kiểm tra:</label>
-                    <select id="video-lesson-selector" class="form-control" style="font-size: 13px; padding: 8px 12px; border-radius: 8px;" onchange="changePreviewVideo(this.value)">
+                    <select id="video-lesson-selector" class="form-control" style="font-size: 13px; padding: 8px 12px; border-radius: 8px;" onchange="selectPreviewLesson(this)">
                     </select>
                 </div>
 
                 <div id="video-preview-player-box" style="aspect-ratio: 16/9; background: #000; border-radius: 14px; overflow: hidden; position: relative; margin-bottom: 16px; display: flex; align-items: center; justify-content: center;">
                     <!-- Direct HTML5 video element (MP4/WebM) -->
-                    <video id="video-preview-element" controls style="width: 100%; height: 100%; object-fit: contain; display: none;"></video>
+                    <video id="video-preview-element" playsinline style="width: 100%; height: 100%; object-fit: contain; display: none;"></video>
                     
                     <!-- YouTube / External Embed Player -->
                     <iframe id="video-preview-iframe" style="width: 100%; height: 100%; border: none; display: none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -251,6 +266,14 @@
                             </div>
                             <strong id="video-preview-title" style="font-size: 14px; display: block; max-width: 500px; margin: 0 auto;">Đang tải nội dung bài giảng...</strong>
                         </div>
+                    </div>
+                    <div id="admin-video-controls" class="admin-preview-controls" hidden>
+                        <button id="admin-preview-play" type="button" class="admin-preview-control" aria-label="Phát hoặc tạm dừng video" title="Phát">▶</button>
+                        <span id="admin-preview-time" class="admin-preview-time">0:00 / 0:00</span>
+                        <input id="admin-preview-seek" type="range" class="admin-preview-seek" min="0" max="0" step="0.05" value="0" aria-label="Tiến trình video" />
+                        <button id="admin-preview-volume" type="button" class="admin-preview-control" aria-label="Bật hoặc tắt âm thanh" title="Tắt tiếng">🔊</button>
+                        <button id="admin-subtitle-toggle" type="button" class="admin-preview-cc" hidden aria-pressed="false" title="Bật phụ đề tiếng Việt" aria-label="Bật hoặc tắt phụ đề tiếng Việt">CC</button>
+                        <button id="admin-preview-fullscreen" type="button" class="admin-preview-control" aria-label="Bật hoặc tắt toàn màn hình" title="Toàn màn hình">⛶</button>
                     </div>
                 </div>
 
@@ -382,6 +405,8 @@
 
         document.getElementById('video-fallback-cover').style.display = 'flex';
         document.getElementById('video-select-box').style.display = 'none';
+        document.getElementById('admin-subtitle-toggle').hidden = true;
+        document.getElementById('admin-video-controls').hidden = true;
 
         // Hiển thị modal với class active
         const modal = document.getElementById('approval-detail-modal');
@@ -443,7 +468,8 @@
                                         videoLessons.push({
                                             title: bh.TenBaiHoc,
                                             url: bh.VideoUrl.trim(),
-                                            chapter: ch.TenChuong
+                                            chapter: ch.TenChuong,
+                                            subtitleUrl: bh.SubtitleUrl || ''
                                         });
                                     }
 
@@ -455,7 +481,7 @@
                                     curriculumHtml += `<div style="font-size: 13px; color: #475569; display: flex; align-items: center; justify-content: space-between; background: #FFFFFF; padding: 8px 12px; border-radius: 8px; border: 1px solid #F1F5F9;">
                                         <div>
                                             <i class="bi bi-play-circle text-primary me-1"></i> <strong style="color:#1E293B;">${escapeHtml(bh.TenBaiHoc)}</strong> 
-                                            <span style="color:#94A3B8; font-size:12px;">(${bh.ThoiLuong ? Math.round(bh.ThoiLuong / 60) + ' phút' : 'Video'})</span>
+                                            <span style="color:#94A3B8; font-size:12px;">(${bh.ThoiLuong ? Math.round(bh.ThoiLuong / 60) + ' phút' : 'Video'})</span>${bh.SubtitleUrl ? ' <span style="color:#5B4CD6; font-size:11px; font-weight:700;">CC Có phụ đề</span>' : ''}
                                             ${resourceText}
                                         </div>
                                         ${lessonIndex >= 0 ? `<button type="button" class="btn btn-sm btn-outline" style="font-size:11px; padding: 2px 8px;" onclick="playLessonByIndex(${lessonIndex})">Phát video</button>` : `<span style="font-size:11px; color:#94A3B8;">Chưa có video</span>`}
@@ -480,11 +506,13 @@
                             const opt = document.createElement('option');
                             opt.value = v.url;
                             opt.textContent = `[${v.chapter}] - ${v.title}`;
+                            opt.dataset.title = v.title;
+                            opt.dataset.subtitleUrl = v.subtitleUrl || '';
                             selector.appendChild(opt);
                         });
 
                         // Tự động phát video đầu tiên
-                        changePreviewVideo(videoLessons[0].url, videoLessons[0].title);
+                        changePreviewVideo(videoLessons[0].url, videoLessons[0].title, videoLessons[0].subtitleUrl);
                     } else {
                         document.getElementById('video-select-box').style.display = 'none';
                         document.getElementById('video-preview-title').textContent = 'Khóa học: ' + (data.TenKhoaHoc || '') + ' (Chưa đăng tải video bài giảng)';
@@ -524,28 +552,125 @@
             if (selector) {
                 selector.value = item.url;
             }
-            changePreviewVideo(item.url, item.title);
+            changePreviewVideo(item.url, item.title, item.subtitleUrl);
         }
     }
 
+    function adminPreviewTimeLabel(seconds) {
+        if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+        const minutes = Math.floor(seconds / 60), remain = Math.floor(seconds % 60);
+        return minutes + ':' + String(remain).padStart(2, '0');
+    }
+    function initAdminPreviewControls() {
+        const shell = document.getElementById('video-preview-player-box'), player = document.getElementById('video-preview-element');
+        const play = document.getElementById('admin-preview-play'), time = document.getElementById('admin-preview-time');
+        const seek = document.getElementById('admin-preview-seek'), volume = document.getElementById('admin-preview-volume');
+        const fullscreen = document.getElementById('admin-preview-fullscreen');
+        const controls = document.getElementById('admin-video-controls'); let controlsTimer, interactingWithControls = false;
+        function isFullscreen() { return document.fullscreenElement === shell || document.webkitFullscreenElement === shell; }
+        function hideControls() {
+            if (!isFullscreen() || player.paused || player.ended || interactingWithControls || controls.querySelector(':focus-visible')) return;
+            controls.classList.add('controls-hidden'); shell.classList.add('controls-hidden');
+        }
+        function showControls() {
+            clearTimeout(controlsTimer);
+            controls.classList.remove('controls-hidden'); shell.classList.remove('controls-hidden');
+            if (isFullscreen() && !player.paused && !player.ended && !controls.hidden) controlsTimer = setTimeout(hideControls, 2500);
+        }
+        function handleFullscreenChange() { refresh(); showControls(); }
+        function handlePointerDown(event) { interactingWithControls = !!event.target.closest('.admin-preview-controls'); showControls(); }
+        function finishControlInteraction() { if (interactingWithControls) { interactingWithControls = false; showControls(); } }
+        function refresh() {
+            const duration = Number.isFinite(player.duration) ? player.duration : 0;
+            seek.max = duration; seek.value = Math.min(player.currentTime || 0, duration);
+            time.textContent = adminPreviewTimeLabel(player.currentTime) + ' / ' + adminPreviewTimeLabel(duration);
+            play.textContent = player.paused ? '▶' : '❚❚'; play.title = player.paused ? 'Phát' : 'Tạm dừng';
+            volume.textContent = player.muted || player.volume === 0 ? '🔇' : '🔊'; volume.title = player.muted || player.volume === 0 ? 'Bật tiếng' : 'Tắt tiếng';
+            const full = document.fullscreenElement === shell || document.webkitFullscreenElement === shell;
+            fullscreen.textContent = full ? '⤢' : '⛶'; fullscreen.title = full ? 'Thoát toàn màn hình' : 'Toàn màn hình';
+        }
+        function togglePlay() { if (player.paused) player.play(); else player.pause(); }
+        function toggleFullscreen() {
+            const full = document.fullscreenElement === shell || document.webkitFullscreenElement === shell;
+            if (full) { if (document.exitFullscreen) document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); }
+            else if (shell.requestFullscreen) shell.requestFullscreen(); else if (shell.webkitRequestFullscreen) shell.webkitRequestFullscreen();
+        }
+        play.addEventListener('click', togglePlay); player.addEventListener('click', togglePlay);
+        seek.addEventListener('input', function() { player.currentTime = Number(seek.value); showControls(); });
+        volume.addEventListener('click', function() { player.muted = !player.muted; });
+        document.getElementById('admin-subtitle-toggle').addEventListener('click', toggleAdminSubtitle);
+        fullscreen.addEventListener('click', toggleFullscreen);
+        ['loadedmetadata', 'durationchange', 'timeupdate', 'play', 'pause', 'volumechange', 'ended'].forEach(function(name) { player.addEventListener(name, refresh); });
+        player.addEventListener('play', showControls); player.addEventListener('pause', showControls); player.addEventListener('ended', showControls);
+        shell.addEventListener('pointermove', showControls); shell.addEventListener('pointerdown', handlePointerDown); shell.addEventListener('focusin', showControls);
+        window.addEventListener('pointerup', finishControlInteraction); window.addEventListener('pointercancel', finishControlInteraction);
+        document.addEventListener('keydown', function() { if (isFullscreen()) showControls(); });
+        document.addEventListener('fullscreenchange', handleFullscreenChange); document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        refresh();
+    }
+
     // Thay đổi video xem trước (hỗ trợ cả YouTube Embed lẫn MP4/WebM)
-    function changePreviewVideo(url, title) {
+    function setAdminSubtitle(subtitleUrl) {
+        const button = document.getElementById('admin-subtitle-toggle');
+        button.hidden = !subtitleUrl;
+        if (!subtitleUrl) return;
+        button.disabled = false;
+        const track = getAdminSubtitleTrack();
+        const enabled = localStorage.getItem('eco_subtitle_vi') === '1';
+        if (track) track.mode = enabled ? 'showing' : 'hidden';
+        button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+        button.classList.toggle('is-active', enabled);
+        button.title = enabled ? 'Tắt phụ đề tiếng Việt' : 'Bật phụ đề tiếng Việt';
+    }
+    function getAdminSubtitleTrack() {
+        const player = document.getElementById('video-preview-element');
+        if (!player || !player.textTracks) return null;
+        for (let i = 0; i < player.textTracks.length; i++) {
+            const track = player.textTracks[i];
+            if (track.language === 'vi' || track.label === 'Tiếng Việt') return track;
+        }
+        return null;
+    }
+    function toggleAdminSubtitle() {
+        const button = document.getElementById('admin-subtitle-toggle');
+        const track = getAdminSubtitleTrack();
+        if (!track) {
+            button.disabled = true; button.title = 'Đang tải phụ đề…';
+            window.setTimeout(function() { button.disabled = false; button.title = 'Bật phụ đề tiếng Việt'; }, 800);
+            return;
+        }
+        const enabled = track.mode !== 'showing';
+        track.mode = enabled ? 'showing' : 'hidden';
+        localStorage.setItem('eco_subtitle_vi', enabled ? '1' : '0');
+        button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+        button.classList.toggle('is-active', enabled);
+        button.title = enabled ? 'Tắt phụ đề tiếng Việt' : 'Bật phụ đề tiếng Việt';
+    }
+    function selectPreviewLesson(select) {
+        const option = select.options[select.selectedIndex];
+        changePreviewVideo(option.value, option.dataset.title || option.textContent, option.dataset.subtitleUrl || '');
+    }
+    function changePreviewVideo(url, title, subtitleUrl) {
         const player = document.getElementById('video-preview-element');
         const iframe = document.getElementById('video-preview-iframe');
         const fallback = document.getElementById('video-fallback-cover');
         const techStatusBox = document.getElementById('tech-status-box');
 
         if (!url || url.trim() === '') {
+            setAdminSubtitle('');
             if (player) { try { player.pause(); player.src = ''; } catch(e){} player.style.display = 'none'; }
             if (iframe) { iframe.src = ''; iframe.style.display = 'none'; }
+            document.getElementById('admin-video-controls').hidden = true;
             if (fallback) fallback.style.display = 'flex';
             return;
         }
 
         const ytId = extractYouTubeId(url);
         if (ytId) {
+            setAdminSubtitle('');
             // Nguồn là video YouTube
             if (player) { try { player.pause(); player.src = ''; } catch(e){} player.style.display = 'none'; }
+            document.getElementById('admin-video-controls').hidden = true;
             if (iframe) {
                 iframe.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`;
                 iframe.style.display = 'block';
@@ -561,11 +686,21 @@
             // Nguồn là MP4 / WebM / HTML5 direct link
             if (iframe) { iframe.src = ''; iframe.style.display = 'none'; }
             if (player) {
+                while (player.firstChild) player.removeChild(player.firstChild);
                 player.src = url;
+                if (subtitleUrl) {
+                    const track = document.createElement('track');
+                    track.dataset.adminSubtitle = 'true'; track.kind = 'subtitles'; track.srclang = 'vi'; track.label = 'Tiếng Việt'; track.src = subtitleUrl;
+                    track.addEventListener('load', function() { setAdminSubtitle(subtitleUrl); });
+                    track.addEventListener('error', function() { const button = document.getElementById('admin-subtitle-toggle'); button.disabled = true; button.title = 'Không tải được phụ đề'; });
+                    player.appendChild(track);
+                }
                 player.style.display = 'block';
                 player.play().catch(() => {});
             }
+            document.getElementById('admin-video-controls').hidden = false;
             if (fallback) fallback.style.display = 'none';
+            setAdminSubtitle(subtitleUrl || '');
 
             if (techStatusBox) {
                 techStatusBox.style.background = '#ECFDF5';
@@ -575,22 +710,28 @@
         }
     }
 
-    function playLessonVideoDirect(title, url) {
+    function playLessonVideoDirect(title, url, subtitleUrl) {
         switchApprTab('video');
         const selector = document.getElementById('video-lesson-selector');
         if (selector) {
             selector.value = url;
         }
-        changePreviewVideo(url, title);
+        changePreviewVideo(url, title, subtitleUrl);
     }
 
     // Đóng modal kiểm duyệt khóa học
     function closeApprovalModal() {
         const player = document.getElementById('video-preview-element');
+        const playerBox = document.getElementById('video-preview-player-box');
+        if (document.fullscreenElement === playerBox || document.webkitFullscreenElement === playerBox) {
+            if (document.exitFullscreen) document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        }
         if (player) {
             try { player.pause(); player.src = ''; } catch (e) {}
             player.style.display = 'none';
         }
+        document.getElementById('admin-subtitle-toggle').hidden = true;
+        document.getElementById('admin-video-controls').hidden = true;
         const iframe = document.getElementById('video-preview-iframe');
         if (iframe) {
             iframe.src = '';
@@ -863,6 +1004,7 @@
 
     // Khởi tạo các sự kiện khi trang đã tải xong
     document.addEventListener('DOMContentLoaded', () => {
+        initAdminPreviewControls();
         // Đóng modal khi click ra ngoài vùng backdrop
         const apprModal = document.getElementById('approval-detail-modal');
         if (apprModal) {

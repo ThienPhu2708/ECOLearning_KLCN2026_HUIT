@@ -15,6 +15,7 @@ namespace ECOLearning.Controllers.Api
     /// <summary>
     /// API chat học viên - giáo viên cho ứng dụng di động. Toàn bộ quyền truy cập,
     /// giới hạn gửi tin, quy tắc "học viên nhắn trước" và mốc đã đọc dùng lại ChatService của website.
+    /// Một tài khoản có thể vừa quản lý khóa học, vừa là học viên của khóa học khác.
     /// </summary>
     [RoutePrefix("api/v1/chat"), ApiAuthorize]
     public class ChatApiController : ApiControllerBase
@@ -33,30 +34,34 @@ namespace ECOLearning.Controllers.Api
             var service = new ChatService(Db);
             if (!service.DaCaiDat()) return Fail(503, "NOT_INSTALLED", "Chức năng chat chưa được kích hoạt trong CSDL.");
 
-            var items = LaGiaoVien()
-                ? service.LayDanhSachHoiThoaiGiaoVien(CurrentUserId, courseId, status)
-                : service.LayDanhSachHoiThoaiHocVien(CurrentUserId);
+            // Một giáo viên có thể là học viên ở khóa của người khác. Trả về cả hai loại hội thoại,
+            // còn vai trò hiển thị được xác định theo từng hội thoại ở ConversationJson.
+            var managedItems = service.LayDanhSachHoiThoaiGiaoVien(CurrentUserId, courseId, status);
+            var enrolledItems = service.LayDanhSachHoiThoaiHocVien(CurrentUserId);
+            if (!string.IsNullOrWhiteSpace(courseId)) enrolledItems = enrolledItems.Where(x => x.MaKhoaHoc == courseId).ToList();
+            if (status == "unread") enrolledItems = enrolledItems.Where(x => x.SoTinChuaDoc > 0).ToList();
+            if (status == "unanswered") enrolledItems = enrolledItems.Where(x => !x.DaTraLoi && x.TinCuoiLuc.HasValue).ToList();
 
-            if (!LaGiaoVien())
-            {
-                if (!string.IsNullOrWhiteSpace(courseId)) items = items.Where(x => x.MaKhoaHoc == courseId).ToList();
-                if (status == "unread") items = items.Where(x => x.SoTinChuaDoc > 0).ToList();
-                if (status == "unanswered") items = items.Where(x => !x.DaTraLoi && x.TinCuoiLuc.HasValue).ToList();
-            }
+            var items = managedItems.Concat(enrolledItems)
+                .GroupBy(x => x.MaHoiThoai)
+                .Select(x => x.First())
+                .OrderByDescending(x => x.TinCuoiLuc)
+                .ToList();
             return Ok(items.Select(ConversationJson).ToList());
         }
 
         // POST /api/v1/chat/courses/{courseId}/conversation
-        // Chỉ học viên đã ghi danh được mở phòng để đặt câu hỏi cho giáo viên.
+        // Người đã ghi danh được mở phòng để đặt câu hỏi cho giáo viên của khóa đó.
         [HttpPost, Route("courses/{courseId}/conversation")]
         public ActionResult OpenConversation(string courseId)
         {
-            if (LaGiaoVien()) return Forbidden("Giáo viên không thể chủ động mở hội thoại với học viên.", "TEACHER_CANNOT_START");
             var service = new ChatService(Db);
             if (!service.DaCaiDat()) return Fail(503, "NOT_INSTALLED", "Chức năng chat chưa được kích hoạt trong CSDL.");
 
             var course = Db.KhoaHoc.FirstOrDefault(x => x.maKhoaHoc == courseId);
             if (course == null) return NotFoundJson("Không tìm thấy khóa học!", "COURSE_NOT_FOUND");
+            if (course.maGiaoVien == CurrentUserId)
+                return Forbidden("Giáo viên không thể chủ động mở hội thoại với học viên trong khóa học do mình quản lý.", "TEACHER_CANNOT_START");
             if (!Db.DangKyKhoaHoc.Any(x => x.maKhoaHoc == courseId && x.maHocVien == CurrentUserId))
                 return Forbidden("Bạn cần đăng ký khóa học này trước khi nhắn cho giáo viên.", "NOT_ENROLLED");
 
@@ -180,7 +185,7 @@ namespace ECOLearning.Controllers.Api
         [HttpGet, Route("unread-count")]
         public ActionResult UnreadCount()
         {
-            return Ok(new { count = new ChatService(Db).DemTongTinChuaDoc(CurrentUserId, LaGiaoVien()) });
+            return Ok(new { count = new ChatService(Db).DemTongTinChuaDoc(CurrentUserId) });
         }
 
         // POST /api/v1/chat/conversations/{id}/report  { reason }
@@ -197,15 +202,9 @@ namespace ECOLearning.Controllers.Api
             return Ok(null, "Đã gửi báo cáo hội thoại đến Quản trị viên.");
         }
 
-        private bool LaGiaoVien()
-        {
-            return string.Equals(CurrentUser?.vaiTro, "GiaoVien", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(CurrentUser?.vaiTro, "Giáo viên", StringComparison.OrdinalIgnoreCase);
-        }
-
         private object ConversationJson(HoiThoaiItemViewModel item)
         {
-            bool teacher = LaGiaoVien();
+            bool teacher = item.MaGiaoVien == CurrentUserId;
             return new
             {
                 id = item.MaHoiThoai,

@@ -1,4 +1,5 @@
 ﻿@model ECOLearning.Areas.Instructor.Models.CurriculumViewModel
+@using ECOLearning.Services
 @{
     ViewBag.Title = "Chi tiết đề cương";
     ViewBag.BreadcrumbCurrent = "Chi tiết đề cương";
@@ -16,6 +17,10 @@
 .outline-lesson strong { font-size:15px; line-height:1.6; }
 .outline-video { display:inline-flex; align-items:center; justify-content:center; gap:9px; color:var(--primary); font-size:13px; font-weight:600; text-decoration:none; padding:9px 14px; border-radius:9px; background:#eef0ff; transition:background .15s; white-space:nowrap; }
 .outline-video:hover { background:#e1e5ff; }
+.outline-lesson-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+.outline-subtitle { border:1px solid #c7d2fe; color:#3730a3; background:#fff; font:inherit; font-size:12px; font-weight:700; border-radius:9px; padding:9px 11px; cursor:pointer; white-space:nowrap; }
+.outline-subtitle:hover:not(:disabled) { background:#eef2ff; }
+.outline-subtitle:disabled { opacity:.65; cursor:wait; }
 .outline-lesson > .caption { margin:0 !important; font-size:12px; padding:9px 14px; background:var(--bg-canvas); border-radius:9px; text-align:center; }
 .outline-documents { grid-column:1 / -1; display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:var(--text-secondary); }
 .outline-document { display:inline-flex; align-items:center; gap:7px; padding:8px 12px; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:8px; color:var(--text-heading); text-decoration:none; overflow-wrap:anywhere; transition:border-color .15s; }
@@ -38,6 +43,7 @@
     <a class="btn btn-outline btn-sm" href="@Url.Action("Index", "Course", new { area = "Instructor" })">Quay lại danh sách</a>
     </div>
 </div>
+@Html.AntiForgeryToken()
 @if (Model.ChuongHocs.Any(c => c.MaChuong != "none" || c.BaiHocs.Any()))
 {
     foreach (var chapter in Model.ChuongHocs.Where(c => c.MaChuong != "none" || c.BaiHocs.Any()).OrderBy(c => c.ThuTu))
@@ -57,10 +63,22 @@
                     </div>
                     @if (!string.IsNullOrWhiteSpace(lesson.DuongDanVideo))
                     {
-                        <a class="outline-video" href="@lesson.DuongDanVideo" data-title="@lesson.TenBaiHoc" onclick="showOutlineVideo(this);return false;">
-                            <svg width="16" height="16" viewBox="0 0 16 16" style="flex-shrink:0;"><circle cx="8" cy="8" r="8" fill="currentColor"/><path d="M6.3 4.6L11 8L6.3 11.4Z" fill="white"/></svg>
-                            <span>Xem video (@(lesson.ThoiLuong / 60):@((lesson.ThoiLuong % 60).ToString("D2")))</span>
-                        </a>
+                        var phuDe = VideoSubtitleService.LayTrangThai(lesson.MaBaiHoc);
+                        bool videoTaiLen = VideoStorageService.LaVideoTaiLen(lesson.DuongDanVideo);
+                        <div class="outline-lesson-actions">
+                            <a class="outline-video" href="@VideoStorageService.LinkPhat(lesson.DuongDanVideo)" data-title="@lesson.TenBaiHoc" onclick="showOutlineVideo(this);return false;">
+                                <svg width="16" height="16" viewBox="0 0 16 16" style="flex-shrink:0;"><circle cx="8" cy="8" r="8" fill="currentColor"/><path d="M6.3 4.6L11 8L6.3 11.4Z" fill="white"/></svg>
+                                <span>Xem video (@(lesson.ThoiLuong / 60):@((lesson.ThoiLuong % 60).ToString("D2")))</span>
+                            </a>
+                            @if (videoTaiLen)
+                            {
+                                <button type="button" class="outline-subtitle" data-lesson-id="@lesson.MaBaiHoc" onclick="generateSubtitle(this)" @(phuDe.DangXuLy ? "disabled" : "") title="@(phuDe.GhiChu ?? "Tạo phụ đề tự động bằng Groq Whisper")">
+                                    @if (phuDe.DangXuLy) { <text>⌛ @phuDe.TrangThai</text> }
+                                    else if (phuDe.CoPhuDe) { <text>CC Tạo lại phụ đề</text> }
+                                    else { <text>CC Tạo phụ đề</text> }
+                                </button>
+                            }
+                        </div>
                     }
                     else { <p class="caption" style="margin-top:8px;">Chưa có video</p> }
                     @if (lesson.TaiNguyens.Any())
@@ -91,6 +109,28 @@ function showOutlineVideo(link) {
     document.getElementById('outline-preview-title').textContent = link.dataset.title;
     var player = document.getElementById('outline-player'); player.src = link.href;
     document.getElementById('outline-preview').showModal(); player.play().catch(function() {});
+}
+function generateSubtitle(button) {
+    if (!confirm('Tạo phụ đề tiếng Việt tự động cho video này? Video sẽ được gửi tới Groq để nhận diện giọng nói.')) return;
+    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+    var lessonId = button.dataset.lessonId;
+    button.disabled = true;
+    var original = button.textContent;
+    button.textContent = '⌛ Đang xếp hàng...';
+    fetch('@Url.Action("GenerateSubtitle", "Curriculum", new { area = "Instructor" })', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: '__RequestVerificationToken=' + encodeURIComponent(token ? token.value : '') + '&lessonId=' + encodeURIComponent(lessonId)
+    }).then(function (response) {
+        return response.json();
+    }).then(function (data) {
+        alert(data.message || (data.success ? 'Đã xếp hàng tạo phụ đề.' : 'Không thể tạo phụ đề.'));
+        if (data.success) window.setTimeout(function () { window.location.reload(); }, 500);
+        else { button.disabled = false; button.textContent = original; }
+    }).catch(function () {
+        alert('Không thể kết nối máy chủ để tạo phụ đề.');
+        button.disabled = false; button.textContent = original;
+    });
 }
 document.getElementById('outline-preview').addEventListener('close', function() {
     var player = document.getElementById('outline-player'); player.pause(); player.removeAttribute('src'); player.load();

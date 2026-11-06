@@ -81,7 +81,7 @@
             <!-- SIDEBAR -->
             <aside class="dashboard-sidebar" id="admin-sidebar" aria-label="Điều hướng quản trị">
                 <div class="sidebar-logo">
-                    <a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })" class="brand-logo">
+                    <a href="@(ECOLearning.Services.AccountAdminService.LaAdminKiemDuyetNoiDung(Session["Role"] as string) ? Url.Action("Index", "CourseApproval", new { area = "Admin" }) : Url.Action("Index", "Dashboard", new { area = "Admin" }))" class="brand-logo">
                         <div class="logo-icon" style="width: 34px; height: 34px; background: #0F172A;">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
@@ -96,9 +96,12 @@
                 @{
                 string currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Dashboard";
                 var choXuLy = ViewBag.AdminPending as ECOLearning.Services.AdminPendingCounts ?? new ECOLearning.Services.AdminPendingCounts();
+                bool isContentModerator = ECOLearning.Services.AccountAdminService.LaAdminKiemDuyetNoiDung(Session["Role"] as string);
             }
 
             <nav class="sidebar-menu">
+                @if (!isContentModerator)
+                {
                 <div class="sidebar-section">Tổng quan</div>
                 <a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })" class="sidebar-item @(currentController == "Dashboard" ? "active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -126,13 +129,17 @@
                     <i class="bi bi-megaphone-fill" style="font-size: 17px; width: 18px; text-align: center;"></i>
                     Giám sát Marketing
                 </a>
-                <div class="sidebar-section">Nội dung</div>
+                }
+                <div class="sidebar-section">@(isContentModerator ? "Kiểm duyệt nội dung" : "Nội dung")</div>
+                @if (!isContentModerator)
+                {
                 <a href="@Url.Action("Index", "Category", new { area = "Admin" })" class="sidebar-item @(currentController == "Category" ? "active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 6h16M4 12h16M4 18h16"></path>
                     </svg>
                     Quản lý danh mục
                 </a>
+                }
                 <a href="@Url.Action("Index", "CourseApproval", new { area = "Admin" })" class="sidebar-item @(currentController == "CourseApproval" ? "active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 11l3 3L22 4"></path>
@@ -155,6 +162,8 @@
                     Yêu cầu bổ sung chuyên môn
                     @ChamDo("specialties", choXuLy.ChuyenMon, "yêu cầu")
                 </a>
+                @if (!isContentModerator)
+                {
                 <a href="@Url.Action("Index", "ViolationReport", new { area = "Admin" })" class="sidebar-item @(currentController == "ViolationReport" ? "active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
@@ -181,6 +190,7 @@
                     Chi trả giáo viên
                     @ChamDo("payouts", choXuLy.ChiTra, "phiếu chi")
                 </a>
+                }
             </nav>
 
             <div class="sidebar-footer">
@@ -195,7 +205,7 @@
             <header class="dashboard-topbar">
                 <button type="button" class="staff-menu-btn" id="admin-menu-toggle" aria-controls="admin-sidebar" aria-expanded="false" aria-label="Mở menu quản trị"><i class="bi bi-list" aria-hidden="true"></i></button>
                 <nav class="breadcrumb-nav">
-                    <a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })">Admin</a>
+                    <a href="@(isContentModerator ? Url.Action("Index", "CourseApproval", new { area = "Admin" }) : Url.Action("Index", "Dashboard", new { area = "Admin" }))">Admin</a>
                     @* Trang chi tiết (cấp 3): cấp giữa bấm được, quay về đúng trang danh sách vừa mở (giữ bộ lọc, trang số) *@
                     @if (ViewBag.BreadcrumbParent != null)
                     {
@@ -316,6 +326,9 @@
             }
         }
 
+        @if (!isContentModerator)
+        {
+        <text>
         // Làm mới chấm đỏ khi Admin để trang mở lâu, quay lại tab, hoặc vừa duyệt / từ chối bằng AJAX
         (function () {
             var url = '@Url.Action("PendingCounts", "Dashboard", new { area = "Admin" })';
@@ -349,6 +362,8 @@
                 });
             }
         })();
+        </text>
+        }
 
         function closeAdminLogoutModal() {
             const modal = document.getElementById('admin-logout-modal');

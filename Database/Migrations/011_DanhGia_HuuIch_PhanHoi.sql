@@ -1,4 +1,4 @@
--- =============================================================================
+chịn-- =============================================================================
 -- 011_DanhGia_HuuIch_PhanHoi.sql  (độc lập, chạy sau 010)
 --
 -- Phần "Đánh giá từ học viên" ở trang chi tiết khóa học (Services/CourseReviewService.cs):

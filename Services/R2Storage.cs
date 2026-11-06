@@ -1,6 +1,7 @@
 using System;
 using System.Configuration;
 using System.Globalization;
+using System.IO;
 using System.Net;
 using System.Web;
 using System.Web.Caching;
@@ -89,6 +90,26 @@ namespace ECOLearning.Services
             if (soGiay.HasValue && soGiay.Value > 0) req.Metadata.Add("duration", soGiay.Value.ToString(CultureInfo.InvariantCulture));
             Client.PutObject(req);
             HttpRuntime.Cache.Remove(KhoaCache(key));
+        }
+
+        /// <summary>
+        /// Tải một object riêng tư từ R2 về file tạm trên máy chủ. Dùng cho các tác vụ nền
+        /// như tạo phụ đề; không tạo URL công khai và không đi qua trình duyệt học viên.
+        /// </summary>
+        public static void TaiXuong(string key, string duongDanDich)
+        {
+            if (!DaCauHinh) throw new InvalidOperationException("Chưa cấu hình Cloudflare R2.");
+            if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("Thiếu key R2.", "key");
+            if (string.IsNullOrWhiteSpace(duongDanDich)) throw new ArgumentException("Thiếu đường dẫn đích.", "duongDanDich");
+
+            string thuMuc = Path.GetDirectoryName(duongDanDich);
+            if (!string.IsNullOrEmpty(thuMuc)) Directory.CreateDirectory(thuMuc);
+            using (var response = Client.GetObject(new GetObjectRequest { BucketName = TenBucket, Key = key }))
+            using (var input = response.ResponseStream)
+            using (var output = new FileStream(duongDanDich, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                input.CopyTo(output);
+            }
         }
 
         /// <summary>Thông tin object (HEAD), null nếu không có. Cache 6 giờ khi có, 2 phút khi không có hoặc lỗi mạng.</summary>

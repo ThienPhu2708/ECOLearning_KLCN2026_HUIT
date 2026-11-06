@@ -161,6 +161,40 @@ namespace ECOLearning.Areas.Instructor.Controllers
             }
         }
 
+        // VTT của bài học thuộc khóa đã có người học không được ghi đè ngay. Mỗi lần giáo viên
+        // tạo/tạo lại phụ đề sẽ có một mã nháp riêng, chỉ tài khoản đã khởi tạo hoặc bản sửa
+        // của chính khóa đó mới được xem trong lúc kiểm tra.
+        private Dictionary<string, string> SubtitleDrafts
+        {
+            get {
+                var drafts = Session["CourseSubtitleDrafts"] as Dictionary<string, string>;
+                if (drafts == null) { drafts = new Dictionary<string, string>(); Session["CourseSubtitleDrafts"] = drafts; }
+                return drafts;
+            }
+        }
+
+        private bool BelongsToCurrentTeacher(BaiHoc lesson)
+        {
+            return lesson != null && (lesson.maChuong != null
+                ? db.ChuongHoc.Any(c => c.maChuong == lesson.maChuong && c.KhoaHoc.maGiaoVien == CurrentTeacherId)
+                : db.KhoaHoc.Any(c => c.maGiaoVien == CurrentTeacherId && lesson.maBaiHoc.StartsWith(c.maKhoaHoc + "_")));
+        }
+
+        private bool CanUseSubtitleDraft(string subtitleKey, string lessonId)
+        {
+            if (string.IsNullOrWhiteSpace(subtitleKey) || !subtitleKey.StartsWith("sub_", StringComparison.Ordinal)) return false;
+            string registeredLesson;
+            if (SubtitleDrafts.TryGetValue(subtitleKey, out registeredLesson) && registeredLesson == lessonId) return true;
+
+            var lesson = db.BaiHoc.FirstOrDefault(b => b.maBaiHoc == lessonId);
+            if (!BelongsToCurrentTeacher(lesson)) return false;
+            string courseId = lesson.maChuong != null
+                ? db.ChuongHoc.Where(c => c.maChuong == lesson.maChuong).Select(c => c.maKhoaHoc).FirstOrDefault()
+                : db.KhoaHoc.Where(c => lesson.maBaiHoc.StartsWith(c.maKhoaHoc + "_")).Select(c => c.maKhoaHoc).FirstOrDefault();
+            var revision = string.IsNullOrWhiteSpace(courseId) ? null : new CourseRevisionService(db, Server.MapPath).Get(courseId);
+            return revision != null && revision.TeacherId == CurrentTeacherId && revision.Read().Model.Lessons.Any(l => l.Id == lessonId && l.SubtitleDraftKey == subtitleKey);
+        }
+
         /// <summary>Bài học có video đã tải lên (token trong phiên làm việc) và file video còn trên máy chủ.</summary>
         private bool CoVideoTaiLen(CourseLessonInput lesson)
         {
@@ -210,6 +244,96 @@ namespace ECOLearning.Areas.Instructor.Controllers
             return Json(new { success = true, token, url, name });
         }
 
+        // POST: Instructor/Course/GenerateLessonSubtitle
+        // Video đang ở wizard chưa chắc đã được lưu vào BaiHoc; dùng token phiên làm mã tạm khi tạo khóa học mới.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public JsonResult GenerateLessonSubtitle(string lessonId, string videoToken, string subtitleKey)
+        {
+            string[] uploaded = null;
+            string videoUrl = null;
+            string effectiveKey = videoToken;
+            if (!string.IsNullOrWhiteSpace(lessonId))
+            {
+                var lesson = db.BaiHoc.FirstOrDefault(b => b.maBaiHoc == lessonId);
+                if (lesson == null) return Json(new { success = false, message = "Không tìm thấy bài học." });
+                if (!BelongsToCurrentTeacher(lesson)) return Json(new { success = false, message = "Bạn không có quyền tạo phụ đề cho bài học này." });
+                if (!string.IsNullOrWhiteSpace(videoToken) && CourseUploads.TryGetValue(videoToken, out uploaded) && uploaded[0] == "video") videoUrl = uploaded[1];
+                else videoUrl = lesson.duongDanVideo;
+                if (string.IsNullOrWhiteSpace(videoUrl)) return Json(new { success = false, message = "Bài học chưa có video để tạo phụ đề." });
+
+                // Không dùng lessonId làm khóa job: điều đó sẽ thay phụ đề đang phát cho học viên.
+                if (string.IsNullOrWhiteSpace(subtitleKey)) subtitleKey = "sub_" + Guid.NewGuid().ToString("N");
+                if (!CanUseSubtitleDraft(subtitleKey, lessonId)) SubtitleDrafts[subtitleKey] = lessonId;
+                effectiveKey = subtitleKey;
+            }
+            else if (string.IsNullOrWhiteSpace(videoToken) || !CourseUploads.TryGetValue(videoToken, out uploaded) || uploaded[0] != "video")
+                return Json(new { success = false, message = "Video tải lên không còn trong phiên làm việc. Vui lòng chọn lại video." });
+
+            if (string.IsNullOrWhiteSpace(videoUrl)) videoUrl = uploaded[1];
+
+            var result = VideoSubtitleService.XepHang(effectiveKey, videoUrl);
+            return Json(new { success = result.ThanhCong, message = result.ThongBao, subtitleKey = effectiveKey, status = result.TrangThai == null ? null : result.TrangThai.TrangThai });
+        }
+
+        // GET: Instructor/Course/SubtitleStatus
+        [HttpGet]
+        public JsonResult SubtitleStatus(string lessonId, string videoToken, string subtitleKey)
+        {
+            string effectiveKey = null;
+            string[] uploaded;
+            if (!string.IsNullOrWhiteSpace(subtitleKey) && CanUseSubtitleDraft(subtitleKey, lessonId)) effectiveKey = subtitleKey;
+            if (!string.IsNullOrWhiteSpace(lessonId))
+            {
+                var lesson = db.BaiHoc.FirstOrDefault(b => b.maBaiHoc == lessonId);
+                if (effectiveKey == null && BelongsToCurrentTeacher(lesson)) effectiveKey = lesson.maBaiHoc;
+            }
+            if (string.IsNullOrWhiteSpace(effectiveKey) && !string.IsNullOrWhiteSpace(videoToken)
+                && CourseUploads.TryGetValue(videoToken, out uploaded) && uploaded[0] == "video")
+                effectiveKey = videoToken;
+            if (string.IsNullOrWhiteSpace(effectiveKey)) return Json(new { success = false, message = "Không tìm thấy phụ đề trong phiên làm việc." }, JsonRequestBehavior.AllowGet);
+            var status = VideoSubtitleService.LayTrangThai(effectiveKey);
+            return Json(new {
+                success = true,
+                status = status.TrangThai,
+                message = status.GhiChu,
+                ready = status.CoPhuDe,
+                processing = status.DangXuLy,
+                totalChunks = status.TongDoan,
+                completedChunks = status.DaXuLyDoan,
+                audioDuration = status.ThoiLuongAudio
+            }, JsonRequestBehavior.AllowGet);
+        }
+
+        // GET: Instructor/Course/PreviewSubtitle
+        // Phục vụ VTT trong wizard trước khi khóa học/bài học được lưu. Token chỉ tồn tại trong
+        // session của giáo viên hiện tại, vì vậy không làm lộ file trong App_Data ra công khai.
+        [HttpGet]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "*")]
+        public ActionResult PreviewSubtitle(string lessonId, string videoToken, string subtitleKey)
+        {
+            string effectiveKey = null;
+            if (!string.IsNullOrWhiteSpace(subtitleKey) && CanUseSubtitleDraft(subtitleKey, lessonId)) effectiveKey = subtitleKey;
+            if (!string.IsNullOrWhiteSpace(lessonId))
+            {
+                var lesson = db.BaiHoc.FirstOrDefault(b => b.maBaiHoc == lessonId);
+                if (lesson == null) return HttpNotFound();
+                if (!BelongsToCurrentTeacher(lesson)) return new HttpStatusCodeResult(403);
+                if (effectiveKey == null) effectiveKey = lesson.maBaiHoc;
+            }
+            if (string.IsNullOrWhiteSpace(effectiveKey) && !string.IsNullOrWhiteSpace(videoToken))
+            {
+                string[] uploaded;
+                if (!CourseUploads.TryGetValue(videoToken, out uploaded) || uploaded[0] != "video") return HttpNotFound();
+                effectiveKey = videoToken;
+            }
+            if (string.IsNullOrWhiteSpace(effectiveKey)) return HttpNotFound();
+            string file = VideoSubtitleService.LayFileVtt(effectiveKey);
+            if (file == null) return HttpNotFound("Video chưa có phụ đề hoàn chỉnh.");
+            Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+            return File(file, "text/vtt; charset=utf-8");
+        }
+
         private string SaveCourseFile(System.Web.HttpPostedFileBase file, string folder)
         {
             if (file == null || file.ContentLength == 0) return null;
@@ -242,6 +366,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Create(CourseCreateOrEditViewModel model, string actionType = "draft")
         {
+            model.MoTa = CourseDescriptionHtml.Sanitize(model.MoTa);
             // Normalize formatted VND price from Request.Form if needed
             string rawGiaBan = Request.Form["GiaBan"];
             if (!string.IsNullOrWhiteSpace(rawGiaBan))
@@ -327,6 +452,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
             db.KhoaHoc.Add(course);
 
             var chapterIds = new List<string>();
+            var subtitleRequests = new List<Tuple<string, string>>();
             for (int i = 0; i < chapters.Count; i++)
             {
                 string chapterId = "CH" + Guid.NewGuid().ToString("N").Substring(0, 18);
@@ -344,6 +470,10 @@ namespace ECOLearning.Areas.Instructor.Controllers
                     tenBaiHoc = input.Title.Trim(), thuTu = i + 1, choXemThu = input.Preview,
                     duongDanVideo = videoUrl, thoiLuong = Math.Max(0, input.Duration)
                 });
+                bool movedTemporarySubtitle = input.CreateSubtitle && !string.IsNullOrWhiteSpace(input.VideoToken)
+                    && VideoSubtitleService.ChuyenKetQua(input.VideoToken, lessonId);
+                if (input.CreateSubtitle && !string.IsNullOrWhiteSpace(videoUrl) && !movedTemporarySubtitle)
+                    subtitleRequests.Add(Tuple.Create(lessonId, videoUrl));
                 foreach (string token in input.AttachmentTokens ?? new List<string>())
                 {
                     var uploaded = CourseUploads[token];
@@ -369,9 +499,26 @@ namespace ECOLearning.Areas.Instructor.Controllers
 
             db.SaveChanges();
 
+            int queuedSubtitles = 0;
+            foreach (var request in subtitleRequests)
+            {
+                try
+                {
+                    var result = VideoSubtitleService.XepHang(request.Item1, request.Item2);
+                    if (result.ThanhCong) queuedSubtitles++;
+                }
+                catch (Exception ex)
+                {
+                    // Việc lưu khóa học đã hoàn tất; lỗi hàng đợi không được làm người dùng mất khóa học vừa tạo.
+                    AppLog.Ghi("SUBTITLE", "Không thể xếp hàng phụ đề cho " + request.Item1 + ": " + ex.Message);
+                }
+            }
+
             TempData["SuccessMessage"] = (actionType == "submit")
                 ? "Khóa học đã được gửi yêu cầu kiểm duyệt thành công!"
                 : "Đã lưu bản nháp khóa học thành công!";
+            if (queuedSubtitles > 0)
+                TempData["SuccessMessage"] += " " + queuedSubtitles + " video đang được tạo phụ đề tự động.";
 
             return RedirectToAction("Index");
         }
@@ -442,6 +589,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
             var storedLessons = db.BaiHoc.Where(l => (l.ChuongHoc != null && l.ChuongHoc.maKhoaHoc == id) || (l.maChuong == null && l.maBaiHoc.StartsWith(id + "_"))).OrderBy(l => l.thuTu).ToList();
             foreach (var lesson in storedLessons) {
                 var input = new CourseLessonInput { Id = lesson.maBaiHoc, Title = lesson.tenBaiHoc, Preview = lesson.choXemThu ?? false, Duration = lesson.thoiLuong ?? 0,
+                    HasSubtitle = VideoSubtitleService.CoPhuDe(lesson.maBaiHoc),
                     ChapterIndex = lesson.maChuong == null ? (int?)null : storedChapters.FindIndex(c => c.maChuong == lesson.maChuong) };
                 if (!string.IsNullOrWhiteSpace(lesson.duongDanVideo)) {
                     input.VideoToken = Guid.NewGuid().ToString("N");
@@ -464,6 +612,8 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 var saved = revision.Read();
                 model = saved.Model; model.RevisionVersion = revision.Version;
                 model.TrangThai = course.trangThai; model.Categories = BuildCategoryOptions(course.maDanhMuc);
+                foreach (var lesson in model.Lessons)
+                    if (!string.IsNullOrWhiteSpace(lesson.SubtitleDraftKey)) lesson.HasSubtitle = VideoSubtitleService.CoPhuDe(lesson.SubtitleDraftKey);
                 foreach (var upload in saved.Uploads) CourseUploads[upload.Key] = upload.Value;
                 ViewBag.RevisionReason = revision.Reason;
             }
@@ -476,6 +626,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Edit(CourseCreateOrEditViewModel model, string actionType = "save")
         {
+            model.MoTa = CourseDescriptionHtml.Sanitize(model.MoTa);
             int teacherId = CurrentTeacherId;
             var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == model.MaKhoaHoc && k.maGiaoVien == teacherId);
             if (course == null) return HttpNotFound();
@@ -527,6 +678,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 if (string.IsNullOrWhiteSpace(lesson.Title) || (!string.IsNullOrEmpty(lesson.Id) && !existingLessons.Any(l => l.maBaiHoc == lesson.Id))) ModelState.AddModelError("", "Bài học không hợp lệ.");
                 if (lesson.ChapterIndex.HasValue && (lesson.ChapterIndex.Value < 0 || lesson.ChapterIndex.Value >= chapters.Count)) ModelState.AddModelError("", "Chương của bài học không hợp lệ.");
                 if (!string.IsNullOrEmpty(lesson.VideoToken) && (!CourseUploads.ContainsKey(lesson.VideoToken) || CourseUploads[lesson.VideoToken][0] != "video")) ModelState.AddModelError("", "Video không hợp lệ. Vui lòng tải lại.");
+                if (!string.IsNullOrWhiteSpace(lesson.SubtitleDraftKey) && (!CanUseSubtitleDraft(lesson.SubtitleDraftKey, lesson.Id) || !VideoSubtitleService.LayTrangThai(lesson.SubtitleDraftKey).CoPhuDe)) ModelState.AddModelError("", "Phụ đề của bài \"" + lesson.Title + "\" chưa tạo xong đầy đủ hoặc không thuộc bản sửa này. Vui lòng chờ hoàn tất trước khi lưu hoặc gửi duyệt.");
                 foreach (string token in lesson.AttachmentTokens ?? new List<string>())
                     if (!CourseUploads.ContainsKey(token) || CourseUploads[token][0] != "document") ModelState.AddModelError("", "Tài liệu không hợp lệ.");
             }

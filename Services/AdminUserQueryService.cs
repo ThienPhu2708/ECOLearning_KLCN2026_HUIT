@@ -25,13 +25,14 @@ namespace ECOLearning.Services
                 SELECT COUNT(*) AS TongSo,
                        SUM(CASE WHEN vaiTro = N'HocVien' THEN 1 ELSE 0 END) AS HocVien,
                        SUM(CASE WHEN vaiTro = N'GiaoVien' THEN 1 ELSE 0 END) AS GiaoVien,
-                       SUM(CASE WHEN vaiTro IN (N'Marketing', N'Admin') THEN 1 ELSE 0 END) AS NhanVien,
+                       SUM(CASE WHEN vaiTro IN (N'Marketing', N'Admin', N'Admin Kiểm duyệt nội dung') THEN 1 ELSE 0 END) AS NhanVien,
                        SUM(CASE WHEN trangThai = 0 THEN 1 ELSE 0 END) AS DangKhoa
                 FROM dbo.NguoiDung").Single();
         }
 
         /// <param name="trangThai">"active" / "locked" / null (tất cả)</param>
-        public List<NguoiDungAdminItem> DanhSach(string tuKhoa, string vaiTro, string trangThai, int trang, out PhanTrangViewModel phanTrang)
+        public List<NguoiDungAdminItem> DanhSach(string tuKhoa, string vaiTro, string trangThai, int trang,
+            out PhanTrangViewModel phanTrang, IEnumerable<string> cacVaiTroDuocPhep = null)
         {
             var dieuKien = new List<string>();
             var thamSo = new List<SqlParameter>();
@@ -41,7 +42,19 @@ namespace ECOLearning.Services
                 thamSo.Add(new SqlParameter("@q", "%" + ThoatLike(tuKhoa.Trim()) + "%"));
                 thamSo.Add(new SqlParameter("@ma", tuKhoa.Trim()));
             }
-            if (!string.IsNullOrEmpty(vaiTro))
+            var roles = cacVaiTroDuocPhep == null ? null : cacVaiTroDuocPhep.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToList();
+            if (roles != null && roles.Count > 0)
+            {
+                var tenThamSo = new List<string>();
+                for (int i = 0; i < roles.Count; i++)
+                {
+                    string ten = "@vt" + i;
+                    tenThamSo.Add(ten);
+                    thamSo.Add(new SqlParameter(ten, roles[i]));
+                }
+                dieuKien.Add("nd.vaiTro IN (" + string.Join(", ", tenThamSo) + ")");
+            }
+            else if (!string.IsNullOrEmpty(vaiTro))
             {
                 dieuKien.Add("nd.vaiTro = @vt");
                 thamSo.Add(new SqlParameter("@vt", vaiTro));
@@ -117,7 +130,7 @@ namespace ECOLearning.Services
                 new SqlParameter("@id", maNguoiDung)).Single();
 
             var audit = new AccountAdminService(db);
-            nd.NhatKy = nd.VaiTro == AccountAdminService.Admin ? audit.LayHoatDongAdmin(maNguoiDung)
+            nd.NhatKy = AccountAdminService.LaNhanVienQuanTri(nd.VaiTro) ? audit.LayHoatDongAdmin(maNguoiDung)
                 : audit.LayNhatKy(AccountAdminService.DoiTuongNguoiDung, maNguoiDung.ToString());
             return nd;
         }
@@ -135,6 +148,7 @@ namespace ECOLearning.Services
                 case AccountAdminService.GiaoVien: return "Giáo viên";
                 case AccountAdminService.Marketing: return "Marketing";
                 case AccountAdminService.Admin: return "Quản trị viên";
+                case AccountAdminService.AdminKiemDuyetNoiDung: return "Quản trị viên kiểm duyệt nội dung";
                 default: return vaiTro;
             }
         }
@@ -146,6 +160,7 @@ namespace ECOLearning.Services
                 case AccountAdminService.GiaoVien: return "badge-primary";
                 case AccountAdminService.Marketing: return "badge-warning";
                 case AccountAdminService.Admin: return "badge-danger";
+                case AccountAdminService.AdminKiemDuyetNoiDung: return "badge-primary";
                 default: return "badge-secondary";
             }
         }

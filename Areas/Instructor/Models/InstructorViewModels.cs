@@ -60,6 +60,7 @@ namespace ECOLearning.Areas.Instructor.Models
     {
         public string MaKhoaHoc { get; set; }
         public string TenKhoaHoc { get; set; }
+        [AllowHtml]
         public string MoTa { get; set; }
         public string MoTaNgan { get; set; }
         public string MucTieuDauRa { get; set; }
@@ -88,6 +89,15 @@ namespace ECOLearning.Areas.Instructor.Models
         public bool Preview { get; set; }
         public string VideoToken { get; set; }
         public int Duration { get; set; }
+        /// <summary>Giáo viên yêu cầu tạo phụ đề tự động cho video của bài học.</summary>
+        public bool CreateSubtitle { get; set; }
+        /// <summary>Chỉ dùng để hiển thị khi mở lại wizard: phụ đề WebVTT đã sẵn sàng.</summary>
+        public bool HasSubtitle { get; set; }
+        /// <summary>
+        /// Mã WebVTT bản nháp. Với khóa đã xuất bản, file này chỉ được chuyển thành phụ đề
+        /// chính thức sau khi Admin duyệt bản sửa.
+        /// </summary>
+        public string SubtitleDraftKey { get; set; }
         public List<string> AttachmentTokens { get; set; } = new List<string>();
         public System.Web.HttpPostedFileBase VideoFile { get; set; }
         public System.Web.HttpPostedFileBase AttachmentFile { get; set; }

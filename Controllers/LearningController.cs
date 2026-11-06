@@ -246,6 +246,9 @@ namespace ECOLearning.Controllers
             if (!isPreview && !db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == courseId && d.maHocVien == viewer.maNguoiDung))
                 return new HttpStatusCodeResult(403, "Bạn chưa đăng ký khóa học này.");
             ViewBag.IsPreview = isPreview;
+            // Giáo viên sở hữu khóa cũng được tham gia thảo luận; Admin chỉ xem thử không được ghi vào cộng đồng học viên.
+            ViewBag.CanLessonDiscussion = viewer.maNguoiDung == course.maGiaoVien
+                || db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == courseId && d.maHocVien == viewer.maNguoiDung);
 
             // Khóa học tạm khóa thì học viên đã mua vẫn học bình thường.
             if (course.trangThai == ECOLearning.Services.CourseStatus.KhoaVinhVien)
@@ -352,6 +355,35 @@ namespace ECOLearning.Controllers
             ViewBag.ActiveLessonDocuments = activeLessonDocuments;
 
             return View();
+        }
+
+        // GET: Learning/Subtitle?courseId=...&lessonId=...
+        // File VTT nằm trong App_Data nên chỉ học viên đã ghi danh (hoặc giáo viên/Admin xem thử)
+        // mới lấy được. Không để phụ đề bài học trả trực tiếp như static public file.
+        [HttpGet]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "*")]
+        public ActionResult Subtitle(string courseId, string lessonId)
+        {
+            if (string.IsNullOrWhiteSpace(courseId) || string.IsNullOrWhiteSpace(lessonId)) return HttpNotFound();
+            var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == courseId);
+            var lesson = db.BaiHoc.FirstOrDefault(b => b.maBaiHoc == lessonId);
+            if (course == null || lesson == null) return HttpNotFound();
+
+            bool thuocKhoa = lesson.maChuong != null
+                ? db.ChuongHoc.Any(c => c.maChuong == lesson.maChuong && c.maKhoaHoc == courseId)
+                : lesson.maBaiHoc.StartsWith(courseId + "_", StringComparison.OrdinalIgnoreCase);
+            if (!thuocKhoa) return HttpNotFound();
+
+            var viewer = GetCurrentStudent();
+            if (viewer == null) return new HttpStatusCodeResult(401, "Vui lòng đăng nhập để xem phụ đề.");
+            bool xemThu = viewer.maNguoiDung == course.maGiaoVien || string.Equals(viewer.vaiTro, "Admin", StringComparison.OrdinalIgnoreCase);
+            if (!xemThu && !db.DangKyKhoaHoc.Any(d => d.maKhoaHoc == courseId && d.maHocVien == viewer.maNguoiDung))
+                return new HttpStatusCodeResult(403, "Bạn chưa đăng ký khóa học này.");
+
+            string file = VideoSubtitleService.LayFileVtt(lessonId);
+            if (file == null) return HttpNotFound("Bài học chưa có phụ đề.");
+            Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+            return File(file, "text/vtt; charset=utf-8");
         }
 
         // POST: Learning/UpdateProgress: lưu vị trí đang xem (gọi định kỳ khi xem, khi tạm dừng và khi rời trang)

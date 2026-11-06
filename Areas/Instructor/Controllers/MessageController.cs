@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Web.Mvc;
 using ECOLearning.Areas.Instructor.Controllers;
@@ -9,6 +9,33 @@ namespace ECOLearning.Areas.Instructor.Controllers
 {
     public class MessageController : InstructorBaseController
     {
+        [HttpGet]
+        public JsonResult DiscussionNotifications()
+        {
+            if (!new LessonDiscussionService(db).Installed())
+                return Json(new { available = false }, JsonRequestBehavior.AllowGet);
+            var items = db.Database.SqlQuery<DiscussionNotification>(@"SELECT t.maBaiHoc AS LessonId,
+                k.maKhoaHoc AS CourseId, t.maThaoLuan AS LatestId
+                FROM dbo.ThaoLuanBaiHoc t
+                JOIN dbo.BaiHoc b ON b.maBaiHoc=t.maBaiHoc
+                LEFT JOIN dbo.ChuongHoc c ON c.maChuong=b.maChuong
+                JOIN dbo.KhoaHoc k ON c.maKhoaHoc=k.maKhoaHoc
+                    OR (b.maChuong IS NULL AND LEFT(b.maBaiHoc,LEN(k.maKhoaHoc)+1)=k.maKhoaHoc+'_')
+                WHERE k.maGiaoVien=@teacherId AND t.maNguoiDung<>@teacherId AND t.trangThai=N'HienThi'
+                ORDER BY t.maThaoLuan DESC",
+                new System.Data.SqlClient.SqlParameter("@teacherId", CurrentTeacherId)).ToList();
+            return Json(new { available = true, items = items.GroupBy(i => new { i.LessonId, i.CourseId }).Select(g => new {
+                g.Key.LessonId, g.Key.CourseId, LatestId = g.Max(i => i.LatestId), MessageIds = g.Select(i => i.LatestId).ToArray()
+            }) }, JsonRequestBehavior.AllowGet);
+        }
+
+        private class DiscussionNotification
+        {
+            public string LessonId { get; set; }
+            public string CourseId { get; set; }
+            public int LatestId { get; set; }
+        }
+
         [HttpGet]
         public JsonResult Conversations()
         {

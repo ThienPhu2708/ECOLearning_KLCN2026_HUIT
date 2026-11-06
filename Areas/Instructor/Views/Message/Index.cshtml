@@ -1,4 +1,4 @@
-@{
+﻿@{
     ViewBag.Title = "Thảo luận bài học";
     Layout = "~/Areas/Instructor/Views/Shared/_LayoutInstructor.cshtml";
     var courses = (System.Collections.Generic.List<ECOLearning.Models.KhoaHoc>)ViewBag.Courses;
@@ -9,34 +9,109 @@
 }
 <link rel="stylesheet" href="@Url.Content("~/assets/css/lesson-discussion.css")?v=@(System.IO.File.GetLastWriteTime(Server.MapPath("~/assets/css/lesson-discussion.css")).Ticks)" />
 <style>
-    .teacher-discussions { display:flex; min-height:620px; height:calc(100vh - 125px); background:#fff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; }
-    .teacher-discussions-sidebar { width:300px; flex-shrink:0; border-right:1px solid #e2e8f0; display:flex; flex-direction:column; }
-    .teacher-discussions-sidebar h2 { margin:0; padding:22px 20px 12px; font-size:19px; color:#172033; }
-    .teacher-discussions-search { margin:0 16px 14px; border:1px solid #dbe3ef; border-radius:10px; padding:10px 12px; font:inherit; font-size:13px; }
-    .teacher-discussions-courses { overflow:auto; padding:0 10px 12px; }
-    .teacher-discussions-course { display:block; text-decoration:none; padding:13px 12px; border-radius:10px; color:#334155; font-weight:650; font-size:14px; }
-    .teacher-discussions-course[hidden] { display:none; }
-    .teacher-discussions-course:hover,.teacher-discussions-course.active { color:#4338ca; background:#eeedff; }
-    .teacher-discussions-course small { display:block; color:#94a3b8; font-size:11px; font-weight:500; margin-top:3px; }
-    .teacher-lessons { width:280px; flex-shrink:0; border-right:1px solid #e2e8f0; display:flex; flex-direction:column; min-height:0; }
-    .teacher-lessons-head { padding:20px 16px 10px; color:#172033; font-weight:700; }
-    .teacher-lessons-list { flex:1; overflow:auto; padding:0 10px 12px; }
-    .teacher-lesson { display:flex; align-items:center; gap:9px; text-decoration:none; padding:11px 10px; border-radius:9px; color:#475569; font-size:13px; }
-    .teacher-lesson:hover,.teacher-lesson.active { background:#eeedff; color:#4338ca; }
-    .teacher-lesson[hidden] { display:none; }
+    .teacher-page-content:has(.teacher-discussions) { padding:20px !important; }
+    .teacher-discussions { display:grid; grid-template-columns:270px minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); height:calc(100dvh - 120px); min-height:420px; background:#fff; border:1px solid #e2e8f0; border-radius:18px; overflow:hidden; box-shadow:0 4px 24px #17203305; }
+    .teacher-discussions-sidebar { grid-column:1; grid-row:1; min-width:0; max-height:230px; display:flex; flex-direction:column; background:#fafbfe; border-right:1px solid #e8ecf3; border-bottom:1px solid #e8ecf3; }
+    .teacher-discussions-sidebar h2,.teacher-lessons-head { margin:0; padding:18px 18px 12px; font-size:13px; font-weight:750; color:#475569; }
+    .teacher-discussions-search { min-width:0; margin:0 14px 10px; border:1px solid #e2e8f0; border-radius:9px; padding:9px 11px; background:#fff; color:#334155; font:inherit; font-size:13px; }
+    .teacher-discussions-search:focus { outline:2px solid #c7d2fe; outline-offset:1px; }
+    .teacher-discussions-courses { min-height:0; overflow:auto; padding:0 10px 12px; }
+    .teacher-discussions-course { display:block; text-decoration:none; padding:10px 12px; border-radius:10px; color:#334155; font-weight:650; font-size:13px; overflow-wrap:anywhere; }
+    .teacher-discussions-course[hidden],.teacher-lesson[hidden] { display:none; }
+    .teacher-discussions-course:hover,.teacher-lesson:hover { background:#f0f1fa; }
+    .teacher-discussions-course.active,.teacher-lesson.active { color:#4338ca; background:#eeedff; box-shadow:inset 3px 0 #6366f1; }
+    .teacher-discussions-course small { display:block; color:#94a3b8; font-size:10px; font-weight:500; margin-top:4px; }
+    .teacher-lessons { grid-column:1; grid-row:2; min-height:0; display:flex; flex-direction:column; background:#fafbfe; border-right:1px solid #e8ecf3; }
+    .teacher-lessons-list { flex:1; min-height:0; overflow:auto; padding:0 10px 12px; }
+    .teacher-lesson { display:flex; align-items:center; gap:9px; text-decoration:none; padding:12px; border-radius:10px; color:#475569; font-size:13px; margin-bottom:4px; }
     .teacher-lesson-title { min-width:0; flex:1; overflow-wrap:anywhere; }
-    .teacher-lesson-count { flex-shrink:0; background:#eef2ff; color:#4f46e5; border-radius:12px; padding:3px 7px; font-size:11px; }
-    .teacher-discussions-main { flex:1; min-width:0; display:flex; flex-direction:column; }
-    .teacher-discussions-heading { padding:18px 24px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; gap:12px; }
-    .teacher-discussions-heading h3 { margin:0; font-size:17px; color:#172033; }
-    .teacher-discussions-heading select { max-width:55%; padding:9px; border:1px solid #dbe3ef; border-radius:9px; color:#334155; background:#fff; }
-    .teacher-discussions .lesson-discussion-panel { position:relative; z-index:auto; top:auto; right:auto; width:100%; height:auto; min-height:0; flex:1; transform:none; box-shadow:none; }
+    .teacher-lesson-count { flex-shrink:0; background:#fff; color:#6366f1; border:1px solid #e8e7ff; border-radius:7px; padding:2px 7px; font-size:11px; }
+    .teacher-discussions-main { grid-column:2; grid-row:1 / -1; min-height:0; min-width:0; display:flex; flex-direction:column; }
+    .teacher-discussions-heading { padding:18px 24px; background:#fff; border-bottom:1px solid #eef2f7; }
+    .teacher-discussions-heading h3 { margin:4px 0 0; font-size:18px; font-weight:750; color:#172033; overflow-wrap:anywhere; }
+    .teacher-discussions-context { font-size:12px; color:#64748b; overflow-wrap:anywhere; }
+    .teacher-discussions .lesson-discussion-panel { position:relative; z-index:auto; inset:auto; width:100%; height:auto; min-height:0; flex:1; transform:none; box-shadow:none; transition:none; }
     .teacher-discussions .lesson-discussion-backdrop,.teacher-discussions .lesson-discussion-close { display:none; }
-    .teacher-discussions-empty { margin:auto; padding:24px; text-align:center; color:#64748b; }
-    @@media(max-width:1100px) { .teacher-discussions-sidebar { width:230px; } .teacher-lessons { width:230px; } }
-    @@media(max-width:700px) { .teacher-discussions { height:auto; min-height:70vh; flex-direction:column; } .teacher-discussions-sidebar,.teacher-lessons { width:100%; max-height:210px; border-right:0; border-bottom:1px solid #e2e8f0; } .teacher-discussions-main { min-height:550px; } .teacher-discussions-heading { flex-wrap:wrap; } }
+    .teacher-discussions .lesson-discussion-header { padding:12px 24px; background:#fafbfe; }
+    .teacher-discussions .lesson-discussion-header h3 { font-size:13px; font-weight:650; color:#64748b; }
+    .teacher-discussions .lesson-discussion-list { min-height:0; padding:12px 24px 24px; background:#fcfcff; overscroll-behavior:contain; }
+    .teacher-discussions .lesson-discussion-compose { flex-shrink:0; margin:12px 18px 16px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:16px; background:#fff; box-shadow:0 3px 12px #17203306; }
+    .teacher-discussions .lesson-discussion-compose:focus-within { border-color:#a5b4fc; box-shadow:0 0 0 3px #6366f10d; }
+    .teacher-discussions .lesson-discussion-compose-bottom { margin-top:4px; }
+    .teacher-discussions #lesson-discussion-send { width:38px; height:38px; padding:0; border-radius:12px; display:grid; place-items:center; }
+    .teacher-discussions .lesson-discussion-tools > button { width:34px; height:34px; padding:0; border-radius:9px; font-size:19px; }
+    .teacher-discussions #lesson-discussion-input:focus { border:0; box-shadow:none; }
+    .teacher-discussions .lesson-discussion-compose textarea { min-height:42px; height:42px; max-height:140px; border:0; border-radius:0; background:transparent; padding:8px 6px; font-family:inherit; font-size:14px; line-height:22px; resize:none; overflow-y:auto; }
+    .teacher-discussions .lesson-comment { padding:0; margin:0 0 20px; }
+    .teacher-discussions .lesson-comment-message { width:fit-content; max-width:78%; min-width:0; padding:0; border:0; background:transparent; }
+    .teacher-discussions .lesson-comment-mine > .lesson-comment-message { margin-left:auto; }
+    .teacher-discussions .lesson-comment-head { gap:8px; align-items:center; }
+    .teacher-discussions .lesson-comment-avatar { width:30px; height:30px; font-size:12px; }
+    .teacher-discussions .lesson-comment-head > div { min-width:0; }
+    .teacher-discussions .lesson-comment-author { color:#475569; font-size:12px; overflow-wrap:anywhere; }
+    .teacher-discussions .lesson-comment-teacher { font-size:9px; }
+    .teacher-discussions .lesson-comment-time { display:inline; margin:0; color:#94a3b8; font-size:10px; white-space:nowrap; }
+    .teacher-discussions .lesson-comment-mine > .lesson-comment-message .lesson-comment-head { flex-direction:row-reverse; text-align:right; }
+    .teacher-discussions .lesson-comment-content { width:fit-content; max-width:100%; box-sizing:border-box; margin:8px 0 0 38px; padding:11px 15px; border-radius:4px 16px 16px 16px; background:#fff; border:1px solid #e8ecf3; color:#334155; font-size:14px; line-height:1.6; }
+    .teacher-discussions .lesson-comment-mine > .lesson-comment-message .lesson-comment-content { margin:8px 38px 0 auto; border:0; border-radius:16px 4px 16px 16px; background:#4f46e5; color:#fff; }
+    .teacher-discussions .lesson-comment-actions { margin:6px 0 0 38px; padding:0; gap:10px; align-items:center; flex-wrap:wrap; }
+    .teacher-discussions .lesson-comment-actions button { font-size:11px; font-weight:500; color:#81849b; }
+    .teacher-discussions .lesson-comment-actions button:hover,.teacher-discussions .lesson-comment-actions button.liked { color:#4f46e5; }
+    .teacher-discussions .lesson-comment-mine > .lesson-comment-message .lesson-comment-actions { margin:6px 38px 0 0; justify-content:flex-end; }
+    .teacher-discussions .lesson-comment-image { margin-left:38px; max-width:calc(100% - 38px); }
+    .teacher-discussions .lesson-comment-mine > .lesson-comment-message .lesson-comment-image { margin-left:auto; margin-right:38px; }
+    .teacher-discussions .lesson-comment-reference { margin-left:38px; }
+    .teacher-discussions .lesson-comment-mine > .lesson-comment-message .lesson-comment-reference { margin-left:0; margin-right:38px; }
+    .teacher-discussions .lesson-discussion-list { padding-top:18px; }
+
+    .teacher-discussions-empty { margin:auto; padding:24px; text-align:center; color:#64748b; font-size:14px; }
+    .discussion-mobile-picker { display:none; }
+    @@media(max-width:900px) {
+        .teacher-page-content:has(.teacher-discussions) { padding:16px !important; }
+        .teacher-discussions { display:flex; flex-direction:column; height:calc(100dvh - 112px); min-height:440px; }
+        .teacher-discussions-sidebar,.teacher-lessons { display:none; }
+        .discussion-mobile-picker { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; padding:14px 16px; background:#fafbfe; border-bottom:1px solid #e8ecf3; }
+        .discussion-mobile-picker label { min-width:0; font-size:11px; font-weight:650; color:#64748b; }
+        .discussion-mobile-picker select { display:block; width:100%; min-width:0; margin-top:6px; padding:10px 28px 10px 10px; border:1px solid #dfe4ef; border-radius:9px; background:#fff; color:#334155; font:inherit; font-size:14px; text-overflow:ellipsis; }
+        .teacher-discussions-main { flex:1; }
+        .teacher-discussions-heading { padding:14px 18px; }
+        .teacher-discussions-heading h3 { font-size:16px; }
+    }
+    @@media(max-width:540px) {
+        .teacher-page-content:has(.teacher-discussions) { padding:12px !important; }
+        .teacher-discussions { height:calc(100dvh - 104px); min-height:360px; border-radius:13px; }
+        .discussion-mobile-picker { gap:8px; padding:12px; }
+        .teacher-discussions .lesson-discussion-header { padding:10px 14px; }
+        .teacher-discussions .lesson-discussion-list { padding:8px 14px 20px; }
+        .teacher-discussions .lesson-discussion-compose { margin:8px 10px max(10px,env(safe-area-inset-bottom)); padding:8px; }
+        .teacher-discussions .lesson-discussion-compose textarea { font-size:16px; min-height:42px; }
+        .teacher-discussions .lesson-comment-message { max-width:94%; padding:0; }
+        .teacher-discussions .lesson-comment-content,.teacher-discussions .lesson-comment-actions { padding-left:0; }
+        .teacher-discussions .lesson-comment-head { flex-wrap:nowrap; align-items:flex-start; }
+
+    }
 </style>
 <div class="teacher-discussions">
+    <div class="discussion-mobile-picker">
+        <label>Khóa học
+            <select aria-label="Chọn khóa học" class="discussion-page-select">
+                @if (course == null) { <option value="">Chọn khóa học</option> }
+                @foreach (var item in courses)
+                {
+                    <option value="@Url.Action("Index", "Message", new { area = "Instructor", courseId = item.maKhoaHoc })" selected="@(course != null && course.maKhoaHoc == item.maKhoaHoc)">@item.tenKhoaHoc</option>
+                }
+            </select>
+        </label>
+        <label>Bài học
+            <select aria-label="Chọn bài học" class="discussion-page-select" disabled="@(lessons.Count == 0)">
+                @if (lessons.Count == 0) { <option value="">Chưa có bài học</option> }
+                @foreach (var item in lessons)
+                {
+                    <option value="@Url.Action("Index", "Message", new { area = "Instructor", courseId = course.maKhoaHoc, lessonId = item.maBaiHoc })" selected="@(lesson != null && lesson.maBaiHoc == item.maBaiHoc)">@item.tenBaiHoc</option>
+                }
+            </select>
+        </label>
+    </div>
     <aside class="teacher-discussions-sidebar">
         <h2>Khóa học của bạn</h2>
         <input class="teacher-discussions-search" id="teacher-discussion-search" type="search" placeholder="Tìm khóa học..." aria-label="Tìm khóa học" />
@@ -69,7 +144,7 @@
         @if (course != null && lesson != null)
         {
             <div class="teacher-discussions-heading">
-                <div><h3>@course.tenKhoaHoc</h3><span style="font-size:13px;color:#64748b">@lesson.tenBaiHoc</span></div>
+                <div><div class="teacher-discussions-context">@course.tenKhoaHoc</div><h3>@lesson.tenBaiHoc</h3></div>
             </div>
             <div id="learning-antiforgery" hidden>@Html.AntiForgeryToken()</div>
             @Html.Partial("~/Views/Learning/_LessonDiscussionPanel.cshtml")
@@ -86,6 +161,7 @@
     <script src="@Url.Content("~/assets/js/lesson-discussion.js")?v=@(System.IO.File.GetLastWriteTime(Server.MapPath("~/assets/js/lesson-discussion.js")).Ticks)"></script>
     <script>
         $(function () {
+            $('.discussion-page-select').on('change', function () { if (this.value) window.location.assign(this.value); });
             function normalize(value) { return value.toLocaleLowerCase('vi').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd'); }
             $('#teacher-discussion-search').on('input', function () { var q = normalize(this.value); $('.teacher-discussions-course').each(function () { this.hidden = normalize(this.textContent).indexOf(q) < 0; }); });
             $('#teacher-lesson-search').on('input', function () { var q = normalize(this.value); $('.teacher-lesson').each(function () { this.hidden = normalize(this.textContent).indexOf(q) < 0; }); });
@@ -100,7 +176,15 @@
                     imageUrl: '@Url.Action("Image", "LessonDiscussion", new { area = "" })',
                     likeUrl: '@Url.Action("ToggleLike", "LessonDiscussion", new { area = "" })'
                 });
-                openLessonDiscussion();
+                // Embedded discussion stays visible without opening a modal or focusing the keyboard.
+                $('#lesson-discussion-panel').attr({ role: 'region', 'aria-modal': 'false' });
+                $('#lesson-discussion-input').attr({ rows: 1, placeholder: 'Viết thảo luận...' }).on('input', function () {
+                    this.style.height = 'auto';
+                    this.style.height = Math.min(140, Math.max(42, this.scrollHeight)) + 'px';
+                });
+                $('#lesson-discussion-send').attr({ 'aria-label': 'Gửi thảo luận', title: 'Gửi thảo luận' }).html('<i class="bi bi-send-fill" aria-hidden="true"></i>');
+                $('#lesson-discussion-form').on('submit', function () { $('#lesson-discussion-input').trigger('input'); });
+                openLessonDiscussion(false);
                 </text>
             }
         });

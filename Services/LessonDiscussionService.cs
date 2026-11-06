@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
@@ -120,7 +120,7 @@ namespace ECOLearning.Services
         }
 
         /// <summary>Luồng chat web: chọn các tin mới nhất, bao gồm cả phản hồi, rồi xếp từ cũ đến mới.</summary>
-        public LessonDiscussionPageViewModel GetTimeline(string courseId, string lessonId, int userId, int page, int pageSize)
+        public LessonDiscussionPageViewModel GetTimeline(string courseId, string lessonId, int userId, int page, int pageSize, int? afterId = null)
         {
             if (!Installed() || !CanAccess(courseId, lessonId, userId)) return null;
             page = Math.Max(1, page); pageSize = Math.Max(1, Math.Min(50, pageSize));
@@ -129,6 +129,9 @@ namespace ECOLearning.Services
             var selected = rows.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
                 .Skip((page - 1) * pageSize).Take(pageSize)
                 .OrderBy(r => r.CreatedAt).ThenBy(r => r.Id).ToList();
+            if (afterId.HasValue && page == 1)
+                selected = selected.Concat(rows.Where(r => r.Id > afterId.Value))
+                    .GroupBy(r => r.Id).Select(g => g.First()).OrderBy(r => r.CreatedAt).ThenBy(r => r.Id).ToList();
             var result = new LessonDiscussionPageViewModel
             {
                 Page = page, PageSize = pageSize, Total = rows.Count, TotalComments = rows.Count,

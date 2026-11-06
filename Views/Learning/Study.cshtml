@@ -743,9 +743,9 @@
                 @*hỏi giáo viên*@
                 @if (ViewBag.CanLessonDiscussion == true)
                 {
-                    <button style="background:#434CE8; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow: 0 4px 12px rgba(67, 76, 232, 0.25); transition: background 0.2s;" onclick="openLessonDiscussion()" onmouseover="this.style.background='#363fc2'" onmouseout="this.style.background='#434CE8'">
+                    <button id="lesson-discussion-launcher" style="background:#434CE8; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow: 0 4px 12px rgba(67, 76, 232, 0.25); transition: background 0.2s;" onclick="openLessonDiscussion()" onmouseover="this.style.background='#363fc2'" onmouseout="this.style.background='#434CE8'">
                         <i class="bi bi-people-fill"></i> Thảo luận bài học
-                    </button>
+                    <span id="lesson-discussion-launcher-unread" class="lesson-launcher-unread" hidden aria-live="polite"></span></button>
                 }
 
             </div>

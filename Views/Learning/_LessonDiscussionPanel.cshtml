@@ -1,9 +1,9 @@
-@* Thảo luận cộng đồng theo bài học. Chỉ hiển thị tên và ảnh đại diện của người tham gia. *@
+﻿@* Thảo luận cộng đồng theo bài học. Chỉ hiển thị tên và ảnh đại diện của người tham gia. *@
 <div class="lesson-discussion-backdrop" id="lesson-discussion-backdrop" onclick="closeLessonDiscussion()"></div>
-<aside class="lesson-discussion-panel" id="lesson-discussion-panel" role="dialog" aria-modal="true" aria-labelledby="lesson-discussion-title" tabindex="-1">
+<aside class="lesson-discussion-panel" id="lesson-discussion-panel" data-user-id="@Session["UserId"]" role="dialog" aria-modal="true" aria-labelledby="lesson-discussion-title" tabindex="-1">
     <header class="lesson-discussion-header">
         <div class="lesson-discussion-title-row">
-            <h3 id="lesson-discussion-title"><span id="lesson-discussion-total">0</span> bình luận</h3>
+            <h3 id="lesson-discussion-title"><button type="button" id="lesson-discussion-unread" disabled>Không có thảo luận mới</button></h3>
         </div>
         <button type="button" class="lesson-discussion-close" onclick="closeLessonDiscussion()" aria-label="Đóng">&times;</button>
     </header>
@@ -17,7 +17,7 @@
             <span>Phản hồi <strong id="lesson-discussion-reply-name"></strong></span>
             <button type="button" id="lesson-discussion-reply-clear" aria-label="Chuyển sang bình luận chung" title="Chuyển sang bình luận chung">&times;</button>
         </div>
-        <textarea id="lesson-discussion-input" maxlength="2000" rows="3" placeholder="Viết bình luận hoặc câu hỏi về bài học..." aria-label="Nội dung thảo luận"></textarea>
+        <textarea id="lesson-discussion-input" maxlength="2000" rows="1" placeholder="Viết thảo luận..." aria-label="Nội dung thảo luận"></textarea>
         <div id="lesson-discussion-image-preview" hidden><img alt="Ảnh đã chọn" /><button type="button" id="lesson-discussion-image-remove" aria-label="Bỏ ảnh">&times;</button></div>
         <div class="lesson-discussion-compose-bottom">
             <div class="lesson-discussion-tools">
@@ -26,7 +26,7 @@
                 <input type="file" id="lesson-discussion-image" accept="image/jpeg,image/png" hidden />
                 <div id="lesson-discussion-emoji-picker" hidden></div>
             </div>
-            <button type="button" id="lesson-discussion-send"><i class="bi bi-send-fill"></i> Gửi</button>
+            <button type="button" id="lesson-discussion-send" aria-label="Gửi thảo luận" title="Gửi thảo luận"><i class="bi bi-send-fill" aria-hidden="true"></i></button>
         </div>
     </form>
 </aside>

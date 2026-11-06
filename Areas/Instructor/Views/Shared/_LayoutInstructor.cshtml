@@ -87,8 +87,8 @@
                     <span id="teacher-student-review-badge" class="teacher-review-badge" hidden="@(ViewBag.StudentReviewCount == null || (int)ViewBag.StudentReviewCount == 0)" title="Lượt thi mới cần xem xét" aria-label="@ViewBag.StudentReviewCount lượt thi mới cần xem xét">@(ViewBag.StudentReviewCount != null && (int)ViewBag.StudentReviewCount > 99 ? "99+" : Convert.ToString(ViewBag.StudentReviewCount))</span>
                 </a>
                 <a href="@Url.Action("Index", "Message", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Message" ? "active" : "")">
-                    <i class="bi bi-chat-dots" aria-hidden="true"></i><span>Tin nhắn học viên</span>
-                    <span class="teacher-review-badge js-chat-unread-badge" style="display:none" aria-label="Tin nhắn chưa đọc"></span>
+                    <i class="bi bi-chat-dots" aria-hidden="true"></i><span>Thảo luận bài học</span>
+                    <span id="teacher-discussion-badge" class="teacher-review-badge" hidden aria-live="polite"></span>
                 </a>
                 <a href="@Url.Action("Index", "Analytics", new { area = "Instructor" })" class="sidebar-item @(currentCtrl == "Analytics" ? "active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -359,24 +359,55 @@ function toggleTeacherMenu(open) {
 document.addEventListener('keydown', function(event) { if (event.key === 'Escape' && document.getElementById('teacher-sidebar').classList.contains('active')) toggleTeacherMenu(false); });
 window.addEventListener('resize', function() { if (window.innerWidth > 992 && document.getElementById('teacher-sidebar').classList.contains('active')) toggleTeacherMenu(false); });
 </script>
-    <script>
-        function checkUnreadMessages() {
-            $.get('/Chat/UnreadCount', function (res) {
-                var badge = $('.js-chat-unread-badge');
-                if (res && res.count > 0) {
-                    badge.text(res.count).show();
-                } else {
-                    badge.hide();
-                }
-            });
-        }
-        $(document).ready(function () {
-            checkUnreadMessages();
-            setInterval(checkUnreadMessages, 30000);
-        });
-    </script>
+
 @RenderSection("Scripts", required: false)
-@Html.Partial("~/Areas/Instructor/Views/Shared/_ChatLauncher.cshtml")
+<script>
+(function () {
+    var badge = document.getElementById('teacher-discussion-badge');
+    if (!badge) return;
+    var link = badge.closest('a'), defaultUrl = link.href, busy = false;
+    var selectedLesson = @Html.Raw(System.Web.Helpers.Json.Encode(Convert.ToString((ViewBag.SelectedLesson as ECOLearning.Models.BaiHoc)?.maBaiHoc)));
+    var storageKey = 'teacher-discussions-seen-' + @Html.Raw(System.Web.Helpers.Json.Encode(Convert.ToString(Session["UserId"])));
+    var seen = {};
+    try { seen = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; } catch (_) {}
+    async function refresh() {
+        if (busy || document.hidden) return;
+        busy = true;
+        try {
+            var response = await fetch('@Url.Action("DiscussionNotifications", "Message", new { area = "Instructor" })', { credentials:'same-origin', cache:'no-store', headers:{Accept:'application/json'} });
+            if (!response.ok) return;
+            var data = await response.json();
+            if (!data.available || !Array.isArray(data.items)) return;
+            var unread = data.items.filter(function (item) {
+                return item.LatestId > (Number(seen[item.LessonId]) || 0);
+            });
+            var count = unread.reduce(function (total, item) {
+                return total + (item.MessageIds || []).filter(function (id) { return id > (Number(seen[item.LessonId]) || 0); }).length;
+            }, 0);
+            badge.hidden = count === 0;
+            badge.textContent = count > 99 ? '99+' : String(count);
+            badge.title = count + ' tin thảo luận chưa đọc';
+            badge.setAttribute('aria-label', badge.title);
+            link.href = unread.length ? defaultUrl + '?courseId=' + encodeURIComponent(unread[0].CourseId) + '&lessonId=' + encodeURIComponent(unread[0].LessonId) : defaultUrl;
+        } catch (_) {} finally { busy = false; }
+    }
+    document.addEventListener('lesson-discussion-read', function (event) {
+        if (document.hidden || !selectedLesson || event.detail.lessonId !== selectedLesson) return;
+        seen[selectedLesson] = Math.max(Number(seen[selectedLesson]) || 0, event.detail.latestId);
+        try { localStorage.setItem(storageKey, JSON.stringify(seen)); } catch (_) {}
+        refresh();
+    });
+    refresh();
+    setInterval(refresh, 10000);
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    window.addEventListener('storage', function (event) {
+        if (event.key !== storageKey) return;
+        try { seen = JSON.parse(event.newValue || '{}') || {}; } catch (_) { seen = {}; }
+        refresh();
+    });
+})();
+</script>
 <style>
 .teacher-menu-label{min-width:0;flex:1;line-height:1.55}.teacher-review-badge{display:inline-flex;align-items:center;justify-content:center;gap:4px;margin-left:auto;min-width:22px;padding:3px 5px;border-radius:7px;background:#fff0f0;color:#c46d6d;font-size:10px;font-weight:700;line-height:1.4;flex-shrink:0}.teacher-review-badge::before{content:"";width:5px;height:5px;border-radius:50%;background:#ce7474}.teacher-review-badge[hidden]{display:none!important}
 </style>

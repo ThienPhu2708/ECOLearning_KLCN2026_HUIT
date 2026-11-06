@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -35,12 +35,12 @@ namespace ECOLearning.Controllers
         }
 
         [HttpGet]
-        public JsonResult Get(string courseId, string lessonId, int page = 1, int pageSize = 20)
+        public JsonResult Get(string courseId, string lessonId, int page = 1, int pageSize = 20, int? afterId = null)
         {
             int userId = CurrentUserId();
             var service = new LessonDiscussionService(db);
             if (!service.Installed()) return Json(new { success = false, message = "Thảo luận tạm thời chưa sẵn sàng. Vui lòng thử lại sau." }, JsonRequestBehavior.AllowGet);
-            var data = service.GetTimeline(courseId, lessonId, userId, page, pageSize);
+            var data = service.GetTimeline(courseId, lessonId, userId, page, pageSize, afterId);
             if (data == null) return Json(new { success = false, message = "Bạn không có quyền xem thảo luận của bài học này." }, JsonRequestBehavior.AllowGet);
             return Json(new { success = true, discussion = data }, JsonRequestBehavior.AllowGet);
         }

@@ -1,4 +1,4 @@
-.lesson-discussion-backdrop { position:fixed; inset:0; z-index:1040; background:rgba(15,23,42,.58); opacity:0; visibility:hidden; transition:.2s; }
+﻿.lesson-discussion-backdrop { position:fixed; inset:0; z-index:1040; background:rgba(15,23,42,.58); opacity:0; visibility:hidden; transition:.2s; }
 .lesson-discussion-panel { position:fixed; z-index:1041; top:0; right:0; width:min(510px,100vw); height:100dvh; display:flex; flex-direction:column; background:#f8fafc; color:#172033; box-shadow:-12px 0 44px rgba(15,23,42,.22); transform:translateX(102%); transition:transform .24s ease; }
 .lesson-discussion-backdrop.active { opacity:1; visibility:visible; }
 .lesson-discussion-panel.active { transform:translateX(0); }
@@ -26,3 +26,107 @@
 .lesson-comment-reference strong,.lesson-comment-reference span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .lesson-comment-reference strong { color:#4f46e5; }
 @media(max-width:540px) { .lesson-comment-message { max-width:92%; } }
+
+/* Shared chat layout for learner drawer and instructor workspace. */
+.lesson-comment { padding:0; margin:0 0 20px; }
+.lesson-comment-message { width:fit-content; max-width:78%; min-width:0; padding:0; border:0; background:transparent; }
+.lesson-comment-mine > .lesson-comment-message { margin-left:auto; }
+.lesson-comment-head { gap:8px; align-items:center; }
+.lesson-comment-avatar { width:30px; height:30px; font-size:12px; }
+.lesson-comment-head > div { min-width:0; }
+.lesson-comment-author { color:#475569; font-size:12px; overflow-wrap:anywhere; }
+.lesson-comment-teacher { font-size:9px; }
+.lesson-comment-time { display:inline; margin:0; color:#94a3b8; font-size:10px; white-space:nowrap; }
+.lesson-comment-mine > .lesson-comment-message .lesson-comment-head { flex-direction:row-reverse; text-align:right; }
+.lesson-comment-content { width:fit-content; max-width:100%; box-sizing:border-box; margin:8px 0 0 38px; padding:11px 15px; border-radius:4px 16px 16px 16px; background:#fff; border:1px solid #e8ecf3; color:#334155; font-size:14px; line-height:1.6; }
+.lesson-comment-mine > .lesson-comment-message .lesson-comment-content { margin:8px 38px 0 auto; border:0; border-radius:16px 4px 16px 16px; background:#4f46e5; color:#fff; }
+.lesson-comment-actions { margin:6px 0 0 38px; padding:0; gap:10px; align-items:center; flex-wrap:wrap; }
+.lesson-comment-actions button { font-size:11px; font-weight:500; color:#81849b; }
+.lesson-comment-actions button:hover,.lesson-comment-actions button.liked { color:#4f46e5; }
+.lesson-comment-mine > .lesson-comment-message .lesson-comment-actions { margin:6px 38px 0 0; justify-content:flex-end; }
+.lesson-comment-image { margin-left:38px; max-width:calc(100% - 38px); }
+.lesson-comment-mine > .lesson-comment-message .lesson-comment-image { margin-left:auto; margin-right:38px; }
+.lesson-comment-reference { margin-left:38px; }
+.lesson-comment-mine > .lesson-comment-message .lesson-comment-reference { margin-left:0; margin-right:38px; }
+.lesson-discussion-list { padding-top:18px; }
+
+.lesson-discussion-compose { flex-shrink:0; margin:12px 18px 16px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:16px; background:#fff; box-shadow:0 3px 12px #17203306; }
+.lesson-discussion-compose:focus-within { border-color:#a5b4fc; box-shadow:0 0 0 3px #6366f10d; }
+.lesson-discussion-compose-bottom { margin-top:4px; }
+#lesson-discussion-send { width:38px; height:38px; padding:0; border-radius:12px; display:grid; place-items:center; }
+.lesson-discussion-tools > button { width:34px; height:34px; padding:0; border-radius:9px; font-size:19px; }
+#lesson-discussion-input:focus { border:0; box-shadow:none; }
+.lesson-discussion-compose textarea { min-height:42px; height:42px; max-height:140px; border:0; border-radius:0; background:transparent; padding:8px 6px; font-family:inherit; font-size:14px; line-height:22px; resize:none; overflow-y:auto; }
+
+.lesson-discussion-panel { background:#fafbff; }
+.lesson-discussion-list { background:#fafbff; min-height:0; }
+.lesson-discussion-header { padding:18px 22px; align-items:center; }
+.lesson-discussion-header h3 { font-size:18px; }
+.lesson-discussion-compose { flex-shrink:0; }
+.lesson-discussion-compose textarea { box-sizing:border-box; }
+.lesson-comment-actions .lesson-comment-time { flex-shrink:0; }
+@media(max-width:540px) {
+    .lesson-discussion-header { padding:14px 16px; }
+    .lesson-discussion-list { padding:14px 12px 20px; }
+    .lesson-comment-message { max-width:94%; }
+    .lesson-comment-head { flex-wrap:nowrap; }
+    .lesson-discussion-compose { margin:8px 10px max(10px,env(safe-area-inset-bottom)); padding:8px; }
+    .lesson-discussion-compose textarea { font-size:16px; }
+}
+
+/* Compact consecutive messages without repeating the sender block. */
+.lesson-discussion-panel .lesson-comment { margin-bottom:12px; }
+.lesson-discussion-panel .lesson-comment-grouped { margin-top:-6px; }
+.lesson-discussion-panel .lesson-comment-grouped .lesson-comment-head { display:none; }
+.lesson-discussion-panel .lesson-comment-grouped .lesson-comment-content { margin-top:0; }
+.lesson-discussion-panel .lesson-comment-actions { gap:9px; margin-top:5px; align-items:center; }
+.lesson-discussion-panel .lesson-comment-actions button { font-size:11px; font-weight:500; }
+.lesson-discussion-panel .lesson-comment-content { padding:9px 13px; }
+.lesson-discussion-panel .lesson-comment-message { max-width:86%; }
+.lesson-discussion-panel .lesson-comment-grouped .lesson-comment-message { min-width:190px; }
+@media(max-width:540px) { .lesson-discussion-panel .lesson-comment-message { max-width:96%; } }
+
+/* Keep the conversation quiet; reveal controls for the selected message. */
+.lesson-discussion-panel .lesson-comment-actions button { opacity:0; pointer-events:none; transition:opacity .12s; }
+.lesson-discussion-panel .lesson-comment:not(.lesson-comment-group-end) .lesson-comment-actions { height:0; min-height:0; margin-top:0; overflow:hidden; }
+.lesson-discussion-panel .lesson-comment:hover .lesson-comment-actions,
+.lesson-discussion-panel .lesson-comment:focus-within .lesson-comment-actions,
+.lesson-discussion-panel .lesson-comment.show-actions .lesson-comment-actions { height:auto; margin-top:5px; overflow:visible; }
+.lesson-discussion-panel .lesson-comment:hover .lesson-comment-actions button,
+.lesson-discussion-panel .lesson-comment:focus-within .lesson-comment-actions button,
+.lesson-discussion-panel .lesson-comment.show-actions .lesson-comment-actions button { opacity:1; pointer-events:auto; }
+.lesson-discussion-panel .lesson-comment-message:focus-visible { outline:2px solid #a5b4fc; outline-offset:4px; border-radius:12px; }
+.lesson-discussion-panel .lesson-comment { margin-bottom:8px; }
+.lesson-discussion-panel .lesson-comment-grouped { margin-top:0; }
+.lesson-discussion-panel .lesson-comment-group-end { margin-bottom:18px; }
+
+/* Consecutive bubbles stay together, with room only between speakers. */
+.lesson-discussion-panel .lesson-comment:not(.lesson-comment-group-end) { margin-bottom:4px; }
+.lesson-discussion-panel .lesson-comment-grouped { margin-top:0; }
+.lesson-discussion-panel .lesson-comment-grouped .lesson-comment-content { margin-top:0; }
+.lesson-discussion-panel .lesson-comment-group-end { margin-bottom:14px; }
+#lesson-discussion-unread { border:0; background:transparent; padding:0; color:#4f46e5; font:inherit; font-size:13px; font-weight:650; cursor:pointer; text-align:left; }
+#lesson-discussion-unread:disabled { color:#94a3b8; cursor:default; font-weight:500; }
+#lesson-discussion-unread:focus-visible { outline:2px solid #a5b4fc; outline-offset:5px; border-radius:4px; }
+.lesson-unread-highlight .lesson-comment-content { box-shadow:0 0 0 3px #a5b4fc; transition:box-shadow .2s; }
+
+/* Hidden controls must not reserve space beside the timestamp. */
+.lesson-discussion-panel .lesson-comment-actions button { display:none; }
+.lesson-discussion-panel .lesson-comment:hover .lesson-comment-actions button,
+.lesson-discussion-panel .lesson-comment:focus-within .lesson-comment-actions button,
+.lesson-discussion-panel .lesson-comment.show-actions .lesson-comment-actions button { display:inline-flex; align-items:center; }
+.lesson-discussion-panel .lesson-comment-mine .lesson-comment-actions { justify-content:flex-end; text-align:right; }
+.lesson-discussion-panel .lesson-comment-grouped .lesson-comment-message { min-width:0; }
+
+/* Center the unread indicator within the conversation. */
+.lesson-discussion-panel .lesson-discussion-title-row:has(#lesson-discussion-unread) { flex:1; text-align:center; }
+.lesson-discussion-panel #lesson-discussion-unread { text-align:center; }
+.lesson-discussion-panel .lesson-discussion-header:has(#lesson-discussion-unread) { position:relative; justify-content:center; }
+.lesson-discussion-panel .lesson-discussion-header:has(#lesson-discussion-unread) .lesson-discussion-close { position:absolute; right:18px; top:50%; transform:translateY(-50%); }
+.lesson-discussion-panel .lesson-discussion-title-row:has(#lesson-discussion-unread) { padding:0 30px; }
+
+.lesson-launcher-unread { display:inline-flex; align-items:center; justify-content:center; min-width:21px; height:21px; padding:0 6px; box-sizing:border-box; border-radius:999px; background:#ef4444; color:#fff; font-size:11px; font-weight:750; line-height:1; }
+.lesson-launcher-unread[hidden] { display:none !important; }
+
+.lesson-discussion-new-marker { display:flex; align-items:center; gap:12px; margin:16px 0; color:#6366f1; font-size:11px; font-weight:600; text-align:center; }
+.lesson-discussion-new-marker::before,.lesson-discussion-new-marker::after { content:""; height:1px; flex:1; background:#dddffe; }

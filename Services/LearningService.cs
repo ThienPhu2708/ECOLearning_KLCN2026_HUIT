@@ -109,6 +109,7 @@ namespace ECOLearning.Services
             bool isDone = (watched / total) >= TyLeHoanThanh || watched >= (total - 3);
 
             var progress = db.TienDoBaiHoc.FirstOrDefault(t => t.maHocVien == studentId && t.maBaiHoc == lessonId);
+            bool wasCompleted = progress != null && progress.daHoanThanh == true;
             if (progress == null)
             {
                 progress = new TienDoBaiHoc
@@ -133,8 +134,17 @@ namespace ECOLearning.Services
                 }
             }
 
-            db.SaveChanges();
-            double phanTram = CapNhatTienDoKhoaHoc(studentId, courseId);
+            double phanTram;
+            using (var transaction = db.Database.BeginTransaction())
+            {
+                var quiz = new QuizService(db);
+                quiz.LockCourseConfiguration(courseId);
+                db.SaveChanges();
+                phanTram = CapNhatTienDoKhoaHoc(studentId, courseId);
+                if (!wasCompleted && progress.daHoanThanh == true && DaGhiDanh(studentId, courseId))
+                    quiz.IssueWithoutQuizAfterCompletion(courseId, studentId);
+                transaction.Commit();
+            }
 
             return new KetQuaLuuTienDo
             {

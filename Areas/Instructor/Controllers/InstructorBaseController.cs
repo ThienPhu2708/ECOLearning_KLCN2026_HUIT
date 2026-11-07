@@ -87,6 +87,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
             if(context.Exception==null&&context.Result is ViewResult) {
                 ViewBag.StudentReviewCount=new ECOLearning.Services.QuizVisibilityService(db).UnreadCount(CurrentTeacherId);
                 ViewBag.MenuQuizCounts=new ECOLearning.Services.QuizQuestionReportService(db).TeacherNotifications(CurrentTeacherId);
+                ViewBag.PublishingRestriction = new ECOLearning.Services.TeacherPublishingRestrictionService(db).Active(CurrentTeacherId);
             }
             base.OnActionExecuted(context);
         }

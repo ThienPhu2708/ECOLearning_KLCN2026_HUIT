@@ -37,10 +37,11 @@ namespace ECOLearning.Controllers.Api
             var quiz = Quiz;
             if (!quiz.Installed()) return ChuaCoQuiz();
             if (!new LearningService(Db).DaGhiDanh(CurrentUserId, id)) return Forbidden("Bạn chưa đăng ký khóa học này.", "NOT_ENROLLED");
+            quiz.CloseExpired(id, CurrentUserId);
+            quiz.EnsureCertificateWithoutQuiz(id, CurrentUserId);
             var cauHinh = quiz.Config(id);
             if (cauHinh == null) return NotFoundJson("Giáo viên chưa mở quiz cuối khóa.", "QUIZ_NOT_FOUND");
 
-            quiz.CloseExpired(id, CurrentUserId);
             var st = quiz.Student(id, CurrentUserId);
             var luot = quiz.Attempts(id, CurrentUserId);
             var dangLam = luot.FirstOrDefault(a => !a.SubmittedAt.HasValue);
@@ -54,7 +55,7 @@ namespace ECOLearning.Controllers.Api
                 else if (st == null || !st.LessonsDone) lyDo = "Học đủ 100% bài học trước khi làm quiz.";
                 else if (st.PendingReview) lyDo = "Kết quả đang chờ giáo viên xem xét do rời màn hình từ 3 lần.";
                 else if (st.RetakeRequired) lyDo = "Giáo viên yêu cầu làm lại quiz. Thực hiện lượt làm lại được chỉ định trên website.";
-                else if (st.Passed) lyDo = "Bạn đã đạt quiz của khóa học này.";
+                else if (st.Passed || st.IssuedAt.HasValue) lyDo = "Bạn đã hoàn thành khóa học và không cần làm quiz này.";
                 else if (st.Attempts >= duocPhep) lyDo = "Bạn đã hết lượt làm. Liên hệ giáo viên để được xem xét cấp thêm lượt.";
             }
             return Ok(new
@@ -259,6 +260,8 @@ namespace ECOLearning.Controllers.Api
         [HttpGet, Route("certificates/{courseId}")]
         public ActionResult Certificate(string courseId)
         {
+            if (Quiz.Installed() && new LearningService(Db).DaGhiDanh(CurrentUserId, courseId))
+                Quiz.EnsureCertificateWithoutQuiz(courseId, CurrentUserId);
             var cc = Quiz.Installed() ? DanhSachChungChi(courseId).FirstOrDefault() : null;
             return cc == null ? NotFoundJson("Bạn chưa có chứng chỉ của khóa học này.", "CERTIFICATE_NOT_FOUND") : Ok(cc);
         }

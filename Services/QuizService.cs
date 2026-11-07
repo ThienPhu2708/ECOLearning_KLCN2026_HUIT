@@ -99,6 +99,7 @@ namespace ECOLearning.Services
         public void SaveConfig(QuizConfig c)
         {
             using(var transaction=db.Database.CurrentTransaction==null?db.Database.BeginTransaction():null){
+            Lock("QuizConfig_"+c.CourseId);
             new QuizAssessmentService(db).Normalize(c);
             if(c.Published) ValidateConfig(c);
             else {
@@ -168,7 +169,7 @@ WHERE k.maGiaoVien=@t AND (@c IS NULL OR k.maKhoaHoc=@c) AND (@student IS NULL O
             foreach(var row in rows.Where(r=>r.HasOpenAttempt))CloseExpired(row.CourseId,row.StudentId);
             return rows.Any(r=>r.HasOpenAttempt)?Students(teacher,course,search):rows;
         }
-        public HashSet<string> CertificateCourseIds(int student) => new HashSet<string>(db.Database.SqlQuery<string>(@"SELECT c.CourseId FROM dbo.QuizValidCertificate c WHERE c.StudentId=@p0 AND EXISTS(SELECT 1 FROM dbo.QuizRecognizedAttempt a WHERE a.CourseId=c.CourseId AND a.StudentId=c.StudentId AND a.Passed=1)",student).ToList());
+        public HashSet<string> CertificateCourseIds(int student) => new HashSet<string>(db.Database.SqlQuery<string>(@"SELECT c.CourseId FROM dbo.QuizValidCertificate c WHERE c.StudentId=@p0",student).ToList());
         public List<QuizAttemptGrant> Grants(string course,int student) => db.Database.SqlQuery<QuizAttemptGrant>("SELECT * FROM dbo.QuizAttemptGrant WHERE CourseId=@c AND StudentId=@s ORDER BY Id DESC",P("@c",course),P("@s",student)).ToList();
         public void GrantAttempt(string course,int student,int teacher,string reason)
         {
@@ -210,7 +211,7 @@ WHERE k.maGiaoVien=@t AND (@c IS NULL OR k.maKhoaHoc=@c) AND (@student IS NULL O
                 if(state==null || !state.LessonsDone) throw new InvalidOperationException("Học đủ 100% bài học trước khi làm quiz.");
                 if(state.PendingReview) throw new InvalidOperationException("Kết quả đang chờ giáo viên xem xét do đã rời màn hình từ 3 lần. Chờ quyết định trước khi thi tiếp.");
                 if(state.RetakeRequired) throw new InvalidOperationException("Giáo viên đã yêu cầu làm lại. Mở mục Yêu cầu làm lại để thực hiện lượt được chỉ định.");
-                if(state.Passed) throw new InvalidOperationException("Bạn đã đạt quiz của khóa học này.");
+                if(state.Passed || state.IssuedAt.HasValue) throw new InvalidOperationException("Bạn đã hoàn thành khóa học và không cần làm quiz này.");
                 var config=Config(course);
                 if(config==null || !config.Published) throw new InvalidOperationException("Giáo viên chưa mở quiz cuối khóa.");
                 if(state.Attempts>=config.MaxAttempts+state.ExtraAttempts) throw new InvalidOperationException("Bạn đã hết lượt làm. Liên hệ giáo viên để được xem xét cấp thêm lượt.");
@@ -293,10 +294,12 @@ WHERE k.maGiaoVien=@t AND (@c IS NULL OR k.maKhoaHoc=@c) AND (@student IS NULL O
         {
             RequireEnrollment(course,student);
             using(var tx=db.Database.BeginTransaction(IsolationLevel.Serializable)) {
+                LockCourseConfiguration(course);
                 Lock("Quiz_"+course+"_"+student);
                 var state=Student(course,student);
                 if(state!=null && state.PendingReview)throw new InvalidOperationException("Chờ giáo viên xem xét lượt thi trước khi nhận chứng chỉ.");
                 if(state?.IssuedAt.HasValue==true){tx.Commit();return;}
+                if (!StaffViewMode.LaChiXem(db.NguoiDung.Find(student).vaiTro) && IssueWithoutQuizAfterCompletion(course,student)) { tx.Commit(); return; }
                 if(state==null || !state.LessonsDone || !state.Passed)
                     throw new InvalidOperationException("Cần học đủ bài và đạt ngưỡng quiz của khóa trước khi nhận chứng chỉ.");
                 // Claiming is the issuance event. Upgrade legacy pending records without changing their code.
@@ -305,6 +308,41 @@ UPDATE dbo.QuizCertificate SET IssuedAt=@now,IssuedBy=NULL,Code=CASE WHEN EXISTS
 ELSE INSERT dbo.QuizCertificate(CourseId,StudentId,RequestedAt,IssuedAt,IssuedBy,Code) VALUES(@c,@s,@now,@now,NULL,@code);",
                     P("@c",course),P("@s",student),P("@now",DateTime.UtcNow),P("@code","CERT-"+Guid.NewGuid().ToString("N")));
                 tx.Commit();
+            }
+        }
+
+        // Caller holds a transaction and the course configuration lock while saving completion.
+        public bool IssueWithoutQuizAfterCompletion(string course, int student)
+        {
+            if (!Installed() || Config(course)?.Published == true) return false;
+            Lock("Quiz_" + course + "_" + student);
+            var state = Student(course, student);
+            if (state == null || !state.LessonsDone || state.IssuedAt.HasValue || state.PendingReview || state.RetakeRequired || state.HasOpenAttempt || (state.Attempts > 0 && !state.Passed))
+                return false;
+            if (db.Database.SqlQuery<int>("SELECT COUNT(*) FROM dbo.QuizCertificateRevocation WHERE CourseId=@c AND StudentId=@s", P("@c",course), P("@s",student)).Single() > 0)
+                return false;
+            db.Database.ExecuteSqlCommand(@"IF EXISTS(SELECT 1 FROM dbo.QuizCertificate WHERE CourseId=@c AND StudentId=@s)
+UPDATE dbo.QuizCertificate SET IssuedAt=@now,IssuedBy=NULL,Code=@code WHERE CourseId=@c AND StudentId=@s AND IssuedAt IS NULL;
+ELSE INSERT dbo.QuizCertificate(CourseId,StudentId,RequestedAt,IssuedAt,IssuedBy,Code) VALUES(@c,@s,@now,@now,NULL,@code);",
+                P("@c",course),P("@s",student),P("@now",DateTime.UtcNow),P("@code","CERT-"+Guid.NewGuid().ToString("N")));
+            return true;
+        }
+
+        public void LockCourseConfiguration(string course) { Lock("QuizConfig_" + course); }
+
+        // Reconcile older completions when the learner opens the course certificate page.
+        public bool EnsureCertificateWithoutQuiz(string course, int student)
+        {
+            if (!Installed()) return false;
+            RequireEnrollment(course, student);
+            var user = db.NguoiDung.Find(student);
+            if (user == null || StaffViewMode.LaChiXem(user.vaiTro)) return false;
+            using (var tx = db.Database.BeginTransaction(IsolationLevel.Serializable))
+            {
+                LockCourseConfiguration(course);
+                bool issued = IssueWithoutQuizAfterCompletion(course, student);
+                tx.Commit();
+                return issued;
             }
         }
     }

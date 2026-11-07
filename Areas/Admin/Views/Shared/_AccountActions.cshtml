@@ -25,6 +25,17 @@ else
         {
             <button type="button" class="btn btn-sm btn-primary" onclick="accMoKhoa()"><i class="bi bi-unlock-fill"></i> Mở khóa</button>
         }
+        @if (Model.ChoPhepHanCheDangKhoaHoc)
+        {
+            if (Model.DangHanCheDangKhoaHoc)
+            {
+                <button type="button" class="btn btn-sm acc-btn-warning" onclick="accGoHanChe()"><i class="bi bi-unlock"></i> Gỡ hạn chế giảng dạy</button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-sm acc-btn-warning" onclick="accHanChe()"><i class="bi bi-slash-circle"></i> Hạn chế giảng dạy</button>
+            }
+        }
         <button type="button" class="btn btn-sm acc-btn-warning" onclick="accCanhCao()"><i class="bi bi-exclamation-triangle-fill"></i> Gửi cảnh cáo</button>
         <button type="button" class="btn btn-sm btn-secondary" onclick="accDatLaiMatKhau()"><i class="bi bi-key-fill"></i> Đặt lại mật khẩu</button>
     </div>
@@ -57,6 +68,21 @@ else
         <input type="hidden" name="id" value="@Model.MaNguoiDung" />
         <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
     }
+    if (Model.ChoPhepHanCheDangKhoaHoc)
+    {
+        using (Html.BeginForm("RestrictPublishing", "Teacher", new { area = "Admin" }, FormMethod.Post, new { id = "acc-restrict-form" }))
+        {
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.MaNguoiDung" />
+            <input type="hidden" name="duration" />
+            <input type="hidden" name="reason" />
+        }
+        using (Html.BeginForm("LiftPublishingRestriction", "Teacher", new { area = "Admin" }, FormMethod.Post, new { id = "acc-lift-restriction-form" }))
+        {
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.MaNguoiDung" />
+        }
+    }
 
     <style>
         .acc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -77,6 +103,32 @@ else
             var f = document.getElementById(formId);
             Object.keys(giaTri || {}).forEach(function (k) { f.querySelector('[name=' + k + ']').value = giaTri[k]; });
             f.submit();
+        }
+
+        function accHanChe() {
+            Swal.fire({ title: 'Hạn chế giảng dạy', icon: 'warning',
+                html: '<div class="acc-swal-note">Giáo viên không thể tạo hoặc gửi duyệt khóa học mới. Khóa học đã đăng và hồ sơ đã gửi duyệt vẫn được xử lý bình thường.</div>' +
+                    '<div class="acc-swal-field"><label for="restriction-duration">Thời hạn</label><select id="restriction-duration"><option value="2d">2 ngày</option><option value="5d">5 ngày</option><option value="7d">7 ngày</option><option value="20d">20 ngày</option><option value="1m">1 tháng</option><option value="3m">3 tháng</option><option value="6m">6 tháng</option><option value="indefinite">Đến khi mở</option></select><small id="restriction-end-preview"></small></div>' +
+                    '<div class="acc-swal-field"><label for="restriction-reason">Lý do</label><textarea id="restriction-reason" maxlength="500"></textarea></div>',
+                showCancelButton: true, confirmButtonText: 'Áp dụng hạn chế', cancelButtonText: 'Hủy',
+                didOpen: function () {
+                    var select = document.getElementById('restriction-duration');
+                    function preview() {
+                        var value = select.value, label = document.getElementById('restriction-end-preview');
+                        if (value === 'indefinite') { label.textContent = 'Có hiệu lực đến khi quản trị viên gỡ.'; return; }
+                        var date = new Date(Date.now() + 7 * 3600000), amount = parseInt(value, 10);
+                        if (value.endsWith('d')) date.setUTCDate(date.getUTCDate() + amount);
+                        else { var day = date.getUTCDate(); date.setUTCDate(1); date.setUTCMonth(date.getUTCMonth() + amount); var last = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate(); date.setUTCDate(Math.min(day, last)); }
+                        label.textContent = 'Dự kiến đến ' + date.toLocaleString('vi-VN', { timeZone: 'UTC' }) + ' (giờ Việt Nam).';
+                    }
+                    select.addEventListener('change', preview); preview();
+                },
+                preConfirm: function () { var reason = document.getElementById('restriction-reason').value.trim(); if (reason.length < 5) { Swal.showValidationMessage('Nhập lý do ít nhất 5 ký tự.'); return false; } return { duration: document.getElementById('restriction-duration').value, reason: reason }; }
+            }).then(function (r) { if (r.isConfirmed) accGui('acc-restrict-form', r.value); });
+        }
+        function accGoHanChe() {
+            Swal.fire({ title: 'Gỡ hạn chế giảng dạy?', text: 'Giáo viên sẽ có thể tạo và gửi duyệt khóa học mới.', icon: 'question', showCancelButton: true, confirmButtonText: 'Gỡ hạn chế', cancelButtonText: 'Hủy' })
+                .then(function (r) { if (r.isConfirmed) accGui('acc-lift-restriction-form'); });
         }
 
         function accKhoa() {

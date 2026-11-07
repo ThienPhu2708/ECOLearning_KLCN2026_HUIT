@@ -385,7 +385,7 @@
                             ECOLearning.ViewModels.QuizStudentRow quizState = null;
                             if (quizStates != null) { quizStates.TryGetValue(item.MaKhoaHoc, out quizState); }
                             bool retakeRequired = quizState != null && quizState.RetakeRequired;
-                            bool hasCertificate = quizState != null && !retakeRequired && quizState.Passed && quizState.IssuedAt.HasValue;
+                            bool hasCertificate = quizState != null && !retakeRequired && quizState.IssuedAt.HasValue;
                             string quizLabel = quizState != null && quizState.PendingReview ? "Chờ giáo viên xem xét" : retakeRequired ? "Yêu cầu làm lại quiz" : hasCertificate ? "Đã cấp chứng chỉ" : quizState == null ? "Chưa có kết quả quiz" : quizState.Passed ? "Đã đạt quiz · Có thể nhận chứng chỉ" : quizState.HasOpenAttempt ? "Đang làm quiz" : quizState.Attempts > 0 ? "Quiz chưa đạt" : "Chưa làm quiz";
                             string studyUrl = Url.Action("Study", "Learning", new { courseId = item.MaKhoaHoc });
                             string certUrl = retakeRequired

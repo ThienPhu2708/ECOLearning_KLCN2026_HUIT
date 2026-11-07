@@ -9,6 +9,8 @@ namespace ECOLearning.Areas.Admin.Models
         public string VaiTro { get; set; }
         public bool HoatDong { get; set; }
         public bool LaChinhMinh { get; set; }
+        public bool ChoPhepHanCheDangKhoaHoc { get; set; }
+        public bool DangHanCheDangKhoaHoc { get; set; }
 
         /// <summary>Trang quay về sau khi thao tác (trang chi tiết đang mở).</summary>
         public string ReturnUrl { get; set; }

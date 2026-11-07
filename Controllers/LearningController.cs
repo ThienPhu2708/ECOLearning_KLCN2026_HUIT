@@ -346,7 +346,7 @@ namespace ECOLearning.Controllers
             ViewBag.HasSubmittedReview = hasSubmittedReview;
             var studyQuiz = new QuizService(db);
             var studyQuizState = currentUser != null && studyQuiz.Installed() ? studyQuiz.Student(courseId, currentUser.maNguoiDung) : null;
-            ViewBag.CanReview = studyQuizState != null && studyQuizState.LessonsDone && studyQuizState.Passed;
+            ViewBag.CanReview = studyQuizState != null && studyQuizState.LessonsDone;
 
             // Nút báo cáo vi phạm: chỉ cho học viên đã đăng ký và không phải giáo viên của khóa học
             ViewBag.CanReportViolation = currentUser != null
@@ -411,7 +411,10 @@ namespace ECOLearning.Controllers
             if (!kq.Success)
                 return new HttpStatusCodeResult(400, kq.Message);
 
-            return Json(new { success = true, completed = kq.Completed, position = kq.Position, isDone = kq.IsDone });
+            var quiz = new QuizService(db);
+            var state = quiz.Installed() ? quiz.Student(courseId, studentId) : null;
+            return Json(new { success = true, completed = kq.Completed, position = kq.Position, isDone = kq.IsDone,
+                canReview = state != null && state.LessonsDone, certificateIssued = state != null && state.IssuedAt.HasValue });
         }
 
         /// <summary>Đặt BaiHoc.thoiLuong theo độ dài thật của file video (xem LearningService.DongBoThoiLuong).</summary>
@@ -563,7 +566,7 @@ namespace ECOLearning.Controllers
                 return RedirectToAction("MyCourses");
             }
             var certificateState = quizService.Student(courseId, currentUser.maNguoiDung);
-            if (certificateState == null || !certificateState.Passed || !certificateState.IssuedAt.HasValue)
+            if (certificateState == null || !certificateState.IssuedAt.HasValue)
             {
                 TempData["QuizMessage"] = "Học đủ bài, đạt ngưỡng quiz rồi bấm Nhận chứng chỉ để được cấp tự động.";
                 return RedirectToAction("Index", "Quiz", new { courseId });

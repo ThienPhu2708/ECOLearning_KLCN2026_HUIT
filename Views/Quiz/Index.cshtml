@@ -32,15 +32,16 @@
         <section class="lq-stat"><div class="lq-stat-top">Kết quả quiz<span class="lq-icon"><i class="bi bi-clipboard-check" aria-hidden="true"></i></span></div><div class="lq-value">@(s.BestScore?.ToString("0.##") ?? "—")<small>/10</small></div><span class="lq-badge @(s.Passed ? "success" : "")">@s.QuizStatus</span></section>
         <section class="lq-stat"><div class="lq-stat-top">Chứng chỉ khóa học<span class="lq-icon gold"><i class="bi bi-award" aria-hidden="true"></i></span></div><div class="lq-cert"><span class="lq-badge @(s.IssuedAt.HasValue || (s.LessonsDone && s.Passed) ? "success" : "")">@s.CertificateStatus</span>
         @if (s.IssuedAt.HasValue) {<a href="@Url.Action("Certificate", "Learning", new { courseId = Model.CourseId })">Xem chứng chỉ <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>} else if (s.LessonsDone && s.Passed) {using (Html.BeginForm("ClaimCertificate", "Quiz")) {@Html.AntiForgeryToken()<input type="hidden" name="courseId" value="@Model.CourseId" /><button type="submit">Nhận chứng chỉ <i class="bi bi-arrow-right" aria-hidden="true"></i></button>}}
-        </div><p>@(s.IssuedAt.HasValue ? "Bạn đã nhận chứng chỉ của khóa học này." : "Hoàn thành bài học và đạt quiz để nhận chứng chỉ.")</p></section>
+        </div><p>@(s.IssuedAt.HasValue ? "Bạn đã nhận chứng chỉ của khóa học này." : c == null || !c.Published ? "Hoàn thành bài học để được cấp chứng chỉ." : "Hoàn thành bài học và đạt quiz để nhận chứng chỉ.")</p></section>
     </div>
     @if (active != null) {<div class="lq-notice"><i class="bi bi-clock-history" aria-hidden="true"></i><div><a class="btn btn-primary" href="@Url.Action("Take", new { id = active.Id })">Tiếp tục lượt đang làm</a> Đề và thời gian của lượt đang làm được giữ nguyên.</div></div>}
-    @if (c == null || !c.Published) {<div class="lq-notice"><i class="bi bi-info-circle" aria-hidden="true"></i> Giáo viên chưa mở quiz cuối khóa. Kết quả đã đạt vẫn được lưu.</div>}
+    @if (c == null || !c.Published) {<div class="lq-notice"><i class="bi bi-info-circle" aria-hidden="true"></i> Khóa học hiện không có quiz. Hoàn thành tất cả bài học để được cấp chứng chỉ.</div>}
     else
     {
         <section class="lq-exam"><div class="lq-exam-heading"><h2>@c.Title</h2><span>BÀI KIỂM TRA CUỐI KHÓA</span></div><div class="lq-metrics"><div><i class="bi bi-list-check" aria-hidden="true"></i><span><strong>@c.Total câu</strong><small>Trắc nghiệm một đáp án</small></span></div><div><i class="bi bi-clock" aria-hidden="true"></i><span><strong>@c.Minutes phút</strong><small>Thời gian làm bài</small></span></div><div><i class="bi bi-check-circle" aria-hidden="true"></i><span><strong>Đạt từ @c.PassPercent%</strong><small>Ít nhất @((int)Math.Ceiling(c.Total * c.PassPercent / 100.0))/@c.Total câu đúng</small></span></div><div><i class="bi bi-arrow-repeat" aria-hidden="true"></i><span><strong>@Model.RegularAttempts/@Model.AllowedAttempts lượt</strong><small>Đã sử dụng / tối đa</small></span></div></div>
         @if (active != null) {<div class="lq-notice">Bạn có một lượt đang làm. Bấm “Tiếp tục lượt đang làm” để trở lại bài thi.</div>}
         else if (!s.LessonsDone) {<div class="lq-notice">Hoàn thành 100% bài học để mở quiz cuối khóa.</div>}
+        else if (s.IssuedAt.HasValue && !s.Passed) {<div class="lq-notice success">Bạn đã nhận chứng chỉ trước khi quiz được công bố, không cần làm quiz này.</div>}
         else if (s.PendingReview) {<div class="lq-notice"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Bạn đã rời màn hình từ 3 lần. Kết quả chờ giáo viên xem xét, chưa được công nhận và chưa thể nhận chứng chỉ.</div>}
         else if (s.RetakeRequired) {<div class="lq-notice">Kết quả cũ đã hết hiệu lực. <a href="@Url.Action("Retakes", new { courseId = Model.CourseId })">Mở bài làm lại</a>. Chứng chỉ được xét theo kết quả mới.</div>}
         else if (s.Passed) {<div class="lq-notice success"><i class="bi bi-check-circle" aria-hidden="true"></i> @(s.IssuedAt.HasValue ? "Bạn đã đạt quiz và được cấp chứng chỉ. Chúc mừng bạn hoàn thành khóa học!" : "Bạn đã đạt quiz. Bấm Nhận chứng chỉ để được cấp ngay.")</div>}
@@ -61,7 +62,7 @@
     </section>
 </div>
 
-@if (c != null && c.Published && active == null && s.LessonsDone && !s.Passed && !s.RetakeRequired && !s.PendingReview && Model.RegularAttempts < Model.AllowedAttempts)
+@if (c != null && c.Published && active == null && s.LessonsDone && !s.Passed && !s.IssuedAt.HasValue && !s.RetakeRequired && !s.PendingReview && Model.RegularAttempts < Model.AllowedAttempts)
 {
     <dialog id="quiz-start-dialog" class="lq-start-dialog" aria-labelledby="quiz-start-title" aria-describedby="quiz-start-description">
         <form method="dialog"><button class="lq-dialog-close" aria-label="Đóng">×</button></form>

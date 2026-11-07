@@ -56,7 +56,28 @@ namespace ECOLearning.Areas.Admin.Controllers
             ViewBag.BreadcrumbParentUrl = Url.Action("Index");
             ViewBag.BreadcrumbCurrent = model.CoBan.HoTen;
             ViewBag.LaChinhMinh = id == Convert.ToInt32(Session["UserId"]);
+            var restrictionService = new TeacherPublishingRestrictionService(db);
+            ViewBag.PublishingRestrictionInstalled = restrictionService.Installed();
+            ViewBag.PublishingRestriction = restrictionService.Active(id);
             return View(model);
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult RestrictPublishing(int id, string duration, string reason)
+        {
+            if (!LaAdminGoc) return new HttpStatusCodeResult(403);
+            var result = new TeacherPublishingRestrictionService(db).Apply(Convert.ToInt32(Session["UserId"]), id, duration, reason);
+            TempData[result.ThanhCong ? "SuccessMessage" : "ErrorMessage"] = result.ThongBao;
+            return RedirectToAction("Details", new { id });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult LiftPublishingRestriction(int id)
+        {
+            if (!LaAdminGoc) return new HttpStatusCodeResult(403);
+            var result = new TeacherPublishingRestrictionService(db).Lift(Convert.ToInt32(Session["UserId"]), id);
+            TempData[result.ThanhCong ? "SuccessMessage" : "ErrorMessage"] = result.ThongBao;
+            return RedirectToAction("Details", new { id });
         }
 
         protected override void Dispose(bool disposing)

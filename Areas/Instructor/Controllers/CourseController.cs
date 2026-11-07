@@ -11,6 +11,13 @@ namespace ECOLearning.Areas.Instructor.Controllers
 {
     public class CourseController : InstructorBaseController
     {
+        private bool IsPublishingRestricted()
+        {
+            var restriction = new TeacherPublishingRestrictionService(db).Active(CurrentTeacherId);
+            if (restriction == null) return false;
+            TempData["ErrorMessage"] = restriction.Message;
+            return true;
+        }
         // GET: Instructor/Course (UC9: Danh sách khóa học của giảng viên)
         public ActionResult Index(string search = "", string status = "")
         {
@@ -347,6 +354,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
         // GET: Instructor/Course/Create
         public ActionResult Create()
         {
+            if (IsPublishingRestricted()) return RedirectToAction("Index");
             // Chưa có lĩnh vực nào được duyệt (giáo viên cũ chưa đề xuất chuyên môn): đưa sang trang đề xuất thay vì mở form trống danh mục
             if (new TeacherSpecialtyService(db).NeedsSpecialty(CurrentTeacherId))
             {
@@ -366,6 +374,7 @@ namespace ECOLearning.Areas.Instructor.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Create(CourseCreateOrEditViewModel model, string actionType = "draft")
         {
+            if (IsPublishingRestricted()) return RedirectToAction("Index");
             model.MoTa = CourseDescriptionHtml.Sanitize(model.MoTa);
             // Normalize formatted VND price from Request.Form if needed
             string rawGiaBan = Request.Form["GiaBan"];
@@ -497,7 +506,13 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 CreateOrUpdateKiemDuyetRecord(courseId);
             }
 
-            db.SaveChanges();
+            using (var tx = db.Database.BeginTransaction())
+            {
+                new TeacherPublishingRestrictionService(db).LockTeacher(CurrentTeacherId);
+                if (IsPublishingRestricted()) return RedirectToAction("Index");
+                db.SaveChanges();
+                tx.Commit();
+            }
 
             int queuedSubtitles = 0;
             foreach (var request in subtitleRequests)
@@ -630,6 +645,9 @@ namespace ECOLearning.Areas.Instructor.Controllers
             int teacherId = CurrentTeacherId;
             var course = db.KhoaHoc.FirstOrDefault(k => k.maKhoaHoc == model.MaKhoaHoc && k.maGiaoVien == teacherId);
             if (course == null) return HttpNotFound();
+            if (actionType == "submit" && !CourseRevisionService.Published(course.trangThai)
+                && !course.DangKyKhoaHoc.Any() && new CourseRevisionService(db, Server.MapPath).Get(course.maKhoaHoc) == null
+                && IsPublishingRestricted()) return RedirectToAction("Index");
             if (course.trangThai == "Chờ duyệt" || course.trangThai == "ChoDuyet")
             {
                 TempData["ErrorMessage"] = "Khóa học đang chờ duyệt. Vui lòng hủy yêu cầu duyệt trước khi chỉnh sửa.";
@@ -720,7 +738,17 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 CreateOrUpdateKiemDuyetRecord(course.maKhoaHoc);
             }
 
-            db.SaveChanges();
+            if (actionType == "submit")
+            {
+                using (var tx = db.Database.BeginTransaction())
+                {
+                    new TeacherPublishingRestrictionService(db).LockTeacher(CurrentTeacherId);
+                    if (IsPublishingRestricted()) return RedirectToAction("Index");
+                    db.SaveChanges();
+                    tx.Commit();
+                }
+            }
+            else db.SaveChanges();
 
             if (actionType == "violation")
             {
@@ -761,6 +789,8 @@ namespace ECOLearning.Areas.Instructor.Controllers
                 return RedirectToAction("Edit", new { id });
             }
 
+            if (IsPublishingRestricted()) return RedirectToAction("Index");
+
 
             // Kiểm tra nội dung đã lưu: có chương, có bài, mỗi bài có video còn tồn tại (CourseContentService)
             var thieu = new CourseContentService(db, Server.MapPath).KiemTraKhoaHoc(course.maKhoaHoc);
@@ -772,7 +802,13 @@ namespace ECOLearning.Areas.Instructor.Controllers
 
             course.trangThai = "Chờ duyệt";
             CreateOrUpdateKiemDuyetRecord(course.maKhoaHoc);
-            db.SaveChanges();
+            using (var tx = db.Database.BeginTransaction())
+            {
+                new TeacherPublishingRestrictionService(db).LockTeacher(CurrentTeacherId);
+                if (IsPublishingRestricted()) return RedirectToAction("Index");
+                db.SaveChanges();
+                tx.Commit();
+            }
 
             TempData["SuccessMessage"] = string.Format("Đã gửi khóa học '{0}' vào hàng đợi kiểm duyệt thành công!", course.tenKhoaHoc);
             return RedirectToAction("Index");

@@ -274,12 +274,12 @@ namespace ECOLearning.Controllers.Api
 
         private static List<string> TachMucTieu(string s) => CourseOutcomes.Tach(s);
 
-        /// <summary>Được đánh giá khi đã học đủ bài và đạt quiz cuối khóa (cùng quy tắc ReviewController của website).</summary>
+        /// <summary>Được đánh giá khi đã hoàn thành tất cả bài học.</summary>
         private bool CoTheDanhGia(string courseId, int userId)
         {
             var quiz = new QuizService(Db);
             var state = quiz.Installed() ? quiz.Student(courseId, userId) : null;
-            return state != null && state.LessonsDone && state.Passed;
+            return state != null && state.LessonsDone;
         }
 
         // B4. GET /api/v1/courses/{id}/reviews?stars=&page=
@@ -338,7 +338,7 @@ namespace ECOLearning.Controllers.Api
             if (k == null) return NotFoundJson("Không tìm thấy khóa học.", "COURSE_NOT_FOUND");
             int userId = CurrentUserId;
             if (!CoTheDanhGia(id, userId))
-                return Forbidden("Bạn cần hoàn thành tất cả bài học và đạt quiz cuối khóa trước khi đánh giá.");
+                return Forbidden("Bạn cần hoàn thành tất cả bài học trước khi đánh giá.");
 
             var dg = Db.DanhGiaKhoaHoc.FirstOrDefault(d => d.maHocVien == userId && d.maKhoaHoc == id);
             if (dg != null)

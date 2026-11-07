@@ -10,6 +10,7 @@
     string anh = string.IsNullOrWhiteSpace(u.AnhDaiDien) ? null : (u.AnhDaiDien.StartsWith("http") ? u.AnhDaiDien : Url.Content("~/" + u.AnhDaiDien.TrimStart('~', '/')));
     int soTamAn = Model.KhoaHoc.Count(k => k.TrangThai == CourseStatus.TamAn);
     int viPhamCho = Model.ViPham.Count(v => v.TrangThai == "Chờ xử lý");
+    var hanChe = ViewBag.PublishingRestriction as TeacherPublishingRestriction;
 }
 
 <link rel="stylesheet" href="~/assets/css/admin-users.css?v=1" />
@@ -40,6 +41,10 @@
                 {
                     <span class="badge badge-danger">Đang khóa</span>
                 }
+                @if (hanChe != null)
+                {
+                    <span class="badge badge-warning">Bị hạn chế</span>
+                }
                 @if (viPhamCho > 0)
                 {
                     <span class="badge badge-danger"><i class="bi bi-flag-fill"></i> @viPhamCho vi phạm chờ xử lý</span>
@@ -50,10 +55,16 @@
     @Html.Partial("_AccountActions", new ECOLearning.Areas.Admin.Models.AccountActionsModel
     {
         MaNguoiDung = u.MaNguoiDung, HoTen = u.HoTen, Email = u.Email, VaiTro = u.VaiTro,
-        HoatDong = u.HoatDong, LaChinhMinh = laChinhMinh, ReturnUrl = Request.RawUrl
+        HoatDong = u.HoatDong, LaChinhMinh = laChinhMinh, ReturnUrl = Request.RawUrl,
+        ChoPhepHanCheDangKhoaHoc = ViewBag.PublishingRestrictionInstalled == true,
+        DangHanCheDangKhoaHoc = hanChe != null
     })
 </div>
 
+@if (ViewBag.PublishingRestrictionInstalled != true)
+{
+    <div class="au-lock-box">Chức năng hạn chế đăng khóa học mới chưa sẵn sàng. Cần chạy migration 034.</div>
+}
 @if (!u.HoatDong)
 {
     <div class="au-lock-box">

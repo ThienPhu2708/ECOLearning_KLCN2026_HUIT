@@ -547,7 +547,7 @@
         }
         else if (!canReview)
         {
-            <button class="btn btn-secondary btn-sm" disabled title="Hoàn thành bài học và đạt quiz để đánh giá" style="opacity:.6;font-size:13px;"><i class="bi bi-lock" aria-hidden="true"></i> Chưa thể đánh giá</button>
+            <button class="btn btn-secondary btn-sm" id="btn-rating-header" disabled title="Hoàn thành tất cả bài học để đánh giá" style="opacity:.6;font-size:13px;"><i class="bi bi-lock" aria-hidden="true"></i> Chưa thể đánh giá</button>
         }
         else
         {
@@ -1594,7 +1594,22 @@
             if (useBeacon && navigator.sendBeacon && navigator.sendBeacon(progressUrl, body)) return;
             fetch(progressUrl, { method: 'POST', body: body, credentials: 'same-origin', keepalive: !!useBeacon,
                                  headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(function (r) { if (!r.ok) console.error('UpdateProgress error:', r.status); })
+                .then(function (r) { if (!r.ok) throw new Error('UpdateProgress: ' + r.status); return r.json(); })
+                .then(function (data) {
+                    if (!data.canReview || canReview) return;
+                    canReview = true;
+                    var btn = document.getElementById('btn-rating-header');
+                    if (btn && !hasSubmittedReview) {
+                        btn.disabled = false; btn.title = ''; btn.style.opacity = '1';
+                        btn.className = 'btn btn-primary btn-sm';
+                        btn.innerHTML = '<i class="bi bi-star-fill"></i> Đánh giá khóa học';
+                        btn.onclick = handleRatingButtonClick;
+                    }
+                    if (!hasSubmittedReview && !hasPromptedRating) {
+                        hasPromptedRating = true;
+                        openModal('rating-modal');
+                    }
+                })
                 .catch(function (err) { console.error('UpdateProgress error:', err); });
         }
 
@@ -1608,7 +1623,7 @@
         }
 
         function handleRatingButtonClick() {
-            if (!canReview) { showToast('Hoàn thành tất cả bài học và đạt quiz cuối khóa để đánh giá.', 'warning'); return; }
+            if (!canReview) { showToast('Hoàn thành tất cả bài học để đánh giá.', 'warning'); return; }
             if (hasSubmittedReview) { showToast('Bạn đã gửi đánh giá rồi. Cảm ơn bạn!', 'info'); return; }
             if (!allLessonsCompleted()) {
                 var c = getCompletedCount(), t = courseLessons.length;

@@ -9,6 +9,8 @@
     int totalRejected  = Model != null ? Model.Count(x => x.TrangThai == "TuChoi"   || x.TrangThai == "Từ chối" || x.TrangThai == "Cần sửa đổi" || x.RevisionStatus == "Rejected") : 0;
     int totalViolation = Model != null ? Model.Count(x => x.TrangThai == "Tạm khóa" || x.TrangThai == "Khóa vĩnh viễn") : 0;
     int totalPaused    = Model != null ? Model.Count(x => x.TrangThai == ECOLearning.Services.CourseStatus.TamNgung) : 0;
+    var courseError = TempData["ErrorMessage"] as string;
+    bool isRestrictionNotice = !string.IsNullOrEmpty(courseError) && courseError.StartsWith("Bạn đang bị hạn chế đăng khóa học mới", StringComparison.Ordinal);
 }
 
 @if (TempData["SuccessMessage"] != null)
@@ -17,10 +19,17 @@
         ✓ @TempData["SuccessMessage"]
     </div>
 }
-@if (TempData["ErrorMessage"] != null)
+@if (isRestrictionNotice)
+{
+    <div id="restriction-toast" role="alert" style="position:fixed;top:20px;right:20px;z-index:10000;max-width:min(440px,calc(100vw - 40px));box-sizing:border-box;padding:12px 16px;background:#FEF2F2;border:1px solid #EF4444;color:#991B1B;border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,.15);font-size:14px;font-weight:600;">
+        ✕ @courseError
+    </div>
+    <script>window.setTimeout(function () { var notice = document.getElementById('restriction-toast'); if (notice) notice.remove(); }, 3000);</script>
+}
+else if (!string.IsNullOrEmpty(courseError))
 {
     <div style="padding: 12px 16px; background: #FEF2F2; border: 1px solid #EF4444; color: #991B1B; border-radius: 12px; margin-bottom: 20px; font-size: 14px; font-weight: 600;">
-        ✕ @TempData["ErrorMessage"]
+        ✕ @courseError
     </div>
 }
 

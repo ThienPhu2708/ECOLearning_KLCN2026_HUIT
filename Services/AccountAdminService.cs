@@ -50,6 +50,8 @@ namespace ECOLearning.Services
         public const string HdKhoa = "KhoaTaiKhoan";
         public const string HdMoKhoa = "MoKhoa";
         public const string HdCanhCao = "CanhCao";
+        public const string HdHanCheDangKhoaHoc = "HanCheDangKhoaHoc";
+        public const string HdGoHanCheDangKhoaHoc = "GoHanCheDangKhoaHoc";
         public const string HdTaoNhanVien = "TaoNhanVien";
         public const string HdDatLaiMatKhau = "DatLaiMatKhau";
         public const string HdTamDungKhuyenMai = "TamDungKhuyenMai";
@@ -588,6 +590,8 @@ namespace ECOLearning.Services
                     case AccountAdminService.HdKhoa: return "Khóa tài khoản";
                     case AccountAdminService.HdMoKhoa: return "Mở khóa";
                     case AccountAdminService.HdCanhCao: return "Cảnh cáo";
+                    case AccountAdminService.HdHanCheDangKhoaHoc: return "Hạn chế đăng khóa học mới";
+                    case AccountAdminService.HdGoHanCheDangKhoaHoc: return "Gỡ hạn chế đăng khóa học mới";
                     case AccountAdminService.HdTaoNhanVien: return "Tạo tài khoản";
                     case AccountAdminService.HdDatLaiMatKhau: return "Đặt lại mật khẩu";
                     case AccountAdminService.HdTamDungKhuyenMai: return "Admin tạm dừng";
@@ -613,10 +617,12 @@ namespace ECOLearning.Services
                     case AccountAdminService.HdTuChoiBanSua:
                     case AccountAdminService.HdTamDungKhuyenMai: return "badge-danger";
                     case AccountAdminService.HdMoKhoa:
+                    case AccountAdminService.HdGoHanCheDangKhoaHoc:
                     case AccountAdminService.HdDuyetKhoaHoc:
                     case AccountAdminService.HdDuyetBanSua:
                     case AccountAdminService.HdChoChayKhuyenMai: return "badge-success";
                     case AccountAdminService.HdCanhCao:
+                    case AccountAdminService.HdHanCheDangKhoaHoc:
                     case AccountAdminService.HdThayPhien: return "badge-warning";
                     default: return "badge-primary";
                 }

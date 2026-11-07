@@ -202,7 +202,7 @@ namespace ECOLearning.Controllers.Api
                     passed = trangThai != null && trangThai.Passed
                 },
                 certificate = new { issued = trangThai != null && trangThai.IssuedAt.HasValue },
-                canReview = trangThai != null && trangThai.LessonsDone && trangThai.Passed
+                canReview = trangThai != null && trangThai.LessonsDone
             });
         }
 

@@ -24,6 +24,7 @@ namespace ECOLearning.Controllers
         {
             try {
                 Service.RequireEnrollment(courseId,StudentId);Service.CloseExpired(courseId,StudentId);
+                if (!StaffViewMode.LaChiXem(Session)) Service.EnsureCertificateWithoutQuiz(courseId,StudentId);
                 ViewBag.RetakeCases=new QuizRetakeService(db).ForStudent(StudentId,courseId);
                 return View(new QuizOverview{CourseId=courseId,CourseName=db.KhoaHoc.Find(courseId).tenKhoaHoc,Config=Service.Config(courseId),Student=Service.Student(courseId,StudentId),Attempts=Service.Attempts(courseId,StudentId),HasQuestionReports=new QuizQuestionReportService(db).HasReports(StudentId,courseId)});
             }catch(InvalidOperationException ex){return new HttpStatusCodeResult(403,ex.Message);}

@@ -35,8 +35,8 @@ namespace ECOLearning.Controllers
                 {
                     var quiz = new ECOLearning.Services.QuizService(db);
                     var state = quiz.Installed() ? quiz.Student(courseId, currentUserId) : null;
-                    if (state == null || !state.LessonsDone || !state.Passed)
-                        return Json(new { success = false, message = "Bạn cần hoàn thành tất cả bài học và đạt quiz cuối khóa trước khi đánh giá." });
+                    if (state == null || !state.LessonsDone)
+                        return Json(new { success = false, message = "Bạn cần hoàn thành tất cả bài học trước khi đánh giá." });
                     var existing = db.DanhGiaKhoaHoc.FirstOrDefault(d => d.maHocVien == currentUserId && d.maKhoaHoc == courseId);
                     if (existing != null)
                     {
